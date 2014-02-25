@@ -1,0 +1,60 @@
+/* Setup for the computational modelling for SKA */
+/* Bojan Nikolic <b.nikolic@mrao.cam.ac.uk> */
+
+load(ezunits)$
+load(physical_constants)$
+
+declare_fundamental_dimensions(information)$
+declare_fundamental_units (bit, information)$
+
+declare_fundamental_dimensions(operation)$
+declare_fundamental_units (Ops, operation)$
+
+declare_unit_conversion (byte = 8 * bit) $
+declare_unit_conversion (Gbyte = 1e9 * byte) $
+declare_unit_conversion (Tbyte = 1e12 * byte) $
+
+declare_unit_conversion (GHz = 1e9 * Hz) $
+declare_unit_conversion (MHz = 1e6 * Hz) $
+declare_unit_conversion (kHz = 1e3 * Hz) $
+
+fpprintprec : 3 $
+ratprint: false$
+verbose: false$
+
+unitsimp(x) := x ``fundamental_units(x)$
+unitsimpe(x) := unitsimp(ev(x,infeval))$
+
+
+log2(x) := log(x) / log(2)$
+log2u(x) := log(unitsimpe(x)) / log(2)$
+
+texput(Na, "N_{\\rm a}")$
+texput(Nbeam, "N_{\\rm beam}")$
+texput(DeltaNu, "\\Delta \\nu")$
+texput(deltaNu, "\\delta \\nu")$
+
+texput(Qnu, "Q_{\\nu}")$
+texput(Rf, "R_{\\rm F}")$
+
+texput(Nf, "N_{\\rm f}")$
+texput(Np, "N_{\\rm p}")$
+texput(Npol, "N_{\\rm pol}")$
+texput(Nb, "N_{\\rm b}")$
+
+texput(Ds, "D_{\\rm s}")$
+texput(Bmax, "B_{\\rm max}")$
+texput(Nbas, "N_{\\rm bas}")$
+texput(tint, "t_{\\rm int}")$
+
+texput(Npp, "N_{\\rm pp}")$
+
+texput(timg, "t_{\\rm img}")$
+
+texput(We, "\\Omega_{\\rm E}")$
+
+texput(NGW, "N_{\\rm GW}")$
+texput(VisInRate, "\\\'V_{\rm in}")$
+
+
+calcTel (E,T) ::= buildq ([E,T], "="(concat('E,"(",'T,")") , ev(float(E),T)))$

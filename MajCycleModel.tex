@@ -1,0 +1,300 @@
+\documentclass[useAMS,usenatbib,referee]{article}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{mathptmx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{captcont}
+\usepackage[colorlinks=true,citecolor=blue]{hyperref}
+\usepackage{emaxima}
+\usepackage{natbib}
+
+\newcommand{\unit}[1]{\mathrm{#1}}
+\newcommand{\unitp}[2]{\ensuremath{\mathrm{#1}^{#2}}}
+
+\title{Computational Requirements for SDP\\
+  Rev ID: \input{|"git rev-parse --short HEAD"}}
+\author{B. Nikolic\\
+  Astrophysics Group, Cavendish Laboratory, Cambridge CB3 0HE, UK
+  \\\url{email:b.nikolic@mrao.cam.ac.uk}
+ \\\url{http://www.mrao.cam.ac.uk/~bn204/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Scope of this document}
+
+This document estimates the computational requirements for the SDP for
+each of the SKA telescopes. The estimate is made in terms of FLOPS:
+floating point operations per second.
+
+The estimate is currently provisional and subject to revision due to
+both improvements in our knowledge and inevitable discovery of errors
+of method or incorrect approximations in the calculations.
+
+We currently only consider the computational cost of the `major
+cycle', i.e., the formation of dirty sky image from the visibilities
+and the reverse step of estimating model visibilities from a trial sky
+brightness distribution. We do not take into account `minor-cycle'
+(i.e, image-plane deconvolution), flagging, calibration, point source
+finding or other data processing.
+
+We currently do not estimate the memory requirements or data transfer
+rates for the calculations.
+
+
+\section{Description of algorithms}
+
+We proceed on assumption that the estimation of both the trial sky
+brightness distribution (`back step') and of the model visibilities
+(`forward step') will include correction of both A and $w$ terms by
+convolution in the $uv$ plane. See \cite{Cornwell2008-4703511},
+\cite{Hymphreys132}, \cite{2012SPIE.8500E..0LC},
+\cite{2008A&A...487..419B}.
+
+It is shown by \cite{Hymphreys132} that the required size of
+convolution kernel to adequately correct for the $w$ term is
+approximately $w \Theta_{\rm FoV}$. In general case $w$ can be as
+large as $B_{\rm max}/\lambda$ and as usual $\Theta_{\rm FoV} \sim
+\lambda/ D_{\rm s}$ giving un-feasibly large kernels of size $B_{\rm
+  max}/D_{\rm s}$ \citep[see discussion in][which is somewhat
+difficult to follow but is along these lines]{Kogan2012-VLA164}. For
+this reason it is assumed that the snapshot technique will be
+employed.
+
+In current version of this computation each snapshot is assumed to
+require one FFT and one re-projection. The costs of computing PSFs etc
+are not accounted for. The relation for duration of snapshots is given
+below. 
+
+
+\section{Computations}
+
+\subsection{Telescope information}
+
+We use the following basic information about the telescopes. This is
+based on \cite{DewdneyDD001-1} with its addendum \cite{McCoolDD003}.
+No baseline dependent averaging is assumed.
+\begin{maxima}[]
+SKA1Low : [ tdump = 0.6 `s, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35`m,
+lambda = constvalue(%c) / (100e6`Hz) , Bmax = 100e3`m];
+SKA1Mid : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1, Ds=15`m,
+lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 200e3`m];
+SKA1Survey: [tdump = 0.3`s, Na=94, Nf=256000, Nbeam=36,      Ds=15`m,
+lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 50e3`m];
+\maximaoutput*
+\m  \left[ \mathrm{tdump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=3.0\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=100000.\;\mathrm{m} \right] \\
+\m  \left[ \mathrm{tdump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=.258\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=200000.\;\mathrm{m} \right] \\
+\m  \left[ \mathrm{tdump}=0.3\;\mathrm{s} , N_{\rm a}=94 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=.258\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=50000.\;\mathrm{m} \right] \\
+\end{maxima}
+Here $\lambda$ is a representative wavelength for calculation below.
+The calculations are made at this wavelength and not fully integrated
+over the bands of the telescope.
+
+\subsection{Image size}
+
+The sizes of images to be produced can be estimated as follows:
+
+\begin{maxima}[]
+QPix:  2 ;
+NPix : QPix * 2 * Bmax/ Ds;
+
+calcTel(NPix, SKA1Low);
+calcTel(NPix, SKA1Mid);
+calcTel(NPix, SKA1Survey);
+\maximaoutput*
+\m  2 \\
+\m  {{4\,B_{\rm max}}\over{D_{\rm s}}} \\
+\m  \mathrm{NPix(SKA1Low)}=11429. \\
+\m  \mathrm{NPix(SKA1Mid)}=53333. \\
+\m  \mathrm{NPix(SKA1Survey)}=13333. \\
+\end{maxima}
+
+The size of $uv$-grids is assumed to be the same. 
+
+\subsection{Snapshot duration}
+
+Worst case scenario is that that the baseline is rotating exactly in
+$w$ direction, therefore maximum $w$ rate of deviation is:
+\begin{maxima}[]
+We: 7.27e-5 ` (1/s); 
+DeltaW : Bmax* We/2;
+
+calcTel(DeltaW, SKA1Low);
+calcTel(DeltaW, SKA1Mid);
+calcTel(DeltaW, SKA1Survey);
+
+\maximaoutput*
+\m  7.27 \times 10^{-5}\;{{1}\over{\mathrm{s}}} \\
+\m  3.635 \times 10^{-5}\,B_{\rm max}\;{{1}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Low)}=3.64\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Mid)}=7.27\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Survey)}=1.82\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+Generalising \cite{Hymphreys132} the size of convolution kernel
+required to correct for $w$-term is $Q_{w} \Delta w / D $. Therefore
+if we assume the size of convolution kernel as $N_{\rm GW}$, then we can compute
+duration of snapshot as:
+\begin{maxima}[]
+Qw:1;
+twsnap:  (NGW*Ds)/ (Qw* DeltaW) ;
+
+calcTel(twsnap, SKA1Low);
+calcTel(twsnap, SKA1Mid);
+calcTel(twsnap, SKA1Survey);
+
+\maximaoutput*
+\m  {{27510.\,D_{\rm s}\,N_{\rm GW}}\over{B_{\rm max}}}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Low)}=9.63\,N_{\rm GW}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Mid)}=2.06\,N_{\rm GW}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Survey)}=8.25\,N_{\rm GW}\;\mathrm{s} \\
+\end{maxima}
+
+\subsection{Visibility rate}
+
+The rate at which the SDP receives visibilities is:
+
+\begin{maxima}[]
+VisInRate : Na * (Na-1)/2 * Nf * Nbeam* 4 / tdump ;
+
+calcTel(VisInRate, SKA1Low);
+calcTel(VisInRate, SKA1Mid);
+calcTel(VisInRate, SKA1Survey);
+\maximaoutput*
+\m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{\mathrm{tdump}}} \\
+\m  \mathrm{VisInRate(SKA1Low)}=8.94 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
+\m  \mathrm{VisInRate(SKA1Mid)}=4.11 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
+\m  \mathrm{VisInRate(SKA1Survey)}=5.37 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
+\end{maxima} 
+
+This takes into account 4 polarisation products and  the multiple
+beams for SKA1 Survey.
+
+\subsection{FFT Rate}
+
+Assuming 1 FFT per snapshot per polarisation product per frequency
+channel per beam we get the FLOP rate for FFTs:
+\begin{maxima}[]
+FFTRate : (5 `Ops) * NPix **2 * log2(NPix **2)  * Nf * Nbeam * 4 /
+twsnap ;
+
+calcTel(FFTRate, SKA1Low);
+calcTel(FFTRate, SKA1Mid);
+calcTel(FFTRate, SKA1Survey);
+\maximaoutput*
+\m  {{.0116\,B_{\rm max}^3\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2}}\right)\,N_{\rm beam}\,N_{\rm f}}\over{\log 2\,D_{\rm s}^3\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Low)}={{1.87 \times 10^{+15}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Mid)}={{2.22 \times 10^{+17}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Survey)}={{1.09 \times 10^{+17}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+\subsection{Reprojection rate}
+
+In the snapshot technique each snapshot has to be re-projected to a
+common coordinate system. If it is assumed that 50 FLOP are required
+per pixel to reproject we can get following required rate:
+
+\begin{maxima}[]
+ReProjRate : (50 `Ops ) * NPix**2 * Nf * Nbeam * 4 / twsnap;
+
+calcTel(ReProjRate, SKA1Low);
+calcTel(ReProjRate, SKA1Mid);
+calcTel(ReProjRate, SKA1Survey);
+
+\maximaoutput*
+\m  {{.116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Low)}={{6.95 \times 10^{+14}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Mid)}={{7.06 \times 10^{+16}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Survey)}={{3.97 \times 10^{+16}}\over{N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+\subsection{Gridding rate}
+
+
+\begin{maxima}[]
+GridRate   : VisInRate * (9**2+NGW**2) * (4 `Ops) ;
+
+calcTel(GridRate, SKA1Low);
+calcTel(GridRate, SKA1Mid);
+calcTel(GridRate, SKA1Survey);
+
+\maximaoutput*
+\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,\left(N_{\rm GW}^2+81\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops} \\
+\m  \mathrm{GridRate(SKA1Low)}=3.58 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{GridRate(SKA1Mid)}=1.65 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{GridRate(SKA1Survey)}=2.15 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+\subsection{Computing requirement}
+
+Total compute rate is then given by:
+\begin{maxima}[]
+CompRate : FFTRate+ ReProjRate+ GridRate;
+
+calcTel(CompRate, SKA1Low);
+calcTel(CompRate, SKA1Mid);
+calcTel(CompRate, SKA1Survey);
+\maximaoutput*
+\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,\left(N_{\rm GW}^2+81\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops}+\left({{.0116\,B_{\rm max}^3\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2}}\right)\,N_{\rm beam}\,N_{\rm f}}\over{\log 2\,D_{\rm s}^3\,N_{\rm GW}}}+{{.116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Low)}=\left(3.58 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)+{{2.57 \times 10^{+15}}\over{N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Mid)}=\left(1.65 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)+{{2.92 \times 10^{+17}}\over{N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Survey)}=\left(2.15 \times 10^{+12}\,\left(N_{\rm GW}^2+81.0\right)+{{1.49 \times 10^{+17}}\over{N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+This is the compute rate per half-major cycle (i.e., per forward step
+or backward step).
+
+
+\subsection{Optimal gridding kernel size}
+
+We can find the optimum w-kernel size for each telescope by finding
+the stationary points of the CompRate function wrt to the size of the
+kernels:
+\begin{maxima}[]
+float(solve(diff(ev(CompRate, SKA1Low) / ( 1` (Ops/s)), NGW), NGW));
+float(solve(diff(ev(CompRate, SKA1Mid) / ( 1` (Ops/s)), NGW), NGW));
+float(solve(diff(ev(CompRate, SKA1Survey) / ( 1` (Ops/s)), NGW), NGW));
+\maximaoutput*
+\m  \left[ N_{\rm GW}=3.55\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-3.55\,\left(1.73\,i+1.0\right) , N_{\rm GW}=7.11 \right] \\
+\m  \left[ N_{\rm GW}=22.3\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-22.3\,\left(1.73\,i+1.0\right) , N_{\rm GW}=44.6 \right] \\
+\m  \left[ N_{\rm GW}=16.3\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-16.3\,\left(1.73\,i+1.0\right) , N_{\rm GW}=32.6 \right] \\
+\end{maxima}
+Obviously the real solutions (printed rightmost) are the ones with
+physical meaning.
+
+
+\subsection{Compute rate at optimal kernel size}
+
+
+If we take the optimised convolution kernel sizes from above the
+section above we get total compute rates as:
+
+\begin{maxima}[]
+ev(float(CompRate), cons( NGW=7,  SKA1Low) );
+ev(float(CompRate), cons( NGW=44,  SKA1Mid) );
+ev(float(CompRate), cons( NGW=33,  SKA1Survey) );
+\maximaoutput*
+\m  8.32 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  9.96 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  7.01 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+again this is per half-major cycle.
+
+One thing to note is that kernel size of $\sqrt(9^2+7^2)\sim 11$ will
+likely not be enough to capture the A term for SKA1 Low. It may
+therefore be necessary to use kernels which are larger than this for
+SKA1 Low, leading to higher computational load. 
+
+\bibliographystyle{mn2eurl} 
+\bibliography{ska.bib}
+
+\end{document}
+
+\end{document}
+
+% Local Variables:
+% LaTeX-command: "latex -shell-escape"
+% End:
