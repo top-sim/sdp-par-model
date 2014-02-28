@@ -1,0 +1,30 @@
+
+* Maxima 
+
+I currently use Maxima (http://maxima.sourceforge.net/) approximately
+version 5.30 (strictly: branch_5_30_base_110_ga2815dc). Probably best
+to go for the newest official version and let me know of any problems.
+
+* Emaxima 
+
+The tex files are prepared using Emacs and emaxima mode. The
+emaxima.el comes with the Maxima package. See below for doing
+computations without using emaxima mode. 
+
+* Extract Maxima code from .tex files
+
+The following awk program will extract all the maxima inputs from a 
+.tex file:
+
+awk '/\\begin{maxima}/{a=1;next}/maximaoutput/{a=0}a' mytexfile.tex
+
+(You will need to install awk if you do not have it already). Feed
+this extract into Maxima and then you can do interactive computations.
+
+You can edit the TeX file directly then, paste the input into maxima
+and paste output back into emacs after the maxima output line.
+
+
+
+
+
