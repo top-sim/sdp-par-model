@@ -27,12 +27,12 @@
 
 \section{Scope of this document}
 
-\section{Processing hardware}
+\section{Floating point operation power requirements}
 
 Non-immersed systems currently get about $\sim 3.6\times 10^9$
 double-precision FLOPS per W (e.g., Wilkes cluster in Cambridge,
 \cite{Green500Nov2013}). This is for the whole system, actual
-performance with (close-to-best case) LINPACK tests.
+performance with (close-to-best-case) LINPACK tests. 
 
 They are generally based on Kepler, 2012 technology. Assuming two year
 doubling time scale, we can model efficiency approximately as:
@@ -44,6 +44,8 @@ float(DPP(2017));
 \m  \mathrm{DPP}\left(t\right)\mathbin{:=}3.6 \times 10^{+9}\,2^{{{t-2012}\over{2}}}\;{{\mathrm{Ops}}\over{\mathrm{W}\,\mathrm{s}}} \\
 \m  2.04 \times 10^{+10}\;{{\mathrm{Ops}}\over{\mathrm{W}\,\mathrm{s}}} \\
 \end{maxima}
+Again note this is efficiency for the system as a whole but for a
+best-case type of processing.
 
 Using calculations from the computing requirements:
 \begin{maxima}[]
@@ -55,6 +57,13 @@ HCSKA1Survey: 7e15 `(Ops/s)* 2 * Nmajor/  epsilon;
 \m  2.0 \times 10^{+16}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
 \m  1.4 \times 10^{+16}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
 \end{maxima}
+Here:
+\begin{description}
+  \item[Nmajor] is the number of major cycles 
+  \item[$\epsilon$] is a further efficiency factor. In current version
+    of this document we assume this is same for all operations. This
+    is probably a poor approximation which needs to be revisited. 
+\end{description}
 
 Therefore current power estimates:
 \begin{maxima}[]
@@ -66,6 +75,7 @@ float( (HCSKA1Survey / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
 \m  19.6\;\mathrm{MW} \\
 \m  13.7\;\mathrm{MW} \\
 \end{maxima}
+for Low, Mid and Survey. 
 
 
 \section{Storage}
