@@ -48,6 +48,8 @@ texput(Nbas, "N_{\\rm bas}")$
 texput(tint, "t_{\\rm int}")$
 
 texput(Npp, "N_{\\rm pp}")$
+texput(NAA, "N_{\\rm AA}")$
+texput(Nfacet, "N_{\\rm facet}")$
 
 texput(timg, "t_{\\rm img}")$
 

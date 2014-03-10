@@ -1,0 +1,192 @@
+\documentclass[useAMS,usenatbib,referee]{article}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{mathptmx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{captcont}
+\usepackage[colorlinks=true,citecolor=blue]{hyperref}
+\usepackage{emaxima}
+\usepackage{natbib}
+
+\newcommand{\unit}[1]{\mathrm{#1}}
+\newcommand{\unitp}[2]{\ensuremath{\mathrm{#1}^{#2}}}
+
+\title{Data Flows in SDP\\
+  Rev: \input{|"git describe --dirty"}}
+\author{B. Nikolic\\
+  Astrophysics Group, Cavendish Laboratory, Cambridge CB3 0HE, UK
+  \\\url{email:b.nikolic@mrao.cam.ac.uk}
+ \\\url{http://www.mrao.cam.ac.uk/~bn204/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Scope of this document}
+
+This documents sets out initial numerical models for data rates and
+flows within the SDP element. It is currently in {\bf in draft} and is
+{\bf not complete}: it instead concentrates on some of the perceived
+high-risk areas. 
+
+\section{Visibilities input data rate}
+
+The input data rate into the SDP is largely defined by the
+\cite{DewdneyDD001-1} as amended by \cite{McCoolDD003}.  If we assume
+8 bytes per visibility, the calculations below show the baseline
+design data rates in terms of TBytes/s. 
+
+\begin{maxima}
+SKA1Low : [ tdump = 0.6 `s, Na = 1024 , Nf= 256000, Nbeam=1];
+SKA1Mid : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1];
+SKA1Survey: [tdump = 0.3`s, Na=94, Nf=256000, Nbeam=36];
+SDPInRate : Na * (Na-1)/2 * Nf * Nbeam* 4 / tdump * (8`byte) ``(Tbyte);
+
+calcTel(SDPInRate, SKA1Low);
+calcTel(SDPInRate, SKA1Mid);
+calcTel(SDPInRate, SKA1Survey);
+
+\maximaoutput*
+\m  \left[ \mathrm{tdump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 \right] \\
+\m  \left[ \mathrm{tdump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 \right] \\
+\m  \left[ \mathrm{tdump}=0.3\;\mathrm{s} , N_{\rm a}=94 , N_{\rm f}=256000 , N_{\rm beam}=36 \right] \\
+\m  {{\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{62500000000\,\mathrm{tdump}}}\;\mathrm{Tbyte} \\
+\m  \mathrm{SDPInRate(SKA1Low)}=7.15\;{{\mathrm{Tbyte}}\over{\mathrm{s}}} \\
+\m  \mathrm{SDPInRate(SKA1Mid)}=3.29\;{{\mathrm{Tbyte}}\over{\mathrm{s}}} \\
+\m  \mathrm{SDPInRate(SKA1Survey)}=4.3\;{{\mathrm{Tbyte}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+
+\section{``UV buffer'' rates chunk sizes}
+
+The ``UV buffer'' is the system component that temporarily stores
+visibility data until the imaging and calibration processing has
+converged to a faithful representation of the sky and/or
+visibility-based processing has extracted the information required
+from raw visibilities. 
+
+It is expected that some data reduction will be possible in the ingest
+processing stage so that UV buffer will not normally handle the full
+input data rate from the Correlator. However, until the feasibility of
+this data reduction is confirmed we assume the maximal data input
+rate. 
+
+\subsection{Capacity}
+
+In this case the input data rate in the UV buffer is just the maximum
+data rate given above. Assuming maximum 12 hour duration of data
+accumulation the storage requirement is :
+\begin{maxima}[]
+SDPUVBufSize: SDPInRate * 12* 3600 `s;
+calcTel(SDPUVBufSize, SKA1Low);
+calcTel(SDPUVBufSize, SKA1Mid);
+calcTel(SDPUVBufSize, SKA1Survey);
+\maximaoutput*
+\m  {{27\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{39062500\,\mathrm{tdump}}}\;\mathrm{Tbyte}\,\mathrm{s} \\
+\m  \mathrm{SDPUVBufSize(SKA1Low)}=308936.\;\mathrm{Tbyte} \\
+\m  \mathrm{SDPUVBufSize(SKA1Mid)}=142137.\;\mathrm{Tbyte} \\
+\m  \mathrm{SDPUVBufSize(SKA1Survey)}=185625.\;\mathrm{Tbyte} \\
+\end{maxima}
+
+\subsection{Organisation of input data}
+
+Data coming out of the correlator are assumed to be organised
+according to following order:
+\begin{enumerate}
+  \item Beam
+  \item Polarisation
+  \item Frequency channel
+  \item Time 
+  \item Baseline
+\end{enumerate}
+Dimensions further down the list show data which are closer in
+proximity in the input data stream. 
+
+\subsection{Natural chunks of data for imaging assuming snapshots} 
+
+If we assume snapshot imaging technique is used then the natural chunk
+of data is combination of all baselines and snapshot interval for one
+beam/polarisation/frequency channel. 
+
+Initial analysis in document \cite{MajCycleModel} shows that likely
+snapshot duration is of order 100-200s for each of the telescope.
+Assuming 100s for each, we get the following for the size of
+basic units of data:
+\begin{maxima}[]
+SDPInRatePerStrm : Na * (Na-1)/2    / tdump * (8`byte) ;
+SDPInUnit : (SDPInRatePerStrm * (100`s));
+
+calcTel(SDPInUnit, SKA1Low);
+calcTel(SDPInUnit, SKA1Mid);
+calcTel(SDPInUnit, SKA1Survey);
+
+\maximaoutput*
+\m  {{4\,\left(N_{\rm a}-1\right)\,N_{\rm a}}\over{\mathrm{tdump}}}\;\mathrm{byte} \\
+\m  {{400\,\left(N_{\rm a}-1\right)\,N_{\rm a}}\over{\mathrm{tdump}}}\;\mathrm{s}\,\mathrm{byte} \\
+\m  \mathrm{SDPInUnit(SKA1Low)}=6.984 \times 10^{+8}\;\mathrm{byte} \\
+\m  \mathrm{SDPInUnit(SKA1Mid)}=3.213 \times 10^{+8}\;\mathrm{byte} \\
+\m  \mathrm{SDPInUnit(SKA1Survey)}=1.166 \times 10^{+7}\;\mathrm{byte} \\
+\end{maxima}
+
+It is however extremely likely that in the ingest we will:
+\begin{enumerate}
+  \item Re-organise so that least about 10 frequency channels are
+    organised together
+  \item Similarly group the four polarisation products 
+\end{enumerate}
+Organising 10 frequency channels together still leaves ample
+data-parallelism for the processing.
+
+Therefore it is likely that the basic chunks of UV data be:
+\begin{maxima}[]
+SDPUVChunk : (SDPInUnit * 4* 10);
+
+calcTel(SDPUVChunk, SKA1Low);
+calcTel(SDPUVChunk, SKA1Mid);
+calcTel(SDPUVChunk, SKA1Survey);
+\maximaoutput*
+\m  {{16000\,\left(N_{\rm a}-1\right)\,N_{\rm a}}\over{\mathrm{tdump}}}\;\mathrm{s}\,\mathrm{byte} \\
+\m  \mathrm{SDPUVChunk(SKA1Low)}=2.79 \times 10^{+10}\;\mathrm{byte} \\
+\m  \mathrm{SDPUVChunk(SKA1Mid)}=1.29 \times 10^{+10}\;\mathrm{byte} \\
+\m  \mathrm{SDPUVChunk(SKA1Survey)}=4.662 \times 10^{+8}\;\mathrm{byte} \\
+\end{maxima}
+
+\subsection{Shared filesystem -- number of files}
+
+If for discussion we hypothesise:
+\begin{enumerate}
+  \item The UV buffer is implemented as a global shared filesystem
+  \item For maximum flexibility each UV chunk is represented as an
+    individual file
+\end{enumerate}
+then we get maximal number of:
+
+\begin{maxima}[]
+SDPNoFilesHyp: (SDPUVBufSize/SDPUVChunk)``1;
+
+calcTel(SDPNoFilesHyp, SKA1Low);
+calcTel(SDPNoFilesHyp, SKA1Mid);
+calcTel(SDPNoFilesHyp, SKA1Survey);
+\maximaoutput*
+\m  {{216\,N_{\rm beam}\,N_{\rm f}}\over{5}} \\
+\m  \mathrm{SDPNoFilesHyp(SKA1Low)}=1.106 \times 10^{+7} \\
+\m  \mathrm{SDPNoFilesHyp(SKA1Mid)}=1.106 \times 10^{+7} \\
+\m  \mathrm{SDPNoFilesHyp(SKA1Survey)}=3.981 \times 10^{+8} \\
+\end{maxima}
+
+
+
+
+
+\bibliographystyle{mn2eurl} 
+\bibliography{ska.bib}
+
+
+\end{document}
+
+% Local Variables:
+% LaTeX-command: "latex -shell-escape"
+% End:
