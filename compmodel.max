@@ -11,6 +11,7 @@ declare_fundamental_dimensions(operation)$
 declare_fundamental_units (Ops, operation)$
 
 declare_unit_conversion (byte = 8 * bit) $
+declare_unit_conversion (Mbyte = 1e6 * byte) $
 declare_unit_conversion (Gbyte = 1e9 * byte) $
 declare_unit_conversion (Tbyte = 1e12 * byte) $
 
@@ -59,4 +60,4 @@ texput(NGW, "N_{\\rm GW}")$
 texput(VisInRate, "\\\'V_{\rm in}")$
 
 
-calcTel (E,T) ::= buildq ([E,T], "="(concat('E,"(",'T,")") , ev(float(E),T)))$
+calcTel (E,T) ::= buildq ([E,T], "="(concat('E,"(",'T,")") , ev(float(E),infeval,T)))$
