@@ -327,7 +327,7 @@ Compared to snapshots:
 
 \begin{maxima}[]
 wsDeltaW : Bmax / 2 / wsNWPlanes;
-wsNGW :  (Qw * wsDeltaW ) / Ds;
+wsNGW :  (Qw * wsDeltaW ) / Ds / Nfacet;
 
 calcTel(wsNGW, SKA1Low);
 calcTel(wsNGW, SKA1Mid);
@@ -335,10 +335,10 @@ calcTel(wsNGW, SKA1Survey);
 
 \maximaoutput*
 \m  {{B_{\rm max}}\over{2\,\mathrm{wsNWPlanes}}} \\
-\m  {{B_{\rm max}}\over{2\,D_{\rm s}\,\mathrm{wsNWPlanes}}} \\
-\m  \mathrm{wsNGW(SKA1Low)}={{1429.}\over{\mathrm{wsNWPlanes}}} \\
-\m  \mathrm{wsNGW(SKA1Mid)}={{6667.}\over{\mathrm{wsNWPlanes}}} \\
-\m  \mathrm{wsNGW(SKA1Survey)}={{1667.}\over{\mathrm{wsNWPlanes}}} \\
+\m  {{B_{\rm max}}\over{2\,D_{\rm s}\,N_{\rm facet}\,\mathrm{wsNWPlanes}}} \\
+\m  \mathrm{wsNGW(SKA1Low)}={{1429.}\over{N_{\rm facet}\,\mathrm{wsNWPlanes}}} \\
+\m  \mathrm{wsNGW(SKA1Mid)}={{6667.}\over{N_{\rm facet}\,\mathrm{wsNWPlanes}}} \\
+\m  \mathrm{wsNGW(SKA1Survey)}={{1667.}\over{N_{\rm facet}\,\mathrm{wsNWPlanes}}} \\
 \end{maxima}
 
 \subsubsection{Gridding}
@@ -352,10 +352,10 @@ calcTel(wsGridRate, SKA1Survey);
 
 ev(float(wsGridRate), append([wsNWPlanes=128, NAA=9, Nfacet=1], SKA1Mid));
 \maximaoutput*
-\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops} \\
-\m  \mathrm{wsGridRate(SKA1Low)}=3.58 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2040816.}\over{\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{wsGridRate(SKA1Mid)}=1.65 \times 10^{+12}\,N_{\rm facet}^2\,\left({{4.444 \times 10^{+7}}\over{\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{wsGridRate(SKA1Survey)}=2.15 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2777778.}\over{\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops} \\
+\m  \mathrm{wsGridRate(SKA1Low)}=3.58 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2040816.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{wsGridRate(SKA1Mid)}=1.65 \times 10^{+12}\,N_{\rm facet}^2\,\left({{4.444 \times 10^{+7}}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{wsGridRate(SKA1Survey)}=2.15 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2777778.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  4.6 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
@@ -387,13 +387,22 @@ Nfacet**2 * wsNWPlanes;
 \subsubsection{Total}
 
 \begin{maxima}[]
-wsTotalRate : (wsFFTTot+wsImCorrectTot)/tobs + wsGridRate;
 
-ev(float(wsTotalRate), append([wsNWPlanes=128, NAA=9, Nfacet=1, tobs=(6*3600`s)], SKA1Mid));
+wstot: ComRate = (wsFFTTot+wsImCorrectTot)/tobs + wsGridRate;
+
+float(solve(diff(ev(wstot, append([NAA=9, Nfacet=1, tobs=(6*3600`s)], SKA1Mid) ) / (1 `(Ops/s)), wsNWPlanes), wsNWPlanes));
+
+float(ev(wstot, append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =
+174], SKA1Mid)));
+
+
+float(solve(diff(ev(wstot, append([NAA=9, Nfacet=1, tobs=(6*3600`s)], SKA1Low) ) / (1 `(Ops/s)), wsNWPlanes), wsNWPlanes));
 
 \maximaoutput*
-\m  \left({{{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\right)\;\mathrm{Ops} \\
-\m  8.17 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ComRate}=\left({{{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\right)\;\mathrm{Ops} \\
+\m  \left[ \mathrm{wsNWPlanes}=3.758 \times 10^{-6}\,\left(4.002 \times 10^{+7}\,i-2.311 \times 10^{+7}\right) , \mathrm{wsNWPlanes}=-3.758 \times 10^{-6}\,\left(4.002 \times 10^{+7}\,i+2.311 \times 10^{+7}\right) , \mathrm{wsNWPlanes}=174. \right] \\
+\m  \mathrm{ComRate}=7.41 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \left[ \mathrm{wsNWPlanes}=7.396 \times 10^{-6}\,\left(2.736 \times 10^{+7}\,i-1.579 \times 10^{+7}\right) , \mathrm{wsNWPlanes}=-7.396 \times 10^{-6}\,\left(2.736 \times 10^{+7}\,i+1.579 \times 10^{+7}\right) , \mathrm{wsNWPlanes}=234. \right] \\
 \end{maxima}
 
 
