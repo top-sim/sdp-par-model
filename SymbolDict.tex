@@ -1,0 +1,43 @@
+\documentclass[useAMS,usenatbib,referee]{article}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{mathptmx}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{captcont}
+\usepackage[colorlinks=true,citecolor=blue]{hyperref}
+\usepackage{emaxima}
+\usepackage{natbib}
+
+\newcommand{\unit}[1]{\mathrm{#1}}
+\newcommand{\unitp}[2]{\ensuremath{\mathrm{#1}^{#2}}}
+
+\title{SDP Modelling -- symbol dictionary\\
+  Rev: \input{|"git describe --dirty"}}
+\author{B. Nikolic\\
+  Astrophysics Group, Cavendish Laboratory, Cambridge CB3 0HE, UK
+  \\\url{email:b.nikolic@mrao.cam.ac.uk}
+ \\\url{http://www.mrao.cam.ac.uk/~bn204/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Scope of this document}
+
+\section{Symbols}
+
+\begin{description}
+  \item[$B_{\rm max}$] Maximum baseline length for a telescope
+  \item[$N_{\rm a}$] Number of antennas/stations
+  \item[$N_{\rm f}$] Number of frequency channels formed by the
+    correlator
+  \item[$N_{\rm beam}$] Number of independent beams (for PAFs or AAs)
+  \item[$N_{\rm AA}$] Size of the gridding convolution function used
+    to anti-alias the FFT, in pixels in one dimension (so overall
+    kernel has $N_{\rm AA} \times N_{\rm AA}$ pixels)
+\end{description}
+
+\end{document}
