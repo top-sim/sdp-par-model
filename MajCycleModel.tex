@@ -300,18 +300,16 @@ gcfc1 : [NGCF = sqrt(NAA**2+NGW**2),
 gcfrate : (5 `Ops) *  (FNGCF ** 2) * log2(FNGCF ** 2)  / Tion * Nbl *
 Nfacet**2;
 
-subst(gcfc1, subst(gcfc1, gcfrate/ GridRate) );
+ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9],gcfc1), infeval);
 
-float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=7, Nfacet=1, Tion= 60`s,
-Qgcf=8, NAA=9], SKA1Low)));
-float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=44, Nfacet=1, Tion= 60`s,
-Qgcf=8, NAA=9], SKA1Mid)));
-float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=33, Nfacet=1, Tion= 60`s,
-Qgcf=8, NAA=9], SKA1Survey)));
+float(ev( gcfrate, append(gcfc1, [NGW=7, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Low), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=44, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Mid), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=33, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Survey), infeval));
+
 \maximaoutput*
-\m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+\mathrm{NAA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
+\m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+N_{\rm AA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
 \m  {{20\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,\mathrm{Tion}}}\;\mathrm{Ops} \\
-\m  {{5\,\mathrm{Qgcf}^2\,\mathrm{tdump}\,\log \left(\mathrm{Qgcf}\,\sqrt{N_{\rm GW}^2+\mathrm{NAA}^2}\right)}\over{2\,\log 2\,\mathrm{Tion}}} \\
+\m  {{160\,\mathrm{tdump}\,\log \left(8\,\sqrt{N_{\rm GW}^2+81}\right)}\over{\log 2\,\mathrm{Tion}}} \\
 \m  4.84 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  6.01 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  1.7 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
