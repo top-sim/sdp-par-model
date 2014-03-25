@@ -293,6 +293,15 @@ SKA1 Low, leading to higher computational load.
 
 \section{Computing the convolution kernels}
 
+Computing the convolution functions is a fairly complex process which
+in detail depends on the effects that are corrected for using the
+convolution function in the $uv$-plane. However, the major
+computational complexity arises if the convolution functions need to
+be computed on a baseline-by-baseline basis to account for the
+different $A$ responses of the two receiving elements forming the
+baseline.  In this case the major computational cost is the FFT
+between the image plane where combination of effects is done by
+multiplication.  The computational cost can therefore be estimated as:
 
 \begin{maxima}[]
 gcfc1 : [NGCF = sqrt(NAA**2+NGW**2),
