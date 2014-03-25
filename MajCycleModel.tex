@@ -160,12 +160,14 @@ calcTel(twsnap, SKA1Survey);
 The rate at which the SDP receives visibilities is:
 
 \begin{maxima}[]
-VisInRate : Na * (Na-1)/2 * Nf * Nbeam* 4 / tdump ;
+Nbl       :  Na * (Na-1)/2 * Nf * Nbeam* 4;
+VisInRate : Nbl / tdump ;
 
 calcTel(VisInRate, SKA1Low);
 calcTel(VisInRate, SKA1Mid);
 calcTel(VisInRate, SKA1Survey);
 \maximaoutput*
+\m  2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f} \\
 \m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{\mathrm{tdump}}} \\
 \m  \mathrm{VisInRate(SKA1Low)}=8.94 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
 \m  \mathrm{VisInRate(SKA1Mid)}=4.11 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
@@ -288,6 +290,33 @@ One thing to note is that kernel size of $\sqrt(9^2+7^2)\sim 11$ will
 likely not be enough to capture the A term for SKA1 Low. It may
 therefore be necessary to use kernels which are larger than this for
 SKA1 Low, leading to higher computational load. 
+
+\section{Computing the convolution kernels}
+
+
+\begin{maxima}[]
+gcfc1 : [NGCF = sqrt(NAA**2+NGW**2),
+         FNGCF = Qgcf * NGCF] ;
+gcfrate : (5 `Ops) *  (FNGCF ** 2) * log2(FNGCF ** 2)  / Tion * Nbl *
+Nfacet**2;
+
+subst(gcfc1, subst(gcfc1, gcfrate/ GridRate) );
+
+float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=7, Nfacet=1, Tion= 60`s,
+Qgcf=8, NAA=9], SKA1Low)));
+float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=44, Nfacet=1, Tion= 60`s,
+Qgcf=8, NAA=9], SKA1Mid)));
+float(ev(subst(gcfc1 , subst( gcfc1, gcfrate)) , gcf1, infeval, append( [NGW=33, Nfacet=1, Tion= 60`s,
+Qgcf=8, NAA=9], SKA1Survey)));
+\maximaoutput*
+\m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+\mathrm{NAA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
+\m  {{20\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,\mathrm{Tion}}}\;\mathrm{Ops} \\
+\m  {{5\,\mathrm{Qgcf}^2\,\mathrm{tdump}\,\log \left(\mathrm{Qgcf}\,\sqrt{N_{\rm GW}^2+\mathrm{NAA}^2}\right)}\over{2\,\log 2\,\mathrm{Tion}}} \\
+\m  4.84 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  6.01 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  1.7 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
 
 \section{Alternative to snapshots: W-stacking}
 
@@ -433,6 +462,7 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 \m  \left[ \left[ \mathrm{wsNWPlanes}=60.3 \right]  \right] \\
 \m  5.32 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
+
 
 
 
