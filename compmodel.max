@@ -55,6 +55,7 @@ texput(NAA, "N_{\\rm AA}")$
 texput(Nfacet, "N_{\\rm facet}")$
 
 texput(timg, "t_{\\rm img}")$
+texput(Tion, "t_{\\rm ionsph}")$
 
 texput(We, "\\Omega_{\\rm E}")$
 
