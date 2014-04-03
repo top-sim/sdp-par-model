@@ -27,6 +27,35 @@
 
 \section{Scope of this document}
 
+This document summarises the current power budget calculations for
+SDP. It is currently presents only the option for {\bf baseline
+  design} with, i.e., full spectral resolution, full resolution, no
+baseline-dependent averaging, and {\bf 2017 technology}. The scaling
+of power requirements can be found by in reference document
+\cite{MajCycleModel}. 
+
+Important caveats:
+\begin{itemize}
+\item Only diagonal Muller matrix elements are considered. We are
+  currently analysing which telescopes will require the off-diagonal
+  elements.
+\item Flat efficiency of about 0.25 (more precisely 50\% of LINPACK)
+  is assumed for all operations. Ongoing analysis will provide
+  figures on a firmer basis.
+\end{itemize}
+
+
+\section{Summary of changes vs version 0.2}
+
+\begin{enumerate}
+\item For consistency with other computations gridding is taken to
+  take 8 FLOP rather than 4 FAM operations. This has the greatest
+  proportional effect on the gridding intensive telescopes (SKA1-low)
+\item A first approximation of the computation of convolution kernels
+  is included in the estimate. It is assumed that all kernels are
+  baseline-dependent.
+\item Mistake in number of SKA1-Survey antennas has been corrected. 
+\end{enumerate}
 
 
 \section{Floating point operation power requirements}
@@ -44,20 +73,21 @@ DPP(t) := 3.6e9 * 2**((t-2012)/2) ` (Ops/s/W);
 float(DPP(2017));
 \maximaoutput*
 \m  \mathrm{DPP}\left(t\right)\mathbin{:=}3.6 \times 10^{+9}\,2^{{{t-2012}\over{2}}}\;{{\mathrm{Ops}}\over{\mathrm{W}\,\mathrm{s}}} \\
-\m  2.04 \times 10^{+10}\;{{\mathrm{Ops}}\over{\mathrm{W}\,\mathrm{s}}} \\
+\m  2.0 \times 10^{+10}\;{{\mathrm{Ops}}\over{\mathrm{W}\,\mathrm{s}}} \\
 \end{maxima}
 Again note this is efficiency for the system as a whole but for a
 best-case type of processing.
 
-Using calculations from the \cite{MajCycleModel}:
+We use calculations from the \cite{MajCycleModel} for the compute rate
+major cycle and the computation of the convolution kernel:
 \begin{maxima}[]
-HCSKA1Low: 9e14 `(Ops/s) * 2 * Nmajor  / epsilon;
-HCSKA1Mid: 1e16 `(Ops/s)* 2 * Nmajor / epsilon;
-HCSKA1Survey: 7e15 `(Ops/s)* 2 * Nmajor/  epsilon;
+HCSKA1Low: (1.3e15+4.3e14) `(Ops/s) * 2 * Nmajor  / epsilon;
+HCSKA1Mid: (1.3e16+3.7e14) `(Ops/s)* 2 * Nmajor / epsilon;
+HCSKA1Survey: (9.1e15+9.8e14) `(Ops/s)* 2 * Nmajor/  epsilon;
 \maximaoutput*
-\m  1.8 \times 10^{+15}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
+\m  3.5 \times 10^{+15}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
+\m  2.7 \times 10^{+16}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
 \m  2.0 \times 10^{+16}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
-\m  1.4 \times 10^{+16}\;{{\mathrm{Ops}\,\mathrm{Nmajor}}\over{\varepsilon\,\mathrm{s}}} \\
 \end{maxima}
 Here:
 \begin{description}
@@ -67,31 +97,44 @@ Here:
     is probably a poor approximation which needs to be revisited. 
 \end{description}
 
-Therefore current power estimates:
+For estimate 40\,kW/rack for rack estimate. Therefore current power
+and rack  estimates are:
 \begin{maxima}[]
-float( (HCSKA1Low / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
-float( (HCSKA1Mid / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
-float( (HCSKA1Survey / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
+SKA1LowPower: float( (HCSKA1Low / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
+SKA1MidPower: float( (HCSKA1Mid / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
+SKA1SurveyPower: float( (HCSKA1Survey / DPP(2017)) ``MW) , Nmajor=10, epsilon=0.5;
+
+SKA1LowPower  / (0.04 ` MW);
+SKA1MidPower  / (0.04 ` MW);
+SKA1SurveyPower/ (0.04 ` MW);
 \maximaoutput*
-\m  1.77\;\mathrm{MW} \\
-\m  19.6\;\mathrm{MW} \\
-\m  13.7\;\mathrm{MW} \\
+\m  3.4\;\mathrm{MW} \\
+\m  26.\;\mathrm{MW} \\
+\m  20.\;\mathrm{MW} \\
+\m  85. \\
+\m  657. \\
+\m  495. \\
 \end{maxima}
 for Low, Mid and Survey. 
 
 
 \section{Storage}
 
-In initial estimate we use verbatim the number from
-\cite{SDP-PROP-DR-001-1-ElemConc}. This gives 100 racks (3PB each) at
-18.5 kW each.
+The estimate of scratch storage required is given in
+\cite{SDPDataFlow}. It is 300, 140 and 190 PetaBytes for SKA1-Low,
+SKA1-Mid and SKA1-Survey respectively. We assume power consumption
+of 3kW/PetaByte and 6 PetaByte / rack (slightly more optimistic than
+in proposal \cite{SDP-PROP-DR-001-1-ElemConc}).
+
 
 \section{Network}
 
 In initial estimate we use verbatim the number from
 \cite{SDP-PROP-DR-001-1-ElemConc}. There we estimate 5 core switches
-in total at  10 kW each and 200 rack switches at 300 W each. 
-
+in total at 10 kW each and 200 rack switches at 300 W each. Because
+these values are much smaller than the uncertainties in power required
+for the floating point operations computation we do not include them
+in the budget entered in the spreadsheet.
 
 \bibliographystyle{mn2eurl} 
 \bibliography{ska.bib}
