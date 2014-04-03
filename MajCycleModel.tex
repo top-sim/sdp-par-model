@@ -86,9 +86,9 @@ lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 200e3`m, NAA=9];
 SKA1Survey: [tdump = 0.3`s, Na=96, Nf=256000, Nbeam=36,      Ds=15`m,
 lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 50e3`m, NAA=9];
 \maximaoutput*
-\m  \left[ \mathrm{tdump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=3.0\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=100000.\;\mathrm{m} , \mathrm{NAA}=9 \right] \\
-\m  \left[ \mathrm{tdump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=.258\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=200000.\;\mathrm{m} , \mathrm{NAA}=9 \right] \\
-\m  \left[ \mathrm{tdump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=.258\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=50000.\;\mathrm{m} , \mathrm{NAA}=9 \right] \\
+\m  \left[ t_{\rm dump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=3.0\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=100000.\;\mathrm{m} , N_{\rm AA}=9 \right] \\
+\m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=.26\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=200000.\;\mathrm{m} , N_{\rm AA}=9 \right] \\
+\m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=.26\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=50000.\;\mathrm{m} , N_{\rm AA}=9 \right] \\
 \end{maxima}
 Here $\lambda$ is a representative wavelength for calculation below.
 The calculations are made at this wavelength and not fully integrated
@@ -129,10 +129,10 @@ calcTel(DeltaW, SKA1Survey);
 
 \maximaoutput*
 \m  7.27 \times 10^{-5}\;{{1}\over{\mathrm{s}}} \\
-\m  3.635 \times 10^{-5}\,B_{\rm max}\;{{1}\over{\mathrm{s}}} \\
-\m  \mathrm{DeltaW(SKA1Low)}=3.64\;{{\mathrm{m}}\over{\mathrm{s}}} \\
-\m  \mathrm{DeltaW(SKA1Mid)}=7.27\;{{\mathrm{m}}\over{\mathrm{s}}} \\
-\m  \mathrm{DeltaW(SKA1Survey)}=1.82\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\m  3.64 \times 10^{-5}\,B_{\rm max}\;{{1}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Low)}=3.6\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Mid)}=7.3\;{{\mathrm{m}}\over{\mathrm{s}}} \\
+\m  \mathrm{DeltaW(SKA1Survey)}=1.8\;{{\mathrm{m}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 Generalising \cite{Hymphreys132} the size of convolution kernel
@@ -150,9 +150,9 @@ calcTel(twsnap, SKA1Survey);
 \maximaoutput*
 \m  1 \\
 \m  {{27510.\,D_{\rm s}\,N_{\rm facet}\,N_{\rm GW}}\over{B_{\rm max}}}\;\mathrm{s} \\
-\m  \mathrm{twsnap(SKA1Low)}=9.63\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
-\m  \mathrm{twsnap(SKA1Mid)}=2.06\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
-\m  \mathrm{twsnap(SKA1Survey)}=8.25\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Low)}=9.6\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Mid)}=2.1\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
+\m  \mathrm{twsnap(SKA1Survey)}=8.3\,N_{\rm facet}\,N_{\rm GW}\;\mathrm{s} \\
 \end{maxima}
 
 \subsection{Visibility rate}
@@ -168,9 +168,9 @@ calcTel(VisInRate, SKA1Mid);
 calcTel(VisInRate, SKA1Survey);
 \maximaoutput*
 \m  2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f} \\
-\m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{\mathrm{tdump}}} \\
-\m  \mathrm{VisInRate(SKA1Low)}=8.94 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
-\m  \mathrm{VisInRate(SKA1Mid)}=4.11 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
+\m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}}\over{t_{\rm dump}}} \\
+\m  \mathrm{VisInRate(SKA1Low)}=8.9 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
+\m  \mathrm{VisInRate(SKA1Mid)}=4.1 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
 \m  \mathrm{VisInRate(SKA1Survey)}=5.6 \times 10^{+11}\;{{1}\over{\mathrm{s}}} \\
 \end{maxima} 
 
@@ -188,11 +188,19 @@ twsnap ;
 calcTel(FFTRate, SKA1Low);
 calcTel(FFTRate, SKA1Mid);
 calcTel(FFTRate, SKA1Survey);
+
+ev(FFTRate, append([Nfacet=1],SKA1Low));
+ev(FFTRate, append([Nfacet=1],SKA1Mid));
+ev(FFTRate, append([Nfacet=1],SKA1Survey));
+
 \maximaoutput*
-\m  {{.0116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{FFTRate(SKA1Low)}={{1.0 \times 10^{+14}\,\log \left({{1.306 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{FFTRate(SKA1Mid)}={{1.02 \times 10^{+16}\,\log \left({{2.844 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{FFTRate(SKA1Survey)}={{5.73 \times 10^{+15}\,\log \left({{1.778 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Low)}={{1.0 \times 10^{+14}\,\log \left({{1.31 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Mid)}={{1.0 \times 10^{+16}\,\log \left({{2.84 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{FFTRate(SKA1Survey)}={{5.7 \times 10^{+15}\,\log \left({{1.78 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{1.3 \times 10^{+15}}\over{\log 2\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{1.5 \times 10^{+17}}\over{\log 2\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{7.5 \times 10^{+16}}\over{\log 2\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \subsection{Reprojection rate}
@@ -208,28 +216,59 @@ calcTel(ReProjRate, SKA1Low);
 calcTel(ReProjRate, SKA1Mid);
 calcTel(ReProjRate, SKA1Survey);
 
+
 \maximaoutput*
-\m  {{.116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{ReProjRate(SKA1Low)}={{6.95 \times 10^{+14}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{ReProjRate(SKA1Mid)}={{7.06 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{ReProjRate(SKA1Survey)}={{3.97 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Low)}={{6.9 \times 10^{+14}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Mid)}={{7.1 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{ReProjRate(SKA1Survey)}={{4.0 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \subsection{Gridding rate}
 
 
 \begin{maxima}[]
-GridRate   : VisInRate * (NAA**2+NGW**2) * (4 `Ops) * Nfacet**2;
+GridRate   : VisInRate * (NAA**2+NGW**2) * (8 `Ops) * Nfacet**2;
 
 calcTel(GridRate, SKA1Low);
 calcTel(GridRate, SKA1Mid);
 calcTel(GridRate, SKA1Survey);
 
+ev(GridRate, append([Nfacet=1],SKA1Low));
+ev(GridRate, append([Nfacet=1],SKA1Mid));
+ev(GridRate, append([Nfacet=1],SKA1Survey));
+
 \maximaoutput*
-\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops} \\
-\m  \mathrm{GridRate(SKA1Low)}=3.58 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{GridRate(SKA1Mid)}=1.65 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{GridRate(SKA1Survey)}=2.24 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\m  \mathrm{GridRate(SKA1Low)}=7.2 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{GridRate(SKA1Mid)}=3.3 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{GridRate(SKA1Survey)}=4.5 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  7.2 \times 10^{+12}\,\left(N_{\rm GW}^2+81\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  3.3 \times 10^{+12}\,\left(N_{\rm GW}^2+81\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  4.5 \times 10^{+12}\,\left(N_{\rm GW}^2+81\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+\subsection{Phase Rotation -- preliminary}
+
+In the case of multi-facet imaging, it is necessary to phase rotate
+visibilities to each new imaging plane. A first estimate of this can
+be made as:
+
+\begin{maxima}[]
+PhaseRotateRate   : VisInRate * (20 `Ops) * Nfacet**2;
+\maximaoutput*
+\m  {{40\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\end{maxima}
+
+Allowing for 20 operations to compute the sine/cosine and do the
+multiplication.
+
+\begin{maxima}[]
+ev(PhaseRotateRate, append([Nfacet=2 * Bmax/ Ds], SKA1Low), infeval);
+ev(PhaseRotateRate, append([Nfacet=2 * Bmax/ Ds], SKA1Mid), infeval);
+\maximaoutput*
+\m  5.8 \times 10^{+20}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  5.8 \times 10^{+21}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \subsection{Computing requirement}
@@ -242,10 +281,10 @@ calcTel(CompRate, SKA1Low);
 calcTel(CompRate, SKA1Mid);
 calcTel(CompRate, SKA1Survey);
 \maximaoutput*
-\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops}+\left({{.0116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.116\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{CompRate(SKA1Low)}=\left(3.58 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)+{{1.0 \times 10^{+14}\,\log \left({{1.306 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{6.95 \times 10^{+14}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{CompRate(SKA1Mid)}=\left(1.65 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)+{{1.02 \times 10^{+16}\,\log \left({{2.844 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{7.06 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{CompRate(SKA1Survey)}=\left(2.24 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.0\right)+{{5.73 \times 10^{+15}\,\log \left({{1.778 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{3.97 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Low)}=\left(7.2 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{1.0 \times 10^{+14}\,\log \left({{1.31 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{6.9 \times 10^{+14}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Mid)}=\left(3.3 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{1.0 \times 10^{+16}\,\log \left({{2.84 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{7.1 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{CompRate(SKA1Survey)}=\left(4.5 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{5.7 \times 10^{+15}\,\log \left({{1.78 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{4.0 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 This is the compute rate per half-major cycle (i.e., per forward step
 or backward step).
@@ -261,9 +300,9 @@ float(solve(diff(ev(CompRate, SKA1Low, Nfacet=1) / ( 1` (Ops/s)), NGW), NGW));
 float(solve(diff(ev(CompRate, SKA1Mid, Nfacet=1) / ( 1` (Ops/s)), NGW), NGW));
 float(solve(diff(ev(CompRate, SKA1Survey, Nfacet=1) / ( 1` (Ops/s)), NGW), NGW));
 \maximaoutput*
-\m  \left[ N_{\rm GW}=3.55\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-3.55\,\left(1.73\,i+1.0\right) , N_{\rm GW}=7.11 \right] \\
-\m  \left[ N_{\rm GW}=22.3\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-22.3\,\left(1.73\,i+1.0\right) , N_{\rm GW}=44.6 \right] \\
-\m  \left[ N_{\rm GW}=16.1\,\left(1.73\,i-1.0\right) , N_{\rm GW}=-16.1\,\left(1.73\,i+1.0\right) , N_{\rm GW}=32.1 \right] \\
+\m  \left[ N_{\rm GW}=2.8\,\left(1.7\,i-1.0\right) , N_{\rm GW}=-2.8\,\left(1.7\,i+1.0\right) , N_{\rm GW}=5.6 \right] \\
+\m  \left[ N_{\rm GW}=18.\,\left(1.7\,i-1.0\right) , N_{\rm GW}=-18.\,\left(1.7\,i+1.0\right) , N_{\rm GW}=35. \right] \\
+\m  \left[ N_{\rm GW}=13.\,\left(1.7\,i-1.0\right) , N_{\rm GW}=-13.\,\left(1.7\,i+1.0\right) , N_{\rm GW}=25. \right] \\
 \end{maxima}
 Obviously the real solutions (printed rightmost) are the ones with
 physical meaning.
@@ -280,9 +319,9 @@ ev(float(CompRate), append([NGW=7, Nfacet=1],  SKA1Low) );
 ev(float(CompRate), append([Nfacet=1 , NGW=44],  SKA1Mid) );
 ev(float(CompRate), append([ NGW=33, Nfacet=1],  SKA1Survey) );
 \maximaoutput*
-\m  8.32 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  9.96 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  7.12 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  1.3 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  1.3 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  9.7 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 again this is per half-major cycle.
 
@@ -307,21 +346,40 @@ multiplication.  The computational cost can therefore be estimated as:
 gcfc1 : [NGCF = sqrt(NAA**2+NGW**2),
          FNGCF = Qgcf * NGCF] ;
 gcfrate : (5 `Ops) *  (FNGCF ** 2) * log2(FNGCF ** 2)  / Tion * Nbl *
+Qfcv / 10 *
 Nfacet**2;
 
-ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9],gcfc1), infeval);
+ev( gcfrate, append([Qgcf=8, Qfcv=1], gcfc1),infeval);
+ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1],gcfc1),
+infeval);
 
-float(ev( gcfrate, append(gcfc1, [NGW=7, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Low), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=44, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Mid), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=33, Nfacet=1, Tion= 60`s, Qgcf=8, NAA=9]  , SKA1Survey), infeval));
+float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=6],gcfc1,SKA1Low), infeval));
+float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=35],gcfc1,SKA1Mid), infeval));
+float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=25],gcfc1,SKA1Survey), infeval));
+
+float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1, Tion= 60`s, Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1, Tion= 60`s, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Tion= 60`s,
+Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
+
+float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1,  Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1,  Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
 
 \maximaoutput*
 \m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+N_{\rm AA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
-\m  {{20\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,\mathrm{Tion}}}\;\mathrm{Ops} \\
-\m  {{160\,\mathrm{tdump}\,\log \left(8\,\sqrt{N_{\rm GW}^2+81}\right)}\over{\log 2\,\mathrm{Tion}}} \\
-\m  4.84 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  6.01 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  1.7 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Qfcv}\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,\mathrm{Tion}}}\;\mathrm{Ops} \\
+\m  {{128\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)\,\log \left(8\,\sqrt{N_{\rm GW}^2+N_{\rm AA}^2}\right)}\over{\log 2\,\mathrm{Tion}}}\;\mathrm{Ops} \\
+\m  {{8\,t_{\rm dump}\,\log \left(8\,\sqrt{N_{\rm GW}^2+81}\right)}\over{\log 2\,\mathrm{Tion}}} \\
+\m  {{31.}\over{\mathrm{Tion}}}\;\mathrm{s} \\
+\m  {{5.2}\over{\mathrm{Tion}}}\;\mathrm{s} \\
+\m  {{19.}\over{\mathrm{Tion}}}\;\mathrm{s} \\
+\m  4.3 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  3.7 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  9.8 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{2.6 \times 10^{+16}}\over{\mathrm{Tion}}}\;\mathrm{Ops} \\
+\m  {{2.2 \times 10^{+16}}\over{\mathrm{Tion}}}\;\mathrm{Ops} \\
+\m  {{5.9 \times 10^{+16}}\over{\mathrm{Tion}}}\;\mathrm{Ops} \\
 \end{maxima}
 
 
@@ -390,10 +448,10 @@ calcTel(wsGridRate, SKA1Mid);
 calcTel(wsGridRate, SKA1Survey);
 
 \maximaoutput*
-\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+\mathrm{NAA}^2\right)}\over{\mathrm{tdump}}}\;\mathrm{Ops} \\
-\m  \mathrm{wsGridRate(SKA1Low)}=3.58 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2040816.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{wsGridRate(SKA1Mid)}=1.65 \times 10^{+12}\,N_{\rm facet}^2\,\left({{4.444 \times 10^{+7}}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mathrm{wsGridRate(SKA1Survey)}=2.24 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2777778.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.0\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\m  \mathrm{wsGridRate(SKA1Low)}=3.6 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2040816.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{wsGridRate(SKA1Mid)}=1.6 \times 10^{+12}\,N_{\rm facet}^2\,\left({{4.44 \times 10^{+7}}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mathrm{wsGridRate(SKA1Survey)}=2.2 \times 10^{+12}\,N_{\rm facet}^2\,\left({{2777778.}\over{N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \subsubsection{Image-plane correction}
@@ -415,9 +473,9 @@ calcTel(wsImCorrectTot, SKA1Survey);
 
 \maximaoutput*
 \m  {{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Low)}=6.69 \times 10^{+15}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Mid)}=1.46 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Survey)}=3.28 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Low)}=6.7 \times 10^{+15}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Mid)}=1.5 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Survey)}=3.3 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
 \end{maxima}
 
 \subsubsection{FFT compute requirement}
@@ -462,12 +520,13 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 
 \maximaoutput*
 \m  \mathbf{true} \\
+\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}}=\left({{{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\right)\;\mathrm{Ops} \\
 \m  \left[ \left[ \mathrm{wsNWPlanes}=234. \right]  \right] \\
-\m  6.91 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  6.9 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \left[ \left[ \mathrm{wsNWPlanes}=174. \right]  \right] \\
-\m  7.41 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \left[ \left[ \mathrm{wsNWPlanes}=60.3 \right]  \right] \\
-\m  5.32 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  7.4 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \left[ \left[ \mathrm{wsNWPlanes}=60. \right]  \right] \\
+\m  5.3 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
