@@ -14,6 +14,7 @@ declare_unit_conversion (byte = 8 * bit) $
 declare_unit_conversion (Mbyte = 1e6 * byte) $
 declare_unit_conversion (Gbyte = 1e9 * byte) $
 declare_unit_conversion (Tbyte = 1e12 * byte) $
+declare_unit_conversion (Pbyte = 1e15 * byte) $
 
 declare_unit_conversion (GHz = 1e9 * Hz) $
 declare_unit_conversion (MHz = 1e6 * Hz) $
@@ -31,6 +32,7 @@ log2(x) := log(x) / log(2)$
 log2u(x) := log(unitsimpe(x)) / log(2)$
 
 texput(Na, "N_{\\rm a}")$
+texput(tdump, "t_{\\rm dump}")$
 texput(Nbeam, "N_{\\rm beam}")$
 texput(DeltaNu, "\\Delta \\nu")$
 texput(deltaNu, "\\delta \\nu")$
