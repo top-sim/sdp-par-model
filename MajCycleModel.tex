@@ -281,7 +281,6 @@ calcTel(CompRate, SKA1Low);
 calcTel(CompRate, SKA1Mid);
 calcTel(CompRate, SKA1Survey);
 \maximaoutput*
-\m  {{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \mathrm{CompRate(SKA1Low)}=\left(7.2 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{1.0 \times 10^{+14}\,\log \left({{1.31 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{6.9 \times 10^{+14}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \mathrm{CompRate(SKA1Mid)}=\left(3.3 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{1.0 \times 10^{+16}\,\log \left({{2.84 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{7.1 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \mathrm{CompRate(SKA1Survey)}=\left(4.5 \times 10^{+12}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+81.\right)+{{5.7 \times 10^{+15}\,\log \left({{1.78 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{N_{\rm facet}\,N_{\rm GW}}}+{{4.0 \times 10^{+16}}\over{N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
@@ -329,6 +328,37 @@ One thing to note is that kernel size of $\sqrt(9^2+7^2)\sim 11$ will
 likely not be enough to capture the A term for SKA1 Low. It may
 therefore be necessary to use kernels which are larger than this for
 SKA1 Low, leading to higher computational load. 
+
+\section{Working memory and computational intensity}
+
+\subsection{Computational intensity}
+
+A crude first estimate of the computational intensity can be done by
+dividing the most largest data set (visibilities) and the computing
+requirements computed above. 
+
+Note that: 
+\begin{itemize}
+\item Here I assume 8 bytes per visibility which assumes a very
+  efficient data format, a conservative estimate would be at least 16
+  bytes
+\item The division is of the visibility rate vs half-cycle compute
+  requirements. This number is therefore independent of the number of
+  cycles
+\end{itemize}
+
+\begin{maxima}[]
+CompIntens1: CompRate /  (VisInRate * 8 `byte);
+
+ev(float(CompIntens1), append([ NGW=6, Nfacet=1],  SKA1Low));
+ev(float(CompIntens1), append([Nfacet=1 , NGW=35],  SKA1Mid) );
+ev(float(CompIntens1), append([ NGW=25, Nfacet=1],  SKA1Survey) );
+\maximaoutput*
+\m  \left({{\left(N_{\rm a}-1\right)^ {- 1 }\,N_{\rm a}^ {- 1 }\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,t_{\rm dump}}\over{16}}\;{{1}\over{\mathrm{byte}}}\right)\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}}\right) \\
+\m  177.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  3844.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  2031.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\end{maxima}
 
 \section{Computing the convolution kernels}
 
@@ -488,8 +518,6 @@ total observation (and is not a rate).
 \begin{maxima}[]
 wsFFTTot: (5 `Ops) * NPix **2 * log2(NPix **2)  * Nf * Nbeam * 4 *
 Nfacet**2 * wsNWPlanes;
-\maximaoutput*
-\m  {{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}\;\mathrm{Ops} \\
 \end{maxima}
 
 \subsubsection{Total compute requirement}
@@ -520,7 +548,6 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 
 \maximaoutput*
 \m  \mathbf{true} \\
-\m  {{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{.012\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{.12\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}}=\left({{{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\right)\;\mathrm{Ops} \\
 \m  \left[ \left[ \mathrm{wsNWPlanes}=234. \right]  \right] \\
 \m  6.9 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \left[ \left[ \mathrm{wsNWPlanes}=174. \right]  \right] \\
