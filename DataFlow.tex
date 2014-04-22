@@ -201,6 +201,20 @@ calcTel(SDPNoFilesHyp, SKA1Survey);
 
 
 
+\section{UV Buffer -- throughput requirements}
+
+\subsection{Current technology -- derivation backed out of compute}
+
+\cite{MajCycleModel} estimates the computational intensity of the
+major cycle to be about 200-2000 depending on the telescope. Today one
+K20 GPU can do approximately 1.4 TFLOPs peak. We therefore need to
+supply it with about 7 GB/s of visibility data to ensure it runs at
+optimal efficiency. 
+
+Currently HDD/SSD units achieve maximum performance of about 500 MB/s.
+In current technology we need to have a minimum of 15 SATA drives /
+K20 GPU to keep the GPU filled with UV data. 
+
 
 \bibliographystyle{mn2eurl} 
 \bibliography{ska.bib}
