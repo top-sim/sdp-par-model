@@ -383,33 +383,55 @@ ev( gcfrate, append([Qgcf=8, Qfcv=1], gcfc1),infeval);
 ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1],gcfc1),
 infeval);
 
-float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=6],gcfc1,SKA1Low), infeval));
-float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=35],gcfc1,SKA1Mid), infeval));
-float(ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1,NGW=25],gcfc1,SKA1Survey), infeval));
-
-float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1, Tion= 60`s, Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1, Tion= 60`s, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Tion= 60`s,
-Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
-
-float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1,  Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1,  Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
-
 \maximaoutput*
 \m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+N_{\rm AA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
 \m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Qfcv}\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,t_{\rm ionsph}}}\;\mathrm{Ops} \\
 \m  {{128\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)\,\log \left(8\,\sqrt{N_{\rm GW}^2+N_{\rm AA}^2}\right)}\over{\log 2\,t_{\rm ionsph}}}\;\mathrm{Ops} \\
 \m  {{8\,t_{\rm dump}\,\log \left(8\,\sqrt{N_{\rm GW}^2+81}\right)}\over{\log 2\,t_{\rm ionsph}}} \\
+\end{maxima}
+
+The ratio of operation count for imaging (FFT+Reprojection+Gridding)
+to operation count for the convolution kernel can be expressed as
+function of the ionospheric timescale:
+
+\begin{maxima}[]
+float(ev( gcfrate/ GridRate, 
+          append([Qgcf=8, NAA=9, Qfcv=1,NGW=6],gcfc1,SKA1Low), infeval));
+float(ev( gcfrate/ GridRate, 
+          append([Qgcf=8, NAA=9, Qfcv=1,NGW=35],gcfc1,SKA1Mid), infeval));
+float(ev( gcfrate/ GridRate, 
+          append([Qgcf=8, NAA=9, Qfcv=1,NGW=25],gcfc1,SKA1Survey), infeval));
+\maximaoutput*
 \m  {{31.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
 \m  {{5.2}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
 \m  {{19.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
-\m  4.3 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  3.7 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  9.8 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+The operation rate as function  of ionospheric timescale is given by:
+\begin{maxima}[]
+float(ev( gcfrate, 
+          append(gcfc1, [NGW=6, Nfacet=1,  Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
+float(ev( gcfrate, 
+          append(gcfc1, [NGW=35, Nfacet=1,  Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
+float(ev( gcfrate, 
+          append(gcfc1, [NGW=25, Nfacet=1, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
+\maximaoutput*
 \m  {{2.6 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
 \m  {{2.2 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
 \m  {{5.9 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
+\end{maxima}
+
+If we assume 60 second ionospheric time rate, we get following
+operation rates (per half-major-cycle as everywhere).
+\begin{maxima}[]
+float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1, Tion= 60`s, Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1, Tion= 60`s, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
+float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Tion= 60`s,
+Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
+\maximaoutput*
+\m  4.3 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  3.7 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  9.8 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
