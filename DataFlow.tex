@@ -43,7 +43,7 @@ design data rates in terms of TBytes/s.
 SKA1Low : [ tdump = 0.6 `s, Na = 1024 , Nf= 256000, Nbeam=1];
 SKA1Mid : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1];
 SKA1Survey: [tdump = 0.3`s, Na=96, Nf=256000, Nbeam=36];
-SDPInRate : Na * (Na-1)/2 * Nf * Nbeam* 4 / tdump * (8`byte) ``(Tbyte);
+SDPInRate : Na * (Na-1)/2 * Nf * Nbeam* 4 * (8`byte) / tdump  ``(Tbyte);
 SDPInRate `` byte;
 
 calcTel(SDPInRate, SKA1Low);
