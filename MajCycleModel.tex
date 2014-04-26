@@ -360,6 +360,50 @@ ev(float(CompIntens1), append([ NGW=25, Nfacet=1],  SKA1Survey) );
 \m  2031.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
 \end{maxima}
 
+Note that if faceting is done in the simplest way, i.e., if the entire
+visibility set is iterated for each facet from the beginning, then the
+computational intensity \emph{decreases} in rough proportion to the
+number of facets. The logical approach would therefore be phase rotate
+to each facet, average the data in time, and record the averaged data. 
+
+\subsection{Working memory requirements}
+
+The working random access memory required to process each channel
+comprises of the target grid in $uv$ plane and potentially the cached
+convolution functions. The target grid size is double precision
+complex number and therefore:
+
+\begin{maxima}[]
+TargetGridSize: NPix**2 * 16`byte;
+
+ev(TargetGridSize, append([Nfacet=1], SKA1Low)) `` Gbyte;
+ev(TargetGridSize, append([Nfacet=1], SKA1Mid)) `` Gbyte;
+ev(TargetGridSize, append([Nfacet=1], SKA1Survey)) `` Gbyte;
+\maximaoutput*
+\m  {{256\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\;\mathrm{byte} \\
+\m  2.1\;\mathrm{Gbyte} \\
+\m  46.\;\mathrm{Gbyte} \\
+\m  2.8\;\mathrm{Gbyte} \\
+\end{maxima}
+
+Keeping all of the target grids in memory for the most challenging
+case would require:
+\begin{maxima}[]
+ev(TargetGridSize*Nf , append([Nfacet=1], SKA1Low)) `` Pbyte;
+ev(TargetGridSize*Nf , append([Nfacet=1], SKA1Mid)) `` Pbyte;
+ev(TargetGridSize*Nf , append([Nfacet=1], SKA1Survey)) `` Pbyte;
+
+\maximaoutput*
+\m  .53\;\mathrm{Pbyte} \\
+\m  12.\;\mathrm{Pbyte} \\
+\m  .73\;\mathrm{Pbyte} \\
+\end{maxima}
+of random access memory \footnote{Current top supercomputer has 1
+  PetaByte of RAM}. This requirement can however be reduced both
+sequentially processing the channels rather than keeping all of them
+going at the same time or by employing faceting.
+
+
 \section{Computing the convolution kernels}
 
 Computing the convolution functions is a fairly complex process which

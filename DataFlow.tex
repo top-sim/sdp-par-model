@@ -215,6 +215,22 @@ Currently HDD/SSD units achieve maximum performance of about 500 MB/s.
 In current technology we need to have a minimum of 15 SATA drives /
 K20 GPU to keep the GPU filled with UV data. 
 
+\section{Gridded data}
+
+By gridded data I mean either the data in $uv$ plane (double precision
+complex) or sky images (double precision).
+
+\subsection{Storing $uv$ grids out of working memory}
+
+For the maximum case of SKA1 Mid and assuming 200 seconds for the
+snapshot duration, the rate at which they need to be shuffled in and
+out of working memory is about :
+\begin{maxima}[]
+float( (10 `Pbyte)  / (200 `s)) `` Tbyte;
+\maximaoutput*
+\m  {{50.}\over{s}}\;\mathrm{Tbyte} \\
+\end{maxima}
+
 
 \bibliographystyle{mn2eurl} 
 \bibliography{ska.bib}
