@@ -479,6 +479,43 @@ Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
 \end{maxima}
 
 
+\section{Scenario: SKA1Mid with 120\,km Baselines}
+
+In-prep ECP: SKA1Mid to have 120\,km maximum baseline and
+proportionally shorter dump time.
+
+
+\begin{maxima}[]
+SKA1MidECP : [ tdump = (0.08 * 200/120) `s, Na = 190+64 , Nf= 256000,
+Nbeam=1, Ds=15`m, lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 120e3`m, NAA=9];
+\maximaoutput*
+\m  \left[ t_{\rm dump}=.13\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=.26\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=120000.\;\mathrm{m} , N_{\rm AA}=9 \right] \\
+\end{maxima}
+
+The optimal w-kernel/ snapshot duration changes to:
+
+\begin{maxima}[]
+  float(solve(diff(ev(CompRate, SKA1MidECP, Nfacet=1) / ( 1` (Ops/s)), NGW), NGW));
+\maximaoutput*
+\m  \left[ N_{\rm GW}=12.\,\left(1.7\,i-1.0\right) , N_{\rm GW}=-12.\,\left(1.7\,i+1.0\right) , N_{\rm GW}=25. \right] \\
+\end{maxima}
+
+At optimal kernel size the compute FLOP count for gridding,FFT and
+coordinate projection according to the model is:
+\begin{maxima}[]
+ev(float(CompRate), append([NGW=25, Nfacet=1],  SKA1MidECP) );
+\maximaoutput*
+\m  3.8 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+The ratio to non-ECPd SKA1Mid is:
+\begin{maxima}[]
+ev(float(CompRate), append([NGW=25, Nfacet=1],  SKA1MidECP) )/ev(float(CompRate), append([Nfacet=1 , NGW=35],  SKA1Mid) );
+\maximaoutput*
+\m  0.3 \\
+\end{maxima}
+
+
 \section{Alternative to snapshots: W-stacking}
 
 For outline on ``w-stacking'' see also
