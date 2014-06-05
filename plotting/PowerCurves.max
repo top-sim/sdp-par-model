@@ -1,0 +1,7 @@
+/* Plots of power consumption */
+
+pcPE : (10e9` (Ops/ (s) ));
+
+
+
+pcPW(bmax, nf) := ev(float(CompRate), append([Bmax= bmax `m, NGW=25, Nfacet=1, Nf=nf],  SKA1MidECP) ) * 20 / pcPE;
