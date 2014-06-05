@@ -390,14 +390,14 @@ Keeping all of the target grids in memory for the most challenging
 case would require (factor of four to account for four polarisation
 products):
 \begin{maxima}[]
-ev(TargetGridSize* Nf *4   , append([Nfacet=1], SKA1Low)) `` Pbyte;
-ev(TargetGridSize*Nf * 4 , append([Nfacet=1], SKA1Mid)) `` Pbyte;
-ev(TargetGridSize*Nf * 4 , append([Nfacet=1], SKA1Survey)) `` Pbyte;
+ev(TargetGridSize* Nf *4 * Nbeam  , append([Nfacet=1], SKA1Low)) `` Pbyte;
+ev(TargetGridSize*Nf * 4 * Nbeam , append([Nfacet=1], SKA1Mid)) `` Pbyte;
+ev(TargetGridSize*Nf * 4 * Nbeam , append([Nfacet=1], SKA1Survey)) `` Pbyte;
 
 \maximaoutput*
 \m  3.2\;\mathrm{Pbyte} \\
 \m  70.\;\mathrm{Pbyte} \\
-\m  4.4\;\mathrm{Pbyte} \\
+\m  157.\;\mathrm{Pbyte} \\
 \end{maxima}
 of random access memory \footnote{Current top supercomputer has 1
   PetaByte of RAM}. This requirement can however be reduced both
