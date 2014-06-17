@@ -13,13 +13,21 @@ computations without using emaxima mode.
 
 * Extract Maxima code from .tex files
 
-The following awk program will extract all the maxima inputs from a 
-.tex file:
+The following command (using awk) will extract all the maxima inputs from a 
+.tex file and create wxMaxima workbooks:
 
-awk '/\\begin{maxima}/{a=1;next}/maximaoutput/{a=0}a' mytexfile.tex
+    awk -f dump_maxima_code.awk MajCycleModel.tex    > MajCycleModel.wxm
+    awk -f dump_maxima_code.awk DataFlow.tex         > DataFlow.wxm
+    awk -f dump_maxima_code.awk CompHWPowerModel.tex > CompHWPowerModel.wxm
 
-(You will need to install awk if you do not have it already). Feed
-this extract into Maxima and then you can do interactive computations.
+(You will need to install awk if you do not have it already).
+
+If you want to use plain Maxima code, you can use instead
+
+    awk '/\\begin{maxima}/{a=1;next}/maximaoutput/{a=0}a' latexfile.tex
+
+for each TeX file. You can then feed that extract into Maxima 
+in oder to do interactive computations.
 
 You can edit the TeX file directly then, paste the input into maxima
 and paste output back into emacs after the maxima output line.
