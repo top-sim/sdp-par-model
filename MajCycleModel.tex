@@ -115,6 +115,19 @@ calcTel(NPix, SKA1Survey);
 
 The size of $uv$-grids is assumed to be the same. 
 
+\subsection{Size of w-projection kernels}
+
+The size of support of w-projection kernels is analysed by
+\cite{Mitchell2014} who find that:
+
+\begin{maxima}[]
+NGWfn (w, eta )  := 2 * sqrt (( ((w * (lambda/ Ds) /2))**2 + (w * (lambda/ Ds) /2 )/(3.14 *eta/sqrt(w)))``1)  / (Ds/lambda/2);
+\maximaoutput*
+\m  \mathrm{NGWfn}\left(w , \eta\right)\mathbin{:=}{{2\,\sqrt{\left(\left({{w\,\left({{\lambda}\over{D_{\rm s}}}\right)}\over{2}}\right)^2+{{{{w\,\left({{\lambda}\over{D_{\rm s}}}\right)}\over{2}}}\over{{{3.1\,\eta}\over{\sqrt{w}}}}}\right) `` 1}}\over{{{{{D_{\rm s}}\over{\lambda}}}\over{2}}}} \\
+\end{maxima}
+where $\eta$ is the amplitude level of the kernel where we wish to
+cutoff and $w$ is the w term to be corrected. 
+
 \subsection{Snapshot duration}
 
 Worst case scenario is that that the baseline is rotating exactly in
