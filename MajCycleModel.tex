@@ -527,21 +527,16 @@ between the image plane where combination of effects is done by
 multiplication.  The computational cost can therefore be estimated as:
 
 \begin{maxima}[]
-gcfc1 : [NGCF = sqrt(NAA**2+NGW**2),
+gcfc1 : [NGCF = sqrt(NAA**2+'qty(NGW**2)),
          FNGCF = Qgcf * NGCF] ;
 gcfrate : (5 `Ops) *  (FNGCF ** 2) * log2(FNGCF ** 2)  / Tion * Nbl *
 Qfcv / 10 *
 Nfacet**2;
 
-ev( gcfrate, append([Qgcf=8, Qfcv=1], gcfc1),infeval);
-ev( gcfrate/ GridRate, append([Qgcf=8, NAA=9, Qfcv=1],gcfc1),
-infeval);
 
 \maximaoutput*
-\m  \left[ \mathrm{NGCF}=\sqrt{N_{\rm GW}^2+N_{\rm AA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
+\m  \left[ \mathrm{NGCF}=\sqrt{\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2} , \mathrm{FNGCF}=\mathrm{Qgcf}\,\mathrm{NGCF} \right] \\
 \m  {{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Qfcv}\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,t_{\rm ionsph}}}\;\mathrm{Ops} \\
-\m  {{128\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)\,\log \left(8\,\sqrt{N_{\rm GW}^2+N_{\rm AA}^2}\right)}\over{\log 2\,t_{\rm ionsph}}}\;\mathrm{Ops} \\
-\m  {{8\,t_{\rm dump}\,\log \left(8\,\sqrt{N_{\rm GW}^2+81}\right)}\over{\log 2\,t_{\rm ionsph}}} \\
 \end{maxima}
 
 The ratio of operation count for imaging (FFT+Reprojection+Gridding)
@@ -549,43 +544,42 @@ to operation count for the convolution kernel can be expressed as
 function of the ionospheric timescale:
 
 \begin{maxima}[]
-float(ev( gcfrate/ GridRate, 
-          append([Qgcf=8, NAA=9, Qfcv=1,NGW=6],gcfc1,SKA1Low), infeval));
-float(ev( gcfrate/ GridRate, 
-          append([Qgcf=8, NAA=9, Qfcv=1,NGW=35],gcfc1,SKA1Mid), infeval));
-float(ev( gcfrate/ GridRate, 
-          append([Qgcf=8, NAA=9, Qfcv=1,NGW=25],gcfc1,SKA1Survey), infeval));
+
+ConvToGridRatio : ev(gcfrate/ GridRate, gcfc1);
+
+calcTelA(ConvToGridRatio, SKA1Low, [Nfacet=1, twsnap=40`s, Qfcv=1, Qgcf=8, gcfc1] );
+calcTelA(ConvToGridRatio, SKA1Mid, [Nfacet=1, twsnap=200`s, Qfcv=1, Qgcf=8, gcfc1]);
+calcTelA(ConvToGridRatio, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1]);
+
 \maximaoutput*
-\m  {{30.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
-\m  {{5.2}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
-\m  {{18.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
+\m  {{\mathrm{Qfcv}\,\mathrm{Qgcf}^2\,t_{\rm dump}\,\mathrm{NGCF}^2\,\log \left(\mathrm{Qgcf}\,\mathrm{NGCF}\right)\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)^ {- 1 }}\over{8\,\log 2\,t_{\rm ionsph}}} \\
+\m  \mbox{{}ConvToGridRatio(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{31.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
+\m  \mbox{{}ConvToGridRatio(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{4.9}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
+\m  \mbox{{}ConvToGridRatio(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{17.}\over{t_{\rm ionsph}}}\;\mathrm{s} \\
 \end{maxima}
 
 The operation rate as function  of ionospheric timescale is given by:
 \begin{maxima}[]
-float(ev( gcfrate, 
-          append(gcfc1, [NGW=6, Nfacet=1,  Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
-float(ev( gcfrate, 
-          append(gcfc1, [NGW=35, Nfacet=1,  Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
-float(ev( gcfrate, 
-          append(gcfc1, [NGW=25, Nfacet=1, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
+calcTelA(gcfrate, SKA1Low, [Nfacet=1, twsnap=40`s, Qfcv=1, Qgcf=8, gcfc1] );
+calcTelA(gcfrate, SKA1Mid, [Nfacet=1, twsnap=200`s, Qfcv=1, Qgcf=8, gcfc1]);
+calcTelA(gcfrate, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1]);
 \maximaoutput*
-\m  {{2.58 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
-\m  {{2.24 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
-\m  {{5.87 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
+\m  \mbox{{}gcfrate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{3.04 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
+\m  \mbox{{}gcfrate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{1.03 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
+\m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF]]){}}={{3.14 \times 10^{+16}}\over{t_{\rm ionsph}}}\;\mathrm{Ops} \\
 \end{maxima}
 
 If we assume 60 second ionospheric time rate, we get following
 operation rates (per half-major-cycle as everywhere).
 \begin{maxima}[]
-float(ev( gcfrate, append(gcfc1, [NGW=6, Nfacet=1, Tion= 60`s, Qgcf=8,Qfcv=1, NAA=9]  , SKA1Low), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=35, Nfacet=1, Tion= 60`s, Qgcf=8, Qfcv=1,NAA=9]  , SKA1Mid), infeval));
-float(ev( gcfrate, append(gcfc1, [NGW=25, Nfacet=1, Tion= 60`s,
-Qgcf=8, Qfcv=1,NAA=9]  , SKA1Survey), infeval));
+calcTelA(gcfrate, SKA1Low, [Nfacet=1, twsnap=40`s, Qfcv=1, Qgcf=8,  gcfc1, Tion=60`s] );
+calcTelA(gcfrate, SKA1Mid, [Nfacet=1, twsnap=200`s, Qfcv=1, Qgcf=8, gcfc1, Tion=60`s]);
+calcTelA(gcfrate, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1, Tion=60`s]);
+
 \maximaoutput*
-\m  4.3 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  3.74 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  9.78 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF],Tion = 60 ` s]){}}=5.07 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF],Tion = 60 ` s]){}}=1.72 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF],Tion = 60 ` s]){}}=5.24 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
@@ -605,28 +599,21 @@ Nbeam=1, Ds=15`m, lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 120e3`m, NAA=9];
 The optimal w-kernel/ snapshot duration changes to:
 
 \begin{maxima}[]
-  float(solve(diff(ev(CompRate, SKA1MidECP, Nfacet=1) / ( 1` (Ops/s)), NGW), NGW));
+  find_root(diff(ev(CompRate, twsnap = xx `s, SKA1MidECP, Nfacet=1, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
 \maximaoutput*
-\m  \left[ N_{\rm GW}=12.\,\left(1.7\,i-1.0\right) , N_{\rm GW}=-12.\,\left(1.7\,i+1.0\right) , N_{\rm GW}=24. \right] \\
+\m  220. \\
 \end{maxima}
 
-At optimal kernel size the compute FLOP count for gridding,FFT and
-coordinate projection according to the model is:
+At optimal w-snapshot duration the compute FLOP count for gridding,FFT
+and coordinate projection according to the model is:
 \begin{maxima}[]
-ev(float(CompRate), append([NGW=25, Nfacet=1],  SKA1MidECP) );
+calcTelA(CompRate, SKA1MidECP, [Nfacet=1, twsnap=220`s]);
 \maximaoutput*
-\m  3.82 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\end{maxima}
-
-The ratio to non-ECPd SKA1Mid is:
-\begin{maxima}[]
-ev(float(CompRate), append([NGW=25, Nfacet=1],  SKA1MidECP) )/ev(float(CompRate), append([Nfacet=1 , NGW=35],  SKA1Mid) );
-\maximaoutput*
-\m  0.3 \\
+\m  \mbox{{}CompRate(SKA1MidECP,[Nfacet = 1,twsnap = 220 ` s]){}}=1.7 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
-\section{Alternative to snapshots: W-stacking}
+\section{Alternative to snapshots: W-stacking (to be reviesd)} 
 
 For outline on ``w-stacking'' see also
 \cite{VoronkovCalim2010Gridding}, and \cite{2013A&A...553A.105T}. The
@@ -771,8 +758,6 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 \m  \left[ \left[ \mathrm{wsNWPlanes}=60. \right]  \right] \\
 \m  5.31 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
-
-
 
 
 
