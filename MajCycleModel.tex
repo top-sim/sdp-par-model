@@ -358,14 +358,15 @@ Note that:
 \begin{maxima}[]
 CompIntens1: CompRate /  (VisInRate * 8 `byte);
 
-ev(float(CompIntens1), append([ NGW=6, Nfacet=1],  SKA1Low));
-ev(float(CompIntens1), append([Nfacet=1 , NGW=35],  SKA1Mid) );
-ev(float(CompIntens1), append([ NGW=25, Nfacet=1],  SKA1Survey) );
+calcTelA(CompIntens1, SKA1Low, [Nfacet=1, twsnap=40`s] );
+calcTelA(CompIntens1, SKA1Mid, [Nfacet=1, twsnap=200`s]);
+calcTelA(CompIntens1, SKA1Survey, [Nfacet=1, twsnap=550`s]);
+
 \maximaoutput*
-\m  \left({{\left(N_{\rm a}-1\right)^ {- 1 }\,N_{\rm a}^ {- 1 }\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,t_{\rm dump}}\over{16}}\;{{1}\over{\mathrm{byte}}}\right)\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{0.01\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{0.1\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}}\right) \\
-\m  170.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  3800.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  2000.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  {{\left(N_{\rm a}-1\right)^ {- 1 }\,N_{\rm a}^ {- 1 }\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,t_{\rm dump}\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{16}}\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CompIntens1(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=220.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CompIntens1(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=1500.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CompIntens1(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=890.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
 \end{maxima}
 
 Note that if faceting is done in the simplest way, i.e., if the entire
@@ -447,16 +448,16 @@ intensity is:
 
 CiWorkingMem: ( (CompRate * 20)  * twsnap) / (TargetGridSize* Nf *4 * Nbeam);
 
-float(ev(CiWorkingMem  , append([Nfacet=1, NGW=6], SKA1Low) ,infeval));
+calcTelA(CiWorkingMem, SKA1Low, [Nfacet=1, twsnap=40`s] );
+calcTelA(CiWorkingMem, SKA1Mid, [Nfacet=1, twsnap=200`s]);
+calcTelA(CiWorkingMem, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
-float(ev(CiWorkingMem  , append([Nfacet=1, NGW=35], SKA1Mid) ,infeval));
-float(ev(CiWorkingMem  , append([Nfacet=1, NGW=25], SKA1Survey) ,infeval));
 
 \maximaoutput*
-\m  \left({{350.\,D_{\rm s}^3\,N_{\rm facet}^3\,N_{\rm GW}}\over{B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}}\;{{\mathrm{s}}\over{\mathrm{byte}}}\right)\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm GW}^2+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops}+\left({{0.01\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}+{{0.1\,B_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^3\,N_{\rm facet}\,N_{\rm GW}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}}\right) \\
-\m  450.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  260.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  230.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  {{5\,B_{\rm max}^ {- 2 }\,D_{\rm s}^2\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,N_{\rm facet}^2\,\mathrm{twsnap}\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{384}}\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=390.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=290.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=280.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
 \end{maxima}
 
 These are relatively small numbers. This amount of shuffling can be
@@ -500,16 +501,17 @@ target grid:
 
 \begin{maxima}[]
 
-float(ev((CompRate*20)/NGrids, append([Nfacet=1, NGW=6], SKA1Low)
-,infeval)) `` 1;
+FlopsPerGrid : ((CompRate*20)/NGrids)``1;
 
-float(ev((CompRate * 20)/NGrids  , append([Nfacet=1, NGW=35], SKA1Mid)
-,infeval)) ``1 ;
-float(ev((CompRate*20)/NGrids  , append([Nfacet=1, NGW=25], SKA1Survey) ,infeval))``1;
+calcTelA(FlopsPerGrid, SKA1Low, [Nfacet=1, twsnap=40`s] );
+calcTelA(FlopsPerGrid, SKA1Mid, [Nfacet=1, twsnap=200`s]);
+calcTelA(FlopsPerGrid, SKA1Survey, [Nfacet=1, twsnap=550`s]);
+
 \maximaoutput*
-\m  {{7.92 \times 10^{+10}\,\mathrm{Ops}}\over{s}} \\
-\m  {{1.72 \times 10^{+13}\,\mathrm{Ops}}\over{s}} \\
-\m  {{7.76 \times 10^{+11}\,\mathrm{Ops}}\over{s}} \\
+\m  {{3\,B_{\rm max}^2\,D_{\rm s}^ {- 2 }\,N_{\rm facet}^ {- 2 }\,\mathrm{Ops}\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{390625000000}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=9.95 \times 10^{+10}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=7.0 \times 10^{+12}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=3.43 \times 10^{+11}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \section{Computing the convolution kernels}
