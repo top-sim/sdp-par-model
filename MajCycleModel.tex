@@ -582,6 +582,28 @@ calcTelA(gcfrate, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1, Ti
 \m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,[NGCF = sqrt('qty(16*'qty(3.48E-6*Bmax*twsnap*sqrt(Bmax*twsnap/lambda)/Ds ` 1/s^(3/2)+3.3E-10*Bmax^2*twsnap^2/Ds^2 ` 1/s^2)*lambda^2/Ds^2)+NAA^2),FNGCF = Qgcf*NGCF],Tion = 60 ` s]){}}=5.24 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
+\section{DFT source prediction}
+
+Taking the estimate for the number of FLOPs for DFT by
+\cite{Salvini2014Memo7} (one sided computation, not taking into
+account aperture array-specifics) we can compute the total FLOP count
+to predict the each visibility once for 10000 sources by the DFT
+method:
+
+\begin{maxima}[]
+DFTRate: ((72` Ops)  * Na * (Na-1) * SDft + (256`Ops) * Na * SDft)* Nf / tdump;
+
+calcTelA(DFTRate, SKA1Low, [SDft=1e4]);
+calcTelA(DFTRate, SKA1Mid, [SDft=1e4]);
+calcTelA(DFTRate, SKA1Survey, [SDft=1e4]);
+\maximaoutput*
+\m  {{N_{\rm f}\,\left(72\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,\mathrm{SDft}+256\,N_{\rm a}\,\mathrm{SDft}\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\m  \mbox{ DFTRate(SKA1Low,[SDft = 10000.]) }=3.2 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{ DFTRate(SKA1Mid,[SDft = 10000.]) }=1.5 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{ DFTRate(SKA1Survey,[SDft = 10000.]) }=5.8 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+
 
 \section{Scenario: SKA1Mid with 120\,km Baselines}
 
