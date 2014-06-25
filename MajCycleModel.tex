@@ -591,16 +591,16 @@ to predict the each visibility once for 10000 sources by the DFT
 method:
 
 \begin{maxima}[]
-DFTRate: ((72` Ops)  * Na * (Na-1) * SDft + (256`Ops) * Na * SDft)* Nf / tdump;
+DFTRate: ((72` Ops)  * Na * (Na-1) * SDft + (256`Ops) * Na * SDft)* Nf * Nbeam / tdump;
 
 calcTelA(DFTRate, SKA1Low, [SDft=1e4]);
 calcTelA(DFTRate, SKA1Mid, [SDft=1e4]);
 calcTelA(DFTRate, SKA1Survey, [SDft=1e4]);
 \maximaoutput*
-\m  {{N_{\rm f}\,\left(72\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,\mathrm{SDft}+256\,N_{\rm a}\,\mathrm{SDft}\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
-\m  \mbox{ DFTRate(SKA1Low,[SDft = 10000.]) }=3.2 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{ DFTRate(SKA1Mid,[SDft = 10000.]) }=1.5 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{ DFTRate(SKA1Survey,[SDft = 10000.]) }=5.8 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{N_{\rm beam}\,N_{\rm f}\,\left(72\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,\mathrm{SDft}+256\,N_{\rm a}\,\mathrm{SDft}\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\m  \mbox{{}DFTRate(SKA1Low,[SDft = 10000.]){}}=3.22 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}DFTRate(SKA1Mid,[SDft = 10000.]){}}=1.5 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}DFTRate(SKA1Survey,[SDft = 10000.]){}}=2.09 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
