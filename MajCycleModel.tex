@@ -28,12 +28,10 @@
 \section{Scope of this document}
 
 This document estimates the computational requirements for the SDP for
-each of the SKA telescopes. The estimate is made in terms of FLOPS:
-floating point operations per second.
-
-The estimate is currently provisional and subject to revision due to
-both improvements in our knowledge and inevitable discovery of errors
-of method or incorrect approximations in the calculations.
+each of the SKA telescopes.  The estimate is currently provisional and
+subject to revision due to both improvements in our knowledge and
+inevitable discovery of errors of method or incorrect approximations
+in the calculations.
 
 We currently only consider the computational cost of the `major
 cycle', i.e., the formation of dirty sky image from the visibilities
@@ -41,10 +39,6 @@ and the reverse step of estimating model visibilities from a trial sky
 brightness distribution. We do not take into account `minor-cycle'
 (i.e, image-plane deconvolution), flagging, calibration, point source
 finding or other data processing.
-
-We currently do not estimate the memory requirements or data transfer
-rates for the calculations.
-
 
 \section{Description of algorithms}
 
