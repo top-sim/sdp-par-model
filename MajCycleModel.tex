@@ -191,18 +191,19 @@ calcTel(FFTRate, SKA1Low);
 calcTel(FFTRate, SKA1Mid);
 calcTel(FFTRate, SKA1Survey);
 
-ev(FFTRate, append([Nfacet=1],SKA1Low));
-ev(FFTRate, append([Nfacet=1],SKA1Mid));
-ev(FFTRate, append([Nfacet=1],SKA1Survey));
+calcTelA(FFTRate, SKA1Low, [Nfacet=1, twsnap=40`s]);
+calcTelA(FFTRate, SKA1Mid, [Nfacet=1, twsnap=200`s]);
+calcTelA(FFTRate, SKA1Survey, [Nfacet=1, twsnap=550`s]);
+
 
 \maximaoutput*
 \m  {{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
-\m  \mathrm{FFTRate(SKA1Low)}={{9.64 \times 10^{+14}\,\log \left({{1.3 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
+\m  \mathrm{FFTRate(SKA1Low)}={{9.6 \times 10^{+14}\,\log \left({{1.31 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{FFTRate(SKA1Mid)}={{2.1 \times 10^{+16}\,\log \left({{2.84 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
-\m  \mathrm{FFTRate(SKA1Survey)}={{4.72 \times 10^{+16}\,\log \left({{1.77 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
-\m  {{1.24 \times 10^{+16}}\over{\log 2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
-\m  {{3.17 \times 10^{+17}}\over{\log 2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
-\m  {{6.22 \times 10^{+17}}\over{\log 2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
+\m  \mathrm{FFTRate(SKA1Survey)}={{4.7 \times 10^{+16}\,\log \left({{1.78 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
+\m  \mbox{ FFTRate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]) }=4.5 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{ FFTRate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]) }=2.3 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{ FFTRate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]) }=1.6 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \subsection{Reprojection rate}
