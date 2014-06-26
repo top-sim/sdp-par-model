@@ -1,15 +1,23 @@
-
 * Maxima 
 
-I currently use Maxima (http://maxima.sourceforge.net/) approximately
-version 5.30 (strictly: branch_5_30_base_110_ga2815dc). Probably best
-to go for the newest official version and let me know of any problems.
+I currently use Maxima (http://maxima.sourceforge.net/) version 5.32
+(current version in Ubuntu 14.04, easy to install on all other
+systems). Usually it is best for newcomers to use the newest official
+version and let me know of any problems.
+
+* Support file compmodel.max
+
+Most of the definitions of relations are done from within LaTeX
+document in somewhat of a literate programming style. However there is
+a support file (compmodel.max) that contains some pure maxima
+supporting code. This file should be loaded before any other work is
+done.
 
 * Emaxima 
 
-The tex files are prepared using Emacs and emaxima mode. The
+The tex files are maintained using Emacs and emaxima mode. The
 emaxima.el comes with the Maxima package. See below for doing
-computations without using emaxima mode. 
+computations without using emaxima mode.
 
 * Extract Maxima code from .tex files
 
