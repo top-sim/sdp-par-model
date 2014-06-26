@@ -33,12 +33,29 @@
   \item[$B_{\rm max}$] Maximum baseline length for a telescope
   \item[$N_{\rm a}$] Number of antennas/stations
   \item[$N_{\rm f}$] Number of frequency channels formed by the
-    correlator
+    correlator and provided to the SDP
   \item[$N_{\rm beam}$] Number of independent beams (for PAFs or AAs)
+  \item[$D_{\rm s}$] Diameter of dishes/ diameter of AA stations
   \item[$N_{\rm AA}$] Size of the gridding convolution function used
     to anti-alias the FFT, in pixels in one dimension (so overall
     kernel has $N_{\rm AA} \times N_{\rm AA}$ pixels)
-  \item[$N_{\rm pix}$] Size of image as number of pixels in one dimension
+
+  \item[$N_{\rm pix}$] Size of sky-plane images as number of pixels in
+    one dimension (i.e., the image size is $N_{\rm pix} \times N_{\rm
+      pix} $)
+
+  \item[$QPix$] Quality factor for size of image plane pixels, i.e.,
+    the factor by which image plane pixels over-sample the synthesised
+    beam
+
+  \item[$Qw$] Quality factor for size of $w$-kernels. $Qw=1$
+    corresponds to extending the w-kernel to the 1\% level. 
+
 \end{description}
 
 \end{document}
+
+
+% Local Variables:
+% LaTeX-command: "latex -shell-escape"
+% End:

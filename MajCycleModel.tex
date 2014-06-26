@@ -47,22 +47,16 @@ brightness distribution (`back step') and of the model visibilities
 (`forward step') will include correction of both A and $w$ terms by
 convolution in the $uv$ plane. See \cite{Cornwell2008-4703511},
 \cite{Hymphreys132}, \cite{2012SPIE.8500E..0LC},
-\cite{2008A&A...487..419B}.
-
-It is shown by \cite{Hymphreys132} that the required size of
-convolution kernel to adequately correct for the $w$ term is
-approximately $w \Theta_{\rm FoV}$. In general case $w$ can be as
-large as $B_{\rm max}/\lambda$ and as usual $\Theta_{\rm FoV} \sim
-\lambda/ D_{\rm s}$ giving un-feasibly large kernels of size $B_{\rm
-  max}/D_{\rm s}$ \citep[see discussion in][which is somewhat
-difficult to follow but is along these lines]{Kogan2012-VLA164}. For
-this reason it is assumed that the snapshot technique will be
-employed.
+\cite{2008A&A...487..419B}. The size of $w$ kernels are analysed by
+\cite{Hymphreys132} and \cite{Mitchell2014}. In general case
+$w$-kernels can be very large and so for this reason it is assumed a
+technique for controlling the $w$ term like snapshot or
+$w$-stacking. The $w$-snapshots approach is analysed in most detail.
 
 In current version of this computation each snapshot is assumed to
 require one FFT and one re-projection. The costs of computing PSFs etc
 are not accounted for. The relation for duration of snapshots is given
-below. 
+below.
 
 
 \section{Computations}
@@ -85,8 +79,8 @@ lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 50e3`m, NAA=9];
 \m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=50000.\;\mathrm{m} , N_{\rm AA}=9 \right] \\
 \end{maxima}
 Here $\lambda$ is a representative wavelength for calculation below.
-The calculations are made at this wavelength and not fully integrated
-over the bands of the telescope.
+All the calculations are made at single wavelength rather than being
+integrated over the bands of the telescope.
 
 \subsection{Image size}
 
@@ -113,7 +107,6 @@ The size of $uv$-grids is assumed to be the same.
 
 The size of support of w-projection kernels is analysed by
 \cite{Mitchell2014} who find that:
-
 \begin{maxima}[]
 NGWfn (w, eta )  := 2 * sqrt ('qty( ((w * (lambda/ Ds) /2))**2 + (w * (lambda/ Ds) /2 )/(3.14 *eta/sqrt(w))))  / (Ds/lambda/2);
 \maximaoutput*
@@ -215,8 +208,12 @@ ev(FFTRate, append([Nfacet=1],SKA1Survey));
 \subsection{Reprojection rate}
 
 In the snapshot technique each snapshot has to be re-projected to a
-common coordinate system. If it is assumed that 50 FLOP are required
-per pixel to reproject we can get following required rate:
+common coordinate system. If it is assumed that 50 FLOP\footnote{The
+  assumption of 50 FLOP is a guess for the time being. Investigation
+  of ASKAPSoft have shown that that greatest fraction of the
+  reprojection cost is in computing the coordinate transformation
+  rather than the interpolation.} are required per pixel to reproject
+we can get following required rate:
 
 \begin{maxima}[]
 ReProjRate : (50 `Ops ) * NPix**2 * Nf * Nbeam * 4 * Nfacet**2 / twsnap;
