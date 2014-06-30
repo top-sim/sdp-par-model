@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <title>jQuery.sheet - The Ajax Spreadsheet</title>
+	<script type="text/javascript" src="../jquery-1.10.2.min.js"></script>
+    <script type="text/javascript" src="https://rawgithub.com/Spreadsheets/formula/master/formula.js"></script>
+	<script type="text/javascript" src="../jquery.sheet.js"></script>
+	<script type="text/javascript">
+		$.sheet.preLoad('../');
+        $(function() {
+            $('#sheetParent').sheet();
+			//check ReqFmin, whenever the mouse is out the "ReqFmin" label
+			$("td#ReqFmin").hover( 
+			function() {	
+			},
+			function() {
+				var num=new Number($(this).text());
+				var type=$("td#ReqTele").children("select").find("option:selected").text();
+				if (type=="Low" && num>1000&&num<1400)//>min && <max
+					$("#pp").text("yes");
+				else
+					$("#pp").text("no");
+			}
+			);
+			//when "reqtele" changes, check all "req" labels
+			$("td#ReqTele").change( function() {
+				var type=$(this).children("select").find("option:selected").text();
+				var reqfmin=new Number($("td#ReqFmin").text());
+				if (type=="Low" && num>1000&&num<1400)//>min && <max
+					$("#pp").text("yes");
+				else
+					$("#pp").text("no");
+			});
+			$("span.ui-widget-header").hide();
+			$("div.jSEnclosure:first").css({"width":"350px"});
+			$("div.jSEnclosure:last").css({"width":"800px","left":"369px","display":"inline"});
+        });
+    </script>
+	<link rel="stylesheet" type="text/css" href="../jquery.sheet.css">
+    <link rel="stylesheet" type="text/css" href="../jquery-ui/theme/jquery-ui.min.css">
+</head>
+<body>
+<p id="pp">message</p>
+<div id="sheetParent" title="SKA" style="height: 700px; "  >
+    <table title="Wide HI Survey">
+        <colgroup>
+				<col style="width: 200px; "/>
+				<col style="width: 150px; "/>
+		</colgroup>
+		<tbody>			
+            <tr>
+                <td class="styleBold styleCenter"></td>
+                <td class="styleBold styleCenter"></td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>There is no DRM</td>
+                <td>z=0.05 to 0</td>
+            </tr>
+			<tr>
+                <td>Wide HI</td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Req. Telescope</td>
+                <td data-formula="=DROPDOWN('Low','Mid','Survey')" id="ReqTele"></td>
+            </tr>
+            <tr>
+                <td>Req. Fmin (MHz)</td>
+                <td id="ReqFmin">1350</td>
+            </tr>           
+			<tr>
+                <td>Req. Fmax</td>
+                <td id="ReqFmax">1420</td>
+            </tr>
+			<tr>
+                <td>Req. Npol</td>
+                <td id="ReqNpol">4</td>
+            </tr>
+			<tr>
+                <td>Req. BW (MHz)</td>
+                <td id="ReqBW">500</td>
+            </tr>
+			<tr>
+                <td>Req. Res (arcs)</td>
+                <td id="ReqRes">10</td>
+            </tr>
+			<tr>
+                <td>Class</td>
+                <td>line</td>
+            </tr>
+			<tr>
+                <td>Total Time (khr)</td>
+                <td>10</td>
+            </tr>
+			<tr>
+                <td>Angular Cov.</td>
+                <td>20626.5</td>
+            </tr>
+			<tr>
+                <td>dvel</td>
+                <td>1</td>
+            </tr>
+			<tr>
+                <td>Npol_img</td>
+                <td>1</td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Postage Stamp/bm</td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Bytes raw</td>
+                <td>1</td>
+            </tr>
+			<tr>
+                <td>Bytes vis</td>
+                <td>8</td>
+            </tr>
+			<tr>
+                <td>Bytes img</td>
+                <td>4</td>
+            </tr>
+			<tr>
+                <td>Oversampling T</td>
+                <td>11.2</td>
+            </tr>
+			<tr>
+                <td>Oversampling Frq</td>
+                <td>8</td>
+            </tr>
+			<tr>
+                <td>Oversampling Img</td>
+                <td>4</td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Day=Hours/Image</td>
+                <td>6</td>
+            </tr>
+			<tr>
+                <td></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Nant</td>
+                <td data-formula="=PARASELECT(B5,A29)"></td>
+            </tr>
+			<tr>
+                <td>Nbeam</td>
+                <td data-formula="=PARASELECT(B5,A30)"></td>
+            </tr>
+			<tr>
+                <td>Diam (m)</td>
+                <td data-formula="=PARASELECT(B5,A31)"></td>
+            </tr>
+			<tr>
+                <td>Bmax (km)</td>
+                <td data-formula="=PARASELECT(B5,A32)"></td>
+            </tr>
+        </tbody>
+    </table>
+	<table title="Computed result" class="readOnly">
+		<colgroup>
+			<col style="width: 200px; "/>
+			<col style="width: 200px; "/>
+			<col style="width: 200px; "/>
+			<col style="width: 200px; "/>
+		</colgroup>
+		<tbody>			
+			<tr>
+                <td>FFreq (MHz)</td>
+                <td data-formula="=CALCFIDFREQ(SHEET1!B6,SHEET1!B7,0)"></td>
+				<td data-formula="SNF(B1)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>FoV/bm (deg)</td>
+                <td data-formula="=57.3/(SHEET1!B31/(300/B1))"></td>
+				<td data-formula="SNF(B2)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>FOV2 (deg^2)</td>
+                <td data-formula="=(CALCFOV2(B1,SHEET1!B31,SHEET1!B30))"></td>
+				<td data-formula="SNF(B3)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>BW</td>
+                <td data-formula="=BANDWIDTH(SHEET1!B6,SHEET1!B7,SHEET1!B9,SHEET1!B14)"></td>
+				<td data-formula="SNF(B4)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Resolution (arcs)</td>
+                <td data-formula="=RESOLUTION(B1,SHEET1!B32)"></td>
+				<td data-formula="SNF(B5)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>nChan</td>
+                <td data-formula="=CALCNCHAN(SHEET1!B6,B4,SHEET1!B11,SHEET1!B14,SHEET1!B31,SHEET1!B32,SHEET1!B23)"></td>
+				<td data-formula="SNF(B6)"></td>
+                <td data-formula="=IF((B6>262144),'OVERSPEC!','')"></td>
+            </tr>
+			<tr>
+                <td>Confusion(uJy/bm)</td>
+                <td data-formula="=CONFUSION(B1,B5)"></td>
+				<td data-formula="SNF(B7)"></td>
+                <td data-formula="=IF((B6=262144),'OVERSPEC!','')"></td>
+            </tr>
+			<tr>
+                <td>Raw In (B/s)</td>
+                <td data-formula="=RAWIN(B4,SHEET1!B19,SHEET1!B29)*SHEET1!B30"></td>
+				<td data-formula="SNF(B8)"></td>
+                <td data-formula="=IF((C7=''),'OK',((( B4/B6)/SHEET1!B6)*300000))"></td>
+            </tr>
+			<tr>
+                <td>Correlator Int (s)</td>
+                <td data-formula="=CORRELATORINT2(SHEET1!B31,SHEET1!B32,SHEET1!B22)"></td>
+				<td data-formula="SNF(B9)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Corr. Out (B/s)</td>
+                <td data-formula="=CORRELATOROUT(SHEET1!B29,SHEET1!B30,B6,B9,SHEET1!B20,SHEET1!B8)"></td>
+				<td data-formula="SNF(B10)"></td>
+                <td data-formula="=LOG10(B10)"></td>
+            </tr>
+			<tr>
+                <td>Av. Factor</td>
+                <td data-formula="=AVFACTORFIXED(SHEET1!B32,SHEET1!B31,SHEET1!B22,SHEET1!B11,SHEET1!B6,B4,SHEET1!B14,SHEET1!B5)"></td>
+                <td data-formula="SNF(B11)"></td>
+				<td></td>
+            </tr>
+			<tr>
+                <td>Correlator/Day</td>
+                <td data-formula="=((B10*SHEET1!B27)*60)*60"></td>
+				<td data-formula="SNF(B12)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Av. Corr. Out (B/s)</td>
+                <td data-formula="=B10/B11"></td>
+				<td data-formula="SNF(B13)"></td>
+                <td data-formula="=LOG10(B13)"></td>
+			</tr>
+			<tr>
+                <td>Correlator Tot</td>
+                <td data-formula="=((B10*SHEET1!B12)*1000)*3600"></td>
+				<td data-formula="SNF(B14)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Av.Correlator Tot</td>
+                <td data-formula="=((B13*SHEET1!B12)*1000)*3600"></td>
+				<td data-formula="SNF(B15)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Image/Day</td>
+                <td data-formula="=DAILYIMAGE(B6,SHEET1!B21,B5,B3,(SHEET1!B15+1),SHEET1!B24,(SHEET1!B18*SHEET1!B30),SHEET1!B11)"></td>
+                <td data-formula="SNF(B16)"></td>
+				<td></td>
+            </tr>
+			<tr>
+                <td>Sci Image/Day</td>
+                <td data-formula="=IF(OR(SHEET1!B18,(B5>SHEET1!B10)),B16,(B16*(B5/SHEET1!B10)*(B5/SHEET1!B10)))"></td>
+				<td data-formula="SNF(B17)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Image Tot</td>
+                <td data-formula="=((B16*SHEET1!B12)*1000)/SHEET1!B27"></td>
+				<td data-formula="SNF(B18)" ></></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Sci Image Tot</td>
+                <td data-formula="=((B17*SHEET1!B12)*1000)/SHEET1!B27"></td>
+				<td data-formula="SNF(B19)"></td>
+                <td data-formula="=LOG10(B19)" data-celltype="number"></td>
+            </tr>
+			<tr>
+                <td>SEFD</td>
+                <td data-formula="=CALCSEFD(SHEET1!B31,SHEET1!B5,B1,SHEET1!B29)"></td>
+				<td data-formula="SNF(B20)"></td>
+                <td></td>
+            </tr>
+			<tr>
+                <td>Delta S uJy/bm</td>
+                <td data-formula="=FINALSEN(B20,SHEET1!B12,B4,(SHEET1!B7-SHEET1!B6),SHEET1!B8,B6,SHEET1!B13,B3,SHEET1!B11)"></td>
+                <td data-formula="SNF(B21)"></td>
+				<td></td>
+            </tr>
+			
+		</tbody>
+	</table>
+</div>
+</body>
+</html>
