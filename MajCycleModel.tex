@@ -594,6 +594,33 @@ calcTelA(gcfrate, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1, Ti
 \m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=5.24 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
+Combining with the other imaging steps and entering the number of major cycles as parameter we get
+\begin{maxima}[]
+CompRateG : (CompRate + gcfrate) * 2 * NMajor ;
+
+calcTelA(CompRateG, SKA1Low, [Nfacet=1, twsnap=40`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+calcTelA(CompRateG, SKA1Mid, [Nfacet=1, twsnap=200`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+calcTelA(CompRateG, SKA1Survey, [Nfacet=1, twsnap=550`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+\maximaoutput*
+\m  2\,\mathrm{NMajor}\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Qfcv}\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,t_{\rm ionsph}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \mbox{{}CompRateG(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=4.18 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateG(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=1.06 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateG(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=9.09 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+\begin{maxima}[]
+ParUnit : CompRateG/Nf/Nbeam;
+
+calcTelA(ParUnit, SKA1Low, [Nfacet=1, twsnap=40`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+calcTelA(ParUnit, SKA1Mid, [Nfacet=1, twsnap=200`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+calcTelA(ParUnit, SKA1Survey, [Nfacet=1, twsnap=550`s, Tion=60`s, NMajor=10, Qfcv=1,gcfc1, Qgcf=8]);
+\maximaoutput*
+\m  {{2\,\mathrm{NMajor}\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Qfcv}\,\mathrm{FNGCF}^2\,\log \mathrm{FNGCF}}\over{\log 2\,t_{\rm ionsph}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{N_{\rm beam}\,N_{\rm f}}}\;\mathrm{Ops} \\
+\m  \mbox{{}ParUnit(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=1.63 \times 10^{+11}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}ParUnit(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=4.14 \times 10^{+11}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}ParUnit(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Tion = 60 ` s,NMajor = 10,Qfcv = 1,gcfc1,Qgcf = 8]){}}=9.86 \times 10^{+9}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\end{maxima}
+
 \section{DFT source prediction}
 
 Taking the estimate for the number of FLOPs for DFT by
