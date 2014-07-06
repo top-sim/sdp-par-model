@@ -400,10 +400,32 @@ ev(TargetGridSize*Nf * 4 * Nbeam , append([Nfacet=1], SKA1Survey)) `` Pbyte;
 \m  69.\;\mathrm{Pbyte} \\
 \m  150.\;\mathrm{Pbyte} \\
 \end{maxima}
-of random access memory \footnote{Current top supercomputer has 1
+of random access memory \footnote{For comparison, the current top supercomputer has 1
   PetaByte of RAM}. This requirement can however be reduced both
 sequentially processing the channels rather than keeping all of them
 going at the same time or by employing faceting.
+
+We can also compute the size of the caches for convolution kernels,
+e.g., as used by ASKAPSoft today. We assume the number of w-planes is
+the same as the support of the w-kernel leading to $NGW^3$ pixels,
+that oversampling is specified by $Qgcf$, that different kernels are
+needed for each beam (this is the case for ASKAP) and that each pixel
+is 8 bytes:
+\begin{maxima}[]
+KernelCache: (NGW ** 2 * NGW * Qgcf**2 * Nbeam * 8`byte * Nf) `` Gbyte;
+
+calcTelA(KernelCache, SKA1Low,  [Qgcf=8, twsnap=40`s] );
+calcTelA(KernelCache, SKA1Mid,  [Qgcf=8, twsnap=200`s] );
+calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=550`s] );
+\maximaoutput*
+\m  {{N_{\rm beam}\,N_{\rm f}\,\mathrm{Qgcf}^2\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}\,\lambda^3}\over{1953125\,D_{\rm s}^3}}\;\mathrm{Gbyte} \\
+\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=52.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=1700.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=26000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\end{maxima}
+Note that at least SKA1-Low will use baseline-dependent kernels and so
+the cache size is not particularly material given the further
+computation necessary to compute the per-baseline kernels.
 
 \subsection{Computation intensity in respect of working memory}
 
