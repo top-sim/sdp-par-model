@@ -435,19 +435,17 @@ If we wanted to keep all target grids in memory we would need the
 following balance between ops and memory:
 \begin{maxima}[]
 
-FiWorkingMem: ( (CompRate * 20)  ) / (TargetGridSize* Nf *4 * Nbeam);
+FiWorkingMem: (( (CompRate * 20)  ) / (TargetGridSize* Nf *4 * Nbeam) )`` ((Ops/s)/Gbyte  );
 
-float(ev(FiWorkingMem    , append([Nfacet=1, NGW=6], SKA1Low)
-,infeval)) `` ((Ops/s)/Gbyte  );
-float(ev(FiWorkingMem , append([Nfacet=1, NGW=35], SKA1Mid) ,infeval))`` ((Ops/s)/Gbyte  );
-float(ev(FiWorkingMem, append([Nfacet=1, NGW=25], SKA1Survey)
-,infeval)) `` ((Ops/s)/Gbyte  );
+calcTelA(FiWorkingMem, SKA1Low,  [Qgcf=8, twsnap=40`s, Nfacet=1] );
+calcTelA(FiWorkingMem, SKA1Mid,  [Qgcf=8, twsnap=200`s, Nfacet=1] );
+calcTelA(FiWorkingMem, SKA1Survey,  [Qgcf=8, twsnap=550`s, Nfacet=1] );
 
 \maximaoutput*
-\m  {{5\,B_{\rm max}^ {- 2 }\,D_{\rm s}^2\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,N_{\rm facet}^2\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{384}}\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  6.23 \times 10^{-6}\,s\,\left(7.15 \times 10^{+12}\,\left(\mathrm{qty}\left(0.1\,\mathrm{qty}\left(0.002\,\mathrm{twsnap}^2\;{{1}\over{\mathrm{s}^2}}+1.8\,\mathrm{twsnap}^{{{3}\over{2}}}\;{{\sqrt{\mathrm{Hz}}}\over{\mathrm{s}}}\right)\;{{1}\over{\mathrm{s}^2\,\mathrm{Hz}^2}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{2.47 \times 10^{+16}}\over{\mathrm{twsnap}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
-\m  2.86 \times 10^{-7}\,s\,\left(3.29 \times 10^{+12}\,\left(\mathrm{qty}\left(0.004\,\mathrm{qty}\left(0.05\,\mathrm{twsnap}^2\;{{1}\over{\mathrm{s}^2}}+40.\,\mathrm{twsnap}^{{{3}\over{2}}}\;{{\sqrt{\mathrm{Hz}}}\over{\mathrm{s}}}\right)\;{{1}\over{\mathrm{s}^2\,\mathrm{Hz}^2}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{6.03 \times 10^{+17}}\over{\mathrm{twsnap}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
-\m  1.27 \times 10^{-7}\,s\,\left(4.48 \times 10^{+12}\,\left(\mathrm{qty}\left(0.004\,\mathrm{qty}\left(0.003\,\mathrm{twsnap}^2\;{{1}\over{\mathrm{s}^2}}+5.1\,\mathrm{twsnap}^{{{3}\over{2}}}\;{{\sqrt{\mathrm{Hz}}}\over{\mathrm{s}}}\right)\;{{1}\over{\mathrm{s}^2\,\mathrm{Hz}^2}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{1.22 \times 10^{+18}}\over{\mathrm{twsnap}}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
+\m  {{39062500\,B_{\rm max}^ {- 2 }\,D_{\rm s}^2\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,N_{\rm facet}^2\,s\,\left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)}\over{3}}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Low,[Qgcf = 8,twsnap = 40 ` s,Nfacet = 1]){}}=9.89 \times 10^{+9}\,s\;{{\mathrm{Ops}}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s,Nfacet = 1]){}}=1.46 \times 10^{+9}\,s\;{{\mathrm{Ops}}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s,Nfacet = 1]){}}=5.11 \times 10^{+8}\,s\;{{\mathrm{Ops}}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
 \end{maxima}
 This is lower than the expected ratio of typical machines at
 deployment time. The assumption therefore should be that not all grids
