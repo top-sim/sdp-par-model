@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{captcont}
+\usepackage[refpage]{nomencl}
 \usepackage[colorlinks=true,citecolor=blue]{hyperref}
 \usepackage[breqn]{emaxima}
 \usepackage{natbib}
@@ -23,6 +24,7 @@
 \begin{document}
 
 \maketitle
+\makenomenclature
 
 \tableofcontents
 
@@ -50,14 +52,14 @@ convolution in the $uv$ plane. See \cite{Cornwell2008-4703511},
 \cite{Hymphreys132}, \cite{2012SPIE.8500E..0LC},
 \cite{2008A&A...487..419B}. The size of $w$ kernels are analysed by
 \cite{Hymphreys132} and \cite{Mitchell2014}. In general case
-$w$-kernels can be very large and so for this reason it is assumed a
-technique for controlling the $w$ term like snapshot or
-$w$-stacking. The $w$-snapshots approach is analysed in most detail.
+$w$-kernels can be very large and so here it is assumed a technique
+for controlling the $w$-term like snapshot or $w$-stacking is
+used. The $w$-snapshots approach is analysed in most detail. 
 
 In current version of this computation each snapshot is assumed to
 require one FFT and one re-projection. The costs of computing PSFs etc
-are not accounted for. The relation for duration of snapshots is given
-below.
+are not accounted for. The relation for duration of snapshots and the
+size of necessary $w$-kernels is given below.
 
 
 \section{Computations}
@@ -81,11 +83,46 @@ lambda=constvalue(%c) / (1160e6`Hz) , Bmax = 50e3`m, NAA=9];
 \end{maxima}
 Here $\lambda$ is a representative wavelength for calculation below.
 All the calculations are made at single wavelength rather than being
-integrated over the bands of the telescope.
+integrated over the full band of the telescope; this introduces some
+errors but these are unlikely to be as large as other sources of
+uncertainty.
 
-\subsection{Image size}
+\subsection{Size of rasters (images and `uv' planes)}
 
-The sizes of images to be produced can be estimated as follows:
+The number of pixels in one dimension of each the images ($N_{\rm
+  pix}$) is the field of view to be imaged divided by the angular size
+of pixels. \nomenclature{$N_{\rm pix}$}{The number of pixels in one
+  dimension of each the images}
+
+To achieve good sampling the pixel size must be smaller than the
+minimum size of the synthesised beam. It is usually taken that there
+should be at the minimum three pixels across the synthesised beam. 
+
+The angular size of images is primarily determined by the requirement
+to be able to clean stronger sources toward the edges of the primary
+beam and possibly near-in-sidelobes. The optimum sizes therefore
+depends at least on parameters:
+\begin{itemize}
+  \item The dynamic range that is sought
+  \item Primary Beam shape of telescope being observed
+  \item Brightness distribution of sources at the observing wavelength
+\end{itemize}
+This makes a full analysis out of scope of this document. Some points
+can however be noted:
+\begin{itemize}
+\item PAF beam illumination does not taper-off smoothly and therefore
+  they will have larger sidelobes and/or a shoulder compared to single
+  pixel receivers. This implies that a larger area has to be imaged
+  (or alternatively as in ASKAPSoft all beams are imaged together, so
+  that the inward-facing sidelobes are automatically included in the
+  image).
+\item Unblocked offset-Gregorian dishes will have smaller far-out
+  side-lobes than comparable Cassegrain 
+\item The strength near-in side-lobes depends on the illumination
+  patter of the single pixel receivers
+\item For LOFAR it is recommended to make the image large enough to
+  include the first side-lobe
+\end{itemize}
 
 \begin{maxima}[]
 QPix:  2 ;
@@ -825,6 +862,7 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 \end{maxima}
 
 
+\printnomenclature 
 
 \bibliographystyle{mn2eurl} 
 \bibliography{ska.bib}
