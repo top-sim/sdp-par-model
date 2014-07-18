@@ -316,12 +316,14 @@ ev(PhaseRotateRate, append([Nfacet=2 * Bmax/ Ds], SKA1Mid), infeval);
 Total compute rate is then given by:
 \begin{maxima}[]
 CompRate : FFTRate+ ReProjRate+ GridRate;
+CompRateE : FFTRate/FFTEps+ ReProjRate+ GridRate/GridEps;
 
 calcTel(CompRate, SKA1Low);
 calcTel(CompRate, SKA1Mid);
 calcTel(CompRate, SKA1Survey);
 \maximaoutput*
 \m  \left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{\mathrm{GridEps}\,t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{FFTEps}\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
 \m  \mathrm{CompRate(SKA1Low)}=\left(7.15 \times 10^{+12}\,N_{\rm facet}^2\,\left(0.1\,\left(0.002\,\mathrm{twsnap}^2+1.8\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{9.64 \times 10^{+14}\,\log \left({{1.3 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}+{{6.68 \times 10^{+15}}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
 \m  \mathrm{CompRate(SKA1Mid)}=\left(3.29 \times 10^{+12}\,N_{\rm facet}^2\,\left(0.004\,\left(0.05\,\mathrm{twsnap}^2+40.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{2.1 \times 10^{+16}\,\log \left({{2.84 \times 10^{+9}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}+{{1.45 \times 10^{+17}}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
 \m  \mathrm{CompRate(SKA1Survey)}=\left(4.48 \times 10^{+12}\,N_{\rm facet}^2\,\left(0.004\,\left(0.003\,\mathrm{twsnap}^2+5.1\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{4.72 \times 10^{+16}\,\log \left({{1.77 \times 10^{+8}}\over{N_{\rm facet}^2}}\right)}\over{\mathrm{twsnap}}}+{{3.27 \times 10^{+17}}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
@@ -340,10 +342,17 @@ find_root(diff(ev(CompRate, twsnap = xx `s, SKA1Low, Nfacet=1, nouns) / ( 1` (Op
 find_root(diff(ev(CompRate, twsnap = xx `s, SKA1Mid, Nfacet=1, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
 find_root(diff(ev(CompRate, twsnap = xx `s, SKA1Survey, Nfacet=1, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
 
+find_root(diff(ev(CompRateE, twsnap = xx `s, SKA1Low, Nfacet=1, FFTEps=0.15, GridEps=0.6, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
+find_root(diff(ev(CompRateE, twsnap = xx `s, SKA1Mid, Nfacet=1, FFTEps=0.15, GridEps=0.6, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
+find_root(diff(ev(CompRateE, twsnap = xx `s, SKA1Survey, Nfacet=1, FFTEps=0.15, GridEps=0.6, nouns) / ( 1` (Ops/s)), xx), xx, 1, 1000);
+
 \maximaoutput*
 \m  40. \\
 \m  200. \\
 \m  550. \\
+\m  63. \\
+\m  320. \\
+\m  870. \\
 \end{maxima}
 
 
@@ -367,10 +376,18 @@ calcTelA(CompRate, SKA1Low, [Nfacet=1, twsnap=40`s]);
 calcTelA(CompRate, SKA1Mid, [Nfacet=1, twsnap=200`s]);
 calcTelA(CompRate, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
+
+calcTelA(CompRateE, SKA1Low, [Nfacet=1, twsnap=63`s , FFTEps=0.15, GridEps=0.6]);
+calcTelA(CompRateE, SKA1Mid, [Nfacet=1, twsnap=320`s , FFTEps=0.15, GridEps=0.6]);
+calcTelA(CompRateE, SKA1Survey, [Nfacet=1, twsnap=870`s, FFTEps=0.15, GridEps=0.6]);
+
 \maximaoutput*
 \m  \mbox{{}CompRate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=1.58 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \mbox{{}CompRate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=5.12 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \m  \mbox{{}CompRate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=4.02 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateE(SKA1Low,[Nfacet = 1,twsnap = 63 ` s,FFTEps = 0.1,GridEps = 0.6]){}}=4.26 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateE(SKA1Mid,[Nfacet = 1,twsnap = 320 ` s,FFTEps = 0.1,GridEps = 0.6]){}}=1.66 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateE(SKA1Survey,[Nfacet = 1,twsnap = 870 ` s,FFTEps = 0.1,GridEps = 0.6]){}}=1.26 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 again this is per half-major cycle.
 
