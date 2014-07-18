@@ -711,6 +711,44 @@ calcTelA(DFTRate, SKA1Survey, [SDft=1e4]);
 \m  \mbox{{}DFTRate(SKA1Survey,[SDft = 10000.]){}}=2.09 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
+\section{Fast imaging for transients}
+
+The most demanding part of fast imaging is likely to be transporting
+the uv grids so that they can be combined into one (or few) continuum
+channels for the FFT step. It is easy to see that combining the grids
+all in one place is unlikely to work since the data rate (assuming Nf
+gridding channels so that gridding from `slow' imaging is reused 1
+second imaging cadence) is:
+\begin{maxima}[]
+
+FastImgDataRateOut: TargetGridSize / Timg * Nf *Nbeam ;
+
+calcTelA(FastImgDataRateOut, SKA1Low , [Nfacet=1, Nffi=10000, Timg=1`s]);
+calcTelA(FastImgDataRateOut, SKA1Mid , [Nfacet=1, Nffi=10000, Timg=1`s]);
+calcTelA(FastImgDataRateOut, SKA1Survey , [Nfacet=1, Nffi=10000, Timg=1`s]);
+
+\maximaoutput*
+\m  {{384\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Low,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=8.02 \times 10^{+14}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Mid,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=1.74 \times 10^{+16}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Survey,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=3.93 \times 10^{+16}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\end{maxima}
+
+A tree-like approach can however be adopted. In this the total network
+throughput required approximately as logarithm of the number of
+channels so about:
+\begin{maxima}[]
+FastImgDataRateOutFlat: TargetGridSize / Timg * 2 * log2(Nf) *Nbeam ;
+
+calcTelA(FastImgDataRateOutFlat, SKA1Low , [Nfacet=1, Timg=1`s]);
+calcTelA(FastImgDataRateOutFlat, SKA1Mid , [Nfacet=1, Timg=1`s]);
+calcTelA(FastImgDataRateOutFlat, SKA1Survey , [Nfacet=1, Timg=1`s]);
+\maximaoutput*
+\m  {{768\,B_{\rm max}^2\,N_{\rm beam}\,\log N_{\rm f}}\over{\log 2\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Low,[Nfacet = 1,Timg = 1 ` s]){}}=1.12 \times 10^{+11}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Mid,[Nfacet = 1,Timg = 1 ` s]){}}=2.45 \times 10^{+12}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Survey,[Nfacet = 1,Timg = 1 ` s]){}}=5.51 \times 10^{+12}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\end{maxima}
 
 
 \section{Scenario: SKA1Mid with 120\,km Baselines}
