@@ -124,19 +124,35 @@ can however be noted:
   include the first side-lobe
 \end{itemize}
 
+\nomenclature{$lambdamax$}{Maximum wavelength in observing band, used
+  to determine field of view and the magnitude of correction required
+  for wide field effects.}
+\nomenclature{$Qfov$}{Quality factor representing how much more than field of view needs to be imaged. 1= image to first null of Airy function}
 \begin{maxima}[]
-QPix:  2 ;
-NPix : QPix * 2 * Bmax/ Ds / Nfacet;
-
-calcTel(NPix, SKA1Low);
-calcTel(NPix, SKA1Mid);
-calcTel(NPix, SKA1Survey);
+FOVl : lambdamax / Ds * 2*(3.83/ %pi) * Qfov ;
 \maximaoutput*
-\m  2 \\
-\m  {{4\,B_{\rm max}}\over{D_{\rm s}\,N_{\rm facet}}} \\
-\m  \mathrm{NPix(SKA1Low)}={{11000.}\over{N_{\rm facet}}} \\
-\m  \mathrm{NPix(SKA1Mid)}={{53000.}\over{N_{\rm facet}}} \\
-\m  \mathrm{NPix(SKA1Survey)}={{13000.}\over{N_{\rm facet}}} \\
+\m  {{7.6\,\mathrm{lambdamax}\,\mathrm{Qfov}}\over{\pi\,D_{\rm s}}} \\
+\end{maxima}
+
+\nomenclature{$lambdamin$}{Minimum wavelength used in observation, used to set the angular size of each pixel.}
+\nomenclature{$B_{\rm max}$}{Maximum baseline length.}
+\begin{maxima}[]
+PixSz : lambdamin / (Bmax * (2/3)) / 2 / QPix;
+\maximaoutput*
+\m  {{3\,\mathrm{lambdamin}}\over{4\,B_{\rm max}\,\mathrm{QPix}}} \\
+\end{maxima}
+
+\begin{maxima}[]
+NPix : FOVl/PixSz; 
+
+calcTelA(NPix, SKA1Low, [QPix=2.5, Qfov=1.8]);
+calcTelA(NPix, SKA1Mid, [QPix=2.5, Qfov=1.8]);
+calcTelA(NPix, SKA1Survey, [QPix=2.5, Qfov=1.8]);
+\maximaoutput*
+\m  {{10.\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{QPix}\,\mathrm{Qfov}}\over{\pi\,D_{\rm s}\,\mathrm{lambdamin}}} \\
+\m  \mbox{{}NPix(SKA1Low,[QPix = 2.5,Qfov = 1.8]){}}={{41000.\,\mathrm{lambdamax}}\over{\mathrm{lambdamin}}} \\
+\m  \mbox{{}NPix(SKA1Mid,[QPix = 2.5,Qfov = 1.8]){}}={{190000.\,\mathrm{lambdamax}}\over{\mathrm{lambdamin}}} \\
+\m  \mbox{{}NPix(SKA1Survey,[QPix = 2.5,Qfov = 1.8]){}}={{48000.\,\mathrm{lambdamax}}\over{\mathrm{lambdamin}}} \\
 \end{maxima}
 
 The size of $uv$-grids is assumed to be the same. 
