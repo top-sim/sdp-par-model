@@ -141,14 +141,15 @@ can however be noted:
   include the first side-lobe
 \end{itemize}
 
-\nomenclature{$lambdamax$}{Maximum wavelength in observing band, used
+\nomenclature{$\lambda_{\rm min}$}{Maximum wavelength in observing band, used
   to determine field of view and the magnitude of correction required
   for wide field effects.}
-\nomenclature{$Qfov$}{Quality factor representing how much more than field of view needs to be imaged. 1= image to first null of Airy function}
+\nomenclature{$Q_{\rm FoV}$}{Quality factor representing how much more than field of view needs to be imaged. 1= image to first null of Airy function}
+\nomenclature{$\theta_{\rm FoV}$}{The field of view that is to be imaged, expressed as an angle}
 \begin{maxima}[]
 FOVl : lambdamax / Ds * 2*(3.83/ %pi) * Qfov ;
 \maximaoutput*
-\m  {{7.6\,\mathrm{lambdamax}\,\mathrm{Qfov}}\over{\pi\,D_{\rm s}}} \\
+\m  {{7.6\,\lambda_{\rm max}\,Q_{\rm FoV}}\over{\pi\,D_{\rm s}}} \\
 \end{maxima}
 
 \nomenclature{$lambdamin$}{Minimum wavelength used in observation, used to set the angular size of each pixel.}

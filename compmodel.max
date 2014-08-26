@@ -38,6 +38,7 @@ texput(DeltaNu, "\\Delta \\nu")$
 texput(deltaNu, "\\delta \\nu")$
 
 texput(Qnu, "Q_{\\nu}")$
+texput(Qfov, "Q_{\\rm FoV}")$
 texput(Rf, "R_{\\rm F}")$
 
 texput(Nf, "N_{\\rm f}")$
@@ -62,6 +63,12 @@ texput(We, "\\Omega_{\\rm E}")$
 
 texput(NGW, "N_{\\rm GW}")$
 texput(VisInRate, "\\\'V_{\rm in}")$
+
+texput(FOVl, "\\theta_{\\rm FoV}")$
+
+texput(lambdamax, "\\lambda_{\\rm max}")$
+texput(lambdamin, "\\lambda_{\\rm min}")$
+
 
 
 calcTel (E,T) ::= buildq ([E,T], "="(concat('E,"(",'T,")") , ev(float(E),infeval,nouns,T)))$
