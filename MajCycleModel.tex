@@ -72,31 +72,40 @@ No baseline dependent averaging is assumed.
 \begin{maxima}[]
 EORf : (100e6`Hz);
 HIf : (1160e6`Hz);
-SKA1Low : [ tdump = 0.6 `s, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35`m, 
+
+SKA1LowBfree : [ tdump = 0.6 `s, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35`m, 
 lambda = constvalue(%c) / EORf, lambdamin = constvalue(%c) / EORf, lambdamax = constvalue(%c) / EORf , 
-Bmax = 100e3`m, NAA=9,
+NAA=9,
 QPix=2.5, Qfov=1.8,
 NMm=2];
-SKA1Mid : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1, Ds=15`m,
+SKA1MidBfree : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1, Ds=15`m,
 lambda=constvalue(%c) / HIf , 
 lambdamin=constvalue(%c) / HIf , 
 lambdamax=constvalue(%c) / HIf , 
-Bmax = 200e3`m, NAA=9,
+NAA=9,
 QPix=2.5, Qfov=1.8,
 NMm=2];
-SKA1Survey: [tdump = 0.3`s, Na=96, Nf=256000, Nbeam=36,      Ds=15`m,
+SKA1SurveyBfree: [tdump = 0.3`s, Na=96, Nf=256000, Nbeam=36,      Ds=15`m,
 lambda=constvalue(%c) / HIf , 
 lambdamin=constvalue(%c) / HIf , 
 lambdamax=constvalue(%c) / HIf , 
-Bmax = 50e3`m, NAA=9,
+NAA=9,
 QPix=2.5, Qfov=1.8,
 NMm=2];
+
+SKA1Low : append(SKA1LowBfree, [Bmax = 100e3`m]);
+SKA1Mid : append(SKA1MidBfree, [Bmax = 200e3`m]);
+SKA1Survey : append(SKA1SurveyBfree, [Bmax = 50e3`m]);
+
 \maximaoutput*
 \m  1.0 \times 10^{+8}\;\mathrm{Hz} \\
 \m  1.16 \times 10^{+9}\;\mathrm{Hz} \\
-\m  \left[ t_{\rm dump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamin}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamax}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=100000.\;\mathrm{m} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , \mathrm{Qfov}=1.8 , \mathrm{NMm}=2 \right] \\
-\m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamin}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamax}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=200000.\;\mathrm{m} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , \mathrm{Qfov}=1.8 , \mathrm{NMm}=2 \right] \\
-\m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamin}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \mathrm{lambdamax}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , B_{\rm max}=50000.\;\mathrm{m} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , \mathrm{Qfov}=1.8 , \mathrm{NMm}=2 \right] \\
+\m  \left[ t_{\rm dump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 \right] \\
+\m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 \right] \\
+\m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 \right] \\
+\m  \left[ t_{\rm dump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=100000.\;\mathrm{m} \right] \\
+\m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=200000.\;\mathrm{m} \right] \\
+\m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=50000.\;\mathrm{m} \right] \\
 \end{maxima}
 Here $\lambda$ is a representative wavelength for calculation below.
 All the calculations are made at single wavelength rather than being
@@ -157,7 +166,7 @@ FOVl : lambdamax / Ds * 2*(3.83/ %pi) * Qfov ;
 \begin{maxima}[]
 PixSz : lambdamin / (Bmax * (2/3)) / 2 / QPix;
 \maximaoutput*
-\m  {{3\,\mathrm{lambdamin}}\over{4\,B_{\rm max}\,\mathrm{QPix}}} \\
+\m  {{3\,\lambda_{\rm min}}\over{4\,B_{\rm max}\,\mathrm{QPix}}} \\
 \end{maxima}
 
 \begin{maxima}[]
@@ -167,7 +176,7 @@ calcTel(NPix, SKA1Low);
 calcTel(NPix, SKA1Mid);
 calcTel(NPix, SKA1Survey);
 \maximaoutput*
-\m  {{10.\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{QPix}\,\mathrm{Qfov}}\over{\pi\,D_{\rm s}\,\mathrm{lambdamin}}} \\
+\m  {{10.\,B_{\rm max}\,\lambda_{\rm max}\,\mathrm{QPix}\,Q_{\rm FoV}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}} \\
 \m  \mathrm{NPix(SKA1Low)}=41000. \\
 \m  \mathrm{NPix(SKA1Mid)}=190000. \\
 \m  \mathrm{NPix(SKA1Survey)}=48000. \\
@@ -182,7 +191,7 @@ The size of support of w-projection kernels is analysed by
 \begin{maxima}[]
 NGWfn (w, eta )  := 2 * sqrt ('qty( ((w * FOVl/2))**2 + (w * FOVl/2 )/(3.14 *eta/sqrt(w))))  * FOVl;
 \maximaoutput*
-\m  \mathrm{NGWfn}\left(w , \eta\right)\mathbin{:=}2\,\sqrt{\mathrm{qty}\left(\left({{w\,\mathrm{FOVl}}\over{2}}\right)^2+{{{{w\,\mathrm{FOVl}}\over{2}}}\over{{{3.1\,\eta}\over{\sqrt{w}}}}}\right)}\,\mathrm{FOVl} \\
+\m  \mathrm{NGWfn}\left(w , \eta\right)\mathbin{:=}2\,\sqrt{\mathrm{qty}\left(\left({{w\,\theta_{\rm FoV}}\over{2}}\right)^2+{{{{w\,\theta_{\rm FoV}}\over{2}}}\over{{{3.1\,\eta}\over{\sqrt{w}}}}}\right)}\,\theta_{\rm FoV} \\
 \end{maxima}
 where $\eta$ is the amplitude level of the kernel where we wish to
 cutoff and $w$ is the w term to be corrected. 
@@ -191,8 +200,9 @@ cutoff and $w$ is the w term to be corrected.
 
 Worst case scenario is that that the baseline is rotating exactly in
 $w$ direction, therefore maximum $w$ rate of deviation is:
+
 \begin{maxima}[]
-We: 7.27e-5 ` (1/s); 
+We: 7.27e-5 ` (1/s);
 DeltaW : Bmax* We/2;
 
 calcTel(DeltaW, SKA1Low);
@@ -214,19 +224,42 @@ snapshots:
 \begin{maxima}[]
 Qw:1;
 
-NGW :NGWfn ( DeltaW * twsnap / lambda,  0.01/Qw );
+NGW :NGWfn ( DeltaW * twsnap / lambdamin,  0.01/Qw );
 
 calcTelA(NGW, SKA1Low, [twsnap=120`s] )``1;
 calcTelA(NGW, SKA1Mid, [twsnap=120`s] )``1;
 calcTelA(NGW, SKA1Survey, [twsnap=120`s] )``1;
 
+NGW;
+
+
+NGWT11Low :  ev(NGW, append(SKA1LowBfree , [twsnap=120`s]), infeval,nouns ) ``1;
+NGWT11Mid :  ev(NGW, append(SKA1MidBfree  , [twsnap=120`s]), infeval,nouns ) ``1;
+NGWT11Survey :  ev(NGW, append(SKA1SurveyBfree , [twsnap=120`s]), infeval,nouns ) ``1;
+
+NGWTLow: taylor( NGWT11Low, Bmax, 100e3,1)$
+NGWTMid: taylor( NGWT11Mid  , Bmax, 200e3,1)$
+NGWTSurvey: taylor( NGWT11Survey  , Bmax, 50e3,1)$
+1$
+
+float(NGWTLow);
+float(NGWTMid);
+float(NGWTSurvey);
+
 
 \maximaoutput*
 \m  1 \\
-\m  {{15.\,\mathrm{lambdamax}\,\mathrm{Qfov}\,\sqrt{\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{Qfov}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{\pi\,D_{\rm s}\,\lambda}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda^2}}\;{{1}\over{\mathrm{s}^2}}\right)}}\over{\pi\,D_{\rm s}}} \\
+\m  {{15.\,\lambda_{\rm max}\,Q_{\rm FoV}\,\sqrt{\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}}\over{\pi\,D_{\rm s}}} \\
 \m  \mbox{{}NGW(SKA1Low,[twsnap = 120 ` s]){}}=79. \\
 \m  \mbox{{}NGW(SKA1Mid,[twsnap = 120 ` s]){}}=75. \\
 \m  \mbox{{}NGW(SKA1Survey,[twsnap = 120 ` s]){}}=26. \\
+\m  {{15.\,\lambda_{\rm max}\,Q_{\rm FoV}\,\sqrt{\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}}\over{\pi\,D_{\rm s}}} \\
+\m  {{2.3\,\sqrt{{{7.38 \times 10^{-7}\,B_{\rm max}^2}\over{\pi^2}}+{{0.001\,B_{\rm max}^{{{3}\over{2}}}}\over{\pi}}}}\over{\pi}} \\
+\m  {{0.4\,\sqrt{{{4.01 \times 10^{-6}\,B_{\rm max}^2}\over{\pi^2}}+{{0.008\,B_{\rm max}^{{{3}\over{2}}}}\over{\pi}}}}\over{\pi}} \\
+\m  {{0.4\,\sqrt{{{4.01 \times 10^{-6}\,B_{\rm max}^2}\over{\pi^2}}+{{0.008\,B_{\rm max}^{{{3}\over{2}}}}\over{\pi}}}}\over{\pi}} \\
+\m  6.11 \times 10^{-4}\,\left(B_{\rm max}-100000.\right)+79. \\
+\m  2.91 \times 10^{-4}\,\left(B_{\rm max}-200000.\right)+75. \\
+\m  4.0 \times 10^{-4}\,\left(B_{\rm max}-50000.\right)+26. \\
 \end{maxima}
 
 \subsection{Visibility rate}
@@ -269,7 +302,7 @@ calcTelA(FFTRate, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
 
 \maximaoutput*
-\m  {{2000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2\,\log \left({{100.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
+\m  {{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{FFTRate(SKA1Low)}={{2.74 \times 10^{+17}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{FFTRate(SKA1Mid)}={{6.84 \times 10^{+18}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{FFTRate(SKA1Survey)}={{1.36 \times 10^{+19}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
@@ -297,7 +330,7 @@ calcTel(ReProjRate, SKA1Survey);
 
 
 \maximaoutput*
-\m  {{20000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
+\m  {{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{ReProjRate(SKA1Low)}={{8.94 \times 10^{+16}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{ReProjRate(SKA1Mid)}={{1.94 \times 10^{+18}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
 \m  \mathrm{ReProjRate(SKA1Survey)}={{4.38 \times 10^{+18}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\;\mathrm{Ops} \\
@@ -316,10 +349,10 @@ calcTelA(GridRate, SKA1Mid, [Nfacet=1]);
 calcTelA(GridRate, SKA1Survey , [Nfacet=1]);
 
 \maximaoutput*
-\m  {{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{230.\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{Qfov}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{\pi\,D_{\rm s}\,\lambda}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
-\m  \mbox{{}GridRate(SKA1Low,[Nfacet = 1]){}}=7.15 \times 10^{+12}\,\mathrm{NMm}\,\left(0.5\,\left(0.05\,\mathrm{twsnap}^2+7.9\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}GridRate(SKA1Mid,[Nfacet = 1]){}}=3.29 \times 10^{+12}\,\mathrm{NMm}\,\left(0.02\,\left(1.1\,\mathrm{twsnap}^2+170.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}GridRate(SKA1Survey,[Nfacet = 1]){}}=4.48 \times 10^{+12}\,\mathrm{NMm}\,\left(0.02\,\left(0.07\,\mathrm{twsnap}^2+22.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  {{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm AA}^2+\mathrm{qty}\left({{230.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)\right)}\over{t_{\rm dump}}}\;\mathrm{Ops} \\
+\m  \mbox{{}GridRate(SKA1Low,[Nfacet = 1]){}}=1.43 \times 10^{+13}\,\left(0.5\,\left(0.05\,\mathrm{twsnap}^2+7.9\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}GridRate(SKA1Mid,[Nfacet = 1]){}}=6.58 \times 10^{+12}\,\left(0.02\,\left(1.1\,\mathrm{twsnap}^2+170.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}GridRate(SKA1Survey,[Nfacet = 1]){}}=8.96 \times 10^{+12}\,\left(0.02\,\left(0.07\,\mathrm{twsnap}^2+22.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
@@ -357,11 +390,11 @@ calcTel(CompRate, SKA1Low);
 calcTel(CompRate, SKA1Mid);
 calcTel(CompRate, SKA1Survey);
 \maximaoutput*
-\m  \left({{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{230.\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{Qfov}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{\pi\,D_{\rm s}\,\lambda}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{2000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2\,\log \left({{100.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}+{{20000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
-\m  \left({{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{230.\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\mathrm{lambdamax}\,\mathrm{Qfov}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{\pi\,D_{\rm s}\,\lambda}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{Qfov}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{\mathrm{GridEps}\,t_{\rm dump}}}+{{2000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2\,\log \left({{100.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\mathrm{FFTEps}\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}+{{20000.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
-\m  \mathrm{CompRate(SKA1Low)}=\left(7.15 \times 10^{+12}\,\mathrm{NMm}\,N_{\rm facet}^2\,\left(0.5\,\left(0.05\,\mathrm{twsnap}^2+7.9\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{3.64 \times 10^{+17}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
-\m  \mathrm{CompRate(SKA1Mid)}=\left(3.29 \times 10^{+12}\,\mathrm{NMm}\,N_{\rm facet}^2\,\left(0.02\,\left(1.1\,\mathrm{twsnap}^2+170.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{8.79 \times 10^{+18}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
-\m  \mathrm{CompRate(SKA1Survey)}=\left(4.48 \times 10^{+12}\,\mathrm{NMm}\,N_{\rm facet}^2\,\left(0.02\,\left(0.07\,\mathrm{twsnap}^2+22.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{1.8 \times 10^{+19}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \left({{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm AA}^2+\mathrm{qty}\left({{230.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)\right)}\over{t_{\rm dump}}}+{{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}+{{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \left({{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm AA}^2+\mathrm{qty}\left({{230.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)\right)}\over{\mathrm{GridEps}\,t_{\rm dump}}}+{{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\mathrm{FFTEps}\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}+{{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \mathrm{CompRate(SKA1Low)}=\left(1.43 \times 10^{+13}\,N_{\rm facet}^2\,\left(0.5\,\left(0.05\,\mathrm{twsnap}^2+7.9\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{3.64 \times 10^{+17}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \mathrm{CompRate(SKA1Mid)}=\left(6.58 \times 10^{+12}\,N_{\rm facet}^2\,\left(0.02\,\left(1.1\,\mathrm{twsnap}^2+170.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{8.79 \times 10^{+18}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
+\m  \mathrm{CompRate(SKA1Survey)}=\left(8.96 \times 10^{+12}\,N_{\rm facet}^2\,\left(0.02\,\left(0.07\,\mathrm{twsnap}^2+22.\,\mathrm{twsnap}^{{{3}\over{2}}}\right)+81.\right)\;{{1}\over{\mathrm{s}}}+{{1.8 \times 10^{+19}\,N_{\rm facet}^2}\over{\mathrm{twsnap}}}\right)\;\mathrm{Ops} \\
 \end{maxima}
 This is the compute rate per half-major cycle (i.e., per forward step
 or backward step).
@@ -434,9 +467,9 @@ calcTelA(GridToFFT, SKA1Mid, [Nfacet=1, twsnap=200`s]);
 calcTelA(GridToFFT, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 \maximaoutput*
 \m  {{\mathrm{GridRate}}\over{\mathrm{FFTRate}}} \\
-\m  \mbox{{}GridToFFT(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=0.1 \\
-\m  \mbox{{}GridToFFT(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=0.06 \\
-\m  \mbox{{}GridToFFT(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=0.07 \\
+\m  \mbox{{}GridToFFT(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=2.6 \\
+\m  \mbox{{}GridToFFT(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=2.4 \\
+\m  \mbox{{}GridToFFT(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=2.5 \\
 \end{maxima}
 
 \subsection{Phase Rotation -- preliminary}
@@ -468,10 +501,11 @@ calcTelA(CompIntens1, SKA1Mid, [Nfacet=1, twsnap=200`s]);
 calcTelA(CompIntens1, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
 \maximaoutput*
-\m  {{\mathrm{CompRate}\,\'V_{rm in}^ {- 1 }}\over{8}}\;{{1}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CompIntens1(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=220.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CompIntens1(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=1500.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CompIntens1(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=890.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  12\;\mathrm{byte} \\
+\m  {{\mathrm{CompRate}}\over{\mathrm{VisDatumSize}}} \\
+\m  \mbox{{}CompIntens1(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=2.27 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{byte}}} \\
+\m  \mbox{{}CompIntens1(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=1.06 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{byte}}} \\
+\m  \mbox{{}CompIntens1(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=8.1 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{byte}}} \\
 \end{maxima}
 
 Note that if faceting is done in the simplest way, i.e., if the entire
@@ -494,7 +528,7 @@ ev(TargetGridSize, append([Nfacet=1], SKA1Low)) `` Gbyte;
 ev(TargetGridSize, append([Nfacet=1], SKA1Mid)) `` Gbyte;
 ev(TargetGridSize, append([Nfacet=1], SKA1Survey)) `` Gbyte;
 \maximaoutput*
-\m  {{2500.\,B_{\rm max}^2\,\mathrm{lambdamax}^2\,\mathrm{QPix}^2\,\mathrm{Qfov}^2}\over{\pi^2\,D_{\rm s}^2\,\mathrm{lambdamin}^2}}\;\mathrm{byte} \\
+\m  {{2500.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;\mathrm{byte} \\
 \m  {{410.}\over{\pi^2}}\;\mathrm{Gbyte} \\
 \m  {{9000.}\over{\pi^2}}\;\mathrm{Gbyte} \\
 \m  {{560.}\over{\pi^2}}\;\mathrm{Gbyte} \\
@@ -509,9 +543,9 @@ ev(TargetGridSize*Nf * 4 * Nbeam , append([Nfacet=1], SKA1Mid)) `` Pbyte;
 ev(TargetGridSize*Nf * 4 * Nbeam , append([Nfacet=1], SKA1Survey)) `` Pbyte;
 
 \maximaoutput*
-\m  3.2\;\mathrm{Pbyte} \\
-\m  69.\;\mathrm{Pbyte} \\
-\m  150.\;\mathrm{Pbyte} \\
+\m  {{420.}\over{\pi^2}}\;\mathrm{Pbyte} \\
+\m  {{9200.}\over{\pi^2}}\;\mathrm{Pbyte} \\
+\m  {{20000.}\over{\pi^2}}\;\mathrm{Pbyte} \\
 \end{maxima}
 of random access memory \footnote{For comparison, the current top supercomputer has 1
   PetaByte of RAM}. This requirement can however be reduced both
@@ -531,10 +565,10 @@ calcTelA(KernelCache, SKA1Low,  [Qgcf=8, twsnap=40`s] );
 calcTelA(KernelCache, SKA1Mid,  [Qgcf=8, twsnap=200`s] );
 calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=550`s] );
 \maximaoutput*
-\m  {{N_{\rm beam}\,N_{\rm f}\,\mathrm{Qgcf}^2\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}\,\lambda^3}\over{1953125\,D_{\rm s}^3}}\;\mathrm{Gbyte} \\
-\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=52.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=1700.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=26000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  {{2.87 \times 10^{-5}\,\lambda_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,Q_{\rm FoV}^3\,\mathrm{Qgcf}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}}\over{\pi^3\,D_{\rm s}^3}}\;\mathrm{Gbyte} \\
+\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=5300.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=180000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=2800000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
 \end{maxima}
 Note that at least SKA1-Low will use baseline-dependent kernels and so
 the cache size is not particularly material given the further
@@ -555,10 +589,10 @@ calcTelA(FiWorkingMem, SKA1Mid,  [Qgcf=8, twsnap=200`s, Nfacet=1] );
 calcTelA(FiWorkingMem, SKA1Survey,  [Qgcf=8, twsnap=550`s, Nfacet=1] );
 
 \maximaoutput*
-\m  {{39062500\,B_{\rm max}^ {- 2 }\,\mathrm{CompRate}\,D_{\rm s}^2\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,N_{\rm facet}^2\,s}\over{3\,\mathrm{Ops}}}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
-\m  \mbox{{}FiWorkingMem(SKA1Low,[Qgcf = 8,twsnap = 40 ` s,Nfacet = 1]){}}={{9.89 \times 10^{+9}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
-\m  \mbox{{}FiWorkingMem(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s,Nfacet = 1]){}}={{1.46 \times 10^{+9}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
-\m  \mbox{{}FiWorkingMem(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s,Nfacet = 1]){}}={{5.11 \times 10^{+8}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
+\m  {{1900000.\,\pi^2\,\mathrm{CompRate}\,D_{\rm s}^2\,\lambda_{\rm min}^2\,s}\over{B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{Ops}\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}}\;{{\mathrm{Ops}}\over{\mathrm{s}\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Low,[Qgcf = 8,twsnap = 40 ` s,Nfacet = 1]){}}={{1.27 \times 10^{+10}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s,Nfacet = 1]){}}={{2.73 \times 10^{+9}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
+\m  \mbox{{}FiWorkingMem(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s,Nfacet = 1]){}}={{9.24 \times 10^{+8}\,s}\over{\mathrm{Ops}}}\;{{\mathrm{Ops}^2}\over{\mathrm{s}^2\,\mathrm{Gbyte}}} \\
 \end{maxima}
 This is lower than the expected ratio of typical machines at
 deployment time. The assumption therefore should be that not all grids
@@ -579,10 +613,10 @@ calcTelA(CiWorkingMem, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
 
 \maximaoutput*
-\m  {{5\,B_{\rm max}^ {- 2 }\,\mathrm{CompRate}\,D_{\rm s}^2\,N_{\rm beam}^ {- 1 }\,N_{\rm f}^ {- 1 }\,N_{\rm facet}^2\,\mathrm{twsnap}}\over{384}}\;{{1}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CiWorkingMem(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=390.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CiWorkingMem(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=290.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
-\m  \mbox{{}CiWorkingMem(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=280.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  {{0.001\,\pi^2\,\mathrm{CompRate}\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}\over{B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}}\;{{1}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=500.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=540.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
+\m  \mbox{{}CiWorkingMem(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=500.\;{{\mathrm{Ops}}\over{\mathrm{byte}}} \\
 \end{maxima}
 
 These are relatively small numbers. This amount of shuffling can be
@@ -612,13 +646,13 @@ ev((Nf*4*Nbeam)/ (TargetMemBudget/TargetGridSize), append([Nfacet=1], SKA1Survey
 
 \maximaoutput*
 \m  1\;\mathrm{Pbyte} \\
-\m  {{B_{\rm max}^ {- 2 }\,D_{\rm s}^2\,N_{\rm facet}^2}\over{384}}\;{{\mathrm{Pbyte}}\over{\mathrm{byte}}} \\
-\m  310000. \\
-\m  14000. \\
-\m  230000. \\
-\m  3.2 \\
-\m  69. \\
-\m  150. \\
+\m  {{3.99 \times 10^{-4}\,\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}\over{B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}}\;{{\mathrm{Pbyte}}\over{\mathrm{byte}}} \\
+\m  2400.\,\pi^2 \\
+\m  110.\,\pi^2 \\
+\m  1700.\,\pi^2 \\
+\m  {{420.}\over{\pi^2}} \\
+\m  {{9200.}\over{\pi^2}} \\
+\m  {{20000.}\over{\pi^2}} \\
 \end{maxima}
 
 We can then calculate the number of FLOPs that need to work on each
@@ -633,10 +667,10 @@ calcTelA(FlopsPerGrid, SKA1Mid, [Nfacet=1, twsnap=200`s]);
 calcTelA(FlopsPerGrid, SKA1Survey, [Nfacet=1, twsnap=550`s]);
 
 \maximaoutput*
-\m  {{3\,B_{\rm max}^2\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,\mathrm{Ops}\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{24414062500\,D_{\rm s}^2\,t_{\rm dump}}}+{{3\,B_{\rm max}^4\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{Ops}}\over{1220703125\,\log 2\,D_{\rm s}^4\,N_{\rm facet}^2\,\mathrm{twsnap}}}+{{6\,B_{\rm max}^4\,N_{\rm beam}\,N_{\rm f}\,\mathrm{Ops}}\over{244140625\,D_{\rm s}^4\,N_{\rm facet}^2\,\mathrm{twsnap}}} \\
-\m  \mbox{{}FlopsPerGrid(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=9.95 \times 10^{+10}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
-\m  \mbox{{}FlopsPerGrid(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=7.0 \times 10^{+12}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
-\m  \mbox{{}FlopsPerGrid(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=3.43 \times 10^{+11}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
+\m  {{8.01 \times 10^{-10}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Ops}\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\left(N_{\rm AA}^2+\mathrm{qty}\left({{230.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)\right)}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,t_{\rm dump}}}+{{1.04 \times 10^{-7}\,B_{\rm max}^4\,\lambda_{\rm max}^4\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Ops}\,\mathrm{QPix}^4\,Q_{\rm FoV}^4\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^4\,\log 2\,D_{\rm s}^4\,\lambda_{\rm min}^4\,\mathrm{twsnap}}}+{{1.04 \times 10^{-6}\,B_{\rm max}^4\,\lambda_{\rm max}^4\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{Ops}\,\mathrm{QPix}^4\,Q_{\rm FoV}^4}\over{\pi^4\,D_{\rm s}^4\,\lambda_{\rm min}^4\,\mathrm{twsnap}}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Low,[Nfacet = 1,twsnap = 40 ` s]){}}=2.28 \times 10^{+13}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s]){}}=2.33 \times 10^{+15}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
+\m  \mbox{{}FlopsPerGrid(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s]){}}=1.11 \times 10^{+14}\,\mathrm{Ops}\;{{1}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \section{Computing the convolution kernels}
@@ -702,9 +736,9 @@ calcTelA(gcfrate, SKA1Mid, [Nfacet=1, twsnap=200`s, Qfcv=1, Qgcf=8, gcfc1, Tion=
 calcTelA(gcfrate, SKA1Survey, [Nfacet=1, twsnap=550`s, Qfcv=1, Qgcf=8, gcfc1, Tion=60`s]);
 
 \maximaoutput*
-\m  \mbox{{}gcfrate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=5.07 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}gcfrate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=1.72 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=5.24 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Low,[Nfacet = 1,twsnap = 40 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=1.18 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Mid,[Nfacet = 1,twsnap = 200 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=8.77 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}gcfrate(SKA1Survey,[Nfacet = 1,twsnap = 550 ` s,Qfcv = 1,Qgcf = 8,gcfc1,Tion = 60 ` s]){}}=2.42 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 Combining with the other imaging steps and entering the number of major cycles as parameter we get
@@ -718,9 +752,9 @@ calcTelA(CompRateG, SKA1Survey, append([Nfacet=1, twsnap=550`s], GStdCond));
 \maximaoutput*
 \m  2\,\left(\mathrm{gcfrate}+\mathrm{CompRate}\right)\,\mathrm{NMajor} \\
 \m  \left[ t_{\rm ionsph}=60\;\mathrm{s} , \mathrm{NMajor}=10 , \mathrm{Qfcv}=1 , \mathrm{gcfc1} , \mathrm{Qgcf}=8 \right] \\
-\m  \mbox{{}CompRateG(SKA1Low,append([Nfacet = 1,twsnap = 40 ` s],GStdCond)){}}=2.11 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}CompRateG(SKA1Mid,append([Nfacet = 1,twsnap = 200 ` s],GStdCond)){}}=9.25 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}CompRateG(SKA1Survey,append([Nfacet = 1,twsnap = 550 ` s],GStdCond)){}}=7.02 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateG(SKA1Low,append([Nfacet = 1,twsnap = 40 ` s],GStdCond)){}}=7.82 \times 10^{+17}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateG(SKA1Mid,append([Nfacet = 1,twsnap = 200 ` s],GStdCond)){}}=2.73 \times 10^{+18}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRateG(SKA1Survey,append([Nfacet = 1,twsnap = 550 ` s],GStdCond)){}}=2.43 \times 10^{+18}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \begin{maxima}[]
@@ -731,9 +765,9 @@ calcTelA(ParUnit, SKA1Mid, append([Nfacet=1, twsnap=200`s], GStdCond));
 calcTelA(ParUnit, SKA1Survey, append([Nfacet=1, twsnap=550`s], GStdCond));
 \maximaoutput*
 \m  {{\mathrm{CompRateG}}\over{N_{\rm beam}\,N_{\rm f}}} \\
-\m  \mbox{{}ParUnit(SKA1Low,append([Nfacet = 1,twsnap = 40 ` s],GStdCond)){}}=8.26 \times 10^{+11}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}ParUnit(SKA1Mid,append([Nfacet = 1,twsnap = 200 ` s],GStdCond)){}}=3.61 \times 10^{+12}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \mbox{{}ParUnit(SKA1Survey,append([Nfacet = 1,twsnap = 550 ` s],GStdCond)){}}=7.61 \times 10^{+10}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}ParUnit(SKA1Low,append([Nfacet = 1,twsnap = 40 ` s],GStdCond)){}}=3.05 \times 10^{+12}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}ParUnit(SKA1Mid,append([Nfacet = 1,twsnap = 200 ` s],GStdCond)){}}=1.06 \times 10^{+13}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}ParUnit(SKA1Survey,append([Nfacet = 1,twsnap = 550 ` s],GStdCond)){}}=2.63 \times 10^{+11}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 \section{DFT source prediction}
@@ -774,10 +808,10 @@ calcTelA(FastImgDataRateOut, SKA1Mid , [Nfacet=1, Nffi=10000, Timg=1`s]);
 calcTelA(FastImgDataRateOut, SKA1Survey , [Nfacet=1, Nffi=10000, Timg=1`s]);
 
 \maximaoutput*
-\m  {{384\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
-\m  \mbox{{}FastImgDataRateOut(SKA1Low,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=8.02 \times 10^{+14}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
-\m  \mbox{{}FastImgDataRateOut(SKA1Mid,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=1.74 \times 10^{+16}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
-\m  \mbox{{}FastImgDataRateOut(SKA1Survey,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=3.93 \times 10^{+16}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  {{2500.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Low,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=1.07 \times 10^{+16}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Mid,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=2.33 \times 10^{+17}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOut(SKA1Survey,[Nfacet = 1,Nffi = 10000,Timg = 1 ` s]){}}=5.25 \times 10^{+17}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 A tree-like approach can however be adopted. In this the total network
@@ -790,10 +824,10 @@ calcTelA(FastImgDataRateOutFlat, SKA1Low , [Nfacet=1, Timg=1`s]);
 calcTelA(FastImgDataRateOutFlat, SKA1Mid , [Nfacet=1, Timg=1`s]);
 calcTelA(FastImgDataRateOutFlat, SKA1Survey , [Nfacet=1, Timg=1`s]);
 \maximaoutput*
-\m  {{768\,B_{\rm max}^2\,N_{\rm beam}\,\log N_{\rm f}}\over{\log 2\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
-\m  \mbox{{}FastImgDataRateOutFlat(SKA1Low,[Nfacet = 1,Timg = 1 ` s]){}}=1.12 \times 10^{+11}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
-\m  \mbox{{}FastImgDataRateOutFlat(SKA1Mid,[Nfacet = 1,Timg = 1 ` s]){}}=2.45 \times 10^{+12}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
-\m  \mbox{{}FastImgDataRateOutFlat(SKA1Survey,[Nfacet = 1,Timg = 1 ` s]){}}=5.51 \times 10^{+12}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  {{5000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,\log N_{\rm f}\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{Timg}}}\;\mathrm{byte} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Low,[Nfacet = 1,Timg = 1 ` s]){}}=1.5 \times 10^{+12}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Mid,[Nfacet = 1,Timg = 1 ` s]){}}=3.28 \times 10^{+13}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
+\m  \mbox{{}FastImgDataRateOutFlat(SKA1Survey,[Nfacet = 1,Timg = 1 ` s]){}}=7.38 \times 10^{+13}\;{{\mathrm{byte}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
@@ -815,7 +849,7 @@ The optimal w-kernel/ snapshot duration changes to:
 \begin{maxima}[]
   find_root(diff(ev(CompRate, twsnap = xx `s, SKA1MidECP, Nfacet=1, nouns) / ( 1` (Ops/s)), xx), xx, 1, 10000);
 \maximaoutput*
-\m  220. \\
+\m  \mathrm{find\_root}\left({{2.05 \times 10^{+12}\,\lambda_{\rm max}^2\,\mathrm{NMm}\,Q_{\rm FoV}^2\,\left({{74.\,\lambda_{\rm max}\,Q_{\rm FoV}\,\sqrt{{{\mathrm{xx}}\over{\lambda_{\rm min}}}}}\over{\pi\,\lambda_{\rm min}}}+{{37.\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{xx}}\over{\pi\,\lambda_{\rm min}^2\,\sqrt{{{\mathrm{xx}}\over{\lambda_{\rm min}}}}}}+{{2.4\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{xx}}\over{\pi^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2}}-{{3.41 \times 10^{+16}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{6.67 \times 10^{+9}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2\,\log 2\,\lambda_{\rm min}^2\,\mathrm{xx}^2}}-{{3.41 \times 10^{+17}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,\lambda_{\rm min}^2\,\mathrm{xx}^2}} , \mathrm{xx} , 1.0 , 10000.\right) \\
 \end{maxima}
 
 At optimal w-snapshot duration the compute FLOP count for gridding,FFT
@@ -823,7 +857,7 @@ and coordinate projection according to the model is:
 \begin{maxima}[]
 calcTelA(CompRate, SKA1MidECP, [Nfacet=1, twsnap=220`s]);
 \maximaoutput*
-\m  \mbox{{}CompRate(SKA1MidECP,[Nfacet = 1,twsnap = 220 ` s]){}}=1.7 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \mbox{{}CompRate(SKA1MidECP,[Nfacet = 1,twsnap = 220 ` s]){}}=\left({{2.27 \times 10^{+13}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{6.76 \times 10^{+8}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\lambda_{\rm min}^2}}\right)}\over{\lambda_{\rm min}^2}}+1.97 \times 10^{+12}\,\mathrm{NMm}\,\left(0.1\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\left({{6000.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2}\over{\lambda_{\rm min}^2}}+{{76000.\,\lambda_{\rm max}\,Q_{\rm FoV}}\over{\lambda_{\rm min}^{{{3}\over{2}}}}}\right)+81.\right)+{{1.57 \times 10^{+14}\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\lambda_{\rm min}^2}}\right)\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
@@ -916,10 +950,10 @@ calcTel(wsImCorrectTot, SKA1Mid);
 calcTel(wsImCorrectTot, SKA1Survey);
 
 \maximaoutput*
-\m  {{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Low)}=6.68 \times 10^{+15}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Mid)}=1.45 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
-\m  \mathrm{wsImCorrectTot(SKA1Survey)}=3.27 \times 10^{+17}\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  {{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\mathrm{wsNWPlanes}}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Low)}=8.94 \times 10^{+16}\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Mid)}=1.94 \times 10^{+18}\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
+\m  \mathrm{wsImCorrectTot(SKA1Survey)}=4.38 \times 10^{+18}\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}\;\mathrm{Ops} \\
 \end{maxima}
 
 \subsubsection{FFT compute requirement}
@@ -933,7 +967,7 @@ total observation (and is not a rate).
 wsFFTTot: (5 `Ops) * NPix **2 * log2(NPix **2)  * Nf * Nbeam * 4 *
 Nfacet**2 * wsNWPlanes;
 \maximaoutput*
-\m  {{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}\;\mathrm{Ops} \\
+\m  {{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;\mathrm{Ops} \\
 \end{maxima}
 
 \subsubsection{Total compute requirement}
@@ -964,13 +998,13 @@ float(ev(rhs(wstot), append([NAA=9, Nfacet=1, tobs=(6*3600`s), wsNWPlanes =60], 
 
 \maximaoutput*
 \m  \mathbf{true} \\
-\m  \left({{16\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(\mathrm{qty}\left({{16\,\mathrm{qty}\left({{3.48 \times 10^{-6}\,B_{\rm max}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda}}}}\over{D_{\rm s}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{3.3 \times 10^{-10}\,B_{\rm max}^2\,\mathrm{twsnap}^2}\over{D_{\rm s}^2}}\;{{1}\over{\mathrm{s}^2}}\right)\,\lambda^2}\over{D_{\rm s}^2}}\right)+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}+{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)}\over{\log 2\,D_{\rm s}^2\,\mathrm{twsnap}}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}}\over{D_{\rm s}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops}=\left({{{{320\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\log \left({{16\,B_{\rm max}^2}\over{D_{\rm s}^2\,N_{\rm facet}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\log 2\,D_{\rm s}^2}}+{{3200\,B_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,\mathrm{wsNWPlanes}}\over{D_{\rm s}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\right)\;\mathrm{Ops} \\
-\m  \left[ \left[ \mathrm{wsNWPlanes}=230. \right]  \right] \\
-\m  6.9 \times 10^{+14}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \left[ \left[ \mathrm{wsNWPlanes}=170. \right]  \right] \\
-\m  7.4 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
-\m  \left[ \left[ \mathrm{wsNWPlanes}=60. \right]  \right] \\
-\m  5.31 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \left({{16\,\mathrm{NMm}\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left(N_{\rm AA}^2+\mathrm{qty}\left({{230.\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)}\over{\pi^2\,D_{\rm s}^2}}\right)\right)}\over{t_{\rm dump}}}+{{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}+{{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2\,\mathrm{twsnap}}}\right)\;\mathrm{Ops}=\left({{{{2000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\log \left({{100.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\right)\,\mathrm{wsNWPlanes}}\over{\pi^2\,\log 2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}+{{20000.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2\,\mathrm{wsNWPlanes}}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}}\over{\mathrm{tobs}}}+{{8\,\left(N_{\rm a}-1\right)\,N_{\rm a}\,N_{\rm beam}\,N_{\rm f}\,N_{\rm facet}^2\,\left({{B_{\rm max}^2}\over{4\,D_{\rm s}^2\,N_{\rm facet}^2\,\mathrm{wsNWPlanes}^2}}+N_{\rm AA}^2\right)}\over{t_{\rm dump}}}\right)\;\mathrm{Ops} \\
+\m  \left[ \left[ \mathrm{wsNWPlanes}=95. \right]  \right] \\
+\m  4.36 \times 10^{+15}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \left[ \left[ \mathrm{wsNWPlanes}=71. \right]  \right] \\
+\m  7.33 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
+\m  \left[ \left[ \mathrm{wsNWPlanes}=24. \right]  \right] \\
+\m  5.2 \times 10^{+16}\;{{\mathrm{Ops}}\over{\mathrm{s}}} \\
 \end{maxima}
 
 
