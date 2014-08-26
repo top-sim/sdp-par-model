@@ -1,0 +1,20 @@
+geometry : [ We = 7.27e-5 ];
+
+uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov, ThetaPix = lambdamin / (Bmax * (2/3)) / 2 / QPix, NPix = ThetaFOV/ ThetaPix];
+
+convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV, DeltaWMax = (Bmax * We * Tsnap )/(2 * lambdamin)] ;
+
+floprate : [ RFLOP= 2 * NMajor * 4 * Nbeam * Nf * (RGrid + RFFT + RRP), RGrid = Na * (Na -1 )  /(2*TDump)  * (NGW**2  + NAA**2) * Nmm * 8, NGW = NGWfn(DeltaWMax, etaw ), RFFT = NPix**2 * log(NPix**2) / log(2) * 5 / Tsnap, RRP = NPix**2 / Tsnap * 50 ];
+
+
+general : [ Ncrpd = Na * (Na -1 ) /2  * 4  * Nbeam * Nf, Rvis  = Ncrpd / TDump];
+
+
+/* Some scenarios to run */
+SKA1LowBaseline : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, NAA=9, QPix=2.5, Qfov=1.8,Nmm=2, Bmax=1e5, etaw=0.01, NMajor=10];
+SKA1LowOld : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, NAA=9, QPix=1.5, Qfov=0.9,Nmm=1, Bmax=1e5, etaw=0.01, NMajor=10];
+
+/* example */
+xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, SKA1LowBaseline,infeval), Tsnap);
+find_root (xx1, Tsnap, 1, 1000000);
+float(ev(RFLOP, floprate, geometry, uvsize, convksize, SKA1LowBaseline,infeval, Tsnap=26)) / 1e15;
