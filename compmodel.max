@@ -76,3 +76,4 @@ calcTel (E,T) ::= buildq ([E,T], "="(concat('E,"(",'T,")") , ev(float(E),infeval
 
 /* Calculate for telescope, with additional assumptions. Third argument is the list of additional assumptions.*/
 calcTelA (E,T,AL) ::= buildq ([E,T,AL], "="(sconcat('E,"(",'T, ",", 'AL, ")") , float(ev(E,append(AL,T),infeval,nouns))))$
+
