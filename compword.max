@@ -27,6 +27,9 @@ TelRun(T) := block ( [s, xx1, muv], xx1: diff(ev(RFLOP, floprate, geometry, uvsi
 /* Take a parameter list for a list and remove a parameter. Allows then easier differentiation etc. */
 DeletePar(P, T) := delete( P= ''assoc(P, T), T);
 
+/* Scales parameter and returns revised key outputs */
+DiffPar(T, P, f) := TelRun ( append(DeletePar(P,T) , [P=assoc(P, T)*f]));
+
 /* example */
 xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, SKA1LowBaseline,infeval), Tsnap);
 find_root (xx1, Tsnap, 1, 1000000);
