@@ -552,23 +552,21 @@ of random access memory \footnote{For comparison, the current top supercomputer 
 sequentially processing the channels rather than keeping all of them
 going at the same time or by employing faceting.
 
-We can also compute the size of the caches for convolution kernels,
-e.g., as used by ASKAPSoft today. We assume the number of w-planes is
-the same as the support of the w-kernel leading to $NGW^3$ pixels,
-that oversampling is specified by $Qgcf$, that different kernels are
-needed for each beam (this is the case for ASKAP) and that each pixel
-is 8 bytes:
+Kernel cache size:
 \begin{maxima}[]
-KernelCache: (NGW ** 2 * NGW * Qgcf**2 * Nbeam * 8`byte * Nf) `` Gbyte;
+KernelCache: (NGW ** 2 * NGW * Qgcf**3 * Nbeam * 8`byte * 16 * Nf) `` Pbyte;
 
 calcTelA(KernelCache, SKA1Low,  [Qgcf=8, twsnap=40`s] );
 calcTelA(KernelCache, SKA1Mid,  [Qgcf=8, twsnap=200`s] );
 calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=550`s] );
+
+calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=100`s] );
 \maximaoutput*
-\m  {{2.87 \times 10^{-5}\,\lambda_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,Q_{\rm FoV}^3\,\mathrm{Qgcf}^2\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}}\over{\pi^3\,D_{\rm s}^3}}\;\mathrm{Gbyte} \\
-\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=5300.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=180000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=2800000.\;{{\mathrm{Gbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  {{4.6 \times 10^{-10}\,\lambda_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,Q_{\rm FoV}^3\,\mathrm{Qgcf}^3\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}}\over{\pi^3\,D_{\rm s}^3}}\;\mathrm{Pbyte} \\
+\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=0.6\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=23.\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=360.\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 100 ` s]){}}=7.3\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
 \end{maxima}
 Note that at least SKA1-Low will use baseline-dependent kernels and so
 the cache size is not particularly material given the further
