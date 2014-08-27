@@ -19,7 +19,12 @@ floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * Nf * (RGrid + RFFT + RRP + RCCF),
              RCCF =  (Na * (Na -1 ) /2 ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV),
              NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
 
-workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf, Rvis  = Ncrpd / TDump, MUVGrid = 32 * NPix**2,  MBufVis= 2 * Rvis * MVis  * TObs, RIO = NMajor * Rvis * MVis];
+workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf,
+               Rvis  = Ncrpd / TDump,
+               MUVGrid = 32 * NPix**2,
+               MWCache = NGW**3 * QGCF**3 * Nbeam * Nf * 8, 
+               MBufVis= 2 * Rvis * MVis  * TObs,
+               RIO = NMajor * Rvis * MVis];
 
 
 
@@ -45,7 +50,13 @@ SKA1LowOld : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 
 
 SKA1SurveyOld : [ TDump = 0.3, Na = 96 , Nf= 256000, Nbeam=36, Ds=15, lambdamax = 0.2, lambdamin = 0.2, lambda = 0.2, NAA=9, QPix=1.5, Qfov=0.8,Nmm=1, Bmax=0.5e5, etaw=0.01, NMajor=10, QGCF=8, QFCV=10, TIon=60 ] ;
 
-TelRun(T) := block ( [s, xx1, muv], xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, T,infeval), Tsnap), s: find_root (xx1, Tsnap, 10, 1000),  muv: float(ev(MUVGrid, uvsize, workingmem, T,infeval)), rio: float(ev(RIO, uvsize, workingmem, T,infeval)), mb: float(ev(MBufVis, uvsize, workingmem, T,infeval)) , [RFLOP=float(ev(RFLOP, floprate, geometry, uvsize, convksize, T,infeval, Tsnap=s)), Tsnap =s, MUVGrid=muv, RIO=rio, MBufVis = mb  ]);
+TelRun(T) := block ( [s, xx1, muv],
+  xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, T,infeval), Tsnap),
+  s: find_root (xx1, Tsnap, 10, 1000),  muv: float(ev(MUVGrid, uvsize, workingmem, T,infeval)),
+  rio: float(ev(RIO, uvsize, workingmem, T,infeval)),
+  mb: float(ev(MBufVis, uvsize, workingmem, T,infeval)) ,
+  [RFLOP=float(ev(RFLOP, floprate, geometry, uvsize, convksize, T,infeval, Tsnap=s)), Tsnap =s, MUVGrid=muv, RIO=rio, MBufVis = mb,
+   MWCache= float(ev(MWCache, floprate, workingmem, geometry, uvsize, convksize, T,infeval, Tsnap=s))]);
 
 
 /* Take a parameter list for a list and remove a parameter. Allows then easier differentiation etc. */
