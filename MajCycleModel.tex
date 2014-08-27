@@ -97,6 +97,11 @@ SKA1Low : append(SKA1LowBfree, [Bmax = 100e3`m]);
 SKA1Mid : append(SKA1MidBfree, [Bmax = 200e3`m]);
 SKA1Survey : append(SKA1SurveyBfree, [Bmax = 50e3`m]);
 
+SKA1MidOld : [ tdump = 0.08 `s, Na = 190+64 , Nf= 256000, Nbeam=1, Ds=15`m, lambda=constvalue(%c) / HIf ,  lambdamin=constvalue(%c) / HIf ,  lambdamax=constvalue(%c) / HIf , 
+NAA=9,
+QPix=1.5, Qfov=0.8,
+NMm=2, Bmax=200e3`m];
+
 \maximaoutput*
 \m  1.0 \times 10^{+8}\;\mathrm{Hz} \\
 \m  1.16 \times 10^{+9}\;\mathrm{Hz} \\
@@ -106,6 +111,7 @@ SKA1Survey : append(SKA1SurveyBfree, [Bmax = 50e3`m]);
 \m  \left[ t_{\rm dump}=0.6\;\mathrm{s} , N_{\rm a}=1024 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=35\;\mathrm{m} , \lambda=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=2.9\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=100000.\;\mathrm{m} \right] \\
 \m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=200000.\;\mathrm{m} \right] \\
 \m  \left[ t_{\rm dump}=0.3\;\mathrm{s} , N_{\rm a}=96 , N_{\rm f}=256000 , N_{\rm beam}=36 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=2.5 , Q_{\rm FoV}=1.8 , \mathrm{NMm}=2 , B_{\rm max}=50000.\;\mathrm{m} \right] \\
+\m  \left[ t_{\rm dump}=0.08\;\mathrm{s} , N_{\rm a}=254 , N_{\rm f}=256000 , N_{\rm beam}=1 , D_{\rm s}=15\;\mathrm{m} , \lambda=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm min}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , \lambda_{\rm max}=0.2\;{{\mathrm{m}}\over{\mathrm{s}\,\mathrm{Hz}}} , N_{\rm AA}=9 , \mathrm{QPix}=1.5 , Q_{\rm FoV}=0.8 , \mathrm{NMm}=2 , B_{\rm max}=200000.\;\mathrm{m} \right] \\
 \end{maxima}
 Here $\lambda$ is a representative wavelength for calculation below.
 All the calculations are made at single wavelength rather than being
@@ -522,16 +528,20 @@ convolution functions. The target grid size is double precision
 complex number with a double precision weight; therefore:
 
 \begin{maxima}[]
-TargetGridSize: NPix**2 * (16+8)`byte;
+TargetGridSize: NPix**2 * (32)`byte;
 
-ev(TargetGridSize, append([Nfacet=1], SKA1Low)) `` Gbyte;
-ev(TargetGridSize, append([Nfacet=1], SKA1Mid)) `` Gbyte;
-ev(TargetGridSize, append([Nfacet=1], SKA1Survey)) `` Gbyte;
+float(ev(TargetGridSize, append([Nfacet=1], SKA1Low)) `` Gbyte);
+float(ev(TargetGridSize, append([Nfacet=1], SKA1Mid)) `` Gbyte);
+float(ev(TargetGridSize, append([Nfacet=1], SKA1Survey)) `` Gbyte);
+
+float(ev(TargetGridSize, append([Nfacet=1], SKA1MidOld)) `` Gbyte);
+
 \maximaoutput*
-\m  {{2500.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;\mathrm{byte} \\
-\m  {{410.}\over{\pi^2}}\;\mathrm{Gbyte} \\
-\m  {{9000.}\over{\pi^2}}\;\mathrm{Gbyte} \\
-\m  {{560.}\over{\pi^2}}\;\mathrm{Gbyte} \\
+\m  {{3300.\,B_{\rm max}^2\,\lambda_{\rm max}^2\,\mathrm{QPix}^2\,Q_{\rm FoV}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;\mathrm{byte} \\
+\m  55.\;\mathrm{Gbyte} \\
+\m  1200.\;\mathrm{Gbyte} \\
+\m  76.\;\mathrm{Gbyte} \\
+\m  86.\;\mathrm{Gbyte} \\
 \end{maxima}
 
 Keeping all of the target grids in memory for the most challenging
@@ -554,7 +564,7 @@ going at the same time or by employing faceting.
 
 Kernel cache size:
 \begin{maxima}[]
-KernelCache: (NGW ** 2 * NGW * Qgcf**3 * Nbeam * 8`byte * 16 * Nf) `` Pbyte;
+KernelCache: (NGW ** 2 * NGW * Qgcf**3 * Nbeam * 8`byte *  Nf) `` Pbyte;
 
 calcTelA(KernelCache, SKA1Low,  [Qgcf=8, twsnap=40`s] );
 calcTelA(KernelCache, SKA1Mid,  [Qgcf=8, twsnap=200`s] );
@@ -562,11 +572,11 @@ calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=550`s] );
 
 calcTelA(KernelCache, SKA1Survey,  [Qgcf=8, twsnap=100`s] );
 \maximaoutput*
-\m  {{4.6 \times 10^{-10}\,\lambda_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,Q_{\rm FoV}^3\,\mathrm{Qgcf}^3\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}}\over{\pi^3\,D_{\rm s}^3}}\;\mathrm{Pbyte} \\
-\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=0.6\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=23.\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=360.\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
-\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 100 ` s]){}}=7.3\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  {{2.87 \times 10^{-11}\,\lambda_{\rm max}^3\,N_{\rm beam}\,N_{\rm f}\,Q_{\rm FoV}^3\,\mathrm{Qgcf}^3\,\mathrm{qty}\left({{2.67 \times 10^{-5}\,B_{\rm max}\,\lambda_{\rm max}\,Q_{\rm FoV}\,\mathrm{twsnap}\,\sqrt{{{B_{\rm max}\,\mathrm{twsnap}}\over{\lambda_{\rm min}}}}}\over{\pi\,D_{\rm s}\,\lambda_{\rm min}}}\;{{1}\over{\mathrm{s}^{{{3}\over{2}}}}}+{{1.93 \times 10^{-8}\,B_{\rm max}^2\,\lambda_{\rm max}^2\,Q_{\rm FoV}^2\,\mathrm{twsnap}^2}\over{\pi^2\,D_{\rm s}^2\,\lambda_{\rm min}^2}}\;{{1}\over{\mathrm{s}^2}}\right)^{{{3}\over{2}}}}\over{\pi^3\,D_{\rm s}^3}}\;\mathrm{Pbyte} \\
+\m  \mbox{{}KernelCache(SKA1Low,[Qgcf = 8,twsnap = 40 ` s]){}}=0.04\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Mid,[Qgcf = 8,twsnap = 200 ` s]){}}=1.4\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 550 ` s]){}}=22.\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
+\m  \mbox{{}KernelCache(SKA1Survey,[Qgcf = 8,twsnap = 100 ` s]){}}=0.4\;{{\mathrm{Pbyte}}\over{\mathrm{s}^3\,\mathrm{Hz}^3}} \\
 \end{maxima}
 Note that at least SKA1-Low will use baseline-dependent kernels and so
 the cache size is not particularly material given the further
