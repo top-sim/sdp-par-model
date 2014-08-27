@@ -4,22 +4,41 @@ ratprint: false$
 
 geometry : [ We = 7.27e-5 ];
 
-uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov, ThetaPix = lambdamin / (Bmax * (2/3)) / 2 / QPix, NPix = ThetaFOV/ ThetaPix];
+uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov,
+           ThetaPix = lambdamin / (Bmax * (2/3)) / 2 / QPix,
+           NPix = ThetaFOV/ ThetaPix];
 
-convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV, DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdamin)] ;
+convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV,
+              DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdamin)] ;
 
-floprate : [ RFLOP= 2 * NMajor * 4 * Nbeam * Nf * (RGrid + RFFT + RRP + RCCF), RGrid = Na * (Na -1 )  /(2*TDump)  * (NGW**2  + NAA**2) * Nmm * 8, NGW = NGWfn(DeltaWMax, etaw ), RFFT = NPix**2 * log(NPix**2) / log(2) * 5 / Tsnap, RRP = NPix**2 / Tsnap * 50 , RCCF =  (2 *Na * (Na -1 ) ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV), NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
+floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * Nf * (RGrid + RFFT + RRP + RCCF),
+             RGrid = Na * (Na -1 )  /(2*TDump)  * (NGW**2  + NAA**2) * Nmm * 8,
+             NGW = NGWfn(DeltaWMax, etaw ),
+             RFFT = NPix**2 * log(NPix**2) / log(2) * 5 / Tsnap,
+             RRP = NPix**2 / Tsnap * 50 ,
+             RCCF =  (Na * (Na -1 ) /2 ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV),
+             NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
 
-workingmem : [ Ncrpd = Na * (Na -1 ) /2  * 4  * Nbeam * Nf, Rvis  = Ncrpd / TDump, MUVGrid = 32 * NPix**2,  MBufVis= 2 * Rvis * MVis  * TObs, RIO = NMajor * Rvis * MVis];
+workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf, Rvis  = Ncrpd / TDump, MUVGrid = 32 * NPix**2,  MBufVis= 2 * Rvis * MVis  * TObs, RIO = NMajor * Rvis * MVis];
 
 
 
-GeneralBaseline: [MVis =12, TObs = 6 * 3600, Nf= 256000, NAA=9, QPix=2.5, Qfov=1.8,Nmm=2, etaw=0.01, NMajor=10, QGCF=8, QFCV=10, TIon=60, Qw=1];
+GeneralBaseline: [MVis =12, TObs = 6 * 3600, Nf= 256000,
+                  NAA=9, QPix=2.5, Qfov=1.8, Nmm=2,
+                  etaw=0.01, NMajor=10, QGCF=8, QFCV=10,
+                  TIon=60, Qw=1, Npp=4];
 
 /* Some scenarios to run */
-SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, Bmax=1e5 ] , GeneralBaseline) ;
-SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15, lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3, Bmax=2e5] , GeneralBaseline) ;
-SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15, lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,  Bmax=0.5e5],  GeneralBaseline);
+SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
+                           lambdamax = 3, lambdamin = 3, lambda = 3,
+                           Bmax=1e5 ] , GeneralBaseline) ;
+
+SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
+                           lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
+                           Bmax=2e5] , GeneralBaseline) ;
+SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
+                              lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
+                              Bmax=0.5e5],  GeneralBaseline);
 
 
 SKA1LowOld : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, NAA=9, QPix=1.5, Qfov=0.9,Nmm=1, Bmax=1e5, etaw=0.01, NMajor=10];
@@ -47,3 +66,9 @@ DiffPar(SKA1SurveyBaseline, Bmax, 0.5);
 DiffPar(SKA1LowBaseline, Qfov, 0.5);
 DiffPar(SKA1MidBaseline, Qfov, 0.5);
 DiffPar(SKA1SurveyBaseline, Qfov, 0.5);
+
+
+tex( RGrid = ''ev(RGrid, floprate,  uvsize, convksize, workingmem, infeval));
+tex( RFFT = ''ev(RFFT, floprate,  uvsize, convksize, workingmem, infeval));
+tex( RRP = ''ev(RFFT, floprate,  uvsize, convksize, workingmem, infeval));
+tex( RCCF = ''ev(RCCF, floprate,  uvsize, convksize, workingmem, infeval));
