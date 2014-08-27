@@ -88,3 +88,4 @@ tex( RGrid = ''ev(RGrid, floprate,  uvsize, convksize, workingmem, infeval));
 tex( RFFT = ''ev(RFFT, floprate,  uvsize, convksize, workingmem, infeval));
 tex( RRP = ''ev(RRP, floprate,  uvsize, convksize, workingmem, infeval));
 tex( RCCF = ''ev(RCCF, floprate,  uvsize, convksize, workingmem, infeval));
+map (tex, append(uvsize, convksize, floprate, workingmem) );
