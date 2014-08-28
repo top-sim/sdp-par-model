@@ -1,22 +1,29 @@
 
 texput(We, "\\Omega_{\\rm E}")$
 
-texput(ThetaFOV, "\\Theta_{\\rm FoV}")$ 
-texput(ThetaPix, "\\Theta_{\\rm pix}")$ 
+texput(ThetaFOV, "\\Theta_{\\rm FoV}")$
+texput(FOVBeam, "\\frac{\\Theta_{\\rm FoV}}{\\Theta_{\\rm beam}}")$ 
+texput(ThetaPix, "\\Theta_{\\rm pix}")$
+texput(ThetaBeam, "\\Theta_{\\rm beam}")$ 
 texput(NPix, "N_{\\rm pix}")$ 
-texput(Qfov, "Q_{\\rm FoV}")$ 
+texput(Qfov, "Q_{\\rm FoV}")$
+texput(Qnu, "Q_{\\rm nu}")$ 
 texput(QPix, "Q_{\\rm pix}")$
 texput(QGCF, "Q_{\\rm GCF}")$
 texput(QFCV, "Q_{\\rm FCV}")$ 
 
-texput(lambdamax, "\\lambda_{\\rm max}")$ 
-texput(lambdamin, "\\lambda_{\\rm min}")$ 
+texput(lambdamax, "\\lambda_{\\rm band, max}")$ 
+texput(lambdamin, "\\lambda_{\\rm band, min}")$
+
+texput(lambdasubmax, "\\lambda_{\\rm subband, max}")$ 
+texput(lambdasubmin, "\\lambda_{\\rm subband, min}")$ 
 
 texput(Ds, "D_{\\rm s}")$ 
 texput(Bmax, "B_{\\rm max}")$
 texput(Nbeam, "N_{\\rm beam}")$
 texput(Na, "N_{\\rm a}")$
 texput(Nf, "N_{\\rm f}")$
+texput(Nfo, "N_{\\rm fo}")$
 texput(Nmm, "N_{\\rm mm}")$
 texput(Npp, "N_{\\rm pp}")$
 texput(NMajor, "N_{\\rm major}")$
@@ -27,10 +34,12 @@ texput(Ncrpd, "N_{\\rm crpd}")$
 texput(etaw, "\\epsilon_{\\rm w}")$
 
 texput(Tsnap, "T_{\\rm snap}")$
+texput(TsnapMin, "T_{\\rm snap,min}")$
 texput(TIon, "T_{\\rm ion}")$
 texput(TDump, "T_{\\rm dump}")$
 texput(TObs, "T_{\\rm obs}")$
 
+texput(WCurve, "W_{\\rm curve}")$
 texput(DeltaWMax, "\\Delta w_{\\rm max}")$
 
 texput(RGrid, "R_{\\rm grid}")$
@@ -48,3 +57,4 @@ texput(MUVGrid, "M_{\\rm uv grid}")$
 
 
 
+texput(DeltaNu, "\\Delta\\nu")$
