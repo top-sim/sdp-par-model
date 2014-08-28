@@ -5,8 +5,19 @@ ratprint: false$
 geometry : [ We = 7.27e-5 ];
 
 uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov,
-           ThetaPix = lambdamin / (Bmax * (2/3)) / 2 / QPix,
-           NPix = ThetaFOV/ ThetaPix];
+           ThetaBeam = lambdamin / (Bmax * (2/3)),
+           ThetaPix = ThetaBeam  / 2 / QPix,
+           NPix = ThetaFOV / ThetaPix];
+
+
+continuum : [ cc=3e8 , Nu = cc/ lambdamax,
+              /*  Ratio of FoV / Beam at single frequency, different to ThetaBeam/ThetaFOV */
+              FOVBeam =  1/ ((2*(3.83/ %pi) * Qfov / Ds) /  ( 1 / (Bmax * 2/3))),
+              /* Rao thesis Eq 5.2 */
+              DeltaNu = Nu  * FOVBeam  / Qnu,
+              NuMin = (cc/lambdamax),
+              NuMax = (cc/ lambdamin), 
+              Nch = (NuMax - NuMin) / DeltaNu ];
 
 convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV,
               DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdamin)] ;
@@ -28,7 +39,7 @@ workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf,
 
 
 
-GeneralBaseline: [MVis =12, TObs = 6 * 3600, Nf= 256000,
+GeneralBaseline: [MVis =12, TObs = 6 * 3600, 
                   NAA=9, QPix=2.5, Qfov=1.8, Nmm=2,
                   etaw=0.01, NMajor=10, QGCF=8, QFCV=10,
                   TIon=60, Qw=1, Npp=4];
@@ -36,14 +47,32 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600, Nf= 256000,
 /* Some scenarios to run */
 SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                            lambdamax = 3, lambdamin = 3, lambda = 3,
-                           Bmax=1e5 ] , GeneralBaseline) ;
+                           Bmax=1e5, Nf= 256000 ] , GeneralBaseline) ;
+
+SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
+                       lambdamax = 6, lambdamin = 0.8, lambda = 3,
+                       Bmax=1e5, Nf=Nch ] , GeneralBaseline) ;
 
 SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                           Bmax=2e5] , GeneralBaseline) ;
+                           Bmax=2e5, Nf= 256000] , GeneralBaseline) ;
+
+/* Band 1*/
+SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
+                        lambdamax = 0.8, lambdamin = 0.2, lambda = 0.3,
+                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
+
+SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
+                        lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
+                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
+                         
 SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                               lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                              Bmax=0.5e5],  GeneralBaseline);
+                              Bmax=0.5e5, Nf= 256000],  GeneralBaseline);
+
+SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
+                           lambdamax = 0.4, lambdamin = 0.1, lambda = 0.3,
+                           Bmax=0.5e5 , Nf=Nch],  GeneralBaseline);
 
 
 SKA1LowOld : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, NAA=9, QPix=1.5, Qfov=0.9,Nmm=1, Bmax=1e5, etaw=0.01, NMajor=10];
@@ -52,16 +81,17 @@ SKA1SurveyOld : [ TDump = 0.3, Na = 96 , Nf= 256000, Nbeam=36, Ds=15, lambdamax 
 
 TelRun(T) := block ( [s, xx1, muv, fev],
   /* First find the optimum snapshot duration. xx1 is function to minimise, s is the duration */
-  xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, T,infeval), Tsnap),
+  xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, continuum, T,infeval), Tsnap),
   s: find_root (xx1, Tsnap, 10, 1000),
   /* Then create a function to evaluate requirements at optimum snapshot duration*/
-  fev(P) := float(ev(P, floprate, workingmem, geometry, uvsize, convksize, T, infeval, Tsnap=s)),
+  fev(P) := float(ev(P, floprate, workingmem, geometry, uvsize, convksize, continuum, T, infeval, Tsnap=s)),
   [RFLOP=fev(RFLOP),
   Tsnap =s,
   MUVGrid=fev(MUVGrid),
   RIO=fev(RIO),
   MBufVis = fev(MBufVis),
-  MWCache= fev(MWCache)]);
+  MWCache= fev(MWCache),
+  Nf = fev(Nf)]);
 
 
 /* Take a parameter list and remove the parameter */
