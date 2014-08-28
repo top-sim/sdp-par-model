@@ -44,6 +44,8 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600,
                   etaw=0.01, NMajor=10, QGCF=8, QFCV=10,
                   TIon=60, Qw=1, Npp=4];
 
+ContBaseline: [Nf=Nch, Qnu=1, Nfo=10 ];
+
 /* Some scenarios to run */
 SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                            lambdamax = 3, lambdamin = 3, lambda = 3,
@@ -51,7 +53,7 @@ SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
 
 SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdamax = 6, lambdamin = 0.8, lambda = 3, 
-                       Bmax=1e5, Nf=Nch] , GeneralBaseline) ;
+                       Bmax=1e5] , GeneralBaseline, ContBaseline) ;
 
 SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
@@ -60,11 +62,11 @@ SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
 /* Band 1*/
 SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.8, lambdamin = 0.2, lambda = 0.3,
-                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
+                        Bmax=2e5] , GeneralBaseline, ContBaseline) ;
 
 SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
-                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
+                        Bmax=2e5] , GeneralBaseline, ContBaseline) ;
                          
 SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                               lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
@@ -72,7 +74,7 @@ SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
 
 SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                            lambdamax = 0.4, lambdamin = 0.1, lambda = 0.3,
-                           Bmax=0.5e5 , Nf=Nch],  GeneralBaseline);
+                           Bmax=0.5e5 ],  GeneralBaseline, ContBaseline);
 
 
 /* Find root of function f if bracketed by l and h otherwise return  l  */
@@ -107,10 +109,10 @@ TelRun(SKA1LowBaseline);
 TelRun(SKA1MidBaseline);
 TelRun(SKA1SurveyBaseline);
 
-TelRun(append([Qnu=1, Nfo=10], SKA1LowCont));
-TelRun(append([Qnu=1, Nfo=10], SKA1MidCont1));
-TelRun(append([Qnu=1, Nfo=10], SKA1MidCont2));
-TelRun(append([Qnu=1, Nfo=10], SKA1SurveyCont));
+TelRun(SKA1LowCont);
+TelRun(SKA1MidCont1);
+TelRun(SKA1MidCont2);
+TelRun(SKA1SurveyCont);
 
 DiffPar(SKA1LowBaseline, Bmax, 0.5);
 DiffPar(SKA1MidBaseline, Bmax, 0.5);
