@@ -4,8 +4,8 @@ ratprint: false$
 
 geometry : [ We = 7.27e-5, Re = 6400e3, WCurve= (Bmax/2)**2 / (2*Re) , TSnapMin = WCurve / ( Bmax * We /2)];
 
-uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov,
-           ThetaBeam = lambdamin / (Bmax * (2/3)),
+uvsize : [ ThetaFOV = lambda / Ds * 2*(3.83/ %pi) * Qfov,
+           ThetaBeam = lambda / (Bmax * (2/3)),
            ThetaPix = ThetaBeam  / 2 / QPix,
            NPix = ThetaFOV / ThetaPix];
 
@@ -20,7 +20,7 @@ continuum : [ cc=3e8 , Nu = cc/ lambdamax,
               Nch = (NuMax - NuMin) / DeltaNu ];
 
 convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV,
-              DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdamin)] ;
+              DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambda)] ;
 
 floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( Nf * (RGrid  + RCCF)  + Nfo * (RFFT + RRP))  ,
              RGrid = Na * (Na -1 )  /(2*TDump)  * (NGW**2  + NAA**2) * Nmm * 8,
@@ -40,24 +40,28 @@ workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf,
 
 
 GeneralBaseline: [MVis =12, TObs = 6 * 3600, 
-                  NAA=9, QPix=2.5, Qfov=1.8, Nmm=2,
-                  etaw=0.01, NMajor=10, QGCF=8, QFCV=10,
+                  NAA=9, QPix=2.5, 
+                  Nmm=4,
+                  etaw=0.01, QGCF=8, QFCV=10,
                   TIon=60, Qw=1, Npp=4];
 
-ContBaseline: [Nf=Nch, Qnu=1, Nfo=10 ];
+/* Spectral line case has only major cycle, Field-of-view only up to first null*/
+SpecBaseline : [NMajor=1, Qfov=1, Nfo=Nf, Nf=256000];
+
+ContBaseline: [Nf=Nch, Qnu=1, Qfov=1.8, Nfo=500, NMajor=10 ];
 
 /* Some scenarios to run */
-SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
-                           lambdamax = 3, lambdamin = 3, lambda = 3,
-                           Bmax=1e5, Nf= 256000 , Nfo=Nf] , GeneralBaseline) ;
+SKA1LowSpec : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
+                       lambdamax = 3, lambdamin = 3, lambda = 3,
+                       Bmax=1e5] , GeneralBaseline, SpecBaseline) ;
 
 SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdamax = 6, lambdamin = 0.8, lambda = 3, 
                        Bmax=1e5] , GeneralBaseline, ContBaseline) ;
 
-SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
+SKA1MidSpec : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                           Bmax=2e5, Nf= 256000 , Nfo=Nf] , GeneralBaseline) ;
+                           Bmax=2e5] , GeneralBaseline, SpecBaseline) ;
 
 /* Band 1*/
 SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
@@ -68,9 +72,9 @@ SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
                         Bmax=2e5] , GeneralBaseline, ContBaseline) ;
                          
-SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
-                              lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                              Bmax=0.5e5, Nf= 256000, Nfo=Nf],  GeneralBaseline);
+SKA1SurveySpec : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
+                             lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
+                              Bmax=0.5e5],  GeneralBaseline, SpecBaseline);
 
 SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                            lambdamax = 0.4, lambdamin = 0.1, lambda = 0.3,
@@ -105,22 +109,20 @@ DeletePar(P, T) := delete( P= ''assoc(P, T), T);
 DiffPar(T, P, f) := TelRun ( append(DeletePar(P,T) , [P=assoc(P, T)*f]));
 
 
-TelRun(SKA1LowBaseline);
-TelRun(SKA1MidBaseline);
-TelRun(SKA1SurveyBaseline);
+TelRun(SKA1LowSpec);
+TelRun(SKA1MidSpec);
+TelRun(SKA1SurveySpec);
 
 TelRun(SKA1LowCont);
 TelRun(SKA1MidCont1);
 TelRun(SKA1MidCont2);
 TelRun(SKA1SurveyCont);
 
-DiffPar(SKA1LowBaseline, Bmax, 0.5);
-DiffPar(SKA1MidBaseline, Bmax, 0.5);
-DiffPar(SKA1SurveyBaseline, Bmax, 0.5);
+DiffPar(SKA1LowSpec, Bmax, 0.5);
+DiffPar(SKA1MidSpec, Bmax, 0.5);
+DiffPar(SKA1SurveySpec, Bmax, 0.5);
 
-DiffPar(SKA1LowBaseline, Qfov, 0.5);
-DiffPar(SKA1MidBaseline, Qfov, 0.5);
-DiffPar(SKA1SurveyBaseline, Qfov, 0.5);
+
 
 
 tex( RGrid = ''ev(RGrid, floprate,  uvsize, convksize, workingmem, infeval));
