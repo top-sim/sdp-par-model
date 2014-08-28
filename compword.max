@@ -2,7 +2,7 @@ fpprintprec : 2 $
 ratprint: false$
 
 
-geometry : [ We = 7.27e-5 ];
+geometry : [ We = 7.27e-5, Re = 6400e3, WCurve= (Bmax/2)**2 / (2*Re) , TSnapMin = WCurve / ( Bmax * We /2)];
 
 uvsize : [ ThetaFOV = lambdamax / Ds * 2*(3.83/ %pi) * Qfov,
            ThetaBeam = lambdamin / (Bmax * (2/3)),
@@ -47,39 +47,33 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600,
 /* Some scenarios to run */
 SKA1LowBaseline : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                            lambdamax = 3, lambdamin = 3, lambda = 3,
-                           Bmax=1e5, Nf= 256000 , Nfo=Nf,
-                           TSnapMin=200/3.6] , GeneralBaseline) ;
+                           Bmax=1e5, Nf= 256000 , Nfo=Nf] , GeneralBaseline) ;
 
 SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdamax = 6, lambdamin = 0.8, lambda = 3, 
-                       Bmax=1e5, Nf=Nch,
-                       TSnapMin=200/3.6 ] , GeneralBaseline) ;
+                       Bmax=1e5, Nf=Nch] , GeneralBaseline) ;
 
 SKA1MidBaseline : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                           Bmax=2e5, Nf= 256000 , Nfo=Nf, TSnapMin=780/7.2] , GeneralBaseline) ;
+                           Bmax=2e5, Nf= 256000 , Nfo=Nf] , GeneralBaseline) ;
 
 /* Band 1*/
 SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.8, lambdamin = 0.2, lambda = 0.3,
-                        Bmax=2e5, Nf=Nch, TSnapMin=780/7.2] , GeneralBaseline) ;
+                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
 
 SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
-                        Bmax=2e5, Nf=Nch, TSnapMin=780/7.2] , GeneralBaseline) ;
+                        Bmax=2e5, Nf=Nch] , GeneralBaseline) ;
                          
 SKA1SurveyBaseline : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                               lambdamax = 0.3, lambdamin = 0.3, lambda = 0.3,
-                              Bmax=0.5e5, Nf= 256000, Nfo=Nf, TSnapMin= 50/1.8],  GeneralBaseline);
+                              Bmax=0.5e5, Nf= 256000, Nfo=Nf],  GeneralBaseline);
 
 SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                            lambdamax = 0.4, lambdamin = 0.1, lambda = 0.3,
-                           Bmax=0.5e5 , Nf=Nch, TSnapMin= 50/1.8],  GeneralBaseline);
+                           Bmax=0.5e5 , Nf=Nch],  GeneralBaseline);
 
-
-SKA1LowOld : [ TDump = 0.6, Na = 1024 , Nf= 256000, Nbeam=1, Ds=35, lambdamax = 3, lambdamin = 3, lambda = 3, NAA=9, QPix=1.5, Qfov=0.9,Nmm=1, Bmax=1e5, etaw=0.01, NMajor=10];
-
-SKA1SurveyOld : [ TDump = 0.3, Na = 96 , Nf= 256000, Nbeam=36, Ds=15, lambdamax = 0.2, lambdamin = 0.2, lambda = 0.2, NAA=9, QPix=1.5, Qfov=0.8,Nmm=1, Bmax=0.5e5, etaw=0.01, NMajor=10, QGCF=8, QFCV=10, TIon=60 ] ;
 
 /* Find root of function f if bracketed by l and h otherwise return  l  */
 find_root_or_min(f, x, l, h):= block( [fl, fh],
@@ -90,7 +84,7 @@ find_root_or_min(f, x, l, h):= block( [fl, fh],
 TelRun(T) := block ( [s, xx1, muv, fev],
   /* First find the optimum snapshot duration. xx1 is function to minimise, s is the duration */
   xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, continuum, T,infeval), Tsnap),
-  s: find_root_or_min (xx1, Tsnap, ev(TSnapMin, T), 1000),
+  s: find_root_or_min (xx1, Tsnap, ev(TSnapMin, T, geometry, infeval), 1000),
   /* Then create a function to evaluate requirements at optimum snapshot duration*/
   fev(P) := float(ev(P, floprate, workingmem, geometry, uvsize, convksize, continuum, T, infeval, Tsnap=s)),
   [RFLOP=fev(RFLOP),
@@ -112,6 +106,11 @@ DiffPar(T, P, f) := TelRun ( append(DeletePar(P,T) , [P=assoc(P, T)*f]));
 TelRun(SKA1LowBaseline);
 TelRun(SKA1MidBaseline);
 TelRun(SKA1SurveyBaseline);
+
+TelRun(append([Qnu=1, Nfo=10], SKA1LowCont));
+TelRun(append([Qnu=1, Nfo=10], SKA1MidCont1));
+TelRun(append([Qnu=1, Nfo=10], SKA1MidCont2));
+TelRun(append([Qnu=1, Nfo=10], SKA1SurveyCont));
 
 DiffPar(SKA1LowBaseline, Bmax, 0.5);
 DiffPar(SKA1MidBaseline, Bmax, 0.5);
