@@ -16,8 +16,9 @@ continuum : [ cc=3e8 , Nu = cc/ lambdamax,
               /* Rao thesis Eq 5.2 */
               DeltaNu = Nu  * FOVBeam  / Qnu,
               NuMin = (cc/lambdamax),
-              NuMax = (cc/ lambdamin), 
-              Nch = (NuMax - NuMin) / DeltaNu ];
+              NuMax = (cc/ lambdamin),
+              /* log-spaced channels */
+              Nch = log(lambdamax/lambdamin) / log(1+FOVBeam) ];
 
 convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV,
               DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdasubmin)] ;
