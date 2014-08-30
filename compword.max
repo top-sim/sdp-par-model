@@ -43,7 +43,7 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600,
                   NAA=9, QPix=2.5, 
                   Nmm=4,
                   etaw=0.01, QGCF=8, QFCV=10,
-                  TIon=60, Qw=1, Npp=4, fBShort=0.7 ];
+                  TIon=60, Qw=1, Npp=4, fBShort=0.5 ];
 
 /* Spectral line case has only major cycle, Field-of-view only up to first null*/
 SpecBaseline : [NMajor=1, Qfov=1, Nfo=Nf, Nf=256000];
