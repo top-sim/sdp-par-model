@@ -13,8 +13,7 @@ uvsize : [ ThetaFOV = lambdasubmax / Ds * 2*(3.83/ %pi) * Qfov,
            NPix = ThetaFOV / ThetaPix];
 
 
-continuum : [ cc=3e8 , Nu = cc/ lambdamax,
-              /*  Ratio of FoV / Beam at single frequency, different to ThetaBeam/ThetaFOV */
+continuum : [ /*  Ratio of FoV / Beam at single frequency, different to ThetaBeam/ThetaFOV */
               FOVBeam =  1/ ((2*(3.83/ %pi) * Qfov / Ds) /  ( 1 / (Bmax * 2/3))),
               /* Rao thesis Eq 5.2 */
               /* log-spaced channels */
@@ -111,13 +110,14 @@ TelRun(T) := block ( [s, xx1, muv, fev],
   Nf = fev(Nf),
   RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  )]);
 
-DesignEq(Tc, Ts) := block( [ s, c],
+DesignEq(Tc, Ts) := block( [ s, c, tf],
   c: TelRun(Tc),
   s: TelRun(Ts),
-  [TotFLOP=assoc(RFLOP, c) + assoc(RFLOP, s),
+  tf:assoc(RFLOP, c) + assoc(RFLOP, s),
+  [TotFLOP=tf,
    TotMemBW  =2*(assoc(RFLOP, c) + assoc(RFLOP, s)),
    TotBufVis = (assoc(MBufVis, c) + assoc(MBufVis, s)),
-   BufIO = max(assoc(RIO, c) + assoc(RIO, s))   ,
+   BufIO = max(assoc(RIO, c) * tf /assoc(RFLOP, c)   + assoc(RIO, s)* tf /assoc(RFLOP, s) )   ,
    MemWorkU = max(assoc(MUVGrid, c) + assoc(MUVGrid, s)),
    RFLOPU   = ev( RcuFLOPMin,c)]);
  
