@@ -7,7 +7,7 @@ texput(ThetaPix, "\\Theta_{\\rm pix}")$
 texput(ThetaBeam, "\\Theta_{\\rm beam}")$ 
 texput(NPix, "N_{\\rm pix}")$ 
 texput(Qfov, "Q_{\\rm FoV}")$
-texput(Qnu, "Q_{\\rm nu}")$ 
+texput(Qbw, "Q_{\\rm bw}")$ 
 texput(QPix, "Q_{\\rm pix}")$
 texput(QGCF, "Q_{\\rm GCF}")$
 texput(QFCV, "Q_{\\rm FCV}")$ 
@@ -34,7 +34,7 @@ texput(Ncrpd, "N_{\\rm crpd}")$
 texput(etaw, "\\epsilon_{\\rm w}")$
 
 texput(Tsnap, "T_{\\rm snap}")$
-texput(TsnapMin, "T_{\\rm snap,min}")$
+texput(TSnapMin, "T_{\\rm snap,min}")$
 texput(TIon, "T_{\\rm ion}")$
 texput(TDump, "T_{\\rm dump}")$
 texput(TObs, "T_{\\rm obs}")$
@@ -49,6 +49,7 @@ texput(RCCF, "R_{\\rm CCF}")$
 texput(RFLOP, "R_{\\rm FLOP}")$
 texput(RIO, "R_{\\rm io}")$
 texput(Rvis, "R_{\\rm vis}")$
+texput(Re, "R_{\\rm Earth}")$
 
 texput(MVis, "M_{\\rm vis}")$
 texput(MBufVis, "M_{\\rm buf,vis}")$
