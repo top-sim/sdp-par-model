@@ -108,8 +108,19 @@ TelRun(T) := block ( [s, xx1, muv, fev],
   RIO=fev(RIO),
   MBufVis = fev(MBufVis),
   MWCache= fev(MWCache),
-  Nf = fev(Nf)]);
+  Nf = fev(Nf),
+  RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  )]);
 
+DesignEq(Tc, Ts) := block( [ s, c],
+  c: TelRun(Tc),
+  s: TelRun(Ts),
+  [TotFLOP=assoc(RFLOP, c) + assoc(RFLOP, s),
+   TotMemBW  =2*(assoc(RFLOP, c) + assoc(RFLOP, s)),
+   TotBufVis = (assoc(MBufVis, c) + assoc(MBufVis, s)),
+   BufIO = max(assoc(RIO, c) + assoc(RIO, s))   ,
+   MemWorkU = max(assoc(MUVGrid, c) + assoc(MUVGrid, s)),
+   RFLOPU   = ev( RcuFLOPMin,c)]);
+ 
 
 /* Take a parameter list and remove the parameter */
 DeletePar(P, T) := delete( P= ''assoc(P, T), T);
@@ -131,15 +142,13 @@ TelRun(SKA1SurveyCont);
 TelRun(SKA1SurveySpec);
 
 
+DesignEq(SKA1LowCont, SKA1LowSpec); DesignEq(SKA1MidCont2, SKA1MidSpec); DesignEq(SKA1SurveyCont, SKA1SurveySpec);
+
+
 DiffPar(SKA1LowSpec, Bmax, 0.5);
-DiffPar(SKA1MidSpec, Bmax, 0.5);
-DiffPar(SKA1SurveySpec, Bmax, 0.5);
 
 
 
 
-tex( RGrid = ''ev(RGrid, floprate,  uvsize, convksize, workingmem, infeval));
-tex( RFFT = ''ev(RFFT, floprate,  uvsize, convksize, workingmem, infeval));
-tex( RRP = ''ev(RRP, floprate,  uvsize, convksize, workingmem, infeval));
-tex( RCCF = ''ev(RCCF, floprate,  uvsize, convksize, workingmem, infeval));
+
 map (tex, append(geometry, uvsize, continuum, convksize, floprate, workingmem) );
