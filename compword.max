@@ -17,23 +17,22 @@ continuum : [ /*  Ratio of FoV / Beam at single frequency, different to ThetaBea
               FOVBeam =  1/ ((2*(3.83/ %pi) * Qfov / Ds) /  ( 1 / (Bmax * 2/3))),
               /* Rao thesis Eq 5.2 */
               /* log-spaced channels */
-              Nch = log(lambdamax/lambdamin) / log(1+FOVBeam/ Qbw) ];
+              Nfbw = log(lambdamax/lambdamin) / log(1+FOVBeam/ Qbw) ];
 
 convksize : [ NGWfn (w, eta )  := 2 * sqrt (( ((w * ThetaFOV/2))**2 + (w * ThetaFOV/2 )/(3.14 *eta/sqrt(w))))  * ThetaFOV,
               DeltaWMax = (Bmax * We * Tsnap *Qw )/(2 * lambdasubmin)] ;
 
-floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nf *  RCCF  + Nfo * (RFFT + RRP))  ,
+floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nfin *  RCCF  + Nfout * (RFFT + RRP))  ,
              RGrid = Nvis   * (NGW**2  + NAA**2) * Nmm * 8,
-             Nvis  =  (Nfo * fBShort + Nf*(1-fBShort)) * Na * (Na -1 )  /(2*TDump) ,
+             Nvis  =  (Nfout * fBShort + Nfin*(1-fBShort)) * Na * (Na -1 )  /(2*TDump) ,
              NGW = NGWfn(DeltaWMax, etaw ),
              RFFT = NPix**2 * log(NPix**2) / log(2) * 5 / Tsnap,
              RRP = NPix**2 / Tsnap * 50 ,
              RCCF =  (Na * (Na -1 ) /2 ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV),
              NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
 
-workingmem : [ Ncrpd = Na * (Na -1 ) /2  * Npp  * Nbeam * Nf,
-               MUVGrid = 32 * NPix**2,
-               MWCache = NGW**3 * QGCF**3 * Nbeam * Nf * 8, 
+workingmem : [ MUVGrid = 32 * NPix**2,
+               MWCache = NGW**3 * QGCF**3 * Nbeam * Nfin * 8, 
                MBufVis= 2 * Npp* Nbeam *Nvis * MVis  * TObs,
                RIO = NMajor * Npp* Nbeam *Nvis * MVis];
 
@@ -47,12 +46,12 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600,
                   NAA=9, QPix=2.5, 
                   Nmm=4,
                   etaw=0.01, QGCF=8, QFCV=10,
-                  TIon=60, Qw=1, Npp=4, fBShort=0.5 ];
+                  TIon=60, Qw=1, Npp=4, fBShort=0.5, Nfcorr=256000 ];
 
 /* Spectral line case has only major cycle, Field-of-view only up to first null*/
-SpecBaseline : [NMajor=1, Qfov=1, Nfo=Nf, Nf=256000];
+SpecBaseline : [NMajor=1, Qfov=1, Nfin=Nfcorr, Nfout=Nfcorr];
 
-ContBaseline: [Nf=Nch, Qbw=1, Qfov=1.8, Nfo=500, NMajor=10];
+ContBaseline: [Nfin=Nfbw, Qbw=1, Qfov=1.8, Nfout=500, NMajor=10];
 
 /* Some scenarios to run */
 SKA1LowSpec : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
@@ -107,7 +106,7 @@ TelRun(T) := block ( [s, xx1, muv, fev],
   RIO=fev(RIO),
   MBufVis = fev(MBufVis),
   MWCache= fev(MWCache),
-  Nf = fev(Nf),
+  Nfin = fev(Nfin),
   RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  )]);
 
 DesignEq(Tc, Ts) := block( [ s, c, tf],

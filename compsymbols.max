@@ -22,8 +22,11 @@ texput(Ds, "D_{\\rm s}")$
 texput(Bmax, "B_{\\rm max}")$
 texput(Nbeam, "N_{\\rm beam}")$
 texput(Na, "N_{\\rm a}")$
-texput(Nf, "N_{\\rm f}")$
-texput(Nfo, "N_{\\rm fo}")$
+
+texput(Nfcorr, "N_{\\rm f,corr}")$
+texput(Nfin, "N_{\\rm f,in}")$
+texput(Nfout, "N_{\\rm f,out}")$
+
 texput(Nmm, "N_{\\rm mm}")$
 texput(Npp, "N_{\\rm pp}")$
 texput(NMajor, "N_{\\rm major}")$
