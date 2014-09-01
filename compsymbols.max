@@ -2,7 +2,7 @@
 texput(We, "\\Omega_{\\rm E}")$
 
 texput(ThetaFOV, "\\Theta_{\\rm FoV}")$
-texput(FOVBeam, "\\frac{\\Theta_{\\rm FoV}}{\\Theta_{\\rm beam}}")$ 
+texput(FOVBeam, "\\frac{\\Theta_{\\rm beam}}{\\Theta_{\\rm FoV}}")$ 
 texput(ThetaPix, "\\Theta_{\\rm pix}")$
 texput(ThetaBeam, "\\Theta_{\\rm beam}")$ 
 texput(NPix, "N_{\\rm pix}")$ 
