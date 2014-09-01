@@ -1,4 +1,4 @@
-fpprintprec : 2 $
+fpprintprec : 4 $
 ratprint: false$
 
 
