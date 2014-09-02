@@ -59,7 +59,7 @@ SKA1LowSpec : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        Bmax=1e5] , GeneralBaseline, SpecBaseline) ;
 
 SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
-                       lambdamax = 6, lambdamin = 0.8, 
+                       lambdamax = 6, lambdamin = 0.857, 
                        lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
                        Bmax=1e5] , GeneralBaseline, ContBaseline) ;
 
