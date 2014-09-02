@@ -26,10 +26,14 @@ floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nfin *  RCCF  + Nfout *
              RGrid = Nvis   * (NGW**2  + NAA**2) * Nmm * 8,
              Nvis  =  (Nfout * fBShort + Nfin*(1-fBShort)) * Na * (Na -1 )  /(2*TDump) ,
              NGW = NGWfn(DeltaWMax, etaw ),
-             RFFT = NPix**2 * log(NPix**2) / log(2) * 5 / Tsnap,
+             FFTSnap = NPix**2 * log(NPix**2) / log(2) * 5,
+             RFFT = FFTSnap / Tsnap,
              RRP = NPix**2 / Tsnap * 50 ,
              RCCF =  (Na * (Na -1 ) /2 ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV),
              NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
+
+
+fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump )];
 
 workingmem : [ MUVGrid = 32 * NPix**2,
                MWCache = NGW**3 * QGCF**3 * Nbeam * Nfin * 8, 
