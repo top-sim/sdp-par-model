@@ -38,7 +38,7 @@ fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump )]
 workingmem : [ MUVGrid = 16 * NPix**2,
                MWCache = NGW**3 * QGCF**3 * Nbeam * Nfin * 8, 
                MBufVis= 2 * Npp* Nbeam *Nvis * MVis  * TObs,
-               RIO = NMajor * Npp* Nbeam *Nvis * MVis];
+               RIO = (1+NMajor) * Npp* Nbeam *Nvis * MVis];
 
 
 /* Not yet included in totals, subject to confirmation of the number
@@ -50,7 +50,7 @@ GeneralBaseline: [MVis =12, TObs = 6 * 3600,
                   NAA=9, 
                   Nmm=4,
                   etaw=0.01, QGCF=8, QFCV=10,
-                  TIon=60, Qw=1, Npp=4, fBShort=0.5, Nfcorr=256000 ];
+                  TIon=60, Qw=1, Npp=4,  Nfcorr=256000 ];
 
 /* Spectral line case has only major cycle, Field-of-view only up to first null*/
 SpecBaseline : [NMajor=1, Qfov=1, Nfin=Nfcorr, Nfout=Nfcorr, QPix=2.5 ];
@@ -62,45 +62,51 @@ FastBaseline: [Nfin=Nfbw, Qbw=1, Qfov=0.9, QPix=1.5, Nfout=500, NMajor=1];
 /* Some scenarios to run */
 SKA1LowSpec : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
-                       Bmax=1e5] , GeneralBaseline, SpecBaseline) ;
+                       Bmax=1e5, fBShort=0.5] , GeneralBaseline, SpecBaseline) ;
 
 SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdamax = 6, lambdamin = 0.857, 
                        lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
-                       Bmax=1e5] , GeneralBaseline, ContBaseline) ;
+                       Bmax=1e5, fBShort=0.5] , GeneralBaseline, ContBaseline) ;
 
 SKA1LowFast : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdamax = 6, lambdamin = 0.857, 
                        lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
-                       Bmax=1e5] , GeneralBaseline, FastBaseline) ;
+                       Bmax=1e5, fBShort=0.5] , GeneralBaseline, FastBaseline) ;
 
 SKA1MidSpec : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,
-                           Bmax=2e5] , GeneralBaseline, SpecBaseline) ;
+                           Bmax=2e5 , fBShort=0.5] , GeneralBaseline, SpecBaseline) ;
 
 /* Band 1*/
 SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
-                        lambdamax = 0.8, lambdamin = 0.2, 
-                        lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,                        
-                        Bmax=2e5] , GeneralBaseline, ContBaseline) ;
+                        lambdamax = 0.8, lambdamin = 0.286, 
+                        lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6,                        
+                        Bmax=2e5, fBShort=0.5] , GeneralBaseline, ContBaseline) ;
 
 SKA1MidFast1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
-                        lambdamax = 0.8, lambdamin = 0.2, 
-                        lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,                                   Bmax=2e5] , GeneralBaseline, FastBaseline) ;
+                        lambdamax = 0.8, lambdamin = 0.286, 
+                        lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,
+                        Bmax=2e5, fBShort=0.5] , GeneralBaseline, FastBaseline) ;
 
 SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
                         lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,                                                
-                        Bmax=2e5] , GeneralBaseline, ContBaseline) ;
+                        Bmax=2e5, fBShort=0.5] , GeneralBaseline, ContBaseline) ;
                          
-SKA1SurveySpec : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
-                          lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,
-                             Bmax=0.5e5],  GeneralBaseline, SpecBaseline);
+SKA1SurveySpecB1 : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
+                          lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6,
+                             Bmax=0.5e5 , fBShort=0.1],  GeneralBaseline, SpecBaseline);
 
 SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
-                           lambdamax = 0.4, lambdamin = 0.1, 
+                           lambdamax = 0.46, lambdamin = 0.18, 
                            lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,
-                           Bmax=0.5e5 ],  GeneralBaseline, ContBaseline);
+                           Bmax=0.5e5, fBShort=0.1 ],  GeneralBaseline, ContBaseline);
+
+SKA1SurveyContB1 : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
+                           lambdamax = 0.86, lambdamin = 0.33, 
+                           lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6,
+                           Bmax=0.5e5, fBShort=0.1 ],  GeneralBaseline, ContBaseline);
 
 
 /* Find root of function f if bracketed by l and h otherwise return  l  */
@@ -152,11 +158,11 @@ TelRun(SKA1MidSpec);
 
 
 
-TelRun(SKA1SurveyCont);
-TelRun(SKA1SurveySpec);
+TelRun(SKA1SurveyContB1);
+TelRun(SKA1SurveySpecB1);
 
 
-DesignEq(SKA1LowCont, SKA1LowSpec); DesignEq(SKA1MidCont2, SKA1MidSpec); DesignEq(SKA1SurveyCont, SKA1SurveySpec);
+DesignEq(SKA1LowCont, SKA1LowSpec); DesignEq(SKA1MidCont1, SKA1MidSpec); DesignEq(SKA1SurveyContB1, SKA1SurveySpecB1);
 
 
 DiffPar(SKA1LowSpec, Bmax, 0.5);
