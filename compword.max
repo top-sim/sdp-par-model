@@ -35,7 +35,7 @@ floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nfin *  RCCF  + Nfout *
 
 fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump )];
 
-workingmem : [ MUVGrid = 32 * NPix**2,
+workingmem : [ MUVGrid = 16 * NPix**2,
                MWCache = NGW**3 * QGCF**3 * Nbeam * Nfin * 8, 
                MBufVis= 2 * Npp* Nbeam *Nvis * MVis  * TObs,
                RIO = NMajor * Npp* Nbeam *Nvis * MVis];
@@ -47,15 +47,17 @@ dftsub  : [  RDFTSub = 64 * Ns * Nvis * Npp  * NMajor * Nbeam ];
 
 
 GeneralBaseline: [MVis =12, TObs = 6 * 3600, 
-                  NAA=9, QPix=2.5, 
+                  NAA=9, 
                   Nmm=4,
                   etaw=0.01, QGCF=8, QFCV=10,
                   TIon=60, Qw=1, Npp=4, fBShort=0.5, Nfcorr=256000 ];
 
 /* Spectral line case has only major cycle, Field-of-view only up to first null*/
-SpecBaseline : [NMajor=1, Qfov=1, Nfin=Nfcorr, Nfout=Nfcorr];
+SpecBaseline : [NMajor=1, Qfov=1, Nfin=Nfcorr, Nfout=Nfcorr, QPix=2.5 ];
 
-ContBaseline: [Nfin=Nfbw, Qbw=1, Qfov=1.8, Nfout=500, NMajor=10];
+ContBaseline: [Nfin=Nfbw, Qbw=1, Qfov=1.8, Nfout=500, NMajor=10 ,QPix=2.5 ];
+
+FastBaseline: [Nfin=Nfbw, Qbw=1, Qfov=0.9, QPix=1.5, Nfout=500, NMajor=1];
 
 /* Some scenarios to run */
 SKA1LowSpec : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
@@ -67,6 +69,11 @@ SKA1LowCont : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                        lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
                        Bmax=1e5] , GeneralBaseline, ContBaseline) ;
 
+SKA1LowFast : append([ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
+                       lambdamax = 6, lambdamin = 0.857, 
+                       lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
+                       Bmax=1e5] , GeneralBaseline, FastBaseline) ;
+
 SKA1MidSpec : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                            lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,
                            Bmax=2e5] , GeneralBaseline, SpecBaseline) ;
@@ -76,6 +83,10 @@ SKA1MidCont1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.8, lambdamin = 0.2, 
                         lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,                        
                         Bmax=2e5] , GeneralBaseline, ContBaseline) ;
+
+SKA1MidFast1 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
+                        lambdamax = 0.8, lambdamin = 0.2, 
+                        lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3,                                   Bmax=2e5] , GeneralBaseline, FastBaseline) ;
 
 SKA1MidCont2 : append([ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                         lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
