@@ -65,10 +65,10 @@ ContBaseline: [Nfin=Nfbw, Nfmid= Nfbwmid, Qbw=1, Qfov=1.8, Nfout=500, NMajor=10 
 FastBaseline: [Nfin=Nfbw, Nfmid= Nfbwmid, Qbw=1, Qfov=0.9, QPix=1.5, Nfout=500, NMajor=1];
 
 SKA1LowBase: [ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
-                    lambdamax = 6, lambdamin = 0.857, 
-                   lambdasubmax = 3, lambdasubmin = 3, 
+                 lambdamax = 6, lambdamin = 0.857, 
+                 lambdasubmax = 3, lambdasubmin = 3, 
                       Bmax=1e5, fBShort=0.5,
-                       Bmid=3e4, fBMid=0.0];
+                      Bmid=Bmax/10, fBMid=0.4];
 
 /* Some scenarios to run */
 SKA1LowSpec : append( SKA1LowBase , GeneralBaseline, SpecBaseline) ;
@@ -79,14 +79,15 @@ SKA1LowFast : append(SKA1LowBase , GeneralBaseline, FastBaseline) ;
 
 SKA1MidBase : [ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                 Bmax=2e5 , fBShort=0.5,
-                Bmid=6e4, fBMid=0.0] ;
+                Bmid=Bmax/10, fBMid=0.4] ;
 
 SKA1MidB1 : append(SKA1MidBase,
   [lambdamax = 0.8, lambdamin = 0.286, 
   lambdasubmax = 0.6, lambdasubmin = 0.6]);
 
 
-SKA1MidSpec : append(SKA1MidB1, GeneralBaseline, SpecBaseline) ;
+SKA1MidSpec1 : append(SKA1MidB1, GeneralBaseline, SpecBaseline) ;
+SKA1MidSpec2 : append(SKA1MidB2, GeneralBaseline, SpecBaseline) ;
 
 /* Band 1*/
 SKA1MidCont1 : append(SKA1MidB1 , GeneralBaseline, ContBaseline) ;
@@ -163,7 +164,7 @@ TelRun(SKA1LowSpec);
 
 TelRun(SKA1MidCont1);
 TelRun(SKA1MidCont2);
-TelRun(SKA1MidSpec);
+TelRun(SKA1MidSpec1);
 
 
 
