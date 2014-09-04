@@ -35,7 +35,13 @@ floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nfin *  RCCF  + Nfout *
              RFFT = FFTSnap / Tsnap,
              RRP = NPix**2 / Tsnap * 50 ,
              RCCF =  (Na * (Na -1 ) /2 ) * NCVFF ** 2 * log(NCVFF ** 2 ) / log(2) * Nmm * 5 / (TIon * QFCV),
-             NCVFF = QGCF * sqrt( NGW**2 + NAA**2)];
+             NCVFF = QGCF * sqrt( NGW**2 + NAA**2),
+             Npatch = 2 * Qpix / fPatch,
+             RMinor = Nminor * Npatch**2 * 2 * Nmsmf / TObs,
+             /* exp */
+             RFLOPFacet = 25* Nvis * 2 * NMajor * Npp * Nbeam ];
+
+
 
 
 fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump )];
@@ -67,8 +73,8 @@ FastBaseline: [Nfin=Nfbw, Nfmid= Nfbwmid, Qbw=1, Qfov=0.9, QPix=1.5, Nfout=500, 
 SKA1LowBase: [ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                  lambdamax = 6, lambdamin = 0.857, 
                  lambdasubmax = 3, lambdasubmin = 3, 
-                      Bmax=1e5, fBShort=0.5,
-                      Bmid=Bmax/10, fBMid=0.4];
+                 Bmax=1e5, fBShort=0.5,
+                 Bmid=2e4, fBMid=0.4];
 
 /* Some scenarios to run */
 SKA1LowSpec : append( SKA1LowBase , GeneralBaseline, SpecBaseline) ;
@@ -79,7 +85,7 @@ SKA1LowFast : append(SKA1LowBase , GeneralBaseline, FastBaseline) ;
 
 SKA1MidBase : [ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                 Bmax=2e5 , fBShort=0.5,
-                Bmid=Bmax/10, fBMid=0.4] ;
+                Bmid=2e4, fBMid=0.4] ;
 
 SKA1MidB1 : append(SKA1MidBase,
   [lambdamax = 0.8, lambdamin = 0.286, 
@@ -105,7 +111,7 @@ SKA1SurveyBase: [ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                   lambdamax = 0.86, lambdamin = 0.33, 
                    lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6,
                    Bmax=0.5e5 , fBShort=0.1,
-                   Bmid=2e4, fBMid=0.0];
+                   Bmid=2e4, fBMid=0.8];
                          
 SKA1SurveySpecB1 : append(  SKA1SurveyBase, GeneralBaseline, SpecBaseline);
 
@@ -138,6 +144,7 @@ TelRun(T) := block ( [s, xx1, muv, fev],
   MBufVis = fev(MBufVis),
   MWCache= fev(MWCache),
   Nfin = fev(Nfin),
+  NPix =  fev(NPix), 
   RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  )]);
 
 DesignEq(Tc, Ts) := block( [ s, c, tf],
