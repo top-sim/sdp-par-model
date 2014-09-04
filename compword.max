@@ -66,7 +66,7 @@ FastBaseline: [Nfin=Nfbw, Nfmid= Nfbwmid, Qbw=1, Qfov=0.9, QPix=1.5, Nfout=500, 
 
 SKA1LowBase: [ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                     lambdamax = 6, lambdamin = 0.857, 
-                   lambdasubmax = 3, lambdasubmin = 3, lambda = 3,
+                   lambdasubmax = 3, lambdasubmin = 3, 
                       Bmax=1e5, fBShort=0.5,
                        Bmid=3e4, fBMid=0.0];
 
@@ -83,7 +83,7 @@ SKA1MidBase : [ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
 
 SKA1MidB1 : append(SKA1MidBase,
   [lambdamax = 0.8, lambdamin = 0.286, 
-  lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6]);
+  lambdasubmax = 0.6, lambdasubmin = 0.6]);
 
 
 SKA1MidSpec : append(SKA1MidB1, GeneralBaseline, SpecBaseline) ;
@@ -94,8 +94,8 @@ SKA1MidCont1 : append(SKA1MidB1 , GeneralBaseline, ContBaseline) ;
 SKA1MidFast1 : append(SKA1MidB1, GeneralBaseline, FastBaseline) ;
 
 SKA1MidB2 : append(SKA1MidBase,
-  [lambdamax = 0.316, lambdamin = 0.17, lambda = 0.3,
-  lambdasubmax = 0.3, lambdasubmin = 0.3, lambda = 0.3]);
+  [lambdamax = 0.316, lambdamin = 0.17, 
+  lambdasubmax = 0.3, lambdasubmin = 0.3]);
 
 
 SKA1MidCont2 : append(SKA1MidB2 , GeneralBaseline, ContBaseline) ;
