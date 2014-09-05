@@ -44,7 +44,7 @@ floprate : [ RFLOP= 2 * NMajor * Npp * Nbeam * ( RGrid + Nfin *  RCCF  + Nfout *
 
 
 
-fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump )];
+fast : [ RFLOPFast = 2* Npp * Nbeam *  ( RGrid  + NfoutFast * FFTSnap / TDump + Nfin * RCCF )];
 
 workingmem : [ MUVGrid = 16 * NPix**2,
                MWCache = NGW**3 * QGCF**3 * Nbeam * Nfin * 8, 
@@ -74,7 +74,8 @@ SKA1LowBase: [ TDump = 0.6, Na = 1024 , Nbeam=1, Ds=35,
                  lambdamax = 6, lambdamin = 0.857, 
                  lambdasubmax = 3, lambdasubmin = 3, 
                  Bmax=1e5, fBShort=0.5,
-                 Bmid=2e4, fBMid=0.4];
+                 Bmid=2e4, fBMid=0.4,
+                 NfoutFast=300];
 
 /* Some scenarios to run */
 SKA1LowSpec : append( SKA1LowBase , GeneralBaseline, SpecBaseline) ;
@@ -89,7 +90,8 @@ SKA1MidBase : [ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
 
 SKA1MidB1 : append(SKA1MidBase,
   [lambdamax = 0.8, lambdamin = 0.286, 
-  lambdasubmax = 0.6, lambdasubmin = 0.6]);
+  lambdasubmax = 0.6, lambdasubmin = 0.6,
+  NfoutFast=700]);
 
 
 SKA1MidSpec1 : append(SKA1MidB1, GeneralBaseline, SpecBaseline) ;
@@ -111,7 +113,8 @@ SKA1SurveyBase: [ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
                   lambdamax = 0.86, lambdamin = 0.33, 
                    lambdasubmax = 0.6, lambdasubmin = 0.6, lambda = 0.6,
                    Bmax=0.5e5 , fBShort=0.1,
-                   Bmid=2e4, fBMid=0.8];
+                   Bmid=2e4, fBMid=0.8,
+                   NfoutFast=500];
                          
 SKA1SurveySpecB1 : append(  SKA1SurveyBase, GeneralBaseline, SpecBaseline);
 
@@ -124,6 +127,8 @@ SKA1SurveyCont : append([ TDump = 0.3, Na = 96 , Nbeam=36, Ds=15,
 
 SKA1SurveyContB1 : append(SKA1SurveyBase,  GeneralBaseline, ContBaseline);
 
+SKA1SurveyFastB1 : append(SKA1SurveyBase,  GeneralBaseline, FastBaseline);
+
 
 /* Find root of function f if bracketed by l and h otherwise return  l  */
 find_root_or_min(f, x, l, h):= block( [fl, fh],
@@ -133,10 +138,10 @@ find_root_or_min(f, x, l, h):= block( [fl, fh],
 
 TelRun(T) := block ( [s, xx1, muv, fev],
   /* First find the optimum snapshot duration. xx1 is function to minimise, s is the duration */
-  xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, continuum, T,infeval), Tsnap),
+  xx1: diff(ev(RFLOP, floprate, geometry, uvsize, convksize, workingmem, continuum, fast, T,infeval), Tsnap),
   s: find_root_or_min (xx1, Tsnap, ev(TSnapMin, T, geometry, infeval), 1000),
   /* Then create a function to evaluate requirements at optimum snapshot duration*/
-  fev(P) := float(ev(P, floprate, workingmem, geometry, uvsize, convksize, continuum, T, infeval, Tsnap=s)),
+  fev(P) := float(ev(P, floprate, workingmem, geometry, uvsize, convksize, continuum, fast, T, infeval, Tsnap=s)),
   [RFLOP=fev(RFLOP),
   Tsnap =s,
   MUVGrid=fev(MUVGrid),
@@ -145,13 +150,15 @@ TelRun(T) := block ( [s, xx1, muv, fev],
   MWCache= fev(MWCache),
   Nfin = fev(Nfin),
   NPix =  fev(NPix), 
-  RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  )]);
+  RcuFLOPMin = fev(2 * NMajor * (RFFT + RRP)  ),
+  RFLOPFast = fev(RFLOPFast)]);
 
-DesignEq(Tc, Ts) := block( [ s, c, tf],
+DesignEq(Tc, Ts, Tf) := block( [ s, c, ff, tflop],
   c: TelRun(Tc),
   s: TelRun(Ts),
-  tf:assoc(RFLOP, c) + assoc(RFLOP, s),
-  [TotFLOP=tf,
+  ff: TelRun(Tf),
+  tflop:assoc(RFLOP, c) + assoc(RFLOP, s)+ assoc(RFLOPFast, ff),
+  [TotFLOP=tflop,
    TotMemBW  =2*(assoc(RFLOP, c) + assoc(RFLOP, s)),
    TotBufVis = (assoc(MBufVis, c) + assoc(MBufVis, s)),
    BufIO = max(assoc(RIO, c) * tf /assoc(RFLOP, c)   + assoc(RIO, s)* tf /assoc(RFLOP, s) )   ,
@@ -179,7 +186,9 @@ TelRun(SKA1SurveyContB1);
 TelRun(SKA1SurveySpecB1);
 
 
-DesignEq(SKA1LowCont, SKA1LowSpec); DesignEq(SKA1MidCont1, SKA1MidSpec); DesignEq(SKA1SurveyContB1, SKA1SurveySpecB1);
+DesignEq(SKA1LowCont, SKA1LowSpec, SKA1LowFast);
+DesignEq(SKA1MidCont1, SKA1MidSpec, SKA1MidFast1);
+DesignEq(SKA1SurveyContB1, SKA1SurveySpecB1, SKA1SurveyFastB1);
 
 
 DiffPar(SKA1LowSpec, Bmax, 0.5);
