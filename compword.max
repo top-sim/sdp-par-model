@@ -89,8 +89,8 @@ SKA1MidBase : [ TDump = 0.08, Na = 254 ,  Nbeam=1, Ds=15,
                 Bmid=2e4, fBMid=0.4] ;
 
 SKA1MidB1 : append(SKA1MidBase,
-  [lambdamax = 0.8, lambdamin = 0.286, 
-  lambdasubmax = 0.6, lambdasubmin = 0.6,
+  [lambdamax = 0.857, lambdamin = 0.286, 
+  lambdasubmax = 0.57, lambdasubmin = 0.57,
   NfoutFast=700]);
 
 
