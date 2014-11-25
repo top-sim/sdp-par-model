@@ -1,7 +1,8 @@
-* Maxima 
+===SKA SDP Performance Model===
 
-I currently use Maxima (http://maxima.sourceforge.net/) version 5.32
-(current version in Ubuntu 14.04, easy to install on all other
-systems). Usually it is best for newcomers to use the newest official
-version and let me know of any problems.
+This repository contains iPython and Maxima models 
+that model the SKA Science Data Processor performance
 
+The purpose of these models is primarily to deduce the required amount of 
+storage, processing power and power that are needed to build the SDP.
+These parameters in turn inform the cost estimates of the SDP compute platform. 
