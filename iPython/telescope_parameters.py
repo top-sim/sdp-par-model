@@ -15,9 +15,8 @@ universal = {Omega_E : 7.292115e-5,  # In PDR05 Excel sheet a value of 0.0000727
              Qgcf : 8.0,
              Qfcv : 10.0,
              Tsnap_min : 1.2,
-             Blim_mid : 20000, # Baseline length that(Fbshort+Fbmid, i.e. 90%) of baselines are shorter than.
+             Blim_mid : 20000, # Baseline length that(Fbshort+Fbmid, i.e. 90%) of baselines are shorter than. Defunct.
              Nfacet : 1  # THIS VALUE SHOULD BE DYNAMICALLY MINIMIZED - THIS IS A TEST! TODO.
-             # ** Is this value valid ?? Especially for all telescopes, as they have different baselines ** ??? 
              }  
 
 # The three telescopes, along with their unique characteristics
@@ -141,9 +140,9 @@ imaging_mode_info = {
         Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Blim_mid)/(Theta_fov*Qbw)+1) ,
+        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax)/(Theta_fov*Qbw)+1) , #should be Bmax not Blim mid
         Rrp : 50 * Npix**2 / Tsnap,
-        Nf_used : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Blim_mid)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
+        Nf_used : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
     'Spectral': {

@@ -24,8 +24,8 @@ Tsnap_min = symbols("T_snap\,min", positive=True)
 Qpix = symbols("Q_pix", positive=True)
 
 Ds = symbols("D_s", positive=True)
-Bmax_ref, Bmax = symbols("B_max\,ref B_max", positive=True)
-Fb_short, Fb_short_tel, Fb_mid = symbols("F_b\,short F_b\,short\,tel F_b\,mid") #_short_tel and #mid needed for intermediate computations
+Bmax_ref, Bmax, Bmax_bin = symbols("B_max\,ref B_max Bmax\,bin", positive=True)
+Fb_short, Fb_short_tel, Fb_mid = symbols("F_b\,short F_b\,short\,tel F_b\,mid") #_short_tel and #mid needed for intermediate computations (defunct in baseline binning regime)
 freq_min, freq_max = symbols("f_min f_max")
 
 # These two variables are for computing baseline-dependent variables (by approximating baseline distribution as a series of bins)
@@ -55,24 +55,25 @@ Rrp = symbols("R_rp", positive=True) # Reprojection Flop rate, per output channe
 '''
 Parameters derived in terms of those above:
 '''
-Tdump = Tdump_ref * Bmax_ref / Bmax # Correlator dump time
+Tdump = Min(Tdump_ref * Bmax_ref / Bmax, 1.2) # Correlator dump time; limit this at 1.2s maximum
 wl_max = u.c / freq_min             # Maximum Wavelength
 wl_min = u.c / freq_max             # Minimum Wavelength
 wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
 Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence
-Theta_beam = 3 * wl/(2*Bmax)
+Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin...
 Theta_pix = Theta_beam/(2*Qpix)
 Npix = Theta_fov / Theta_pix
 Nw = 2  # Bytes per value
 Rfft = Nfacet**2 * 10 * Npix**2 * log(Npix,2) / Tsnap # added Nfacet dependence
 
-DeltaW_max = Qw * Max(Bmax*Tsnap*Omega_E/(2*wl), Bmax**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength
+DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
 Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi)))
 Ncvff = Qgcf*sqrt(Naa**2+Ngw**2)
 
-Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet.
+#Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet. (new: just use Nf_used)
+Nf_vis=Nf_used
 Cr=Nf_used/Nf_vis
-Nvis = binfrac*Na*(Na-1)*Nf_used/(2*Tdump)/Cr * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
+Nvis = binfrac*Na*(Na-1)*Nf_used/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
 Rgrid = Nfacet*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase tehre are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower.
 
 Rccf = 5 *(Na-1)*Na*Nmm*Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv)
