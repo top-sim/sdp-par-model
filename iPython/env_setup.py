@@ -12,7 +12,7 @@ init_session(
     pretty_print=True,
     quiet=True,
 )
-from sympy import symbols, pi, log, ln, Max, sqrt, sign, lambdify
+from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify
 import copy
 import sympy.physics.units as u
 from astropy import constants as const

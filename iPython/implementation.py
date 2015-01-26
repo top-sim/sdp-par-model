@@ -158,14 +158,19 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
 
     bins = tp.pop(baseline_bins) # Remove the array of baselines from the parameter dictionary
     counts = tp.pop(baseline_bin_counts) # Remove the array of baselines from the parameter dictionary
-    nbins = len(bins)
+
+    bins_unitless = bins / u.m
+    nbins = bins_unitless.searchsorted(remove_units(tp[Bmax])) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used    
+    bins[:nbins]  # Restrict the bins used to only those bins that are used
+    counts = counts[:nbins]  # Restrict the bins counts used to only those bins that are used
 
     nbaselines = sum(counts)
     temp_result = 0
-    for i in range(nbins): #strictly, need to stop moving along bins if bins[i-1]>Bmax_experiment ("while" bins[i-1]<Bmax_experiment..., or use "if" at adding stage)
+    for i in range(nbins):
         tp[Bmax_bin] = bins[i] #use Bmax for the bin only,  not to determine map size
         tp[binfrac] = counts[i]/nbaselines
-        temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?)
+        temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?). 
+        #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
     
     if mode == 'CS':
         raise Exception('Cannot yet handle CS mode when using binned baselines. Should be simple to implement though.')

@@ -72,7 +72,6 @@ Ncvff = Qgcf*sqrt(Naa**2+Ngw**2)
 
 #Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet. (new: just use Nf_used)
 Nf_vis=Nf_used
-Cr=Nf_used/Nf_vis
 Nvis = binfrac*Na*(Na-1)*Nf_used/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
 Rgrid = Nfacet*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase tehre are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower.
 
