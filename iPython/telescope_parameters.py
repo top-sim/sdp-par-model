@@ -140,7 +140,7 @@ imaging_mode_info = {
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1),
-        Rrp : 50 * Npix**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
         Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
@@ -154,7 +154,7 @@ imaging_mode_info = {
         Fb_short : 0 * Fb_short_tel, # Need a symbolic expression to be able to be substuted; hence multiply by 0 
         Tobs : 6 * u.hours,
         Fb_mid : Fb_short,
-        Rrp : 50 * Npix**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
     },
     'SlowTrans': {
         Qfov: 0.9, # Field of view factor
