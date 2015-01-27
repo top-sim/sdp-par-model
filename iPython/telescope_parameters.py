@@ -139,9 +139,9 @@ imaging_mode_info = {
         Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax)/(Theta_fov*Qbw)+1),
+        Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1),
         Rrp : 50 * Npix**2 / Tsnap,
-        Nf_used : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
+        Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
     'Spectral': {

@@ -138,7 +138,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
     for i in range(nbins):
         tp[Bmax_bin] = bins[i] #use Bmax for the bin only,  not to determine map size
         tp[binfrac] = float(counts[i]) / nbaselines  # Make sure that this is a floating point division, otherwise we get zero!
-        temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?). 
+        temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?).
         #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
     
     if mode == 'CS':
@@ -148,10 +148,10 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
     bound_lower = remove_units(Tsnap_min.subs(tp).subs(tp))
     bound_upper = 0.5 * remove_units(Tobs.subs(tp).subs(tp))
     Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)
-    value_optimal = temp_result.subs({Tsnap : Tsnap_optimal}) /1e15
-    print "Tsnap has been optimized as : %f (for the binned case)." % (Tsnap_optimal,)     # Temp TODO remove later
+    value_optimal = temp_result.subs({Tsnap : Tsnap_optimal})
+    print "Tsnap has been optimized as : %f (for the binned case), yielding a minimum value of %f Tera-units" % (Tsnap_optimal, value_optimal / 1e15)     # Temp TODO remove later
     
-    return {mode : temp_result.subs({Tsnap : Tsnap_optimal})}  # Replace Tsnap with its optimal value
+    return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):
     '''
