@@ -81,7 +81,7 @@ Rphrot = 2 * Nmajor * Npp * Nbeam * Nvis * Nfacet**2 * 25 * sign(Nfacet-1)  # La
 
 #where is Rrp??
 
-Rflop = 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_used*Rccf) + Rgrid) + Rphrot # Overall flop rate
+Rflop = Rphrot + 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_used*Rccf) + Rgrid) # Overall flop rate
 Mbuf_vis = 2 * Mvis * Nbeam * Npp * Nvis * Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
 Rio = Mvis * Nmajor * Nbeam * Npp * Nvis * Nfacet**2 #added Nfacet dependence
 
@@ -93,3 +93,4 @@ Rflop_grid = Rflop_common_factor * Rgrid
 Rflop_conv = Rflop_common_factor * Nf_used * Rccf
 Rflop_fft  = Rflop_common_factor * Nf_out  * Rfft
 Rflop_proj = Rflop_common_factor * Nf_out  * Rrp
+Rflop_phrot = Rphrot
