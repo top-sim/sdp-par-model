@@ -135,7 +135,7 @@ imaging_mode_info = {
         Nmajor: 10, # Number of major CLEAN cycles to be done
         Qpix:  2.5, # Quality factor of synthesised beam oversampling
         Nf_max: 256000, 
-        Nf_out : 5000,
+        Nf_out : 500,
         Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
@@ -146,7 +146,7 @@ imaging_mode_info = {
     }, 
     'Spectral': {
         Qfov: 1.0, # Field of view factor
-        Nmajor: 1, # Number of major CLEAN cycles to be done        
+        Nmajor: 1.5, # Number of major CLEAN cycles to be done
         Qpix: 2.5, # Quality factor of synthesised beam oversampling
         Nf_out : Nf_max, #The same as the number of channels
         Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
