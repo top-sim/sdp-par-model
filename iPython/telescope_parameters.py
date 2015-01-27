@@ -146,7 +146,7 @@ imaging_mode_info = {
     }, 
     'Spectral': {
         Qfov: 1.0, # Field of view factor
-        Nmajor: 1.5, # Number of major CLEAN cycles to be done
+        Nmajor: 1, # Number of major CLEAN cycles to be done
         Qpix: 2.5, # Quality factor of synthesised beam oversampling
         Nf_out : Nf_max, #The same as the number of channels
         Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
