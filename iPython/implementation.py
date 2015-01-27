@@ -158,7 +158,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
     bound_upper = 0.5 * remove_units(Tobs.subs(tp).subs(tp))
     Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)
     value_optimal = temp_result.subs({Tsnap : Tsnap_optimal})
-    print "Tsnap has been optimized as : %f (for the binned case), yielding a minimum value of %f Tera-units" % (Tsnap_optimal, value_optimal / 1e15)     # Temp TODO remove later
+    print "Tsnap has been optimized as : %f (for the binned case), yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal / 1e15)     # Temp TODO remove later
     return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):
