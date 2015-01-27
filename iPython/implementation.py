@@ -19,37 +19,6 @@ mode_labels = dict(
     )
 )
 
-def optimize_Tsnap(telescope_params):
-    '''
-    Optimized Tsnap so that Rflop is minimized for the provided set of telescope parameters.
-    This method will soon be obsolete; replaced by generic optimzation method optimize_expr
-    '''
-    telescope_params = copy.copy(telescope_params)
-    for token in ('mode', 'band', 'telescope', 'comment'):
-        if token in telescope_params:
-            telescope_params.pop(token)
-
-    rflop_expression = Rflop.subs(telescope_params).subs(telescope_params)
-    Rflop_eval = lambdify(Tsnap, rflop_expression, modules=("sympy",))
-    Rflop_eval_f = lambda x: float(Rflop_eval(x))
-    
-    # Remove the string literals from the telescope_params, as they can't be evaluated by lambdify
-    Tobs_val = remove_units(Tobs.subs(telescope_params).subs(telescope_params))
-    Tsnap_min_val = remove_units(Tsnap_min.subs(telescope_params).subs(telescope_params))
-    
-    # Lower bound cannot be higher than the uppper bound.
-    if 0.5 * Tobs_val <= Tsnap_min_val:
-        # print 'Unable to optimize T_snap as 0.5*Tobs_val <= Tsnap_min (%f <= %f). Using Tsnap_min.' % (0.5*Tobs_val, Tsnap_min_val)
-        return Tsnap_min_val
-    else:
-        result = opt.minimize_scalar(Rflop_eval_f, bounds=(Tsnap_min_val, 0.5 * Tobs_val), method='bounded')
-        if not result.success:
-            print 'WARNING! : Was unable to optimize Tsnap. Using a value of: %f' % result.x 
-        else:
-            # print 'Optimized T_snap = %f' % result.x
-            pass
-        return result.x
-
 def optimize_expr(expression, free_var, bound_lower, bound_upper):
     '''
     Optimized Tsnap so that the supplied expression is minimized
@@ -168,7 +137,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
     temp_result = 0
     for i in range(nbins):
         tp[Bmax_bin] = bins[i] #use Bmax for the bin only,  not to determine map size
-        tp[binfrac] = counts[i]/nbaselines
+        tp[binfrac] = float(counts[i]) / nbaselines  # Make sure that this is a floating point division, otherwise we get zero!
         temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?). 
         #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
     
@@ -178,8 +147,10 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
     # Remove string literals from the telescope_params, as they can't be evaluated by lambdify    
     bound_lower = remove_units(Tsnap_min.subs(tp).subs(tp))
     bound_upper = 0.5 * remove_units(Tobs.subs(tp).subs(tp))
-    Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)    
-    print "Tsnap has been optimized as : %f (for the binned case)" % Tsnap_optimal    # Temp TODO remove later
+    Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)
+    value_optimal = temp_result.subs({Tsnap : Tsnap_optimal}) /1e15
+    print "Tsnap has been optimized as : %f (for the binned case)." % (Tsnap_optimal,)     # Temp TODO remove later
+    
     return {mode : temp_result.subs({Tsnap : Tsnap_optimal})}  # Replace Tsnap with its optimal value
 
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):
