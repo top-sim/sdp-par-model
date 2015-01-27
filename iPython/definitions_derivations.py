@@ -71,8 +71,10 @@ Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW
 Ncvff = Qgcf*sqrt(Naa**2+Ngw**2)
 
 #Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet. (new: just use Nf_used)
-Nf_vis=Nf_used
-Nvis = binfrac*Na*(Na-1)*Nf_used/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
+
+#Nf_vis=Max(Nf_out, Nf_no_smear) #need to take max here so that gridding visibilities cannot be put on channels which are too coarse
+Nf_vis=Nf_no_smear
+Nvis = binfrac*Na*(Na-1)*Nf_vis/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
 Rgrid = Nfacet*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase tehre are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower.
 
 Rccf = Nfacet**2 * 5 * binfrac *(Na-1)*Na*Nmm*Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv) #reduce by multiplication by binfrac (RCB), add in extra multiplication by Nfacet-squared.
@@ -81,7 +83,7 @@ Rphrot = 2 * Nmajor * Npp * Nbeam * Nvis * Nfacet**2 * 25 * sign(Nfacet-1)  # La
 
 #where is Rrp??
 
-Rflop = Rphrot + 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_used*Rccf) + Rgrid) # Overall flop rate
+Rflop = Rphrot + 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_vis*Rccf) + Rgrid) # Overall flop rate
 Mbuf_vis = 2 * Mvis * Nbeam * Npp * Nvis * Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
 Rio = Mvis * Nmajor * Nbeam * Npp * Nvis * Nfacet**2 #added Nfacet dependence
 

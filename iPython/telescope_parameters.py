@@ -135,13 +135,13 @@ imaging_mode_info = {
         Nmajor: 10, # Number of major CLEAN cycles to be done
         Qpix:  2.5, # Quality factor of synthesised beam oversampling
         Nf_max: 256000, 
-        Nf_out : 500,
+        Nf_out : 5000,
         Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
-        Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1),
+        Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
         Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
-        Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
+        Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
     'Spectral': {
@@ -149,7 +149,7 @@ imaging_mode_info = {
         Nmajor: 1, # Number of major CLEAN cycles to be done        
         Qpix: 2.5, # Quality factor of synthesised beam oversampling
         Nf_out : Nf_max, #The same as the number of channels
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax)/(Theta_fov*Qbw)+1) ,
+        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
         Nf_used : Nf_max,
         Fb_short : 0 * Fb_short_tel, # Need a symbolic expression to be able to be substuted; hence multiply by 0 
         Tobs : 6 * u.hours,
@@ -161,11 +161,11 @@ imaging_mode_info = {
         Nmajor: 1, # Number of major CLEAN cycles to be done
         Qpix: 1.5, # Quality factor of synthesised beam oversampling
         Nf_out : 500,  # Initially this value was computed (see line above), but Rosie has since specified that it should just be set to 500.
-        Nf_used : ln(wl_max / wl_min) / ln((Theta_beam/(Theta_fov*Qbw)+1)), #Number of bands for gridding at longest baseline
+        Nf_used : log(wl_max/wl_min) / log(3*(wl/u.m)/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of bands for gridding at longest baseline
         Fb_short : 0 * Fb_short_tel,
         Tobs : 1.2 * u.s,  # Used to be equal to Tdump, but after talking to Rosie set this to 1.2 sec
         Fb_mid  : 1-0.1-Fb_short,
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m)/(2*Bmax)/(Theta_fov*Qbw)+1),
+        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m)/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
         Rrp : 0 * Tsnap,
     },
 }
