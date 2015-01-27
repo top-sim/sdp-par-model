@@ -1,3 +1,4 @@
+import time
 from telescope_parameters import *
 #from definitions_derivations import *
 #from sympy import symbols, pi, log, ln, Max, sqrt, sign
@@ -99,16 +100,15 @@ def calc_tel_params(band=None, mode=None, hpso=None):
 def calc_tel_expression(expression, telescope_parameters, mode=None):
     '''
     Calculates the answer to an expression by substituting the supplied telescope parameters into the expression.
-    '''        
+    '''
     tp = telescope_parameters.copy()  # Make a copy, as we will be locally modifying the dictionary
-    
     # Remove specific arrays from the telescope parameters, as these can't be parsed by subst
     if baseline_bins in tp:
         tp.pop(baseline_bins)
     if baseline_bin_counts in tp:
         tp.pop(baseline_bin_counts)
 
-    Tsnap_optimal = optimize_Tsnap(tp)  # Solution to Tsnap has to be bounded 
+    Tsnap_optimal = optimize_Tsnap(tp)  # Solution to Tsnap has to be bounded
     tp[Tsnap] = Tsnap_optimal
     answer = expression.subs(tp).subs(tp)
     if (mode is not None) and (mode != 'CS'):
@@ -117,11 +117,13 @@ def calc_tel_expression(expression, telescope_parameters, mode=None):
         tp.pop(Tsnap) # for safety: forgets the value of Tsnap again for subsequent evaluations
     return answer
 
-def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
+def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verbose_variables=()):
     '''
     Calculates the answer to an expression by substituting the supplied telescope parameters into the expression.
-    '''     
+    '''
+    t0 = time.time()
     tp = telescope_parameters.copy()  # Make a copy, as we will be locally modifying the dictionary
+    t1 = time.time()
     if Tsnap in tp:
         tp.pop(Tsnap) # We will need to optimize Tsnap, so it has to be undefined
 
@@ -135,12 +137,24 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
 
     nbaselines = sum(counts)
     temp_result = 0
+    t2 = time.time()
     for i in range(nbins):
+        binfrac_value = float(counts[i]) / nbaselines
         tp[Bmax_bin] = bins[i] #use Bmax for the bin only,  not to determine map size
-        tp[binfrac] = float(counts[i]) / nbaselines  # Make sure that this is a floating point division, otherwise we get zero!
+        tp[binfrac] = binfrac_value  # Make sure that this is a floating point division, otherwise we get zero!
+
+        if len(verbose_variables) > 0:
+            print 'Bin %i with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % (i, remove_units(tp[Bmax_bin]/1e3), binfrac_value*100)
+            print 'Verbose variable printout:'
+            verbose_output = []
+            for variable in verbose_variables:
+                verbose_output.append(float(remove_units(variable.subs(tp).subs(tp))))
+            print verbose_output
+            # Compute the actual result
+
         temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?).
         #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
-    
+    t3 = time.time()
     if mode == 'CS':
         raise Exception('Cannot yet handle CS mode when using binned baselines. Should be simple to implement though.')
 
@@ -150,7 +164,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None):
     Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)
     value_optimal = temp_result.subs({Tsnap : Tsnap_optimal})
     print "Tsnap has been optimized as : %f (for the binned case), yielding a minimum value of %f Tera-units" % (Tsnap_optimal, value_optimal / 1e15)     # Temp TODO remove later
-    
+    print (t1-t0, t2-t1, t3-t2)
     return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):
