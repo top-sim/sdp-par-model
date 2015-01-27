@@ -4,11 +4,10 @@ Rflop, Mbuf_vis, Rio, Gcorr, Rphrot = symbols("R_flop, M_buf\,vis, R_io G_corr R
 
 Omega_E, R_Earth = symbols("Omega_E, R_Earth", positive=True)
 
-Naa, Nmm, Npp = symbols("N_k N_mm N_pp", integer=True, positive=True)
+Naa, Nmm, Npp, Nw = symbols("N_k N_mm N_pp N_w", integer=True, positive=True)
 Tion = symbols("T_ion", positive=True)
 epsilon_w = symbols("\epsilon_w", positive=True)
 Mvis = symbols("M_vis", positive=True)
-Wcurve = symbols("W_curve", positive=True)
 Qbw, Qw, Qgcf, Qfcv = symbols("Q_bw, Q_w, Q_GCF, Q_fcv", positive=True)
 
 Blim_mid = symbols("B_lim\,mid", positive=True)
@@ -63,7 +62,6 @@ Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence
 Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin...
 Theta_pix = Theta_beam/(2*Qpix)
 Npix = Theta_fov / Theta_pix
-Nw = 2  # Bytes per value
 Rfft = Nfacet**2 * 10 * Npix**2 * log(Npix,2) / Tsnap # added Nfacet dependence
 
 DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
