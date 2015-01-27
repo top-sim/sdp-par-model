@@ -1,4 +1,3 @@
-import time
 from telescope_parameters import *
 #from definitions_derivations import *
 #from sympy import symbols, pi, log, ln, Max, sqrt, sign
@@ -121,9 +120,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
     '''
     Calculates the answer to an expression by substituting the supplied telescope parameters into the expression.
     '''
-    t0 = time.time()
     tp = telescope_parameters.copy()  # Make a copy, as we will be locally modifying the dictionary
-    t1 = time.time()
     if Tsnap in tp:
         tp.pop(Tsnap) # We will need to optimize Tsnap, so it has to be undefined
 
@@ -137,7 +134,6 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
 
     nbaselines = sum(counts)
     temp_result = 0
-    t2 = time.time()
     for i in range(nbins):
         binfrac_value = float(counts[i]) / nbaselines
         tp[Bmax_bin] = bins[i] #use Bmax for the bin only,  not to determine map size
@@ -154,7 +150,6 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
 
         temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?).
         #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
-    t3 = time.time()
     if mode == 'CS':
         raise Exception('Cannot yet handle CS mode when using binned baselines. Should be simple to implement though.')
 
@@ -164,7 +159,6 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
     Tsnap_optimal = optimize_expr(temp_result, Tsnap, bound_lower, bound_upper)
     value_optimal = temp_result.subs({Tsnap : Tsnap_optimal})
     print "Tsnap has been optimized as : %f (for the binned case), yielding a minimum value of %f Tera-units" % (Tsnap_optimal, value_optimal / 1e15)     # Temp TODO remove later
-    print (t1-t0, t2-t1, t3-t2)
     return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):

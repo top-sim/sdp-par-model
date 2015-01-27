@@ -55,7 +55,7 @@ Rrp = symbols("R_rp", positive=True) # Reprojection Flop rate, per output channe
 '''
 Parameters derived in terms of those above:
 '''
-Tdump = Min(Tdump_ref * Bmax_ref / Bmax, 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
+Tdump = Min(Tdump_ref * floor(Bmax_ref / Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
 wl_max = u.c / freq_min             # Maximum Wavelength
 wl_min = u.c / freq_max             # Minimum Wavelength
 wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
