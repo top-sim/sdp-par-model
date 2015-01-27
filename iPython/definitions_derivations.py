@@ -75,9 +75,11 @@ Nf_vis=Nf_used
 Nvis = binfrac*Na*(Na-1)*Nf_used/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
 Rgrid = Nfacet*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase tehre are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower.
 
-Rccf = 5 * binfrac *(Na-1)*Na*Nmm*Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv) #reduce by multiplication by binfrac (RCB)
+Rccf = Nfacet**2 * 5 * binfrac *(Na-1)*Na*Nmm*Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv) #reduce by multiplication by binfrac (RCB), add in extra multiplication by Nfacet-squared.
 
 Rphrot = 2 * Nmajor * Npp * Nbeam * Nvis * Nfacet**2 * 25 * sign(Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
+
+#where is Rrp??
 
 Rflop = 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_used*Rccf) + Rgrid) + Rphrot # Overall flop rate
 Mbuf_vis = 2 * Mvis * Nbeam * Npp * Nvis * Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
