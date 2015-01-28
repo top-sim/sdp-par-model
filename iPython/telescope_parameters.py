@@ -1,38 +1,39 @@
 from definitions_derivations import *
 #from sympy import symbols, pi, log, ln, Max, sqrt, sign
 
+# "universal" parameters are the same for all modes and telescopes
 universal = {Omega_E : 7.292115e-5,  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars,
              R_Earth : const.R_earth.value * u.m, # In PDR05 Excel sheet a value of 6400000 was used,
-             Naa   : 9,
-             Npp  : 4,
-             Nmm  : 4,
-             Nf_max: 256000,        # maximum number of channels (not actually universal, as can be lower depending on spectral line requirements)
-             Tion : 60.0,
              epsilon_w : 0.01,
              Mvis : 12.0,
+             Naa : 9,
+             Nmm : 4,
+             Npp : 4,
+             Nw  : 2,  # Bytes per value
              Qbw  : 1.0,
-             Qw   : 1.0,
-             Qgcf : 8.0,
              Qfcv : 10.0,
+             Qgcf : 8.0,
+             Qw   : 1.0,
+             Tion : 60.0,
              Tsnap_min : 1.2,
-             Nfacet : 1  # THIS VALUE SHOULD BE DYNAMICALLY MINIMIZED - THIS IS A TEST! TODO.
-             }  
+             }
 
 # The three telescopes, along with their unique characteristics
 telescope_info = {
     'SKA1_Low': {
+        Bmax_ref: 100 * u.km, # kilometers of max baseline in reference design
+        Bmax: 100 * u.km,     # Actually constructed kilometers of max baseline
+        Ds: 35 * u.m,        # station "diameter" in meters
+        Fb_short_tel : 0.5,   # Fraction of baselines short enough for data to be averaged to frequency
+                              # resolution of output prior to gridding. Only relevant for continuum modes
+        Na: 1024,            # number of antennas
+        Nbeam: 1,            # number of beams
+        Nf_max: 256000,      # maximum number of channels
         Qw2  : 1, #0.0458053,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
         Qw32 : 1, #0.0750938,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
         Tdump_ref: 0.6* u.s, # Correlator dump time in reference design
-        Na: 1024,            # number of antennas
-        Nbeam: 1,            # number of beams
-        Ds: 35 * u.m,        # station "diameter" in meters
-        Bmax: 100 * u.km,     # Actually constructed kilometers of max baseline
-        Bmax_ref: 100 * u.km, # kilometers of max baseline in reference design
         baseline_bins : np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 68.5, 100)) * u.km,
         baseline_bin_counts : np.array((5031193, 732481, 796973, 586849, 1070483, 939054, 820834, 202366, 12375)),
-        Fb_short_tel : 0.5,   # Fraction of baselines short enough for data to be averaged to frequency
-                              # resolution of output prior to gridding. Only relevant for continuum modes
     },
     'SKA1_Mid': {  # Assuming band 1, for the moment. TODO: allow all bands to be computed.
         Qw2  : 1, #0.0278115,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
@@ -40,6 +41,7 @@ telescope_info = {
         Tdump_ref: 0.08 * u.s, # Correlator dump time in reference design
         Na: 190+64,            # number of antennas
         Nbeam: 1,          # number of beams
+        Nf_max: 256000,      # maximum number of channels
         Ds: 15 * u.m,      # station "diameter" in meters
         Bmax: 200 * u.km,     # Actually constructed kilometers of max baseline
         Bmax_ref: 200 * u.km, # kilometers of max baseline in reference design
@@ -54,6 +56,7 @@ telescope_info = {
         Tdump_ref: 0.3 * u.s, # Correlator dump time in reference design
         Na: 96,               # number of antennas
         Nbeam: 36,            # number of beams (36 because this is a PAF)
+        Nf_max: 256000,      # maximum number of channels
         Ds: 15 * u.m,         # station "diameter" in meters
         Bmax: 50 * u.km,     # Actually constructed kilometers of max baseline
         Bmax_ref: 50 * u.km, # kilometers of max baseline in reference design
@@ -134,8 +137,12 @@ imaging_mode_info = {
         Qfov:  1.8, # Field of view factor
         Nmajor: 10, # Number of major CLEAN cycles to be done
         Qpix:  2.5, # Quality factor of synthesised beam oversampling
+<<<<<<< HEAD
         Nf_max: 256000, 
         Nf_out : 5000,
+=======
+        Nf_out : 500,
+>>>>>>> reorder_alphabetically
         Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
         Fb_mid  : 1-0.1-Fb_short,
