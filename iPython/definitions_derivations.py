@@ -14,7 +14,7 @@ Blim_mid = symbols("B_lim\,mid", positive=True)
 Qfov = symbols("Q_FoV", positive=True)
 
 Nmajor, Nf_used, Nf_out, Nf_max, Nf_no_smear = symbols("N_major N_f\,used N_f\,out N_f\,max N_f\,no-smear", integer=True, positive=True)
-Npix, Nminor, Nfacet = symbols("N_pix N_minor N_facet", integer=True, positive=True) #added Nfacet
+Npix_linear, Nminor, Nfacet = symbols("N_pix\,linear N_minor N_facet", integer=True, positive=True)
 Na, Nbeam = symbols("N_a N_beam", integer=True, positive=True)
 Ngw = symbols("N_gw", positive=True)
 
@@ -49,7 +49,6 @@ Theta_beam = symbols(r"\theta_{beam}", positive=True)
 Theta_fov = symbols(r"\theta_{FoV}", positive=True)
 Rrp = symbols("R_rp", positive=True) # Reprojection Flop rate, per output channel
 
-
 '''
 Parameters derived in terms of those above:
 '''
@@ -60,8 +59,9 @@ wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
 Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence
 Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin...
 Theta_pix = Theta_beam/(2*Qpix)
-Npix = Theta_fov / Theta_pix
-Rfft = Nfacet**2 * 5 * Npix**2 * log(Npix,2) / Tsnap # added Nfacet dependence; 28Jan changed multiplier to 5 not 10 (RCB)
+Npix_linear = Theta_fov / Theta_pix  # The linear number of pixels along the image's side (assumed to be square)
+Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nfacet dependence
+
 
 DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
 Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi)))
