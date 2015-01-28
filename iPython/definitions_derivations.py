@@ -23,7 +23,7 @@ Tsnap_min = symbols("T_snap\,min", positive=True)
 Qpix = symbols("Q_pix", positive=True)
 
 Ds = symbols("D_s", positive=True)
-Bmax_ref, Bmax, Bmax_bin = symbols("B_max\,ref B_max Bmax\,bin", positive=True)
+Bmax, Bmax_bin = symbols("B_max Bmax\,bin", positive=True)
 freq_min, freq_max = symbols("f_min f_max")
 
 # These two variables are for computing baseline-dependent variables (by approximating baseline distribution as a series of bins)
@@ -52,7 +52,7 @@ Rrp = symbols("R_rp", positive=True) # Reprojection Flop rate, per output channe
 '''
 Parameters derived in terms of those above:
 '''
-Tdump = Min(Tdump_ref * floor(Bmax_ref / Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
+Tdump = Min(Tdump_ref * floor(Bmax / Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
 wl_max = u.c / freq_min             # Maximum Wavelength
 wl_min = u.c / freq_max             # Minimum Wavelength
 wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
@@ -62,13 +62,13 @@ Theta_pix = Theta_beam/(2*Qpix)
 Npix_linear = Theta_fov / Theta_pix  # The linear number of pixels along the image's side (assumed to be square)
 Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nfacet dependence
 
-
+Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
+Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
 DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
 Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi)))
 Ncvff = Qgcf*sqrt(Naa**2+Ngw**2)
 
 #Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet. (new: just use Nf_used)
-
 #Nf_vis= Max(Nf_out,Nf_used) #need to take max here so that gridding visibilities cannot be put on channels which are too coarse
 
 Nf_vis=(Nf_out*sign(floor(Nf_out/Nf_no_smear)))+(Nf_no_smear*sign(floor(Nf_no_smear/Nf_out))) #Boom! Workaround to avoid recursive errors...

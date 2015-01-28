@@ -21,47 +21,38 @@ universal = {Omega_E : 7.292115e-5,  # In PDR05 Excel sheet a value of 0.0000727
 # The three telescopes, along with their unique characteristics
 telescope_info = {
     'SKA1_Low': {
-        Bmax_ref: 100 * u.km, # kilometers of max baseline in reference design
         Bmax: 100 * u.km,     # Actually constructed kilometers of max baseline
         Ds: 35 * u.m,        # station "diameter" in meters
         Na: 1024,            # number of antennas
         Nbeam: 1,            # number of beams
         Nf_max: 256000,      # maximum number of channels
-        Qw2  : 1, #0.0458053,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
-        Qw32 : 1, #0.0750938,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
         Tdump_ref: 0.6* u.s, # Correlator dump time in reference design
         baseline_bins : np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 68.5, 100)) * u.km,
         baseline_bin_counts : np.array((5031193, 732481, 796973, 586849, 1070483, 939054, 820834, 202366, 12375)),
     },
-    'SKA1_Mid': {  # Assuming band 1, for the moment. TODO: allow all bands to be computed.
-        Qw2  : 1, #0.0278115,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
-        Qw32 : 1, #0.0462109,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
-        Tdump_ref: 0.08 * u.s, # Correlator dump time in reference design
+    'SKA1_Mid': {
+        Bmax: 200 * u.km,     # Actually constructed kilometers of max baseline
+        Ds: 15 * u.m,      # station "diameter" in meters
         Na: 190+64,            # number of antennas
         Nbeam: 1,          # number of beams
         Nf_max: 256000,      # maximum number of channels
-        Ds: 15 * u.m,      # station "diameter" in meters
-        Bmax: 200 * u.km,     # Actually constructed kilometers of max baseline
-        Bmax_ref: 200 * u.km, # kilometers of max baseline in reference design
+        Tdump_ref: 0.08 * u.s, # Correlator dump time in reference design
         baseline_bins : np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 200)) * u.km,
         baseline_bin_counts : np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745)),
     },
-    'SKA1_Survey': { # Assuming band 1, for the moment. TODO: allow all bands to be computed.
-        Qw2  : 1, #0.0569392,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
-        Qw32 : 1, #0.0929806,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
-        Tdump_ref: 0.3 * u.s, # Correlator dump time in reference design
+    'SKA1_Survey': {
+        Bmax: 50 * u.km,     # Actually constructed kilometers of max baseline
+        Ds: 15 * u.m,         # station "diameter" in meters
         Na: 96,               # number of antennas
         Nbeam: 36,            # number of beams (36 because this is a PAF)
         Nf_max: 256000,      # maximum number of channels
-        Ds: 15 * u.m,         # station "diameter" in meters
-        Bmax: 50 * u.km,     # Actually constructed kilometers of max baseline
-        Bmax_ref: 50 * u.km, # kilometers of max baseline in reference design
+        Tdump_ref: 0.3 * u.s, # Correlator dump time in reference design
         baseline_bins : np.array((3.8, 5.5, 8.0, 11.5, 16.6, 24.0, 34.6, 50)) * u.km,
         baseline_bin_counts : np.array((81109, 15605, 15777, 16671, 16849, 17999, 3282, 324)),
     },
 }
 
-# The 'standard' bands
+# The 'standard' bands for all telescopes
 band_info = {
     'Low' : {
         'telescope' : 'SKA1_Low',
