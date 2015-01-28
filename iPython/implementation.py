@@ -164,7 +164,7 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
 def calc_tel_old(band=None, mode=None, hpso=None, expression=None):
     '''
     Evaluate an expression for a single telescope.
-    This method is no longer strictly necessary in this form, but is provided for backward compatibility
+    This method is no longer strictly necessary in this form, but is provided for possible backward compatibility
     '''
     answer = None
     

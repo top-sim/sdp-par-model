@@ -134,7 +134,7 @@ imaging_mode_info = {
         Nf_out : 5000,
         Tobs : 6 * u.hours,
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
-        Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap,
         Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
@@ -146,7 +146,7 @@ imaging_mode_info = {
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
         Nf_used : Nf_max,
         Tobs : 6 * u.hours,
-        Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap,
     },
     'SlowTrans': {
         Qfov: 0.9, # Field of view factor
