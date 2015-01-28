@@ -61,7 +61,7 @@ Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence
 Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin...
 Theta_pix = Theta_beam/(2*Qpix)
 Npix = Theta_fov / Theta_pix
-Rfft = Nfacet**2 * 10 * Npix**2 * log(Npix,2) / Tsnap # added Nfacet dependence
+Rfft = Nfacet**2 * 5 * Npix**2 * log(Npix,2) / Tsnap # added Nfacet dependence; 28Jan changed multiplier to 5 not 10 (RCB)
 
 DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
 Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi)))
