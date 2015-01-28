@@ -160,21 +160,26 @@ def minimize_expression(expression, telescope_parameters, mode=None, verbose=Fal
         print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal / 1e15)
     return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
-def find_optimal_Tsnap_Nfacet(chosen_band, chosen_mode, verbose=False):
+def find_optimal_Tsnap_Nfacet(chosen_band, chosen_mode, max_number_nfacets=200, verbose=False):
     '''
     Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop for a given telescope, band and mode
     Returns result as a 2-tuple (Tsnap_opt, Nfacet_opt)
     '''
     if verbose:
         print 'Finding optimal values for Tsnap and Nfacet for (%s, %s)' % (chosen_band, chosen_mode)
-    max_number_nfacets = 10
 
     flop_results = {} # Maps nfacet values to flops
     optimal_results = {}
     flop_array = []
     Tsnap_array = []
     minimum_val = sys.float_info.max
+    warned = False
     for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet (typically 1..10)
+        # Warn if large values of nfacets are reached, as it may indicate an error and take long!
+        if (nfacets > 20) and not warned:
+            print 'Searching for minimum Rflop with nfacets > 20... this is a bit odd (and may take long)'
+            warned = True
+
         i = nfacets-1 # zero-based index
         if verbose:
             print 'Evaluating Nfacets = %d' % nfacets
