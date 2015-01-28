@@ -24,7 +24,6 @@ Qpix = symbols("Q_pix", positive=True)
 
 Ds = symbols("D_s", positive=True)
 Bmax_ref, Bmax, Bmax_bin = symbols("B_max\,ref B_max Bmax\,bin", positive=True)
-Fb_short, Fb_short_tel, Fb_mid = symbols("F_b\,short F_b\,short\,tel F_b\,mid") #_short_tel and #mid needed for intermediate computations (defunct in baseline binning regime)
 freq_min, freq_max = symbols("f_min f_max")
 
 # These two variables are for computing baseline-dependent variables (by approximating baseline distribution as a series of bins)

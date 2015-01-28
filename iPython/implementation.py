@@ -147,8 +147,8 @@ def calc_tel_expression_binned(expression, telescope_parameters, mode=None, verb
                 verbose_output.append(float(remove_units(variable.subs(tp).subs(tp))))
             print verbose_output
             # Compute the actual result
-
-        temp_result += expression.subs(tp).subs(tp) #do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?).
+        temp_result += expression.subs(tp).subs(tp)
+        #TODO do need to separate out Mwcache? (i.e. is it the maximum Wkernel memort size we're interested in or the total memory required?).
         #fmalan - TODO yes we need to; I was just thinking along the links of RFLOP when implementing this.
     if mode == 'CS':
         raise Exception('Cannot yet handle CS mode when using binned baselines. Should be simple to implement though.')

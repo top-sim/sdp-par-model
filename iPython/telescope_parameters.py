@@ -24,8 +24,6 @@ telescope_info = {
         Bmax_ref: 100 * u.km, # kilometers of max baseline in reference design
         Bmax: 100 * u.km,     # Actually constructed kilometers of max baseline
         Ds: 35 * u.m,        # station "diameter" in meters
-        Fb_short_tel : 0.5,   # Fraction of baselines short enough for data to be averaged to frequency
-                              # resolution of output prior to gridding. Only relevant for continuum modes
         Na: 1024,            # number of antennas
         Nbeam: 1,            # number of beams
         Nf_max: 256000,      # maximum number of channels
@@ -47,8 +45,6 @@ telescope_info = {
         Bmax_ref: 200 * u.km, # kilometers of max baseline in reference design
         baseline_bins : np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 200)) * u.km,
         baseline_bin_counts : np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745)),
-        Fb_short_tel : 0.5, # Fraction of baselines short enough for data to be averaged to frequency
-                            # resolution of output prior to gridding. Only relevant for continuum modes
     },
     'SKA1_Survey': { # Assuming band 1, for the moment. TODO: allow all bands to be computed.
         Qw2  : 1, #0.0569392,  # Weighing value for baseline length distribution (Ask Rosie Bolton for interpretation)
@@ -62,8 +58,6 @@ telescope_info = {
         Bmax_ref: 50 * u.km, # kilometers of max baseline in reference design
         baseline_bins : np.array((3.8, 5.5, 8.0, 11.5, 16.6, 24.0, 34.6, 50)) * u.km,
         baseline_bin_counts : np.array((81109, 15605, 15777, 16671, 16849, 17999, 3282, 324)),
-        Fb_short_tel : 0.1,  # Fraction of baselines short enough for data to be averaged to frequency
-                             # resolution of output prior to gridding. Only relevant for continuum modes
     },
 }
 
@@ -138,9 +132,7 @@ imaging_mode_info = {
         Nmajor: 10, # Number of major CLEAN cycles to be done
         Qpix:  2.5, # Quality factor of synthesised beam oversampling
         Nf_out : 5000,
-        Fb_short : 0* Fb_short_tel,
         Tobs : 6 * u.hours,
-        Fb_mid  : 1-0.1-Fb_short,
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
         Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
         Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
@@ -151,11 +143,9 @@ imaging_mode_info = {
         Nmajor: 1, # Number of major CLEAN cycles to be done
         Qpix: 2.5, # Quality factor of synthesised beam oversampling
         Nf_out : Nf_max, #The same as the number of channels
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m) /(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
+        Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
         Nf_used : Nf_max,
-        Fb_short : 0 * Fb_short_tel, # Need a symbolic expression to be able to be substuted; hence multiply by 0 
         Tobs : 6 * u.hours,
-        Fb_mid : Fb_short,
         Rrp : Nfacet**2 * 50 * Npix**2 / Tsnap,
     },
     'SlowTrans': {
@@ -163,11 +153,9 @@ imaging_mode_info = {
         Nmajor: 1, # Number of major CLEAN cycles to be done
         Qpix: 1.5, # Quality factor of synthesised beam oversampling
         Nf_out : 500,  # Initially this value was computed (see line above), but Rosie has since specified that it should just be set to 500.
-        Nf_used : log(wl_max/wl_min) / log(3*(wl/u.m)/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of bands for gridding at longest baseline
-        Fb_short : 0 * Fb_short_tel,
+        Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of bands for gridding at longest baseline
         Tobs : 1.2 * u.s,  # Used to be equal to Tdump, but after talking to Rosie set this to 1.2 sec
-        Fb_mid  : 1-0.1-Fb_short,
-        Nf_no_smear : log(wl_max/wl_min) / log(3*(wl/u.m)/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
+        Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
         Rrp : 0 * Tsnap,
     },
 }
@@ -184,7 +172,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_max    : 256000,
         Bmax      : 100 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2500 * u.hours,
         Tpoint    : 1000 * u.hours,
     },
@@ -198,7 +185,6 @@ hpsos = {
         Nf_max    : 256000,
         Nf_out    : 1500, # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
         Bmax      : 100 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2500 * u.hours,
         Tpoint    : 100 * u.hours,
     },
@@ -212,7 +198,6 @@ hpsos = {
         Nf_max    : 256000,
         Nf_out    : 1500, # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
         Bmax      : 100 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2500 * u.hours,
         Tpoint    : 10 * u.hours,
     },
@@ -225,7 +210,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 100 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 12800 * u.hours,
         Tpoint    : 0.17 * u.hours,
         Nmajor    : 10,
@@ -239,7 +223,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 100 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 4300 * u.hours,
         Tpoint    : 0.17 * u.hours,
         Nmajor    : 10,
@@ -253,7 +236,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 10 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 800 * u.hours,
         Tpoint    : (10/60.0) * u.hours,
         Nmajor    : 10,
@@ -267,7 +249,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 10 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 800 * u.hours,
         Tpoint    : (10/60.0) * u.hours,
         Nmajor    : 10,
@@ -281,7 +262,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 15 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 1600 * u.hours,
         Tpoint    : (10/60.0) * u.hours,
         Nmajor    : 10,
@@ -295,7 +275,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 15 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 1600 * u.hours,
         Tpoint    : (10/60.0) * u.hours,
         Nmajor    : 10,
@@ -309,7 +288,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_max    : 3200, #Assume 500 in continuum as well - defualt.
         Bmax      : 40 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 5000 * u.hours,
         Tpoint    : 2500 * u.hours,
     },
@@ -322,7 +300,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_max    : 5000, #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2000 * u.hours,
         Tpoint    : 10 * u.hours,
     },
@@ -335,7 +312,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_max    : 2500, #Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
         Bmax      : 13 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2000 * u.hours,
         Tpoint    : 10 * u.hours,
     },
@@ -348,7 +324,6 @@ hpsos = {
         Tobs      : 0 * u.hours,
         Nf_max    : 256000,
         Bmax      : 10 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 10000 * u.hours,
         Tpoint    : (10/60.0) * u.hours,
         Nmajor    : 10,
@@ -363,7 +338,6 @@ hpsos = {
         Nf_max    : 4000,
         Nf_out    : 4000, #4000 channel continuum observation - band 5.
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 6000 * u.hours,
         Tpoint    : 600 * u.hours,
     },
@@ -376,7 +350,6 @@ hpsos = {
         Nf_max    : 256000,
         Nf_out    : 500, #continuum experiment with 500 output channels
         Bmax      : 50 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 17500 * u.hours,
         Tpoint    : 10 * u.hours,
     },
@@ -388,7 +361,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 500, #continuum experiment with 500 output channels
         Bmax      : 50 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 17500 * u.hours,
         Tpoint    : 10 * u.hours,
     },
@@ -402,7 +374,6 @@ hpsos = {
         Nf_max    : 256000,
         Nf_out    : 500,
         Bmax      : 10 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 5500 * u.hours,
         Tpoint    : 3.3 * u.hours,
     },
@@ -414,7 +385,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 700, #700 channels required in output continuum cubes
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2000 * u.hours,
         Tpoint    : 95 * u.hours,
     },
@@ -426,7 +396,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 700, #700 channels required in output continuum cubes
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 2000 * u.hours,
         Tpoint    : 2000 * u.hours,
     },
@@ -438,7 +407,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 500, #500 channels in output cube
         Bmax      : 50 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 5300 * u.hours,
         Tpoint    : 95 * u.hours,
     },
@@ -450,7 +418,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 1000,
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 1000 * u.hours,
         Tpoint    : 16.4 * u.hours,
     },
@@ -462,7 +429,6 @@ hpsos = {
         Tobs      : 6 * u.hours,
         Nf_out    : 1000,
         Bmax      : 200 * u.kilometer,
-        Fb_mid    : 0, # Check
         Texp      : 1000 * u.hours,
         Tpoint    : 1000 * u.hours,
     }
