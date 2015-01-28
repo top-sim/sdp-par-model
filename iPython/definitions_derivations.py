@@ -81,11 +81,11 @@ Rphrot = 2 * Nmajor * Npp * Nbeam * Nvis * Nfacet**2 * 25 * sign(Nfacet-1)  # La
 
 #Rrp is handled in the telescope parameters file
 
-Rflop = Rphrot + 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_vis*Rccf) + Rgrid) # Overall flop rate
+Gcorr = Na * (Na - 1) * Nf_max * Nbeam * Nw * Npp / Tdump  # Minimum correlator output data rate, after baseline dependent averaging
 Mbuf_vis = 2 * Mvis * Nbeam * Npp * Nvis * Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
+Mw_cache = Ngw**3 * Qgcf**3 * Nbeam * Nf_vis * 8
+Rflop = Rphrot + 2 * Nmajor*Nbeam*Npp*(Nf_out*(Rrp + Rfft) + (Nf_vis*Rccf) + Rgrid) # Overall flop rate
 Rio = Mvis * Nmajor * Nbeam * Npp * Nvis * Nfacet**2 #added Nfacet dependence
-
-Gcorr = Na * (Na - 1) * Nf_max * Nbeam * Nw * Npp / Tdump  # Minimum correlator output data rate, after baseline dependent averaging 
 
 # Split the FLOP rate into constituent parts, for plotting
 Rflop_common_factor = 2 * Nmajor * Nbeam * Npp
