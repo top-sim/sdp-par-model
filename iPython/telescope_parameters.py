@@ -122,10 +122,10 @@ imaging_mode_info = {
         Qfov:  1.8, # Field of view factor
         Nmajor: 10, # Number of major CLEAN cycles to be done
         Qpix:  2.5, # Quality factor of synthesised beam oversampling
-        Nf_out : 5000,
+        Nf_out : 500,
         Tobs : 6 * u.hours,
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
-        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap, #(Consistent with PDR05 280115)
         Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of channels for gridding at longest baseline
 
     }, 
@@ -137,7 +137,7 @@ imaging_mode_info = {
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1) ,
         Nf_used : Nf_max,
         Tobs : 6 * u.hours,
-        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap,
+        Rrp : Nfacet**2 * 50 * Npix_linear**2 / Tsnap, #(Consistent with PDR05 280115)
     },
     'SlowTrans': {
         Qfov: 0.9, # Field of view factor
@@ -147,7 +147,7 @@ imaging_mode_info = {
         Nf_used : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1), #Number of bands for gridding at longest baseline
         Tobs : 1.2 * u.s,  # Used to be equal to Tdump, but after talking to Rosie set this to 1.2 sec
         Nf_no_smear : log(wl_max/wl_min) / log(3*wl/(2*Bmax_bin)/(Theta_fov*Qbw)+1),
-        Rrp : 0 * Tsnap,
+        Rrp : 0 * Tsnap, #(Consistent with PDR05 280115)
     },
 }
 

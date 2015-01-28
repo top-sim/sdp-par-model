@@ -56,28 +56,26 @@ Tdump = Min(Tdump_ref * floor(Bmax / Bmax_bin), 1.2 * u.s) # Correlator dump tim
 wl_max = u.c / freq_min             # Maximum Wavelength
 wl_min = u.c / freq_max             # Minimum Wavelength
 wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
-Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence
-Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin...
-Theta_pix = Theta_beam/(2*Qpix)
-Npix_linear = Theta_fov / Theta_pix  # The linear number of pixels along the image's side (assumed to be square)
-Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nfacet dependence
+Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
+Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin... (Consistent with PDR05 280115)
+Theta_pix = Theta_beam/(2*Qpix) #(Consistent with PDR05 280115)
+Npix_linear = Theta_fov / Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
+Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change))
 
 Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
 Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
-DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered
-Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi)))
-Ncvff = Qgcf*sqrt(Naa**2+Ngw**2)
+DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
+Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi))) #(Consistent with PDR05 280115)
+Ncvff = Qgcf*sqrt(Naa**2+Ngw**2) #(Consistent with PDR05 280115)
 
-#Nf_vis=(Nf_out*Fb_short)+(Nf_used*(1-Fb_short-Fb_mid))+(Nf_no_smear*Fb_mid) #no dependence on nfacet. (new: just use Nf_used)
-#Nf_vis= Max(Nf_out,Nf_used) #need to take max here so that gridding visibilities cannot be put on channels which are too coarse
 
-Nf_vis=(Nf_out*sign(floor(Nf_out/Nf_no_smear)))+(Nf_no_smear*sign(floor(Nf_no_smear/Nf_out))) #Boom! Workaround to avoid recursive errors...
+Nf_vis=(Nf_out*sign(floor(Nf_out/Nf_no_smear)))+(Nf_no_smear*sign(floor(Nf_no_smear/Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
 
-#Nf_vis=Nf_no_smear
+
 Nvis = binfrac*Na*(Na-1)*Nf_vis/(2*Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
-Rgrid = Nfacet*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase tehre are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower.
+Rgrid = (Nfacet**2 + Nfacet)*0.5*8*Nmm*Nvis*(Ngw**2+Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)
 
-Rccf = Nfacet**2 * 5 * binfrac *(Na-1)*Na*Nmm*Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv) #reduce by multiplication by binfrac (RCB), add in extra multiplication by Nfacet-squared.
+Rccf = Nfacet**2 * 5 * binfrac *(Na-1)* Na * Nmm * Ncvff**2 * log(Ncvff,2)/(Tion*Qfcv) #reduce by multiplication by binfrac (RCB), add in extra multiplication by Nfacet-squared.
 
 Rphrot = 2 * Nmajor * Npp * Nbeam * Nvis * Nfacet**2 * 25 * sign(Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
 

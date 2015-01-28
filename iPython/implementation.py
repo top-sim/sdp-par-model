@@ -167,7 +167,7 @@ def find_optimal_Tsnap_Nfacet(chosen_band, chosen_mode, verbose=False):
     '''
     if verbose:
         print 'Finding optimal values for Tsnap and Nfacet for (%s, %s)' % (chosen_band, chosen_mode)
-    max_number_nfacets = 10
+    max_number_nfacets = 100
 
     flop_results = {} # Maps nfacet values to flops
     optimal_results = {}
