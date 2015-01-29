@@ -1,23 +1,6 @@
 from definitions_derivations import *
 #from sympy import symbols, pi, log, ln, Max, sqrt, sign
 
-# "universal" parameters are the same for all modes and telescopes
-universal = {Omega_E : 7.292115e-5,  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars,
-             R_Earth : const.R_earth.value * u.m, # In PDR05 Excel sheet a value of 6400000 was used,
-             epsilon_w : 0.01,
-             Mvis : 12.0,
-             Naa : 9,
-             Nmm : 4,
-             Npp : 4,
-             Nw  : 2,  # Bytes per value
-             Qbw  : 1.0,
-             Qfcv : 10.0,
-             Qgcf : 8.0,
-             Qw   : 1.0,
-             Tion : 60.0,
-             Tsnap_min : 1.2,
-             }
-
 # The three telescopes, along with their unique characteristics
 telescope_info = {
     'SKA1_Low': {

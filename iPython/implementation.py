@@ -71,9 +71,7 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
     # Lastly, if specified, the parameters of the specific high priority science objective (HPSO)
     #######################################################################################################################
 
-    telescope_params = dict(universal, **telescope_info[telescope])  # universal and telescope parameters
-    telescope_params = dict(telescope_params, **freq_range)  # Overwrite specific frequency range information
-        
+    telescope_params = dict(telescope_info[telescope], **freq_range)  # universal and telescope parameters
     answer = {}
     if mode == 'CS':
         telescope_params = dict(telescope_params, **imaging_mode_info['Continuum'])
@@ -181,8 +179,8 @@ def find_optimal_Tsnap_Nfacet(band=None, mode=None, hpso=None, max_number_nfacet
         i = nfacets-1 # zero-based index
         if verbose:
             print 'Evaluating Nfacets = %d' % nfacets
-        universal[Nfacet] = nfacets
         parameters = calc_tel_params(band=band, mode=mode, hpso_key=hpso)
+        parameters[Nfacet] = nfacets
         answer = minimize_expression(expression=Rflop, telescope_parameters=parameters, mode=mode)
         flop_array.append(float(answer['value']))
         Tsnap_array.append(answer[Tsnap])
