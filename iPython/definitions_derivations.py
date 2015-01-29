@@ -58,15 +58,15 @@ wl_min = u.c / freq_max             # Minimum Wavelength
 wl = 0.5*(wl_max + wl_min)          # Representative Wavelength
 Theta_fov = 7.66 * wl * Qfov / (pi * Ds * Nfacet) # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
 Theta_beam = 3 * wl/(2*Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin... (Consistent with PDR05 280115)
-Theta_pix = Theta_beam/(2*Qpix) #(Consistent with PDR05 280115)
+Theta_pix = Theta_beam/(2*Qpix) #(ConsistenNf_outt with PDR05 280115)
 Npix_linear = Theta_fov / Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
 Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change))
 
 Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
 Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
 DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
-Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi))) #(Consistent with PDR05 280115)
-Ncvff = Qgcf*sqrt(Naa**2+Ngw**2) #(Consistent with PDR05 280115)
+Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
+Ncvff = Qgcf*sqrt(Naa**2+Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
 
 
 Nf_vis=(Nf_out*sign(floor(Nf_out/Nf_no_smear)))+(Nf_no_smear*sign(floor(Nf_no_smear/Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
