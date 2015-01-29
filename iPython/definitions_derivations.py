@@ -2,20 +2,20 @@ from env_setup import *
 
 Rflop, Mbuf_vis, Rio, Gcorr, Rphrot = symbols("R_flop, M_buf\,vis, R_io G_corr R_phrot", positive=True)
 
-Omega_E = 7.292115e-5,  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars,
-R_Earth = const.R_earth.value * u.m, # In PDR05 Excel sheet a value of 6400000 was used,
-epsilon_w = 0.01,
-Mvis = 12.0,
-Naa = 9,
-Nmm = 4,
-Npp = 4,
-Nw  = 2,  # Bytes per value
-Qbw  = 1.0,
-Qfcv = 10.0,
-Qgcf = 8.0,
-Qw   = 1.0,
-Tion = 60.0,
-Tsnap_min = 1.2,
+Omega_E = 7.292115e-5  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars
+R_Earth = const.R_earth.value * u.m # In PDR05 Excel sheet a value of 6400000 was used
+epsilon_w = 0.01
+Mvis = 12.0
+Naa = 9
+Nmm = 4
+Npp = 4
+Nw  = 2  # Bytes per value
+Qbw  = 1.0
+Qfcv = 10.0
+Qgcf = 8.0
+Qw   = 1.0
+Tion = 60.0
+Tsnap_min = 1.2
 
 Blim_mid = symbols("B_lim\,mid", positive=True)
 Qfov = symbols("Q_FoV", positive=True)
@@ -26,7 +26,6 @@ Na, Nbeam = symbols("N_a N_beam", integer=True, positive=True)
 Ngw = symbols("N_gw", positive=True)
 
 Tobs = symbols("T_obs", positive=True)
-Tsnap_min = symbols("T_snap\,min", positive=True)
 Qpix = symbols("Q_pix", positive=True)
 
 Ds = symbols("D_s", positive=True)
@@ -48,7 +47,7 @@ wl, wl_max, wl_min, wl_sub_max, wl_sub_min = symbols("\lambda \lambda_max \lambd
 Texp, Tpoint = symbols("T_exp T_point", positive=True)
 
 # Other variables (may be needed later on)
-Tsnap, Tsnap_min = symbols("T_snap T_{snap\,min}", positive=True)  # Snapshot timescale implemented
+Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
 Tdump = symbols("T_dump", positive=True)  # Correlator dump time (s)
 psf_angle= symbols(r"\theta_{PSF}", positive=True)
 pix_angle  = symbols(r"\theta_{pix}", positive=True)
@@ -72,17 +71,8 @@ Rfft = Nfacet**2 * 5 * Npix_linear**2 * log(Npix_linear,2) / Tsnap # added Nface
 Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
 Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
 
-aa = (Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi))
-bb = Bmax_bin*Tsnap*Omega_E/(2*wl)
-print aa
-print '>>>>>'
-print bb
-print '>>>>>'
-print Max(aa, bb)
-print '>>>>>>>>>>>>>>> DONE'
-
-DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(2*wl), Bmax_bin**2/(8*R_Earth*wl)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
-Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*2*pi))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
+DeltaW_max = Qw * Max(Bmax_bin*Tsnap*Omega_E/(wl*2), Bmax_bin**2/(R_Earth*wl*8)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
+Ngw = 2*Theta_fov * sqrt((Qw2 * DeltaW_max**2 * Theta_fov**2/4.0)+(Qw32 * DeltaW_max**1.5 * Theta_fov/(epsilon_w*pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
 Ncvff = Qgcf*sqrt(Naa**2+Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
 
 

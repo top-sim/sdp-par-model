@@ -147,7 +147,7 @@ def minimize_expression(expression, telescope_parameters, mode=None, verbose=Fal
     result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose_variables)
 
     # Remove string literals from the telescope_params, as they can't be evaluated by lambdify    
-    bound_lower = remove_units(Tsnap_min.subs(tp).subs(tp))
+    bound_lower = Tsnap_min
     bound_upper = 0.5 * remove_units(Tobs.subs(tp).subs(tp))
     Tsnap_optimal = optimize_expr(result, Tsnap, bound_lower, bound_upper)
     value_optimal = result.subs({Tsnap : Tsnap_optimal})
