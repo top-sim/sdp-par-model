@@ -1,4 +1,6 @@
-from telescope_parameters import *
+from parameters import parameters as p
+from formulae import formulae as f
+from variable_definitions import symbolic_definitions as s
 import sys
 
 class parameter_container:
@@ -29,6 +31,33 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
     '''
     Calculate telescope parameters for a supplied band, mode or hpso
     '''
+    telescope_params = parameter_container()
+    p.apply_global_parameters(telescope_params)
+    s.define_symbolic_variables(telescope_params)
+
+    assert mode is not None
+    if band is not None:
+        telescope_string = p.get_telescope_from_band(band)
+    elif hpso_key is not None:
+        telescope_string = p.get_telescope_from_hpso(hpso_key)
+    else:
+        raise Exception("Either band or hpso must not be None")
+
+    # Note the order in which these settings are applied, with each one (possibly) overwriting previous definitions,
+    # should they overlap (as happens with e.g. frequency bands)
+    p.apply_telescope_parameters(telescope_params, telescope_string)
+    p.apply_imaging_mode_parameters(telescope_params, mode)
+    if band is not None:
+        p.apply_band_parameters(telescope_params, band)
+    elif hpso_key is not None:
+        p.apply_hpso_parameters(telescope_params, hpso_key)
+    else:
+        raise Exception("Either band or hpso must not be None")
+
+    f.compute_derived_parameters(telescope_params, mode)
+    return telescope_params
+
+    '''
     freq_range = {}
     hpso_params = None
     if hpso_key is not None:
@@ -43,10 +72,10 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
         freq_range = copy.copy(band_info[band])
         telescope = freq_range['telescope']
         freq_range.pop('telescope')  # This key currently is not a defined variable, so we need to lose it for evaluations.
-        
+
     #######################################################################################################################
     # Concatenate all relevant dicionaries to make a unified dictionary of all parameters to use (for this evaluation run)
-    # The sequence of concatenation is important - each added parameter set overwrites 
+    # The sequence of concatenation is important - each added parameter set overwrites
     # any existing parameters that have duplicate keys.
     #
     # Concatenations are done with the following syntax: extended_params = dict(base_params, **additional_params)
@@ -65,20 +94,22 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
         telescope_params_C = telescope_params.copy()
         if hpso_params is not None:
             telescope_params_C = dict(telescope_params_C, **hpso_params)
-                    
+
         telescope_params = dict(telescope_params, **imaging_mode_info['Spectral'])
         telescope_params_S = telescope_params.copy()
         if hpso_params is not None:
             telescope_params_S = dict(telescope_params_S, **hpso_params)
 
-        telescope_params = {'C'  : telescope_params_C, 
+        telescope_params = {'C'  : telescope_params_C,
                             'S'  : telescope_params_S}
     else:
         telescope_params = dict(telescope_params, **imaging_mode_info[mode])
         if hpso_params is not None:
             telescope_params = dict(telescope_params, **hpso_params)
-                
+
     return telescope_params
+    '''
+
 
 def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose_variables=()):
     nbaselines = sum(counts)
