@@ -31,10 +31,14 @@ class formulae:
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
         elif mode == 'SlowTrans':
             o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of bands for gridding at longest baseline
+            o.Rrp  = 0*u.s / u.s #(Consistent with PDR05 280115)
         else:
             raise Exception()
 
         o.Nf_no_smear  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1)
+        #o.Nf_vis = max(o.Nf_out, o.Nf_no_smear)
+
+        #The following workaround is no longer needed
         o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
 
         o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s

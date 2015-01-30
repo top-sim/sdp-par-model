@@ -3,7 +3,7 @@ from astropy import constants as const
 import numpy as np
 from sympy import log
 
-class parameters:
+class parameter_definitions:
     telescope_list = ['SKA1_Low', 'SKA1_Mid', 'SKA1_Survey']
     imaging_modes = ['Continuum', 'Spectral', 'SlowTrans', 'CS']   # CS = Continuum, followed by spectral. Used for HPSOs
 
@@ -156,6 +156,8 @@ class parameters:
             o.Qpix = 1.5 # Quality factor of synthesised beam oversampling
             o.Nf_out  = 500  # Initially this value was computed (see line above) but Rosie has since specified that it should just be set to 500.
             o.Tobs  = 1.2 * u.s  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+        else:
+            raise Exception('Unknown mode!')
 
     @staticmethod
     def apply_hpso_parameters(o, hpso):
@@ -164,8 +166,8 @@ class parameters:
             o.mode      = 'Continuum'
             o.freq_min  =  50e6 * u.Hz
             o.freq_max  = 200e6 * u.Hz
-            o.Nbeam     = 2, #using 2 beams as per HPSO request...
-            o.Nf_out    = 1500, # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
+            o.Nbeam     = 2 #using 2 beams as per HPSO request...
+            o.Nf_out    = 1500 # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 256000
             o.Bmax      = 100 * u.kilometer
@@ -176,10 +178,10 @@ class parameters:
             o.mode      = 'Continuum'
             o.freq_min  =  50e6 * u.Hz
             o.freq_max  = 200e6 * u.Hz
-            o.Nbeam     = 2, #using 2 beams as per HPSO request...
+            o.Nbeam     = 2 #using 2 beams as per HPSO request...
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 256000
-            o.Nf_out    = 1500, # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
+            o.Nf_out    = 1500 # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Bmax      = 100 * u.kilometer
             o.Texp      = 2500 * u.hours
             o.Tpoint    = 100 * u.hours
@@ -188,10 +190,10 @@ class parameters:
             o.mode      = 'Continuum'
             o.freq_min  =  50e6 * u.Hz
             o.freq_max  = 200e6 * u.Hz
-            o.Nbeam     = 2, #using 2 beams as per HPSO request...
+            o.Nbeam     = 2 #using 2 beams as per HPSO request...
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 256000
-            o.Nf_out    = 1500, # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
+            o.Nf_out    = 1500 # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Bmax      = 100 * u.kilometer
             o.Texp      = 2500 * u.hours
             o.Tpoint    = 10 * u.hours
@@ -229,7 +231,7 @@ class parameters:
             o.Nf_max    = 256000
             o.Bmax      = 10 * u.kilometer
             o.Texp      = 800 * u.hours
-            o.Tpoint    = (10/60.0) * u.hours
+            o.Tpoint    = 10/60.0 * u.hours
             o.Nmajor    = 10
         elif hpso == '04B':
             o.telescope = 'SKA1_Mid'
@@ -241,7 +243,7 @@ class parameters:
             o.Nf_max    = 256000
             o.Bmax      = 10 * u.kilometer
             o.Texp      = 800 * u.hours
-            o.Tpoint    = (10/60.0) * u.hours
+            o.Tpoint    = 10/60.0 * u.hours
             o.Nmajor    = 10
         elif hpso == '05A':
             o.telescope = 'SKA1_Mid'
@@ -274,7 +276,7 @@ class parameters:
             o.freq_min  = 790e6 * u.Hz
             o.freq_max  = 950e6 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_max    = 3200, #Assume 500 in continuum as well - defualt.
+            o.Nf_max    = 3200 #Assume 500 in continuum as well - defualt.
             o.Bmax      = 40 * u.kilometer
             o.Texp      = 5000 * u.hours
             o.Tpoint    = 2500 * u.hours
@@ -285,7 +287,7 @@ class parameters:
             o.freq_min  =  1.3e9 * u.Hz
             o.freq_max  =  1.4e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_max    = 5000, #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Nf_max    = 5000 #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 10 * u.hours
@@ -296,7 +298,7 @@ class parameters:
             o.freq_min  =  1.415e9 * u.Hz
             o.freq_max  =  1.425e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_max    = 2500, #Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Nf_max    = 2500 #Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
             o.Bmax      = 13 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 10 * u.hours
@@ -320,7 +322,7 @@ class parameters:
             o.freq_max  =  12e9 * u.Hz
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 4000
-            o.Nf_out    = 4000, #4000 channel continuum observation - band 5.
+            o.Nf_out    = 4000 #4000 channel continuum observation - band 5.
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 6000 * u.hours
             o.Tpoint    = 600 * u.hours
@@ -331,7 +333,7 @@ class parameters:
             o.freq_max  =  1.5e9 * u.Hz
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 256000
-            o.Nf_out    = 500, #continuum experiment with 500 output channels
+            o.Nf_out    = 500 #continuum experiment with 500 output channels
             o.Bmax      = 50 * u.kilometer
             o.Texp      = 17500 * u.hours
             o.Tpoint    = 10 * u.hours
@@ -341,7 +343,7 @@ class parameters:
             o.freq_min  =  1.0e9 * u.Hz
             o.freq_max  =  1.5e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_out    = 500, #continuum experiment with 500 output channels
+            o.Nf_out    = 500 #continuum experiment with 500 output channels
             o.Bmax      = 50 * u.kilometer
             o.Texp      = 17500 * u.hours
             o.Tpoint    = 10 * u.hours
@@ -363,7 +365,7 @@ class parameters:
             o.freq_min  =  1e9 * u.Hz
             o.freq_max  =  1.7e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_out    = 700, #700 channels required in output continuum cubes
+            o.Nf_out    = 700 #700 channels required in output continuum cubes
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 95 * u.hours
@@ -373,7 +375,7 @@ class parameters:
             o.freq_min  =  1e9 * u.Hz
             o.freq_max  =  1.7e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_out    = 700, #700 channels required in output continuum cubes
+            o.Nf_out    = 700 #700 channels required in output continuum cubes
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 2000 * u.hours
@@ -383,7 +385,7 @@ class parameters:
             o.freq_min  =  1e9 * u.Hz
             o.freq_max  =  1.5e9 * u.Hz
             o.Tobs      = 6 * u.hours
-            o.Nf_out    = 500, #500 channels in output cube
+            o.Nf_out    = 500 #500 channels in output cube
             o.Bmax      = 50 * u.kilometer
             o.Texp      = 5300 * u.hours
             o.Tpoint    = 95 * u.hours
