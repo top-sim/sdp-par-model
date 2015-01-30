@@ -132,9 +132,10 @@ def evaluate_binned_expression(expression, telescope_parameters, verbose=False):
 
     bins_unitless = bins / u.m
     assert tp.Bmax is not None
-    Bmax = tp.Bmax / u.m
-    nbins_used = bins_unitless.searchsorted(Bmax) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
+    Bmax_num_value = tp.Bmax / u.m
+    nbins_used = bins_unitless.searchsorted(Bmax_num_value) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
     bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
+    bins[nbins_used-1] = tp.Bmax
     counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
     result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose)
@@ -153,9 +154,10 @@ def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbos
 
     bins_unitless = bins / u.m
     assert tp.Bmax is not None
-    Bmax = tp.Bmax / u.m
-    nbins_used = bins_unitless.searchsorted(Bmax) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
+    Bmax_num_value = tp.Bmax / u.m
+    nbins_used = bins_unitless.searchsorted(Bmax_num_value) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
     bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
+    bins[nbins_used-1] = tp.Bmax
     counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
     result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False)
