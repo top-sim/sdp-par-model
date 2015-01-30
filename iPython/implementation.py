@@ -1,11 +1,18 @@
+import sympy.physics.units as u
 from parameters import parameters as p
 from formulae import formulae as f
 from variable_definitions import symbolic_definitions as s
-import sys
+from sympy import simplify, lambdify
+from scipy import optimize as opt
+import numpy as np
 
 class parameter_container:
     def __init__(self):
         pass
+
+def remove_units(expression):
+    return expression.replace(lambda el: hasattr(u, str(el)), lambda el: 1)
+
 
 def optimize_expr(expression, free_var, bound_lower, bound_upper):
     '''
@@ -57,138 +64,20 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
     f.compute_derived_parameters(telescope_params, mode)
     return telescope_params
 
+def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
     '''
-    freq_range = {}
-    hpso_params = None
-    if hpso_key is not None:
-        assert hpso_key in hpsos
-        hpso_params = hpsos[hpso_key]
-        assert hpso_params is not None
-        assert 'telescope' in hpso_params
-        telescope = hpso_params['telescope']
-        if 'comment' in hpso_params:
-            hpso_params.pop('comment')
-    else:
-        freq_range = copy.copy(band_info[band])
-        telescope = freq_range['telescope']
-        freq_range.pop('telescope')  # This key currently is not a defined variable, so we need to lose it for evaluations.
-
-    #######################################################################################################################
-    # Concatenate all relevant dicionaries to make a unified dictionary of all parameters to use (for this evaluation run)
-    # The sequence of concatenation is important - each added parameter set overwrites
-    # any existing parameters that have duplicate keys.
-    #
-    # Concatenations are done with the following syntax: extended_params = dict(base_params, **additional_params)
-    #
-    # First, universal (default) parameters. These will most probably not be overwritten as they relate to physical constants.
-    # Then, the telescope-specific parameters.
-    # Then, the frequency range that was explicitly specified (if any).
-    # Then, the parameters belonging to the selected imaging mode
-    # Lastly, if specified, the parameters of the specific high priority science objective (HPSO)
-    #######################################################################################################################
-
-    telescope_params = dict(telescope_info[telescope], **freq_range)  # universal and telescope parameters
-    answer = {}
-    if mode == 'CS':
-        telescope_params = dict(telescope_params, **imaging_mode_info['Continuum'])
-        telescope_params_C = telescope_params.copy()
-        if hpso_params is not None:
-            telescope_params_C = dict(telescope_params_C, **hpso_params)
-
-        telescope_params = dict(telescope_params, **imaging_mode_info['Spectral'])
-        telescope_params_S = telescope_params.copy()
-        if hpso_params is not None:
-            telescope_params_S = dict(telescope_params_S, **hpso_params)
-
-        telescope_params = {'C'  : telescope_params_C,
-                            'S'  : telescope_params_S}
-    else:
-        telescope_params = dict(telescope_params, **imaging_mode_info[mode])
-        if hpso_params is not None:
-            telescope_params = dict(telescope_params, **hpso_params)
-
-    return telescope_params
-    '''
-
-
-def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose_variables=()):
-    nbaselines = sum(counts)
-    temp_result = 0
-    for i in range(nbins_used):
-        binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
-        tp[Bmax_bin] = bins[i]  #use Bmax for the bin only,  not to determine map size
-        tp[binfrac] = binfrac_value
-        if len(verbose_variables) > 0:
-            print 'Bin with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % (remove_units(tp[Bmax_bin]/1e3), tp[binfrac]*100)
-            print 'Verbose variable printout:'
-            verbose_output = []
-            for variable in verbose_variables:
-                verbose_output.append(float(remove_units(variable.subs(tp).subs(tp))))
-            print verbose_output
-        # Compute the actual result
-        temp_result += expression.subs(tp).subs(tp)
-    return temp_result
-
-def evaluate_expression(expression, telescope_parameters, verbose_variables=()):
-    tp = telescope_parameters.copy()  # Make a copy, as we will be locally modifying the dictionary
-    bins = tp.pop(baseline_bins) # Remove the array of baselines from the parameter dictionary
-    counts = tp.pop(baseline_bin_counts) # Remove the array of baselines from the parameter dictionary
-    bins_unitless = bins / u.m
-    nbins_used = bins_unitless.searchsorted(remove_units(tp[Bmax])) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
-    bins[:nbins_used]  # Restrict the bins used to only those bins that are used
-    counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
-
-    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose_variables)
-    return float(result)
-
-def minimize_expression(expression, telescope_parameters, mode=None, verbose=False, verbose_variables=()):
-    '''
-    Minimizes an expression by substituting the supplied telescope parameters into the expression, then minimizing it
-    by varying the free parameter, Tsnap
-    '''
-    #TODO: can make the free expression a parameter of this method (should something else than Tsnap be desired)
-    if mode == 'CS':
-        raise Exception('Cannot yet handle CS mode when using binned baselines. Should be simple to implement though.')
-
-    tp = telescope_parameters.copy()  # Make a copy, as we will be locally modifying the dictionary
-    if Tsnap in tp:
-        tp.pop(Tsnap) # We will need to optimize Tsnap, so it has to be undefined
-
-    bins = tp.pop(baseline_bins) # Remove the array of baselines from the parameter dictionary
-    counts = tp.pop(baseline_bin_counts) # Remove the array of baselines from the parameter dictionary
-
-    bins_unitless = bins / u.m
-    nbins_used = bins_unitless.searchsorted(remove_units(tp[Bmax])) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
-    bins[:nbins_used]  # Restrict the bins used to only those bins that are used
-    counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
-
-    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose_variables)
-
-    # Remove string literals from the telescope_params, as they can't be evaluated by lambdify    
-    bound_lower = Tsnap_min
-    bound_upper = 0.5 * remove_units(Tobs.subs(tp).subs(tp))
-    Tsnap_optimal = optimize_expr(result, Tsnap, bound_lower, bound_upper)
-    value_optimal = result.subs({Tsnap : Tsnap_optimal})
-    if verbose:
-        print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal / 1e15)
-    return {Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
-
-def find_optimal_Tsnap_Nfacet(band=None, mode=None, hpso=None, max_number_nfacets=200, verbose=False):
-    '''
-    Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop for a given telescope, band and mode
+    Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop
+    according to its definition in the supplied definitions object
     Returns result as a 2-tuple (Tsnap_opt, Nfacet_opt)
     '''
-    if verbose:
-        if hpso is None:
-            print 'Finding optimal values for Tsnap and Nfacet for (band = %s, mode = %s)' % (band, mode)
-        else:
-            print 'Finding optimal values for Tsnap and Nfacet for HPSO %s (mode = %s)' % (hpso, mode)
-    
+
     flop_results = {} # Maps nfacet values to flops
     flop_array = []
     Tsnap_array = []
     warned = False
+
     for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet (typically 1..10)
+        expression_original = definitions.Rflop
         # Warn if large values of nfacets are reached, as it may indicate an error and take long!
         if (nfacets > 20) and not warned:
             print 'Searching for minimum Rflop with nfacets > 20... this is a bit odd (and may take long)'
@@ -197,11 +86,12 @@ def find_optimal_Tsnap_Nfacet(band=None, mode=None, hpso=None, max_number_nfacet
         i = nfacets-1 # zero-based index
         if verbose:
             print 'Evaluating Nfacets = %d' % nfacets
-        parameters = calc_tel_params(band=band, mode=mode, hpso_key=hpso)
-        parameters[Nfacet] = nfacets
-        answer = minimize_expression(expression=Rflop, telescope_parameters=parameters, mode=mode)
+
+        Rflops = expression_original.subs({definitions.Nfacet : nfacets})
+        answer = minimize_binned_expression_by_Tsnap(expression=Rflops, telescope_parameters=definitions, verbose=verbose)
+
         flop_array.append(float(answer['value']))
-        Tsnap_array.append(answer[Tsnap])
+        Tsnap_array.append(answer[definitions.Tsnap])
         flop_results[nfacets] = flop_array[i]/1e15
         if nfacets >= 2:
             if flop_array[i] >= flop_array[i-1]:
@@ -214,4 +104,70 @@ def find_optimal_Tsnap_Nfacet(band=None, mode=None, hpso=None, max_number_nfacet
     if verbose:
         print '\n%f PetaFLOPS was the lowest FLOP value, found for (Nfacet, Tsnap) = (%d, %.2f)' \
               % (flop_array[i]/1e15, nfacets,  Tsnap_array[i])
+
     return (Tsnap_array[i], nfacets)
+
+def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False):
+    '''
+    Substitute relevant variables for each bin, summing the result
+    '''
+    nbaselines = sum(counts)
+    temp_result = 0
+    for i in range(nbins_used):
+        binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
+
+        # Substitute bin-dependent variables
+        expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
+
+        if verbose:
+            print 'Bin with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % (bins[i]/(u.m*1e3), binfrac_value*100)
+            print 'Verbose variable printout: <empty>'
+
+        temp_result += expr_subst
+    return temp_result
+
+def evaluate_binned_expression(expression, telescope_parameters, verbose=False):
+    tp = telescope_parameters
+    bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
+    counts = tp.baseline_bin_counts # Remove the array of baselines from the parameter dictionary
+
+    bins_unitless = bins / u.m
+    assert tp.Bmax is not None
+    Bmax = tp.Bmax / u.m
+    nbins_used = bins_unitless.searchsorted(Bmax) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
+    bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
+    counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
+
+    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose)
+    return float(result)
+
+def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbose=False):
+    '''
+    Minimizes an expression by substituting the supplied telescope parameters into the expression, then minimizing it
+    by varying the free parameter, Tsnap
+    '''
+    #TODO: can make the free expression a parameter of this method (should something else than Tsnap be desired)
+
+    tp = telescope_parameters
+    bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
+    counts = tp.baseline_bin_counts # Remove the array of baselines from the parameter dictionary
+
+    bins_unitless = bins / u.m
+    assert tp.Bmax is not None
+    Bmax = tp.Bmax / u.m
+    nbins_used = bins_unitless.searchsorted(Bmax) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
+    bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
+    counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
+
+    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False)
+
+    # Remove string literals from the telescope_params, as they can't be evaluated by lambdify    
+    bound_lower = tp.Tsnap_min
+    bound_upper = 0.5 * tp.Tobs / u.s
+
+    Tsnap_optimal = optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
+    value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
+    if verbose:
+        print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal / 1e15)
+    return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
+
