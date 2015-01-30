@@ -115,21 +115,8 @@ def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbo
     temp_result = 0
     for i in range(nbins_used):
         binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
-        print 'bins[i] ='
-        print bins[i]
-        print 'expr'
-        print expression
-        print 'Subst'
-        print expression.subs({tp.Bmax_bin: bins[i]})
-
-
         # Substitute bin-dependent variables
-        print "---\n"
-        #print '\n'
-        #print expression
         expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
-        #print "\n"
-        #print expr_subst
 
         if verbose:
             print 'Bin with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % (bins[i]/(u.m*1e3), binfrac_value*100)
