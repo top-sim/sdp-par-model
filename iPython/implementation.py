@@ -1,22 +1,9 @@
 from telescope_parameters import *
 import sys
 
-telescope_list = ['SKA1_Low', 'SKA1_Mid', 'SKA1_Survey'] 
-imaging_modes = ['Continuum', 'Spectral', 'SlowTrans', 'CS']   # CS = Continuum, followed by spectral
-
-telescope_labels = dict(
-    zip(
-        telescope_list,
-        symbols('Low, Mid, Sur')
-    )
-)
-
-mode_labels = dict(
-    zip(
-        imaging_modes,
-        symbols('C, S, ST, C+S')
-    )
-)
+class parameter_container:
+    def __init__(self):
+        pass
 
 def optimize_expr(expression, free_var, bound_lower, bound_upper):
     '''
