@@ -2,7 +2,7 @@ import sympy.physics.units as u
 from parameter_definitions import parameter_definitions as p
 from formulae import formulae as f
 from variable_definitions import symbolic_definitions as s
-from sympy import simplify, lambdify
+from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
 
@@ -107,7 +107,7 @@ def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False
 
     return (Tsnap_array[i], nfacets)
 
-def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False):
+def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False, take_max=False):
     '''
     Substitute relevant variables for each bin, summing the result
     '''
@@ -122,10 +122,13 @@ def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbo
             print 'Bin with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % (bins[i]/(u.m*1e3), binfrac_value*100)
             print 'Verbose variable printout: <empty>'
 
-        temp_result += expr_subst
+        if take_max:  # For example when computing Npix, we take the max
+            temp_result = Max(temp_result, expr_subst)
+        else:         # For most other varibles we sum over all bins
+            temp_result += expr_subst
     return temp_result
 
-def evaluate_binned_expression(expression, telescope_parameters, verbose=False):
+def evaluate_binned_expression(expression, telescope_parameters, verbose=False, take_max=False):
     tp = telescope_parameters
     bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
     counts = tp.baseline_bin_counts # Remove the array of baselines from the parameter dictionary
@@ -138,10 +141,10 @@ def evaluate_binned_expression(expression, telescope_parameters, verbose=False):
     bins[nbins_used-1] = tp.Bmax
     counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
-    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose)
+    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose, take_max=take_max)
     return float(result)
 
-def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbose=False):
+def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbose=False, take_max=False):
     '''
     Minimizes an expression by substituting the supplied telescope parameters into the expression, then minimizing it
     by varying the free parameter, Tsnap
@@ -160,7 +163,7 @@ def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbos
     bins[nbins_used-1] = tp.Bmax
     counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
-    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False)
+    result = substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False, take_max=take_max)
 
     # Remove string literals from the telescope_params, as they can't be evaluated by lambdify    
     bound_lower = tp.Tsnap_min
