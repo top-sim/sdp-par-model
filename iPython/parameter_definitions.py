@@ -70,8 +70,8 @@ class parameter_definitions:
     def get_telescope_from_hpso(hpso_string):
         telescope_string = ""
         hpsos_using_low = ('01','02A','02B','03A','03B')
-        hpsos_using_mid = ('04A','04B','05A','05B','14','19','22','37a','37b','38a','38b')
-        hpsos_using_sur = ('13','15','27','33','35','37c')
+        hpsos_using_mid = ('04A','04B','05A','05B','14','19','22','37a','37b','38a','38b', '14c', '14s')
+        hpsos_using_sur = ('13','15','27','33','35','37c', '13c', '13s', '15c', '15s')
         if hpso_string in hpsos_using_low:
             telescope_string = "SKA1_Low"
         elif hpso_string in hpsos_using_mid:
@@ -280,6 +280,28 @@ class parameter_definitions:
             o.Bmax      = 40 * u.kilometer
             o.Texp      = 5000 * u.hours
             o.Tpoint    = 2500 * u.hours
+        elif hpso == '13c':
+            o.telescope = 'SKA1_Survey'
+            o.mode      = 'Continuum'
+            o.comment = 'HI, limited BW'
+            o.freq_min  = 790e6 * u.Hz
+            o.freq_max  = 950e6 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 3200 #Assume 500 in continuum as well - defualt.
+            o.Bmax      = 40 * u.kilometer
+            o.Texp      = 5000 * u.hours
+            o.Tpoint    = 2500 * u.hours
+        elif hpso == '13s':
+            o.telescope = 'SKA1_Survey'
+            o.mode      = 'Spectral'
+            o.comment = 'HI, limited BW'
+            o.freq_min  = 790e6 * u.Hz
+            o.freq_max  = 950e6 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 3200 #Assume 500 in continuum as well - defualt.
+            o.Bmax      = 40 * u.kilometer
+            o.Texp      = 5000 * u.hours
+            o.Tpoint    = 2500 * u.hours
         elif hpso == '14':
             o.telescope = 'SKA1_Mid'
             o.mode      = 'CS'
@@ -291,9 +313,53 @@ class parameter_definitions:
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 10 * u.hours
+        elif hpso == '14c':
+            o.telescope = 'SKA1_Mid'
+            o.mode      = 'Continuum'
+            o.comment = 'HI'
+            o.freq_min  =  1.3e9 * u.Hz
+            o.freq_max  =  1.4e9 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 5000 #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Bmax      = 200 * u.kilometer
+            o.Texp      = 2000 * u.hours
+            o.Tpoint    = 10 * u.hours
+        elif hpso == '14s':
+            o.telescope = 'SKA1_Mid'
+            o.mode      = 'Spectral'
+            o.comment = 'HI'
+            o.freq_min  =  1.3e9 * u.Hz
+            o.freq_max  =  1.4e9 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 5000 #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Bmax      = 200 * u.kilometer
+            o.Texp      = 2000 * u.hours
+            o.Tpoint    = 10 * u.hours
         elif hpso == '15':
             o.telescope = 'SKA1_Survey'
             o.mode      = 'CS'
+            o.comment = 'HI, limited spatial resolution'
+            o.freq_min  =  1.415e9 * u.Hz
+            o.freq_max  =  1.425e9 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 2500 #Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Bmax      = 13 * u.kilometer
+            o.Texp      = 2000 * u.hours
+            o.Tpoint    = 10 * u.hours
+        elif hpso == '15c':
+            o.telescope = 'SKA1_Survey'
+            o.mode      = 'Continuum'
+            o.comment = 'HI, limited spatial resolution'
+            o.freq_min  =  1.415e9 * u.Hz
+            o.freq_max  =  1.425e9 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 2500 #Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Bmax      = 13 * u.kilometer
+            o.Texp      = 2000 * u.hours
+            o.Tpoint    = 10 * u.hours
+        elif hpso == '15s':
+            o.telescope = 'SKA1_Survey'
+            o.mode      = 'Spectral'
             o.comment = 'HI, limited spatial resolution'
             o.freq_min  =  1.415e9 * u.Hz
             o.freq_max  =  1.425e9 * u.Hz

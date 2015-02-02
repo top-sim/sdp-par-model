@@ -15,7 +15,6 @@ class formulae:
         o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(ConsistenNf_outt with PDR05 280115)
         o.Npix_linear = o.Theta_fov / o.Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
         o.Rfft = o.Nfacet**2 * 5 * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change))
-
         o.Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
         o.Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
 
@@ -51,14 +50,15 @@ class formulae:
         # Rrp is handled in the telescope parameters file
 
         o.Gcorr = o.Na * (o.Na - 1) * o.Nf_max * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging
-        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
+        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s / 1.0e15# Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
-        o.Rflop = o.Rphrot + 2 * o.Nmajor*o.Nbeam*o.Npp*(o.Nf_out*(o.Rrp + o.Rfft) + (o.Nf_vis*o.Rccf) + o.Rgrid) # Overall flop rate
-        o.Rio = o.Mvis * o.Nmajor * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 #added o.Nfacet dependence
+        o.Rflop = (o.Rphrot + 2 * o.Nmajor*o.Nbeam*o.Npp*(o.Nf_out*(o.Rrp + o.Rfft) + (o.Nf_vis*o.Rccf) + o.Rgrid))/1.0e15 # Overall flop rate
+        o.Rio = o.Mvis * o.Nmajor * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 / 1.0e15 #added o.Nfacet dependence
 
         # Split the FLOP rate into constituent parts, for plotting
-        Rflop_common_factor = 2 * o.Nmajor * o.Nbeam * o.Npp
+        Rflop_common_factor = 2 * o.Nmajor * o.Nbeam * o.Npp / 1.0e15
         o.Rflop_grid = Rflop_common_factor * o.Rgrid
         o.Rflop_conv = Rflop_common_factor * o.Nf_vis * o.Rccf
         o.Rflop_fft  = Rflop_common_factor * o.Nf_out  * o.Rfft
         o.Rflop_proj = Rflop_common_factor * o.Nf_out  * o.Rrp
+        o.Rflop_phrot = o.Rphrot/1.0e15
