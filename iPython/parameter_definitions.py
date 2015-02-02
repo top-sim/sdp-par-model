@@ -70,7 +70,7 @@ class parameter_definitions:
     def get_telescope_from_hpso(hpso_string):
         telescope_string = ""
         hpsos_using_low = ('01','02A','02B','03A','03B')
-        hpsos_using_mid = ('04A','04B','05A','05B','14','19','22','37a','37b','38a','38b', '14c', '14s')
+        hpsos_using_mid = ('04A','04B','05A','05B','14','19','22','37a','37b','38a','38b', '14c', '14s', '14sfull')
         hpsos_using_sur = ('13','15','27','33','35','37c', '13c', '13s', '15c', '15s')
         if hpso_string in hpsos_using_low:
             telescope_string = "SKA1_Low"
@@ -147,7 +147,8 @@ class parameter_definitions:
             o.Qfov = 1.0 # Field of view factor
             o.Nmajor = 1 # Number of major CLEAN cycles to be done
             o.Qpix = 2.5 # Quality factor of synthesised beam oversampling
-            o.Nf_out  = o.Nf_max #The same as the number of channels
+            #o.Nf_out  = o.Nf_max #The same as the number of channels
+            o.Nf_out = 256000
             o.Tobs  = 6 * u.hours
 
         elif mode == 'SlowTrans':
@@ -169,7 +170,7 @@ class parameter_definitions:
             o.Nbeam     = 2 #using 2 beams as per HPSO request...
             o.Nf_out    = 1500 # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Tobs      = 6 * u.hours
-            o.Nf_max    = 256000
+            o.Nf_max    = 1500
             o.Bmax      = 100 * u.kilometer
             o.Texp      = 2500 * u.hours
             o.Tpoint    = 1000 * u.hours
@@ -180,7 +181,7 @@ class parameter_definitions:
             o.freq_max  = 200e6 * u.Hz
             o.Nbeam     = 2 #using 2 beams as per HPSO request...
             o.Tobs      = 6 * u.hours
-            o.Nf_max    = 256000
+            #o.Nf_max    = 256000
             o.Nf_out    = 1500 # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Bmax      = 100 * u.kilometer
             o.Texp      = 2500 * u.hours
@@ -332,6 +333,17 @@ class parameter_definitions:
             o.freq_max  =  1.4e9 * u.Hz
             o.Tobs      = 6 * u.hours
             o.Nf_max    = 5000 #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Bmax      = 200 * u.kilometer
+            o.Texp      = 2000 * u.hours
+            o.Tpoint    = 10 * u.hours
+        elif hpso == '14sfull':
+            o.telescope = 'SKA1_Mid'
+            o.mode      = 'Spectral'
+            o.comment = 'HI'
+            o.freq_min  =  1.3e9 * u.Hz
+            o.freq_max  =  1.4e9 * u.Hz
+            o.Tobs      = 6 * u.hours
+            o.Nf_max    = 50000 #Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
             o.Bmax      = 200 * u.kilometer
             o.Texp      = 2000 * u.hours
             o.Tpoint    = 10 * u.hours
