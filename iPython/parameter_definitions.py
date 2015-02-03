@@ -4,7 +4,7 @@ import numpy as np
 from sympy import log
 
 class parameter_definitions:
-    telescope_list = ['SKA1_Low', 'SKA1_Mid', 'SKA1_Survey']
+    telescope_list = ['SKA1_Low', 'SKA1_Mid', 'SKA1_Survey', 'SKA2_LOW', 'SKA2_MID']
     imaging_modes = ['Continuum', 'Spectral', 'SlowTrans', 'CS']   # CS = Continuum, followed by spectral. Used for HPSOs
 
     @staticmethod
@@ -53,7 +53,24 @@ class parameter_definitions:
             o.Tdump_ref = 0.3* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((3.8, 5.5, 8.0, 11.5, 16.6, 24.0, 34.6, 50)) * u.km
             o.baseline_bin_counts  = np.array((81109, 15605, 15777, 16671, 16849, 17999, 3282, 324))
-
+        elif telescope == 'SKA2_LOW':
+            o.Bmax = 180 * u.km     # Actually constructed kilometers of max baseline
+            o.Ds = 180 * u.m        # station "diameter" in meters
+            o.Na = 155            # number of antennas
+            o.Nbeam = 200            # number of beams
+            o.Nf_max = 256000      # maximum number of channels
+            o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
+            o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
+            o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 180)) * u.km
+        elif telescope == 'SKA2_MID':
+            o.Bmax = 1800 * u.km     # Actually constructed kilometers of max baseline
+            o.Ds = 15 * u.m        # station "diameter" in meters
+            o.Na = 155            # number of antennas
+            o.Nbeam = 200            # number of beams
+            o.Nf_max = 256000      # maximum number of channels
+            o.Tdump_ref = 0.008* u.s # Correlator dump time in reference design
+            o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
+            o.baseline_bins  = np.array((44, 67, 103, 157, 240, 367, 560, 856, 1308, 1800)) * u.km
     @staticmethod
     def get_telescope_from_band(band_string):
         if band_string.upper().startswith('L'):
@@ -133,6 +150,15 @@ class parameter_definitions:
             o.telescope = 'SKA1_Survey'
             o.freq_min = 3.5e9 * u.Hz
             o.freq_max = 4.0e9 * u.Hz
+        elif band == 'LOWSKA2':
+            o.telescope = 'SKA2_LOW'
+            o.freq_min =  70e6 * u.Hz
+            o.freq_max = 350e6 * u.Hz
+        elif band == 'MIDSKA2':
+            o.telescope = 'SKA2_MID'
+            o.freq_min =  450e6 * u.Hz
+            o.freq_max = 1.05e9 * u.Hz
+
 
     @staticmethod
     def apply_imaging_mode_parameters(o, mode):
