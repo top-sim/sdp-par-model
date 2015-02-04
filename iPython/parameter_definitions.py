@@ -12,7 +12,7 @@ class parameter_definitions:
         o.Omega_E = 7.292115e-5  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars
         o.R_Earth = const.R_earth.value * u.m # In PDR05 Excel sheet a value of 6400000 was used
         o.epsilon_w = 0.01
-        o.Mvis = 12.0
+        o.Mvis = 12.0 #back to 12. Likely to change in future
         o.Naa = 9
         o.Nmm = 4
         o.Npp = 4
