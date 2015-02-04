@@ -1,7 +1,6 @@
 import sympy.physics.units as u
 from parameter_definitions import parameter_definitions as p
 from formulae import formulae as f
-from variable_definitions import symbolic_definitions as s
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
@@ -40,7 +39,7 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
     '''
     telescope_params = parameter_container()
     p.apply_global_parameters(telescope_params)
-    s.define_symbolic_variables(telescope_params)
+    p.define_symbolic_variables(telescope_params)
 
     assert mode is not None
     if band is not None:
