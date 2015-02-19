@@ -242,7 +242,7 @@ class parameter_definitions:
 
         elif mode == 'Spectral':
             o.Qfov = 1.0 # Field of view factor
-            o.Nmajor = 1 # Number of major CLEAN cycles to be done
+            o.Nmajor = 1.5 # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5 # Quality factor of synthesised beam oversampling
             #o.Nf_out  = o.Nf_max #The same as the number of channels
             o.Nf_out = 256000
