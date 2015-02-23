@@ -53,7 +53,7 @@ class formulae:
         o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s / 1.0e15# Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
         o.Rflop = (o.Rphrot + 2 * o.Nmajor*o.Nbeam*o.Npp*(o.Nf_out*(o.Rrp + o.Rfft) + (o.Nf_vis*o.Rccf) + o.Rgrid))/1.0e15 # Overall flop rate
-        o.Rio = o.Mvis * o.Nmajor * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 / 1.0e15 #added o.Nfacet dependence
+        o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 / 1.0e15 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
 
         # Split the FLOP rate into constituent parts, for plotting
         Rflop_common_factor = 2 * o.Nmajor * o.Nbeam * o.Npp / 1.0e15
