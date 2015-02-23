@@ -84,7 +84,7 @@ class parameter_definitions:
         o.R_Earth = const.R_earth.value * u.m # In PDR05 Excel sheet a value of 6400000 was used
         o.epsilon_w = 0.01
         o.Mvis = 12.0 #back to 12. Likely to change in future
-        o.Naa = 9
+        o.Naa = 10 #Changed to 10, after PDR submission
         o.Nmm = 4
         o.Npp = 4
         o.Nw  = 2  # Bytes per value
