@@ -6,7 +6,6 @@ from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling,
 class formulae:
     @staticmethod
     def compute_derived_parameters(o, mode):
-        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
         o.wl_max = u.c / o.freq_min             # Maximum Wavelength
         o.wl_min = u.c / o.freq_max             # Minimum Wavelength
         o.wl = 0.5*(o.wl_max + o.wl_min)          # Representative Wavelength
@@ -21,7 +20,16 @@ class formulae:
         o.DeltaW_max = o.Qw * Max(o.Bmax_bin*o.Tsnap*o.Omega_E/(o.wl*2), o.Bmax_bin**2/(o.R_Earth*o.wl*8)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
         o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
-
+        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
+        o.amp_f_max = 1.01 # this needs to live with the parameter definitions...(once we've debugged this)
+        o.epsilon_f_approx = sqrt(6*(1-(1/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
+        #print "epsilon f:", o.epsilon_f_approx
+        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov* o.Omega_E * o.Bmax_bin) *u.s
+        print "Skipper av time", o.Tdump_skipper
+        print "Tdump,ref:", o.Tdump_ref
+        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
+        #o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum. #this line breaks the code but I cannot see what is wring with it...
+        print "using averaging time of...:", o.Tdump
         if mode == 'Continuum':
             o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
