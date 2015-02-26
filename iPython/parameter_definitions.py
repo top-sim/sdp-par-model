@@ -82,6 +82,7 @@ class parameter_definitions:
     def apply_global_parameters(o):
         o.Omega_E = 7.292115e-5  # In PDR05 Excel sheet a value of 0.0000727 was used. This value based on rotation relative to the fixed stars
         o.R_Earth = const.R_earth.value * u.m # In PDR05 Excel sheet a value of 6400000 was used
+        o.pi = 3.14159265358979323846264338328
         o.epsilon_w = 0.01
         o.Mvis = 12.0 #back to 12. Likely to change in future
         o.Naa = 10 #Changed to 10, after PDR submission
@@ -94,6 +95,7 @@ class parameter_definitions:
         o.Qw   = 1.0
         o.Tion = 60.0
         o.Tsnap_min = 1.2
+        o.amp_f_max = 1.01  # Added by Rosie Bolton
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):
@@ -238,7 +240,7 @@ class parameter_definitions:
             o.Nmajor = 10 # Number of major CLEAN cycles to be done
             o.Qpix =  2.5 # Quality factor of synthesised beam oversampling
             o.Nf_out  = 500
-            o.Tobs  = 6 * u.hours
+            o.Tobs    = 6 * u.hours
 
         elif mode == 'Spectral':
             o.Qfov = 1.0 # Field of view factor
