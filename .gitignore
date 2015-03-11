@@ -9,6 +9,8 @@
 /*.pdf
 /*.wxm
 
+*.pyc
+
 /_region_*
 /.Rhistory
 /MajCycleModel.ilg
