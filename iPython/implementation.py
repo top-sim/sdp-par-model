@@ -125,6 +125,7 @@ def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbo
             temp_result = Max(temp_result, expr_subst)
         else:         # For most other varibles we sum over all bins
             temp_result += expr_subst
+
     return temp_result
 
 def evaluate_binned_expression(expression, telescope_parameters, verbose=False, take_max=False):
@@ -135,7 +136,8 @@ def evaluate_binned_expression(expression, telescope_parameters, verbose=False, 
     bins_unitless = bins / u.m
     assert tp.Bmax is not None
     Bmax_num_value = tp.Bmax / u.m
-    nbins_used = bins_unitless.searchsorted(Bmax_num_value) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
+    # Compute the index of the first bin whose baseline exceeds the max baseline used (must be <= number of bins)
+    nbins_used = min(bins_unitless.searchsorted(Bmax_num_value) + 1, len(bins))
     bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
     bins[nbins_used-1] = tp.Bmax
     counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
