@@ -173,6 +173,6 @@ def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbos
     Tsnap_optimal = optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
     value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
     if verbose:
-        print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal / 1e15)
+        print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal)
     return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
 
