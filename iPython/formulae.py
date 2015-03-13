@@ -22,6 +22,7 @@ class formulae:
         o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
 
+        # Rrp <= Reprojection Flop rate, per output channel
         if mode == 'Continuum':
             o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
