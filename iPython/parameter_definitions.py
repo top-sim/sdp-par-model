@@ -185,8 +185,8 @@ class parameter_definitions:
             o.Qfov = 1.0 # Field of view factor
             o.Nmajor = 1.5 # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5 # Quality factor of synthesised beam oversampling
-            #o.Nf_out  = o.Nf_max #The same as the number of channels
-            o.Nf_out = 256000
+            o.Nf_out  = o.Nf_max #The same as the maximum number of channels
+            print '>>>>>>>>  Nf_max = %d (but seems not to be used at present. This may be a bug)' % o.Nf_max
             o.Tobs  = 6 * u.hours
 
         elif mode == 'SlowTrans':

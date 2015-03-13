@@ -63,6 +63,13 @@ def calc_tel_params(band=None, mode=None, hpso_key=None):
     f.compute_derived_parameters(telescope_params, mode)
     return telescope_params
 
+def update_derived_parameters(telescope_params, mode):
+    """
+    Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
+    """
+    p.apply_imaging_mode_parameters(telescope_params, mode)
+    f.compute_derived_parameters(telescope_params, mode)
+
 def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
     '''
     Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop

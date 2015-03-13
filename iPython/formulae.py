@@ -12,7 +12,7 @@ class formulae:
         o.wl = 0.5*(o.wl_max + o.wl_min)          # Representative Wavelength
         o.Theta_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds * o.Nfacet) # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
         o.Theta_beam = 3 * o.wl/(2*o.Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin... (Consistent with PDR05 280115)
-        o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(ConsistenNf_outt with PDR05 280115)
+        o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(ConsistenNf_out with PDR05 280115)
         o.Npix_linear = o.Theta_fov / o.Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
         o.Rfft = o.Nfacet**2 * 5 * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change))
         o.Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
@@ -48,9 +48,7 @@ class formulae:
 
         o.Rphrot = 2 * o.Nmajor * o.Npp * o.Nbeam * o.Nvis * o.Nfacet**2 * 25 * sign(o.Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
 
-        # Rrp is handled in the telescope parameters file
-
-        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_max * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging
+        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_used * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging
         o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s / 1.0e15# Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
         o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 / 1.0e15 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
