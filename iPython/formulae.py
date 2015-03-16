@@ -1,9 +1,10 @@
 import sympy.physics.units as u
-from astropy import constants as const
-import numpy as np
-from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling, floor, evalf
+from sympy import pi, log, ln, Min, Max, sqrt, sign, ceiling, floor, evalf
 
-class formulae:
+class Formulae:
+    def __init__(self):
+        pass
+
     @staticmethod
     def compute_derived_parameters(o, mode):
         o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum

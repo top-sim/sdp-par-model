@@ -193,7 +193,7 @@ class parameter_definitions:
             o.Qfov = 0.9 # Field of view factor
             o.Nmajor = 1 # Number of major CLEAN cycles to be done
             o.Qpix = 1.5 # Quality factor of synthesised beam oversampling
-            o.Nf_out  = 500  # Initially this value was computed (see line above) but Rosie has since specified that it should just be set to 500.
+            o.Nf_out  = 500  # Initially this value was computed, but Rosie has since specified that it should just be set to 500.
             o.Tobs  = 1.2 * u.s  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
         else:
             raise Exception('Unknown mode!')
