@@ -41,8 +41,9 @@ class Formulae:
 
         #The following workaround is no longer needed
         o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
+        print('Nf_out = %d' % o.Nf_out)
 
-        o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
+        o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_used/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
         o.Rgrid = (o.Nfacet**2 + o.Nfacet)*0.5*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)
 
         o.Rccf = o.Nfacet**2 * 5 * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(o.Tion*o.Qfcv) #reduce by multiplication by o.binfrac (RCB), add in extra multiplication by Nfacet-squared.
@@ -50,15 +51,16 @@ class Formulae:
         o.Rphrot = 2 * o.Nmajor * o.Npp * o.Nbeam * o.Nvis * o.Nfacet**2 * 25 * sign(o.Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
 
         o.Gcorr = o.Na * (o.Na - 1) * o.Nf_used * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging
-        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s / 1.0e15# Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
-        o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
-        o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 / 1.0e15 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
+        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
+        o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_used * 8
+        o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
 
-        o.Rflop = (o.Rphrot + 2 * o.Nmajor*o.Nbeam*o.Npp*(o.Nf_out*(o.Rrp + o.Rfft) + (o.Nf_vis*o.Rccf) + o.Rgrid))/1.0e15 # Overall flop rate
         # Split the FLOP rate into constituent parts, for plotting
-        Rflop_common_factor = 2 * o.Nmajor * o.Nbeam * o.Npp / 1.0e15
+        Rflop_common_factor = 2 * o.Nmajor * o.Nbeam * o.Npp
         o.Rflop_grid = Rflop_common_factor * o.Rgrid
-        o.Rflop_conv = Rflop_common_factor * o.Nf_vis * o.Rccf
-        o.Rflop_fft  = Rflop_common_factor * o.Nf_out  * o.Rfft
-        o.Rflop_proj = Rflop_common_factor * o.Nf_out  * o.Rrp
-        o.Rflop_phrot = o.Rphrot/1.0e15
+        o.Rflop_conv = Rflop_common_factor * o.Nf_used * o.Rccf
+        o.Rflop_fft  = Rflop_common_factor * o.Nf_out * o.Rfft
+        o.Rflop_proj = Rflop_common_factor * o.Nf_out * o.Rrp
+        o.Rflop_phrot = o.Rphrot
+
+        o.Rflop = o.Rflop_phrot + o.Rflop_proj + o.Rflop_fft + o.Rflop_conv + o.Rflop_grid  # Overall flop rate

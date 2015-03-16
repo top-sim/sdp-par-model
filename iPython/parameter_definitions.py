@@ -178,7 +178,8 @@ class parameter_definitions:
             o.Qfov =  1.8 # Field of view factor
             o.Nmajor = 10 # Number of major CLEAN cycles to be done
             o.Qpix =  2.5 # Quality factor of synthesised beam oversampling
-            o.Nf_out  = 500
+            print o.Nf_max
+            o.Nf_out  = min(500, o.Nf_max)
             o.Tobs  = 6 * u.hours
 
         elif mode == 'Spectral':
@@ -186,14 +187,13 @@ class parameter_definitions:
             o.Nmajor = 1.5 # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5 # Quality factor of synthesised beam oversampling
             o.Nf_out  = o.Nf_max #The same as the maximum number of channels
-            print '>>>>>>>>  Nf_max = %d (but seems not to be used at present. This may be a bug)' % o.Nf_max
             o.Tobs  = 6 * u.hours
 
         elif mode == 'SlowTrans':
             o.Qfov = 0.9 # Field of view factor
             o.Nmajor = 1 # Number of major CLEAN cycles to be done
             o.Qpix = 1.5 # Quality factor of synthesised beam oversampling
-            o.Nf_out  = 500  # Initially this value was computed, but Rosie has since specified that it should just be set to 500.
+            o.Nf_out  = min(500, o.Nf_max)  # Initially this value was computed, but Rosie has since specified that it should just be set to 500.
             o.Tobs  = 1.2 * u.s  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
         else:
             raise Exception('Unknown mode!')
