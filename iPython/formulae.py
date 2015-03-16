@@ -41,7 +41,6 @@ class Formulae:
 
         #The following workaround is no longer needed
         o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
-        print('Nf_out = %d' % o.Nf_out)
 
         o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_used/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
         o.Rgrid = (o.Nfacet**2 + o.Nfacet)*0.5*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)

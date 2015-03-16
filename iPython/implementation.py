@@ -201,5 +201,6 @@ class Implementation:
         Tsnap_optimal = Implementation.optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
         value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
         if verbose:
-            print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % (Tsnap_optimal, value_optimal)
+            print "Tsnap has been optimized as : %f, yielding a minimum value of %f Peta-units" % \
+                  (Tsnap_optimal, value_optimal / u.peta)
         return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value

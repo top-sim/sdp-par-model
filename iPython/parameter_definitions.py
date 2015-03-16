@@ -178,7 +178,6 @@ class parameter_definitions:
             o.Qfov =  1.8 # Field of view factor
             o.Nmajor = 10 # Number of major CLEAN cycles to be done
             o.Qpix =  2.5 # Quality factor of synthesised beam oversampling
-            print o.Nf_max
             o.Nf_out  = min(500, o.Nf_max)
             o.Tobs  = 6 * u.hours
 
