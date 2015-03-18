@@ -23,13 +23,13 @@ class formulae:
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
 
         if mode == 'Continuum':
-            o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
+            #o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
         elif mode == 'Spectral':
-            o.Nf_used  = o.Nf_max
+            #o.Nf_out  = o.Nf_max
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
         elif mode == 'SlowTrans':
-            o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of bands for gridding at longest baseline
+            #o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of bands for gridding at longest baseline
             o.Rrp  = 0*u.s / u.s #(Consistent with PDR05 280115)
         else:
             raise Exception()

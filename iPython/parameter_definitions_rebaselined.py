@@ -120,16 +120,16 @@ class parameter_definitions:
             o.Ds = 35 * u.m        # station "diameter" in meters
             o.Na = 512            # number of antennas
             o.Nbeam = 1            # number of beams
-            o.Nf_max = 64000      # maximum number of channels
+            o.Nf_max = 65356      # maximum number of channels
             o.Tdump_ref = 0.6* u.s # Correlator dump time in reference design
-            o.baseline_bins  = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 70.0)) * u.km
+            o.baseline_bins  = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 80.0)) * u.km
             o.baseline_bin_counts  = np.array((5031193, 732481, 796973, 586849, 1070483, 939054, 820834, 214741))
         elif telescope == 'SKA1_Mid':
             o.Bmax = 150 * u.km     # Actually constructed kilometers of max baseline
             o.Ds = 15 * u.m        # station "diameter" in meters
             o.Na = 133+64          # number of antennas
             o.Nbeam = 1            # number of beams
-            o.Nf_max = 64000      # maximum number of channels
+            o.Nf_max = 65356      # maximum number of channels
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 150)) * u.km
             o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 22280))
@@ -195,8 +195,7 @@ class parameter_definitions:
             o.Qfov = 1.0 # Field of view factor
             o.Nmajor = 1.5 # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5 # Quality factor of synthesised beam oversampling
-            #o.Nf_out  = o.Nf_max #The same as the number of channels
-            o.Nf_out = 64000
+            o.Nf_out  = o.Nf_max #The same as the number of channels
             o.Tobs  = 6 * u.hours
 
         elif mode == 'SlowTrans':
