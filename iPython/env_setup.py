@@ -12,13 +12,9 @@ init_session(
     pretty_print=True,
     quiet=True,
 )
-from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling, floor, evalf
-import copy
-import sympy.physics.units as u
-from astropy import constants as const
-import numpy as np
-from scipy import optimize as opt
-def divide_elementwise(A,B): 
+from sympy import Max, ceiling
+
+def divide_elementwise(A,B):
     '''
     Does an element-wise division A/B between two sympy matrices A and B
     '''

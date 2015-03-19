@@ -1,5 +1,5 @@
 import sympy.physics.units as u
-from parameter_definitions import parameter_definitions as p
+from parameter_definitions import ParameterDefinitions as p
 from formulae import Formulae as f
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
