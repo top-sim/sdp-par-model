@@ -18,7 +18,6 @@ import sympy.physics.units as u
 from astropy import constants as const
 import numpy as np
 from scipy import optimize as opt
-
 def divide_elementwise(A,B): 
     '''
     Does an element-wise division A/B between two sympy matrices A and B
