@@ -39,7 +39,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(band=None, mode=None, hpso_key=None):
+    def calc_tel_params(band=None, mode=None, hpso=None):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
         """
@@ -49,24 +49,25 @@ class Implementation:
 
         assert mode is not None
         if band is not None:
-            telescope_string = p.get_telescope_from_band(band)
-        elif hpso_key is not None:
-            telescope_string = p.get_telescope_from_hpso(hpso_key)
+            assert hpso is None
+            telescope = p.get_telescope_from_band(band)
+        elif hpso is not None:
+            telescope = p.get_telescope_from_hpso(hpso)
         else:
-            raise Exception("Either band or hpso must not be None")
+            raise Exception("Either band or hpso must not be defined")
 
         # Note the order in which these settings are applied, with each one (possibly) overwriting previous definitions,
         # should they overlap (as happens with e.g. frequency bands)
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
-        p.apply_telescope_parameters(telescope_params, telescope_string)
+        p.apply_telescope_parameters(telescope_params, telescope)
         # Second: The imaging mode (Observation time, number of cycles, quality factor, (possibly) number of channels)
         p.apply_imaging_mode_parameters(telescope_params, mode)
         # Third: Frequency-band (frequency range - and in the case of HPSOs - other application-dependent settings)
         if band is not None:
             p.apply_band_parameters(telescope_params, band)
-        elif hpso_key is not None:
-            p.apply_hpso_parameters(telescope_params, hpso_key)
+        elif hpso is not None:
+            p.apply_hpso_parameters(telescope_params, hpso)
         else:
             raise Exception("Either band or hpso must not be None")
 
