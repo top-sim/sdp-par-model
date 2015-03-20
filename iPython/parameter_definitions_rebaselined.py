@@ -116,7 +116,7 @@ class parameter_definitions:
             o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 200)) * u.km
             o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
         elif telescope == 'SKA1_Low':
-            o.Bmax = 70 * u.km     # Actually constructed kilometers of max baseline
+            o.Bmax = 80 * u.km     # Actually constructed kilometers of max baseline
             o.Ds = 35 * u.m        # station "diameter" in meters
             o.Na = 512            # number of antennas
             o.Nbeam = 1            # number of beams
@@ -131,26 +131,8 @@ class parameter_definitions:
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65356      # maximum number of channels
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
-            o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 150)) * u.km
-            o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523))
-        elif telescope == 'SKA1_Low_no_bl_dep':
-            o.Bmax = 70 * u.km     # Actually constructed kilometers of max baseline
-            o.Ds = 35 * u.m        # station "diameter" in meters
-            o.Na = 512            # number of antennas
-            o.Nbeam = 1            # number of beams
-            o.Nf_max = 65356      # maximum number of channels
-            o.Tdump_ref = 0.6* u.s # Correlator dump time in reference design
-            o.baseline_bins  = np.array((79.9, 80.0)) * u.km
-            o.baseline_bin_counts  = np.array((100, 100))
-        elif telescope == 'SKA1_Mid_no_bl_dep':
-            o.Bmax = 150 * u.km     # Actually constructed kilometers of max baseline
-            o.Ds = 15 * u.m        # station "diameter" in meters
-            o.Na = 133+64          # number of antennas
-            o.Nbeam = 1            # number of beams
-            o.Nf_max = 65356      # maximum number of channels
-            o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
-            o.baseline_bins  = np.array((149.9, 150)) * u.km
-            o.baseline_bin_counts  = np.array((100, 100))
+            o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 150)) * u.km
+            o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
     @staticmethod
     def get_telescope_from_band(band_string):
         telescope_string = band_string

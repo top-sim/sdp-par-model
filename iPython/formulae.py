@@ -6,7 +6,7 @@ from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling,
 class formulae:
     @staticmethod
     def compute_derived_parameters(o, mode):
-        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin) / o.Qfov, 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum - approximation to handle faceting, but proper definition is modify_averaging_time branch
+        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin) / o.Qfov, 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum - approximation to handle faceting, but proper definition is modify_averaging_time branch (even this needs work though, to understand how it relates to the "c" factor in the PDR05 document....)
         o.wl_max = u.c / o.freq_min             # Maximum Wavelength
         o.wl_min = u.c / o.freq_max             # Minimum Wavelength
         o.wl = 0.5*(o.wl_max + o.wl_min)          # Representative Wavelength
