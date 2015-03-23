@@ -11,6 +11,13 @@
 
 *.pyc
 
+*.rej
+*.stackdump
+
+.ipynb_checkpoints
+iPython/.ipynb_checkpoints
+iPython/.idea
+
 /_region_*
 /.Rhistory
 /MajCycleModel.ilg
