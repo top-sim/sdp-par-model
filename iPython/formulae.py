@@ -6,7 +6,7 @@ from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling,
 class formulae:
     @staticmethod
     def compute_derived_parameters(o, mode):
-        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin) / o.Qfov, 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum - approximation to handle faceting, but proper definition is modify_averaging_time branch (even this needs work though, to understand how it relates to the "c" factor in the PDR05 document....)
+        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum - approximation to handle faceting, but proper definition is modify_averaging_time branch (even this needs work though, to understand how it relates to the "c" factor in the PDR05 document....)
         o.wl_max = u.c / o.freq_min             # Maximum Wavelength
         o.wl_min = u.c / o.freq_max             # Minimum Wavelength
         o.wl = 0.5*(o.wl_max + o.wl_min)          # Representative Wavelength
@@ -41,8 +41,8 @@ class formulae:
         o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
 
         o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
-        o.Rgrid = (o.Nfacet**2)*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence.
-            #o.Rgrid = (o.Nfacet**2 + o.Nfacet)*0.5*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)
+        #o.Rgrid = (o.Nfacet**2)*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence.
+        o.Rgrid = (o.Nfacet**2 + o.Nfacet)*0.5*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)
 
         o.Rccf = o.Nfacet**2 * 5 * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(o.Tion*o.Qfcv) #reduce by multiplication by o.binfrac (RCB), add in extra multiplication by Nfacet-squared.
 
