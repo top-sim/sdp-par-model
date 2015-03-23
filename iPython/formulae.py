@@ -22,9 +22,9 @@ class formulae:
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
         o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
         o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
-        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Omega_E * o.Bmax_bin) * u.s
+        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
         # o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
-        o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum. #this line breaks the code but I cannot see what is wring with it...
+        o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
         print ">>>>>>>>>>>  Tdump = ", o.Tdump
         if mode == 'Continuum':
             o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
