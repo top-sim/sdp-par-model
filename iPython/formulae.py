@@ -6,11 +6,10 @@ from sympy import symbols, pi, log, ln, Min, Max, sqrt, sign, lambdify, ceiling,
 class formulae:
     @staticmethod
     def compute_derived_parameters(o, mode):
-        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum - approximation to handle faceting, but proper definition is modify_averaging_time branch (even this needs work though, to understand how it relates to the "c" factor in the PDR05 document....)
         o.wl_max = u.c / o.freq_min             # Maximum Wavelength
         o.wl_min = u.c / o.freq_max             # Minimum Wavelength
         o.wl = 0.5*(o.wl_max + o.wl_min)          # Representative Wavelength
-        o.Theta_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds * o.Nfacet) # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
+        o.Theta_fov = 7.66 * o.wl * o.Qfov / (o.pi * o.Ds * o.Nfacet) # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
         o.Theta_beam = 3 * o.wl/(2*o.Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin... (Consistent with PDR05 280115)
         o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(ConsistenNf_outt with PDR05 280115)
         o.Npix_linear = o.Theta_fov / o.Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
@@ -19,9 +18,14 @@ class formulae:
         o.Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
 
         o.DeltaW_max = o.Qw * Max(o.Bmax_bin*o.Tsnap*o.Omega_E/(o.wl*2), o.Bmax_bin**2/(o.R_Earth*o.wl*8)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
-        o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
+        o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*o.pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
-
+        o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time; limit this at 1.2s maximum
+        o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
+        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
+        # o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
+        o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
+        print ">>>>>>>>>>>  Tdump = ", o.Tdump
         if mode == 'Continuum':
             #o.Nf_used  = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1) #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap #(Consistent with PDR05 280115)
