@@ -16,17 +16,16 @@ class Formulae:
         o.Theta_beam = 3 * o.wl/(2*o.Bmax) #bmax here is for the overall experiment (so use Bmax), not the specific bin... (Consistent with PDR05 280115)
         o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(ConsistenNf_out with PDR05 280115)
         o.Npix_linear = o.Theta_fov / o.Theta_pix  # The linear number of pixels along the image's side (assumed to be square) (Consistent with PDR05 280115)
-        o.Rfft = o.Nfacet**2 * 5 * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change))
-        o.Qw2  = 1  # Obsolete variable (ask Rosie about what it meant)
-        o.Qw32 = 1  # Obsolete variable (ask Rosie about what it meant)
+        o.Rfft = o.Nfacet**2 * 5 * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap # added Nfacet dependence (Consistent with PDR05 280115, with 5 prefactor rather than 10 (late change; somewhat controvertial and in need of review after PDR dicsussions re. Hermiticity))
+        o.Qw2  = 1  # Obsolete variable (this was used to approximate the effect of havign baseline dependent convolution kernels without using a distribution of baselines)
+        o.Qw32 = 1  # Obsolete variable (this was used to approximate the effect of havign baseline dependent convolution kernels without using a distribution of baselinesa)
 
         o.DeltaW_max = o.Qw * Max(o.Bmax_bin*o.Tsnap*o.Omega_E/(o.wl*2), o.Bmax_bin**2/(o.R_Earth*o.wl*8)) #W deviation catered for by W kernel, in units of typical wavelength, for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
         o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2))) #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
         o.Nf_no_smear = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1)
-        o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
-        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
-        # o.Tdump = Min(o.Tdump_ref * floor(o.Bmax / o.Bmax_bin), 1.2 * u.s) # Correlator dump time / Visibility integration time; limit this at 1.2s maximum.
+        o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated. See Skipper memo (REF needed)
+        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
         o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
 
         if mode == ImagingModes.Continuum:
@@ -52,7 +51,7 @@ class Formulae:
 
         o.Rphrot = 2 * o.Nmajor * o.Npp * o.Nbeam * o.Nvis * o.Nfacet**2 * 25 * sign(o.Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
 
-        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_used * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging
+        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_used * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging (THINK THIS IS REDUNDANT)
         o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
         o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
