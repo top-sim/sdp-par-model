@@ -32,6 +32,7 @@ class Formulae:
             o.Nf_used  = o.Nf_no_smear #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif mode == ImagingModes.Spectral:
+            #o.Nf_out  = o.Nf_max
             o.Nf_used  = o.Nf_max
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif mode == ImagingModes.SlowTrans:
