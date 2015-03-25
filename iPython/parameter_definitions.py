@@ -85,6 +85,7 @@ class ParameterDefinitions:
         This method defines the *symbolic* variables that we will use during computations
         and that need to be kept symbolic during evaluation of formulae. One reason to do this would be to allow
         the output formula to be optimized by varying this variable (such as with Tsnap and Nfacet)
+        @param o:
         """
         o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
         o.Bmax_bin = symbols("Bmax\,bin", positive=True)
@@ -93,6 +94,10 @@ class ParameterDefinitions:
 
     @staticmethod
     def apply_global_parameters(o):
+        """
+        Applies the global parameters to the parameter container object o
+        @param o:
+        """
         o.Omega_E = 7.292115e-5  # In PDR05 Excel sheet a value of 0.0000727 was used. value based on rotation relative to the fixed stars
         o.R_Earth = const.R_earth.value * u.m  # In the original PDR05 Excel sheet a value of 6400,000 was used
         o.epsilon_w = 0.01
@@ -107,6 +112,7 @@ class ParameterDefinitions:
         o.Qw   = 1.0
         o.Tion = 60.0
         o.Tsnap_min = 1.2
+        o.amp_f_max = 1.01  # Added by Rosie Bolton
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):
@@ -165,7 +171,7 @@ class ParameterDefinitions:
     def get_telescope_from_band(band):
         """
         Returns the telescope that is associated with the specified band
-        @param band_string:
+        @param band:
         @return: @raise Exception:
         """
         telescope = None
@@ -184,18 +190,19 @@ class ParameterDefinitions:
         return telescope
 
     @staticmethod
-    def get_telescope_from_hpso(hpso_string):
+    def get_telescope_from_hpso(hpso):
         """
         Returns the telescope that is associated with the provided HPSO
-        @param hpso_string:
-        @return: @raise Exception:
+        @param hpso:
+        @return: the telescope corresponding to this HPSO
+        @raise Exception:
         """
         telescope = None
-        if hpso_string in HPSOs.hpsos_using_SKA1Low:
+        if hpso in HPSOs.hpsos_using_SKA1Low:
             telescope = Telescopes.SKA1_Low
-        elif hpso_string in HPSOs.hpsos_using_SKA1Mid:
+        elif hpso in HPSOs.hpsos_using_SKA1Mid:
             telescope = Telescopes.SKA1_Mid
-        elif hpso_string in HPSOs.hpsos_using_SKA1Sur:
+        elif hpso in HPSOs.hpsos_using_SKA1Sur:
             telescope = Telescopes.SKA1_Sur
         else:
             raise Exception()
