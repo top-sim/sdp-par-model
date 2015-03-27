@@ -39,7 +39,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(band=None, mode=None, hpso=None):
+    def calc_tel_params(telescope, mode, band=None, hpso=None):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
         """
@@ -47,14 +47,7 @@ class Implementation:
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
 
-        assert mode is not None
-        if band is not None:
-            assert hpso is None
-            telescope = p.get_telescope_from_band(band)
-        elif hpso is not None:
-            telescope = p.get_telescope_from_hpso(hpso)
-        else:
-            raise Exception("Either band or hpso must not be defined")
+        assert (band is None) or (hpso is None)
 
         # Note the order in which these settings are applied, with each one (possibly) overwriting previous definitions,
         # should they overlap (as happens with e.g. frequency bands)
