@@ -149,8 +149,8 @@ class Implementation:
     @staticmethod
     def evaluate_binned_expression(expression, telescope_parameters, verbose=False, take_max=False):
         tp = telescope_parameters
-        bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
-        counts = tp.baseline_bin_counts # Remove the array of baselines from the parameter dictionary
+        bins = tp.baseline_bins         # Remove the array of baselines from the parameter dictionary
+        counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
 
         bins_unitless = bins / u.m
         assert tp.Bmax is not None
@@ -175,7 +175,7 @@ class Implementation:
 
         tp = telescope_parameters
         bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
-        counts = tp.baseline_bin_counts # Remove the array of baselines from the parameter dictionary
+        counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
 
         bins_unitless = bins / u.m
         assert tp.Bmax is not None
