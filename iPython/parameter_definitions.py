@@ -6,15 +6,15 @@ import numpy as np
 # Enumerate the possible telescopes to choose from (used in the ParameterDefinitions class)
 class Telescopes:
     # The originally planned SKA1 telescopes
-    SKA1_Low_old = 'SKA1Low_old'
-    SKA1_Mid_old = 'SKA1Mid_old'
-    SKA1_Sur_old = 'SKA1Survey_old'
+    SKA1_Low_old = 'SKA1_Low_old'
+    SKA1_Mid_old = 'SKA1_Mid_old'
+    SKA1_Sur_old = 'SKA1_Survey_old'
     # The rebaselined SKA1 telescopes
-    SKA1_Low = 'SKA1Low_rebaselined'
-    SKA1_Mid = 'SKA1Mid_rebaselined'
+    SKA1_Low = 'SKA1_Low_rebaselined'
+    SKA1_Mid = 'SKA1_Mid_rebaselined'
     # Proposed SKA2 telescopes
-    SKA2_Low = 'SKA2Low'
-    SKA2_Mid = 'SKA2Mid'
+    SKA2_Low = 'SKA2_Low'
+    SKA2_Mid = 'SKA2_Mid'
 
 # Enumerate all possible bands (used in the ParameterDefinitions class)
 class Bands :

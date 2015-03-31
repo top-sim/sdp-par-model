@@ -139,9 +139,9 @@ class IPythonAPI:
             tps = {}  # Maps each telescope to its parameter set
             for Telescope in telescopes:
                 tp = imp.calc_tel_params(Telescope, Mode, band=Band)  # Calculate the telescope parameters
-                print '\n> Computing telescope parameters for %s\n' % Telescope
+                print '\n> Computing telescope parameters for %s' % Telescope
                 imp.update_derived_parameters(tp, Mode)
-                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=True)
+                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=False)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet
                 tps[Telescope] = tp
@@ -157,7 +157,7 @@ class IPythonAPI:
                 result_titles = ('Telescope', 'Max Baseline', 'Max # channels', 'Optimal Number of Facets',
                                  'Optimal Snapshot Time', 'Visibility Buffer',
                                  'Working (cache) memory', 'Image side length', 'I/O Rate', 'Total Compute Requirement',
-                                 'rflop_grid', 'rflop_fft', 'rflop_proj', 'rflop_conv', 'rflop_phrot')
+                                 '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
                 result_units = ('km','','', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
                                 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
@@ -212,10 +212,13 @@ class IPythonAPI:
                 imp.update_derived_parameters(tp, mode=Mode)
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                      tp.Rflop/u.peta)
+                                      tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
+                                      tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
                 result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
-                                 'Total Compute Requirement')
-                result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS')
+                                 'Total Compute Requirement',
+                                 '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
+                result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
+                                'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
                 result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet)
                 result_value_string = []
                 for i in range(len(result_values)):
@@ -269,9 +272,9 @@ class IPythonAPI:
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
                                       tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
                                       tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
-                result_titles = ('Number of Facets', 'Snapshot Time', 'Visibility Buffer', 'Working (cache) memory',
+                result_titles = ('Optimal Number of Facets', 'Optimal Snapshot Time', 'Visibility Buffer', 'Working (cache) memory',
                                  'Image side length', 'I/O Rate', 'Total Compute Requirement',
-                                 'rflop_grid', 'rflop_fft', 'rflop_proj', 'rflop_conv', 'rflop_phrot')
+                                 '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
                 result_units = ('', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
                                 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
