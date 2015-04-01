@@ -4,6 +4,7 @@ from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
+import numpy as np
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
@@ -56,10 +57,10 @@ class IPythonAPI:
         display(HTML(s))
 
     @staticmethod
-    def plot_flops_pie(title, rflop_grid, rflop_fft, rflop_proj, rflop_conv, rflop_phrot):
+    def plot_flops_pie(header, titles, values, colours=None):
         """
         Plot FLOPS as a pie chart
-        @param title:
+        @param header:
         @param rflop_grid:
         @param rflop_fft:
         @param rflop_proj:
@@ -67,53 +68,59 @@ class IPythonAPI:
         @param rflop_phrot:
         @return:
         """
+        assert len(titles) == len(values)
+        if colours is not None:
+            assert len(colours) == len(values)
+        nr_slices = len(values)
+
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
 
-        values = [rflop_grid, rflop_fft, rflop_proj, rflop_conv, rflop_phrot]
-
         # The slices will be ordered and plotted counter-clockwise.
-        labels = '(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot'
-        colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green']
-        explode = (0.05, 0.05, 0.05, 0.05, 0.05) # Radial offset of the slices
+        explode = np.ones(nr_slices) * 0.05  # The radial offset of the slices
 
-        plt.pie(values, explode=explode, labels=labels, colors=colors,
+        plt.pie(values, explode=explode, labels=titles, colors=colours,
                 autopct='%1.1f%%', shadow=True, startangle=90)
         # Set aspect ratio to be equal so that pie is drawn as a circle.
         plt.axis('equal')
-        plt.title('%s\n' % title)
+        plt.title('%s\n' % header)
 
         plt.show()
 
     @staticmethod
-    def plot_flops_stacked(title, telescope_results):
+    def plot_flops_stacked(header, bar_titles, dictionary_of_value_arrays, colours=None):
         """
-        Plots a FLOPS as a stacked bar chart
-        @param title:
-        @param telescope_results:
+        Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
+        @param header:
+        @param bar_titles: The title belonging to each bar
+        @param dictionary_of_value_arrays: A dictionary that maps each bar title to an array of values (to be stacked).
         @return:
         """
+        # Do some sanity checks
+        number_of_elements = len(dictionary_of_value_arrays)
+        if colours is not None:
+            assert number_of_elements == len(colours)
+        for key in dictionary_of_value_arrays:
+            assert len(dictionary_of_value_arrays[key]) == len(bar_titles)
+
         #Plot a stacked bar chart
         width = 0.35
+        nr_bars = len(bar_titles)
+        indices = np.arange(nr_bars)  # The indices of the bars
+        bottoms = np.zeros(nr_bars)   # The height of each bar, i.e. the bottom of the next stacked block
 
-        for tel in telescope_results.keys():
-            val = np.array(res_grid)
-            p1 = plt.bar(ind, val, width, color=colors[0])
-            bottoms = val
-            val = np.array(res_fft)
-            p2 = plt.bar(ind, val, width, color=colors[1],
-                         bottom=bottoms)
-            bottoms += val
-            val = np.array(res_proj)
-            p3 = plt.bar(ind, val, width, color=colors[2],
-                         bottom=bottoms)
-            bottoms += val
-            val = np.array(res_conv)
-            p4 = plt.bar(ind, val, width, color=colors[3],
-                         bottom=bottoms)
+        index = 0
+        for key in dictionary_of_value_arrays:
+            values = np.array(dictionary_of_value_arrays[key])
+            if colours is not None:
+                plt.bar(indices, values, width, color=colours[index], bottom=bottoms)
+            else:
+                plt.bar(indices, values, width, bottom=bottoms)
+            bottoms += values
+            index += 1
 
-            plt.xticks(ind+width/2., t )
-            plt.title('PetaFLOPS')
-            plt.legend(labels, loc=2) # legend upper-left
+        plt.xticks(indices+width/2., bar_titles)
+        plt.title(header)
+        plt.legend(dictionary_of_value_arrays.keys(), loc=2) # legend upper-left
 
     @staticmethod
     def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode):
@@ -137,18 +144,18 @@ class IPythonAPI:
             # And now the results:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
             tps = {}  # Maps each telescope to its parameter set
-            for Telescope in telescopes:
-                tp = imp.calc_tel_params(Telescope, Mode, band=Band)  # Calculate the telescope parameters
-                print '\n> Computing telescope parameters for %s' % Telescope
+            for telescope in telescopes:
+                tp = imp.calc_tel_params(telescope, Mode, band=Band)  # Calculate the telescope parameters
                 imp.update_derived_parameters(tp, Mode)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=False)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet
-                tps[Telescope] = tp
+                tps[telescope] = tp
 
             tel_results = {}  # Maps each telescope to its numerical results, expressed as strings
-            for Telescope in telescopes:
-                tp = tps[Telescope]
+            values_per_telescope = {}
+            for telescope in telescopes:
+                tp = tps[telescope]
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
@@ -161,7 +168,7 @@ class IPythonAPI:
                 result_units = ('km','','', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
                                 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
-                result_value_string = [Telescope]  # Start with the telescope's name
+                result_value_string = [telescope]  # Start with the telescope's name
                 result_value_string.append('%d' % (tp.Bmax / u.km))
                 result_value_string.append('%d' % tp.Nf_max)
                 result_value_string.append('%d' % Nfacet)
@@ -174,10 +181,23 @@ class IPythonAPI:
                     else:
                         result_value_string.append('%d' % result_values[i])
 
-                tel_results[Telescope] = result_value_string
+                tel_results[telescope] = result_value_string
+                values_per_telescope[telescope] = result_values[-5:]  # the last five values
+            display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
             IPythonAPI.show_table_compare('Computed Values', result_titles, tel_results[Telescope_1],
                                           tel_results[Telescope_2], result_units)
+
+            labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
+            telescope_labels = (Telescope_1, Telescope_2)
+            colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
+            values = {}
+            i = -1
+            for label in labels:
+                i += 1
+                values[label] = (values_per_telescope[Telescope_1][i], values_per_telescope[Telescope_2][i])
+
+            IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap):
@@ -278,9 +298,7 @@ class IPythonAPI:
                 result_units = ('', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
                                 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
-                result_value_string = []
-                result_value_string.append('%d' % Nfacet)
-                result_value_string.append('%.3g' % Tsnap)
+                result_value_string = ['%d' % Nfacet, '%.3g' % Tsnap]
                 result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet)
                 for i in range(len(result_values)):
                     expression = result_expressions[i]
@@ -290,8 +308,11 @@ class IPythonAPI:
                         result_value_string.append('%d' % result_values[i])
 
                 IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-                IPythonAPI.plot_flops_pie('FLOP breakdown for %s' % Telescope, result_values[5], result_values[6],
-                                          result_values[7], result_values[8], result_values[9])
+                labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
+                colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
+                values = result_values[-5:]  # the last five values
+
+                IPythonAPI.plot_flops_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
             else:
                 msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' % max_allowed_baseline
                 s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
