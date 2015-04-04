@@ -36,21 +36,17 @@ class Formulae:
         o.Tdump = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time; limit this at 1.2s maximum.
 
         if imaging_mode == ImagingModes.Continuum:
-            o.Nf_used  = o.Nf_no_smear #Number of channels for gridding at longest baseline
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif imaging_mode == ImagingModes.Spectral:
-            #o.Nf_out  = o.Nf_max
-            o.Nf_used  = o.Nf_max
+            o.Nf_out  = o.Nf_max    # TODO: Not sure if this is the correct expression
             o.Rrp  = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif imaging_mode == ImagingModes.SlowTrans:
-            o.Nf_used  = o.Nf_no_smear #Number of bands for gridding at longest baseline
             o.Rrp  = 0*u.s / u.s #(Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
-        # o.Nf_vis = max(o.Nf_out, o.Nf_used)
-        # The following workaround is (still) needed. Note: should Nf_used be used instead of Nf_no_smear
-        o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out))) #Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear)
+        # Workaround to avoid recursive errors...effectively is Max(Nf_out,Nf_no_smear). TODO: fix this.
+        o.Nf_vis=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear)))+(o.Nf_no_smear*sign(floor(o.Nf_no_smear/o.Nf_out)))
 
         o.Nvis = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis/(2*o.Tdump) * u.s # Number of visibilities per second to be gridded (after averaging short baselines to coarser freq resolution). Note multiplication by u.s to get rid of /s
         o.Rgrid = (o.Nfacet**2 + o.Nfacet)*0.5*8*o.Nmm*o.Nvis*(o.Ngw**2+o.Naa**2) #added Nfacet dependence. Linear becuase there are Nfacet^2 facets but can integrate Nfacet times longer at gridding as fov is lower. Needs revisiting. (Consistent with PDR05 280115)
@@ -59,7 +55,7 @@ class Formulae:
 
         o.Rphrot = 2 * o.Nmajor * o.Npp * o.Nbeam * o.Nvis * o.Nfacet**2 * 25 * sign(o.Nfacet-1)  # Last factor ensures that answer is zero if Nfacet is 1.
 
-        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_used * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging (THINK THIS IS REDUNDANT)
+        o.Gcorr = o.Na * (o.Na - 1) * o.Nf_vis * o.Nbeam * o.Nw * o.Npp / o.Tdump  # Minimum correlator output data rate, after baseline dependent averaging (THINK THIS IS REDUNDANT)
         o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis * o.Tobs / u.s # Note the division by u.s to get rid of pesky SI unit. Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis * 8
         o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis * o.Nfacet**2 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
