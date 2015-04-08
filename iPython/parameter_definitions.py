@@ -118,6 +118,7 @@ class ParameterDefinitions:
         o.Tion = 60.0
         o.Tsnap_min = 1.2
         o.amp_f_max = 1.01  # Added by Rosie Bolton
+        o.BL_dep_time_av = False #New parameter to act as a switch for BL dependent time averaging
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):

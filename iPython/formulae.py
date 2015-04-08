@@ -25,8 +25,17 @@ class Formulae:
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2) #The total linear kernel size (Consistent with PDR05 280115)
         o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Nfacet*o.Qbw)+1)
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log(3*o.wl/(2*o.Bmax_bin)/(o.Theta_fov*o.Qbw)+1)
-        o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max))) #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max). Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated. See Skipper memo (REF needed)
-        o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
+        o.epsilon_f_approx = sqrt(6*(1-(1.0/o.amp_f_max)))
+        #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max).
+        #Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
+        #See Skipper memo (REF needed)
+        #Set this up to NOT do BL dep time averaging
+        #o.BL_dep_time_av = False
+        if o.BL_dep_time_av == True:
+            o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
+        #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
+        else:
+            o.Tdump_skipper = o.Tdump_ref
         o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s) # Visibility integration time for predict step; limit this at 1.2s maximum.
         o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s) # Visibility integration time at gridding (backward) step; cannot be longer than the update timescale for the convolution kernels, and must also avoid smearing at the faceted FoV.
 
