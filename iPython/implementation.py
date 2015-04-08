@@ -70,7 +70,7 @@ class Implementation:
     @staticmethod
     def update_derived_parameters(telescope_params, mode):
         """
-        Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
+        Used for updating the derived parameters if, e.g., some of the initial parameters was amanually changed
         """
         p.apply_imaging_mode_parameters(telescope_params, mode)
         f.compute_derived_parameters(telescope_params, mode)

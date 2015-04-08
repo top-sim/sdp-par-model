@@ -54,15 +54,19 @@ class Formulae:
 
         #Set this up to allow switchable BL dep averaging
         if o.BL_dep_time_av == True:
+            print "USING BASELINE DEPENDENT TIME AVERAGING"
             o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
             #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
         else:
             o.Tdump_skipper = o.Tdump_ref
+            print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
 
         o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s)
+        print "Tdump_predict =", o.Tdump_predict
         # Visibility integration time for predict step; limit this at 1.2s maximum.
 
         o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s)
+        print "Tdump_backward =", o.Tdump_backward
         # Visibility integration time at gridding (backward) step;
         #cannot be longer than the update timescale for the convolution kernels,
         #and must also avoid smearing at the faceted FoV.

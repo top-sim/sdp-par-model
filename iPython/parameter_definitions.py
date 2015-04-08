@@ -32,12 +32,17 @@ class Bands :
     Sur3B = 'Sur3B'
     SKA2Low = 'LOWSKA2'
     SKA2Mid = 'MIDSKA2'
+    Mid1old = 'Mid1old'
+    Low1old = 'Low1old'
 
     low_bands = {Low}
     mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B}
     survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}
     low_ska2_bands = {SKA2Low}
     mid_ska2_bands = {SKA2Mid}
+    low_old_bands = {Low1old}
+    mid_old_bands = {Mid1old}
+
 
 # Enumerate the possible imaging modes (used in the ParameterDefinitions class)
 class ImagingModes:
@@ -200,15 +205,19 @@ class ParameterDefinitions:
         """
         telescope = None
         if band in Bands.low_bands:
-            telescope = Telescopes.SKA1_Low_old
+            telescope = Telescopes.SKA1_Low
         elif band in Bands.mid_bands:
-            telescope = Telescopes.SKA1_Mid_old
+            telescope = Telescopes.SKA1_Mid
         elif band in Bands.survey_bands:
-            telescope = Telescopes.SKA1_Sur_old
+            telescope = Telescopes.SKA1_Sur
         elif band in Bands.low_ska2_bands:
             telescope = Telescopes.SKA2_Low
         elif band in Bands.mid_ska2_bands:
             telescope = Telescopes.SKA2_Mid
+        elif band in Bands.Mid1old:
+            telescope = Telescopes.SKA1Mid_old
+        elif band in Bands.Low1old:
+            telescope = Telescopes.SKA1Low_old
         else:
             raise Exception("Unknown band %s" % band)
         return telescope
@@ -223,9 +232,9 @@ class ParameterDefinitions:
         """
         telescope = None
         if hpso in HPSOs.hpsos_using_SKA1Low:
-            telescope = Telescopes.SKA1_Low_old
+            telescope = Telescopes.SKA1_Low
         elif hpso in HPSOs.hpsos_using_SKA1Mid:
-            telescope = Telescopes.SKA1_Mid_old
+            telescope = Telescopes.SKA1_Mid
         elif hpso in HPSOs.hpsos_using_SKA1Sur:
             telescope = Telescopes.SKA1_Sur_old
         else:
@@ -241,31 +250,39 @@ class ParameterDefinitions:
         @param band:
         """
         if band == Bands.Low:
+            o.telescope = Telescopes.SKA1_Low
+            o.freq_min =  50e6 * u.Hz
+            o.freq_max = 350e6 * u.Hz
+        elif band == Bands.Low1old:
             o.telescope = Telescopes.SKA1_Low_old
             o.freq_min =  50e6 * u.Hz
             o.freq_max = 350e6 * u.Hz
         elif band == Bands.Mid1:
+            o.telescope = Telescopes.SKA1_Mid
+            o.freq_min =  350e6 * u.Hz
+            o.freq_max = 1.05e9 * u.Hz
+        elif band == Bands.Mid1old:
             o.telescope = Telescopes.SKA1_Mid_old
             o.freq_min =  350e6 * u.Hz
             o.freq_max = 1.05e9 * u.Hz
         elif band == Bands.Mid2:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 949.367e6 * u.Hz
             o.freq_max = 1.7647e9 * u.Hz
         elif band == Bands.Mid3:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 1.65e9 * u.Hz
             o.freq_max = 3.05e9 * u.Hz
         elif band == Bands.Mid4:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 2.80e9 * u.Hz
             o.freq_max = 5.18e9 * u.Hz
         elif band == Bands.Mid5A:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 4.60e9 * u.Hz
             o.freq_max = 7.10e9 * u.Hz
         elif band == Bands.Mid5B:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 11.3e9 * u.Hz
             o.freq_max = 13.8e9 * u.Hz
         elif band == Bands.Sur1:
