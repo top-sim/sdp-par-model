@@ -144,7 +144,7 @@ class ParameterDefinitions:
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(( 49.421,   7.195,   7.829,   5.765,  10.515,   9.224,   8.063, 1.988))
             o.B_dump_ref = 200 * u.km
-            o.Tdump_ref = 0.08*200/150 * u.s # Correlator dump time in reference design
+            o.Tdump_ref = 0.08 * u.s # Correlator dump time in reference design
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100 * u.km     # Actually constructed kilometers of max baseline
             o.Ds = 35 * u.m        # station "diameter" in meters
