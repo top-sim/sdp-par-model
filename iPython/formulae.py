@@ -60,18 +60,25 @@ class Formulae:
         #first order expansion of sin used here to solve epsilon = arcsinc(1/amp_f_max).
         #Checked as valid for amp_f_max 1.001, 1.01, 1.02. 1% error at amp_f_max=1.03 anticipated.
         #See Skipper memo (REF needed)
+        
+        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
+        print "Dump time: ", o.Tdump_scaled
 
         #Set this up to allow switchable BL dep averaging
         if o.BL_dep_time_av == True:
+            print "USING BASELINE DEPENDENT TIME AVERAGING"
             o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
             #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
         else:
-            o.Tdump_skipper = o.Tdump_ref
+            o.Tdump_skipper = o.Tdump_scaled
+            print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
 
         o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s)
+        print "Tdump_predict =", o.Tdump_predict
         # Visibility integration time for predict step; limit this at 1.2s maximum.
 
         o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s)
+        print "Tdump_backward =", o.Tdump_backward
         # Visibility integration time at gridding (backward) step;
         #cannot be longer than the update timescale for the convolution kernels,
         #and must also avoid smearing at the faceted FoV.

@@ -32,12 +32,17 @@ class Bands :
     Sur3B = 'Sur3B'
     SKA2Low = 'LOWSKA2'
     SKA2Mid = 'MIDSKA2'
+    Mid1old = 'Mid1old'
+    Low1old = 'Low1old'
 
     low_bands = {Low}
     mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B}
     survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}
     low_ska2_bands = {SKA2Low}
     mid_ska2_bands = {SKA2Mid}
+    low_old_bands = {Low1old}
+    mid_old_bands = {Mid1old}
+
 
 # Enumerate the possible imaging modes (used in the ParameterDefinitions class)
 class ImagingModes:
@@ -133,10 +138,13 @@ class ParameterDefinitions:
             o.Na = 512            # number of antennas
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65536      # maximum number of channels
-            o.Tdump_ref = 0.6 * u.s # Correlator dump time in reference design
+            o.B_dump_ref = 100 * u.km
+            o.Tdump_ref = 0.6*100/80 * u.s # Correlator dump time in reference design
             o.baseline_bins = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 80.0)) * u.km
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(( 49.421,   7.195,   7.829,   5.765,  10.515,   9.224,   8.063, 1.988))
+            o.B_dump_ref = 200 * u.km
+            o.Tdump_ref = 0.08*200/150 * u.s # Correlator dump time in reference design
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100 * u.km     # Actually constructed kilometers of max baseline
             o.Ds = 35 * u.m        # station "diameter" in meters
@@ -144,6 +152,7 @@ class ParameterDefinitions:
             o.Nbeam = 1            # number of beams
             o.Nf_max = 256000      # maximum number of channels
             o.Tdump_ref = 0.6* u.s # Correlator dump time in reference design
+            o.B_dump_ref = 100 * u.km
             o.baseline_bins  = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 68.5, 100)) * u.km
             o.nr_baselines = 10192608
             o.baseline_bin_distribution = np.array(( 49.361,   7.187,   7.819,   5.758,  10.503,   9.213,   8.053, 1.985, 0.121))
@@ -163,6 +172,7 @@ class ParameterDefinitions:
             o.Na = 190+64          # number of antennas
             o.Nbeam = 1            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 200 * u.km
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 200)) * u.km
             o.nr_baselines = 1165860
@@ -173,6 +183,7 @@ class ParameterDefinitions:
             o.Na = 96            # number of antennas
             o.Nbeam = 36            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 50 * u.km
             o.Tdump_ref = 0.3* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((3.8, 5.5, 8.0, 11.5, 16.6, 24.0, 34.6, 50)) * u.km
             o.nr_baselines = 167616
@@ -182,6 +193,7 @@ class ParameterDefinitions:
             o.Ds = 180 * u.m        # station "diameter" in meters
             o.Na = 155            # number of antennas
             o.Nbeam = 200            # number of beams
+            o.B_dump_ref = 180 * u.km
             o.Nf_max = 256000      # maximum number of channels
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 180)) * u.km
@@ -193,6 +205,7 @@ class ParameterDefinitions:
             o.Na = 155            # number of antennas
             o.Nbeam = 200            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 1800 * u.km
             o.Tdump_ref = 0.008* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((44, 67, 103, 157, 240, 367, 560, 856, 1308, 1800)) * u.km
             o.nr_baselines = 1165860
@@ -207,15 +220,19 @@ class ParameterDefinitions:
         """
         telescope = None
         if band in Bands.low_bands:
-            telescope = Telescopes.SKA1_Low_old
+            telescope = Telescopes.SKA1_Low
         elif band in Bands.mid_bands:
-            telescope = Telescopes.SKA1_Mid_old
+            telescope = Telescopes.SKA1_Mid
         elif band in Bands.survey_bands:
-            telescope = Telescopes.SKA1_Sur_old
+            telescope = Telescopes.SKA1_Sur
         elif band in Bands.low_ska2_bands:
             telescope = Telescopes.SKA2_Low
         elif band in Bands.mid_ska2_bands:
             telescope = Telescopes.SKA2_Mid
+        elif band in Bands.Mid1old:
+            telescope = Telescopes.SKA1Mid_old
+        elif band in Bands.Low1old:
+            telescope = Telescopes.SKA1Low_old
         else:
             raise Exception("Unknown band %s" % band)
         return telescope
@@ -230,9 +247,9 @@ class ParameterDefinitions:
         """
         telescope = None
         if hpso in HPSOs.hpsos_using_SKA1Low:
-            telescope = Telescopes.SKA1_Low_old
+            telescope = Telescopes.SKA1_Low
         elif hpso in HPSOs.hpsos_using_SKA1Mid:
-            telescope = Telescopes.SKA1_Mid_old
+            telescope = Telescopes.SKA1_Mid
         elif hpso in HPSOs.hpsos_using_SKA1Sur:
             telescope = Telescopes.SKA1_Sur_old
         else:
@@ -248,31 +265,39 @@ class ParameterDefinitions:
         @param band:
         """
         if band == Bands.Low:
+            o.telescope = Telescopes.SKA1_Low
+            o.freq_min =  50e6 * u.Hz
+            o.freq_max = 350e6 * u.Hz
+        elif band == Bands.Low1old:
             o.telescope = Telescopes.SKA1_Low_old
             o.freq_min =  50e6 * u.Hz
             o.freq_max = 350e6 * u.Hz
         elif band == Bands.Mid1:
+            o.telescope = Telescopes.SKA1_Mid
+            o.freq_min =  350e6 * u.Hz
+            o.freq_max = 1.05e9 * u.Hz
+        elif band == Bands.Mid1old:
             o.telescope = Telescopes.SKA1_Mid_old
             o.freq_min =  350e6 * u.Hz
             o.freq_max = 1.05e9 * u.Hz
         elif band == Bands.Mid2:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 949.367e6 * u.Hz
             o.freq_max = 1.7647e9 * u.Hz
         elif band == Bands.Mid3:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 1.65e9 * u.Hz
             o.freq_max = 3.05e9 * u.Hz
         elif band == Bands.Mid4:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 2.80e9 * u.Hz
             o.freq_max = 5.18e9 * u.Hz
         elif band == Bands.Mid5A:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 4.60e9 * u.Hz
             o.freq_max = 7.10e9 * u.Hz
         elif band == Bands.Mid5B:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 11.3e9 * u.Hz
             o.freq_max = 13.8e9 * u.Hz
         elif band == Bands.Sur1:
