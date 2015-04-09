@@ -39,14 +39,11 @@ class Formulae:
         #with 5 prefactor rather than 10 (late change; somewhat controvertial
         #and in need of review after PDR dicsussions re. Hermiticity))
         
-        o.Qw2  = 1  # Obsolete variable
-        o.Qw32 = 1  # Obsolete variable
-
         o.DeltaW_max = o.Qw * Max(o.Bmax_bin*o.Tsnap*o.Omega_E/(o.wl*2), o.Bmax_bin**2/(o.R_Earth*o.wl*8))
         #W deviation catered for by W kernel, in units of typical wavelength,
         #for the specific baseline bin being considered (Consistent with PDR05 280115, but with lambda not lambda min)
         
-        o.Ngw = 2*o.Theta_fov * sqrt((o.Qw2 * o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.Qw32 * o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2)))
+        o.Ngw = 2*o.Theta_fov * sqrt((o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2)))
         #size of the support of the w kernel evaluated at maximum w (Consistent with PDR05 280115)
 
         o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2)
@@ -65,7 +62,7 @@ class Formulae:
         print "Dump time: ", o.Tdump_scaled
 
         #Set this up to allow switchable BL dep averaging
-        if o.BL_dep_time_av == True:
+        if o.BL_dep_time_av:
             print "USING BASELINE DEPENDENT TIME AVERAGING"
             o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
             #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).

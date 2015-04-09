@@ -26,6 +26,14 @@ class SKAAPI:
 
     @staticmethod
     def evaluate_expression(expression, tp, tsnap, nfacet):
+        """
+        Evaluate an expression by substituting the telescopecparameters into them. Returns the result
+        @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
+        @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
+        @param tsnap: The snapshot time to use
+        @param nfacet: The number of facets to use
+        @return:
+        """
         try:
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
             result = imp.evaluate_binned_expression(expression_subst, tp)
@@ -70,13 +78,13 @@ class SKAAPI:
     @staticmethod
     def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None):
         """
-        Computes a set of results for a given telescope in a given mode, with supplied max baseline,
-        number of frequency channels.
+        Computes a set of results for a given telescope in a given band and mode. The max baseline and number of
+        frequency channels may be specified as well, if the defaults are not to be used.
         @param telescope
         @param band:
         @param mode:
-        @param max_baseline:
-        @param nr_frequency_channels: the maximum number of frequency channels
+        @param max_baseline: (optional) the maximum baseline to be used
+        @param nr_frequency_channels: (optional) the maximum number of frequency channels
         @return: a dictionary of result values
         """
         SKAAPI.telescope_and_band_are_compatible(telescope, band)
