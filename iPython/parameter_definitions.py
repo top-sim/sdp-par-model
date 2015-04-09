@@ -149,7 +149,7 @@ class ParameterDefinitions:
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65356      # maximum number of channels
             o.B_dump_ref = 200 * u.km
-            o.Tdump_ref = 0.08*200/150 * u.s # Correlator dump time in reference design
+            o.Tdump_ref = 0.08 * u.s # Correlator dump time in reference design
             o.baseline_bins = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 150)) * u.km
             o.baseline_bin_counts = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
         elif telescope == Telescopes.SKA1_Low_old:
