@@ -76,7 +76,8 @@ class SKAAPI:
         return is_compatible
 
     @staticmethod
-    def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, verbose=False):
+    def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, BL_dep_time_av=False,
+                        verbose=False):
         """
         Computes a set of results for a given telescope in a given band and mode. The max baseline and number of
         frequency channels may be specified as well, if the defaults are not to be used.
@@ -94,7 +95,8 @@ class SKAAPI:
             mode_lookup[key] = key
 
         # And now the results:
-        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, verbose=verbose)  # Calculate the telescope parameters
+        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=BL_dep_time_av,
+                                 verbose=verbose)  # Calculate the telescope parameters
         max_allowed_baseline = tp.baseline_bins[-1] / u.km
 
         if max_baseline is not None:

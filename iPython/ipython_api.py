@@ -123,7 +123,7 @@ class IPythonAPI:
         plt.legend(dictionary_of_value_arrays.keys(), loc=2) # legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, verbose=False):
+    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, BL_dep_time_av=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         E.g.: The two telescopes may have different (default) maximum baselines. Plots the results side by side.
@@ -145,7 +145,8 @@ class IPythonAPI:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
             tps = {}  # Maps each telescope to its parameter set
             for telescope in telescopes:
-                tp = imp.calc_tel_params(telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
+                tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=BL_dep_time_av,
+                                         verbose=verbose)  # Calculate the telescope parameters
                 imp.update_derived_parameters(tp, Mode)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 tp.Tsnap_opt = Tsnap
@@ -200,7 +201,7 @@ class IPythonAPI:
             IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, verbose=False):
+    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
         @param Telescope:
@@ -224,7 +225,7 @@ class IPythonAPI:
             display(HTML(s))
         else:
             # And now the results:
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
+            tp = imp.calc_tel_params(Telescope, Mode, band=Band, bldta=BL_dep_time_av, verbose=verbose)  # Calculate the telescope parameters
             max_allowed_baseline = tp.baseline_bins[-1] / u.km
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
@@ -256,7 +257,7 @@ class IPythonAPI:
                 display(HTML(s))
 
     @staticmethod
-    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, verbose=False):
+    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, BL_dep_time_av=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -280,7 +281,7 @@ class IPythonAPI:
         else:
             # And now the results:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
+            tp = imp.calc_tel_params(Telescope, Mode, band=Band, bldta=BL_dep_time_av, verbose=verbose)  # Calculate the telescope parameters
             max_allowed_baseline = tp.baseline_bins[-1] / u.km
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km

@@ -39,9 +39,10 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, verbose=False):
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
+        @param bldta: Baseline dependent time averaging
         """
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
@@ -64,16 +65,17 @@ class Implementation:
         else:
             raise Exception("Either band or hpso must not be None")
 
-        f.compute_derived_parameters(telescope_params, mode, verbose=verbose)
+        f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
         return telescope_params
 
     @staticmethod
-    def update_derived_parameters(telescope_params, mode, verbose=False):
+    def update_derived_parameters(telescope_params, mode, bldta=False, verbose=False):
         """
         Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
+        @param bldta: Baseline dependent time averaging
         """
         p.apply_imaging_mode_parameters(telescope_params, mode)
-        f.compute_derived_parameters(telescope_params, mode, verbose=verbose)
+        f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
 
     @staticmethod
     def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
@@ -148,6 +150,14 @@ class Implementation:
 
     @staticmethod
     def evaluate_binned_expression(expression, telescope_parameters, verbose=False, take_max=False):
+        """
+        Calculate an expression using baseline binning
+        @param expression:
+        @param telescope_parameters:
+        @param verbose:
+        @param take_max:
+        @return:
+        """
         tp = telescope_parameters
         bins = tp.baseline_bins         # Remove the array of baselines from the parameter dictionary
         counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
