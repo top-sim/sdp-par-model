@@ -123,7 +123,7 @@ class IPythonAPI:
         plt.legend(dictionary_of_value_arrays.keys(), loc=2) # legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode):
+    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         E.g.: The two telescopes may have different (default) maximum baselines. Plots the results side by side.
@@ -145,9 +145,9 @@ class IPythonAPI:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
             tps = {}  # Maps each telescope to its parameter set
             for telescope in telescopes:
-                tp = imp.calc_tel_params(telescope, Mode, band=Band)  # Calculate the telescope parameters
+                tp = imp.calc_tel_params(telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
                 imp.update_derived_parameters(tp, Mode)
-                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=False)
+                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet
                 tps[telescope] = tp
@@ -171,8 +171,8 @@ class IPythonAPI:
                 result_value_string = [telescope]  # Start with the telescope's name
                 result_value_string.append('%d' % (tp.Bmax / u.km))
                 result_value_string.append('%d' % tp.Nf_max)
-                result_value_string.append('%d' % Nfacet)
-                result_value_string.append('%.3g' % Tsnap)
+                result_value_string.append('%d' % tp.Nfacet_opt)
+                result_value_string.append('%.3g' % tp.Tsnap_opt)
                 result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
                 for i in range(len(result_values)):
                     expression = result_expressions[i]
@@ -200,7 +200,7 @@ class IPythonAPI:
             IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap):
+    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
         @param Telescope:
@@ -224,7 +224,7 @@ class IPythonAPI:
             display(HTML(s))
         else:
             # And now the results:
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band)  # Calculate the telescope parameters
+            tp = imp.calc_tel_params(Telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
             max_allowed_baseline = tp.baseline_bins[-1] / u.km
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
@@ -256,7 +256,7 @@ class IPythonAPI:
                 display(HTML(s))
 
     @staticmethod
-    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max):
+    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -280,13 +280,13 @@ class IPythonAPI:
         else:
             # And now the results:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band)  # Calculate the telescope parameters
+            tp = imp.calc_tel_params(Telescope, Mode, band=Band, verbose=verbose)  # Calculate the telescope parameters
             max_allowed_baseline = tp.baseline_bins[-1] / u.km
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
                 tp.Nf_max = Nf_max
                 imp.update_derived_parameters(tp, Mode)
-                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=True)
+                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,

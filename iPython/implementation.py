@@ -39,7 +39,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None):
+    def calc_tel_params(telescope, mode, band=None, hpso=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
         """
@@ -64,16 +64,16 @@ class Implementation:
         else:
             raise Exception("Either band or hpso must not be None")
 
-        f.compute_derived_parameters(telescope_params, mode)
+        f.compute_derived_parameters(telescope_params, mode, verbose=verbose)
         return telescope_params
 
     @staticmethod
-    def update_derived_parameters(telescope_params, mode):
+    def update_derived_parameters(telescope_params, mode, verbose=False):
         """
         Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
         """
         p.apply_imaging_mode_parameters(telescope_params, mode)
-        f.compute_derived_parameters(telescope_params, mode)
+        f.compute_derived_parameters(telescope_params, mode, verbose=verbose)
 
     @staticmethod
     def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
