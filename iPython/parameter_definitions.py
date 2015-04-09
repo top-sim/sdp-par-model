@@ -138,7 +138,8 @@ class ParameterDefinitions:
             o.Na = 512            # number of antennas
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65356      # maximum number of channels
-            o.Tdump_ref = 0.6 * u.s # Correlator dump time in reference design
+            o.B_dump_ref = 100 * u.km
+            o.Tdump_ref = 0.6*100/80 * u.s # Correlator dump time in reference design
             o.baseline_bins = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 80.0)) * u.km
             o.baseline_bin_counts = np.array((5031193, 732481, 796973, 586849, 1070483, 939054, 820834, 202366))
         elif telescope == Telescopes.SKA1_Mid:
@@ -147,7 +148,8 @@ class ParameterDefinitions:
             o.Na = 133+64          # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65356      # maximum number of channels
-            o.Tdump_ref = 0.08 * u.s # Correlator dump time in reference design
+            o.B_dump_ref = 200 * u.km
+            o.Tdump_ref = 0.08*200/150 * u.s # Correlator dump time in reference design
             o.baseline_bins = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 150)) * u.km
             o.baseline_bin_counts = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
         elif telescope == Telescopes.SKA1_Low_old:
@@ -157,6 +159,7 @@ class ParameterDefinitions:
             o.Nbeam = 1            # number of beams
             o.Nf_max = 256000      # maximum number of channels
             o.Tdump_ref = 0.6* u.s # Correlator dump time in reference design
+            o.B_dump_ref = 100 * u.km
             o.baseline_bins  = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 68.5, 100)) * u.km
             o.baseline_bin_counts  = np.array((5031193, 732481, 796973, 586849, 1070483, 939054, 820834, 202366, 12375))
         elif telescope == Telescopes.SKA1_Mid_old:
@@ -165,6 +168,7 @@ class ParameterDefinitions:
             o.Na = 190+64          # number of antennas
             o.Nbeam = 1            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 200 * u.km
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 200)) * u.km
             o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
@@ -174,6 +178,7 @@ class ParameterDefinitions:
             o.Na = 96            # number of antennas
             o.Nbeam = 36            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 50 * u.km
             o.Tdump_ref = 0.3* u.s # Correlator dump time in reference design
             o.baseline_bins  = np.array((3.8, 5.5, 8.0, 11.5, 16.6, 24.0, 34.6, 50)) * u.km
             o.baseline_bin_counts  = np.array((81109, 15605, 15777, 16671, 16849, 17999, 3282, 324))
@@ -182,6 +187,7 @@ class ParameterDefinitions:
             o.Ds = 180 * u.m        # station "diameter" in meters
             o.Na = 155            # number of antennas
             o.Nbeam = 200            # number of beams
+            o.B_dump_ref = 180 * u.km
             o.Nf_max = 256000      # maximum number of channels
             o.Tdump_ref = 0.08* u.s # Correlator dump time in reference design
             o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
@@ -192,6 +198,7 @@ class ParameterDefinitions:
             o.Na = 155            # number of antennas
             o.Nbeam = 200            # number of beams
             o.Nf_max = 256000      # maximum number of channels
+            o.B_dump_ref = 1800 * u.km
             o.Tdump_ref = 0.008* u.s # Correlator dump time in reference design
             o.baseline_bin_counts  = np.array((669822, 61039, 64851, 66222, 70838, 68024, 74060, 68736, 21523, 745))
             o.baseline_bins  = np.array((44, 67, 103, 157, 240, 367, 560, 856, 1308, 1800)) * u.km
