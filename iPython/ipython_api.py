@@ -154,7 +154,8 @@ class IPythonAPI:
                 bldta = bdtas[i]
                 tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=bldta,
                                          verbose=verbose)  # Calculate the telescope parameters
-                imp.update_derived_parameters(tp, Mode)
+                imp.update_derived_parameters(tp, Mode, bldta=bldta, verbose=verbose)
+
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet
@@ -238,7 +239,7 @@ class IPythonAPI:
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
                 tp.Nf_max = Nf_max
-                imp.update_derived_parameters(tp, mode=Mode)
+                imp.update_derived_parameters(tp, mode=Mode, bldta=BL_dep_time_av, verbose=verbose)
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
                                       tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
@@ -294,7 +295,7 @@ class IPythonAPI:
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
                 tp.Nf_max = Nf_max
-                imp.update_derived_parameters(tp, Mode)
+                imp.update_derived_parameters(tp, Mode, bldta=BL_dep_time_av, verbose=False)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)

@@ -108,7 +108,7 @@ class SKAAPI:
 
         tp.Bmax = max_baseline * u.km
         tp.Nf_max = nr_frequency_channels
-        imp.update_derived_parameters(tp, mode=mode_lookup[mode])
+        imp.update_derived_parameters(tp, mode=mode_lookup[mode], bldta=BL_dep_time_av, verbose=verbose)
         (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=True)
 
         # The following variables will be evaluated:

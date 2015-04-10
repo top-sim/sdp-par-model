@@ -8,7 +8,7 @@ class Formulae:
         pass
 
     @staticmethod
-    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av=False, verbose=False):
+    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av, verbose=False):
         """
         Computes a host of important values from the originally supplied telescope parameters, using the parametric
         equations. These equations are based on the PDR05 document
@@ -67,10 +67,10 @@ class Formulae:
 
         #Set this up to allow switchable BL dep averaging
         if BL_dep_time_av:
-            if verbose:
-                print "USING BASELINE DEPENDENT TIME AVERAGING"
             o.Tdump_skipper = o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
             #multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV. See Skipper memo (REF needed).
+            if verbose:
+                print "USING BASELINE DEPENDENT TIME AVERAGING"
         else:
             o.Tdump_skipper = o.Tdump_scaled
             if verbose:

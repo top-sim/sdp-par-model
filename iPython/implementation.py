@@ -69,7 +69,7 @@ class Implementation:
         return telescope_params
 
     @staticmethod
-    def update_derived_parameters(telescope_params, mode, bldta=False, verbose=False):
+    def update_derived_parameters(telescope_params, mode, bldta, verbose=False):
         """
         Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
         @param bldta: Baseline dependent time averaging
