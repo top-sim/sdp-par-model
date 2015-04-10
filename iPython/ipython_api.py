@@ -139,6 +139,8 @@ class IPythonAPI:
         """
         telescopes = (Telescope_1, Telescope_2)
         bdtas = (Tel1_BLDTA, Tel2_BLDTA)
+        tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
+        tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
         if not (api.telescope_and_band_are_compatible(Telescope_1, Band) and
                 api.telescope_and_band_are_compatible(Telescope_2, Band)):
@@ -161,8 +163,6 @@ class IPythonAPI:
                 tp.Nfacet_opt = Nfacet
                 tels_params.append(tp)
 
-            tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
-            tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
             for i in range(2):
                 telescope = telescopes[i]
                 tp = tels_params[i]
@@ -171,18 +171,15 @@ class IPythonAPI:
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
                                       tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
                                       tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
-                result_titles = ('Telescope', 'Max Baseline', 'Max # channels', 'Optimal Number of Facets',
-                                 'Optimal Snapshot Time', 'Visibility Buffer',
+                result_titles = ('Telescope', 'Band', 'Mode', 'BLDTA', 'Max Baseline', 'Max # channels',
+                                 'Optimal Number of Facets', 'Optimal Snapshot Time', 'Visibility Buffer',
                                  'Working (cache) memory', 'Image side length', 'I/O Rate', 'Total Compute Requirement',
                                  '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
-                result_units = ('km','','', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
-                                'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
+                result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
+                                'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
-                result_value_string = [telescope]  # Start with the telescope's name
-                result_value_string.append('%d' % (tp.Bmax / u.km))
-                result_value_string.append('%d' % tp.Nf_max)
-                result_value_string.append('%d' % tp.Nfacet_opt)
-                result_value_string.append('%.3g' % tp.Tsnap_opt)
+                result_value_string = [telescope, Band, Mode, bdtas[i], '%d' % (tp.Bmax / u.km), '%d' % tp.Nf_max,
+                                       '%d' % tp.Nfacet_opt, '%.3g' % tp.Tsnap_opt]  # Start building result string
                 result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
                 for i in range(len(result_values)):
                     expression = result_expressions[i]
@@ -199,7 +196,10 @@ class IPythonAPI:
                                           tels_result_strings[1], result_units)
 
             labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
-            telescope_labels = (Telescope_1, Telescope_2)
+            bldta_text = {True : ' (with BLDTA)', False : ' (no BLDTA)'}
+
+            telescope_labels = ('%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA]),
+                                '%s\n%s' % (Telescope_2, bldta_text[Tel2_BLDTA]))
             colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
             values = {}
             i = -1
