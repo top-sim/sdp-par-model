@@ -120,10 +120,11 @@ class IPythonAPI:
 
         plt.xticks(indices+width/2., bar_titles)
         plt.title(header)
-        plt.legend(dictionary_of_value_arrays.keys(), loc=2) # legend upper-left
+        plt.legend(dictionary_of_value_arrays.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, BL_dep_time_av=False, verbose=False):
+    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, Tel1_BLDTA=False, Tel2_BLDTA=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         E.g.: The two telescopes may have different (default) maximum baselines. Plots the results side by side.
@@ -131,9 +132,13 @@ class IPythonAPI:
         @param Telescope_2:
         @param Band:
         @param Mode:
+        @param Tel1_BLDTA: Use baseline dependent time averaging for Telescope1 ?
+        @param Tel2_BLDTA: Use baseline dependent time averaging for Telescope2 ?
+        @param verbose: print verbose output during execution
         @return:
         """
         telescopes = (Telescope_1, Telescope_2)
+        bdtas = (Tel1_BLDTA, Tel2_BLDTA)
 
         if not (api.telescope_and_band_are_compatible(Telescope_1, Band) and
                 api.telescope_and_band_are_compatible(Telescope_2, Band)):
@@ -143,20 +148,23 @@ class IPythonAPI:
         else:
             # And now the results:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-            tps = {}  # Maps each telescope to its parameter set
-            for telescope in telescopes:
-                tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=BL_dep_time_av,
+            tels_params = []  # Maps each telescope to its parameter set
+            for i in range(2):
+                telescope = telescopes[i]
+                bldta = bdtas[i]
+                tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=bldta,
                                          verbose=verbose)  # Calculate the telescope parameters
                 imp.update_derived_parameters(tp, Mode)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet
-                tps[telescope] = tp
+                tels_params.append(tp)
 
-            tel_results = {}  # Maps each telescope to its numerical results, expressed as strings
-            values_per_telescope = {}
-            for telescope in telescopes:
-                tp = tps[telescope]
+            tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
+            tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
+            for i in range(2):
+                telescope = telescopes[i]
+                tp = tels_params[i]
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
@@ -182,12 +190,12 @@ class IPythonAPI:
                     else:
                         result_value_string.append('%d' % result_values[i])
 
-                tel_results[telescope] = result_value_string
-                values_per_telescope[telescope] = result_values[-5:]  # the last five values
+                tels_result_strings.append(result_value_string)
+                tels_result_values.append(result_values[-5:])  # the last five values
             display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
-            IPythonAPI.show_table_compare('Computed Values', result_titles, tel_results[Telescope_1],
-                                          tel_results[Telescope_2], result_units)
+            IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
+                                          tels_result_strings[1], result_units)
 
             labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
             telescope_labels = (Telescope_1, Telescope_2)
@@ -196,7 +204,7 @@ class IPythonAPI:
             i = -1
             for label in labels:
                 i += 1
-                values[label] = (values_per_telescope[Telescope_1][i], values_per_telescope[Telescope_2][i])
+                values[label] = (tels_result_values[0][i], tels_result_values[1][i])
 
             IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
