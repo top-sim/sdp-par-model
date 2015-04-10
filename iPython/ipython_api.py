@@ -154,7 +154,7 @@ class IPythonAPI:
                 bldta = bdtas[i]
                 tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=bldta,
                                          verbose=verbose)  # Calculate the telescope parameters
-                imp.update_derived_parameters(tp, Mode)
+                imp.update_derived_parameters(tp, Mode, bldta)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 tp.Tsnap_opt = Tsnap
                 tp.Nfacet_opt = Nfacet

@@ -39,7 +39,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, verbose=False):
+    def calc_tel_params(telescope, mode, bldta=False, band=None, hpso=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
         @param bldta: Baseline dependent time averaging
@@ -47,6 +47,7 @@ class Implementation:
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
+        print "Baseline dep in calc tel params?:", str(bldta)
 
         assert (band is None) or (hpso is None)
 
@@ -69,7 +70,7 @@ class Implementation:
         return telescope_params
 
     @staticmethod
-    def update_derived_parameters(telescope_params, mode, bldta=False, verbose=False):
+    def update_derived_parameters(telescope_params, mode, bldta, verbose=False):
         """
         Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
         @param bldta: Baseline dependent time averaging
