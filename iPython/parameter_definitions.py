@@ -132,7 +132,7 @@ class ParameterDefinitions:
             o.Na = 512            # number of antennas
             o.Nbeam = 1            # number of beams
             o.Nf_max = 65536      # maximum number of channels
-            o.B_dump_ref = 100 * u.km
+            o.B_dump_ref = 80 * u.km
             o.Tdump_ref = 0.6 * u.s # Correlator dump time in reference design
             o.baseline_bins = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 80.0)) * u.km
             o.nr_baselines = 10180233
