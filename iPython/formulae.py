@@ -44,14 +44,17 @@ class Formulae:
         o.Theta_pix = o.Theta_beam / (2 * o.Qpix)  #(Consistent with PDR05 280115)
 
         o.Npix_linear = o.Theta_fov / o.Theta_pix
+        if verbose:
+            print "Npix_linear, per facet", o.Npix_linear
 
         # The linear number of pixels along the image's side
         # (assumed to be square) (Consistent with PDR05 280115) Per facet.
 
-        o.Rfft = o.Nfacet ** 2 * 5 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
+        o.Rfft = o.binfrac * o.Nfacet**2 * 5 * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap
         # added Nfacet dependence (Consistent with PDR05 280115,
         # with 5 prefactor rather than 10 (late change; somewhat controvertial
         # and in need of review after PDR dicsussions re. Hermiticity))
+        #factor of binfrac ensures taht the total fft rate, summed over all bins, is correct.
 
         o.DeltaW_max = o.Qw * Max(o.Bmax_bin * o.Tsnap * o.Omega_E / (o.wl * 2),
                                   o.Bmax_bin ** 2 / (o.R_Earth * o.wl * 8))
@@ -81,11 +84,13 @@ class Formulae:
 
         # Set this up to allow switchable BL dep averaging
         if BL_dep_time_av:
-            o.Tdump_skipper = o.epsilon_f_approx * o.wl / (o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s
+            o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
+            o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
+            
             # multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
             # See Skipper memo (REF needed).
             if verbose:
-                print "USING BASELINE DEPENDENT TIME AVERAGING"
+                print "USING BASELINE DEPENDENT TIME AVERAGING, combining this number of time samples: ", o.combine_time_samples
         else:
             o.Tdump_skipper = o.Tdump_scaled
             if verbose:
@@ -104,12 +109,11 @@ class Formulae:
         # and must also avoid smearing at the faceted FoV.
 
         if imaging_mode == ImagingModes.Continuum:
-            o.Rrp = o.Nfacet ** 2 * 50 * o.Npix_linear ** 2 / o.Tsnap
+            o.Rrp = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap
             # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif imaging_mode == ImagingModes.Spectral:
             o.Nf_out = o.Nf_max
-            o.Rrp = o.Nfacet ** 2 * 50 * o.Npix_linear ** 2 / o.Tsnap  # Reprojection Flop rate, per output channel
-            # (Consistent with PDR05 280115)
+            o.Rrp = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif imaging_mode == ImagingModes.SlowTrans:
             o.Rrp = 0 * u.s / u.s  # (Consistent with PDR05 280115)
         else:
@@ -168,8 +172,11 @@ class Formulae:
         Rflop_common_factor = o.Nmajor * o.Nbeam * o.Npp
         o.Rflop_grid = Rflop_common_factor * o.Rgrid
         o.Rflop_conv = Rflop_common_factor * o.Rccf
-        o.Rflop_fft = Rflop_common_factor * o.Nf_out * o.Rfft
+        o.Rflop_fft  = Rflop_common_factor * o.Nf_out * o.Rfft
+        if verbose:
+            print "Rflop fft ", o.Rflop_fft
         o.Rflop_proj = Rflop_common_factor * o.Nf_out * o.Rrp
         o.Rflop_phrot = o.Rphrot
 
         o.Rflop = o.Rflop_phrot + o.Rflop_proj + o.Rflop_fft + o.Rflop_conv + o.Rflop_grid  # Overall flop rate
+        o.Npix_linear = o.Npix_linear * o.binfrac #output this multiplied by binfrac so that the totalled value of npix over baseline bins is correct

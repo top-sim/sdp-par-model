@@ -135,7 +135,7 @@ class IPythonAPI(api):
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band, Mode, Tel1_BLDTA=False, Tel2_BLDTA=False, verbose=False):
+    def compare_telescopes_default(Telescope_1, Telescope_2, Band_1, Band_2, Mode_1, Mode_2, Tel1_BLDTA=False, Tel2_BLDTA=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         E.g.: The two telescopes may have different (default) maximum baselines. Plots the results side by side.
@@ -150,11 +150,13 @@ class IPythonAPI(api):
         """
         telescopes = (Telescope_1, Telescope_2)
         bdtas = (Tel1_BLDTA, Tel2_BLDTA)
+        modes=(Mode_1, Mode_2)
+        bands =(Band_1, Band_2)
         tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
         tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
-        if not (imp.telescope_and_band_are_compatible(Telescope_1, Band) and
-                imp.telescope_and_band_are_compatible(Telescope_2, Band)):
+        if not (imp.telescope_and_band_are_compatible(Telescope_1, Band_1) and
+                imp.telescope_and_band_are_compatible(Telescope_2, Band_2)):
             msg = 'ERROR: At least one of the Telescopes is incompatible with the selected Band'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
@@ -165,6 +167,8 @@ class IPythonAPI(api):
             for i in range(2):
                 telescope = telescopes[i]
                 bldta = bdtas[i]
+                Mode=modes[i]
+                Band=bands[i]
                 tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=bldta,
                                          verbose=verbose)  # Calculate the telescope parameters
                 imp.update_derived_parameters(tp, Mode, bldta=bldta, verbose=verbose)
@@ -190,7 +194,7 @@ class IPythonAPI(api):
                 result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
                                 'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
-                result_value_string = [telescope, Band, Mode, bdtas[i], '%d' % (tp.Bmax / u.km), '%d' % tp.Nf_max,
+                result_value_string = [telescope, bands[i], modes[i], bdtas[i], '%d' % (tp.Bmax / u.km), '%d' % tp.Nf_max,
                                        '%d' % tp.Nfacet_opt, '%.3g' % tp.Tsnap_opt]  # Start building result string
                 result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
                 for i in range(len(result_values)):
