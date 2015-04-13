@@ -33,7 +33,8 @@ class Formulae:
         o.Theta_pix = o.Theta_beam/(2*o.Qpix) #(Consistent with PDR05 280115)
         
         o.Npix_linear = o.Theta_fov / o.Theta_pix
-        print "Npix_linear, per facet", o.Npix_linear
+        if verbose:
+            print "Npix_linear, per facet", o.Npix_linear
 
         # The linear number of pixels along the image's side
         #(assumed to be square) (Consistent with PDR05 280115) Per facet.
@@ -150,8 +151,8 @@ class Formulae:
         o.Rflop_grid = Rflop_common_factor * o.Rgrid
         o.Rflop_conv = Rflop_common_factor * o.Rccf
         o.Rflop_fft  = Rflop_common_factor * o.Nf_out * o.Rfft
-        print "Rflop fft ", o.Rflop_fft
-        print "Bmax,bin ", o.Bmax_bin
+        if verbose:
+            print "Rflop fft ", o.Rflop_fft
         o.Rflop_proj = Rflop_common_factor * o.Nf_out * o.Rrp
         o.Rflop_phrot = o.Rphrot
 
