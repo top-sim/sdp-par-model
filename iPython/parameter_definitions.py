@@ -22,6 +22,12 @@ class Telescopes:
     SKA2_Low = 'SKA2_Low'
     SKA2_Mid = 'SKA2_Mid'
 
+    # Supply string representations that are nice to read for humans
+    telescopes_pretty_print = {SKA1_Low_old: 'SKA1-Low',
+                               SKA1_Mid_old: 'SKA1-Mid (Band 1)',
+                               SKA1_Sur_old: 'SKA1-Survey (Band 1)'
+                               }
+
 
 # Enumerate all possible bands (used in the ParameterDefinitions class)
 class Bands:
@@ -54,6 +60,11 @@ class ImagingModes:
     SlowTrans = 'SlowTrans'
     ContAndSpectral = 'CS'  # A special case for some of the HPSOs where continuum and spectral are done sequentially
 
+    # Supply string representations that are nice to read for humans
+    modes_pretty_print = {Continuum: 'Continuum',
+                          Spectral: 'Spectral',
+                          SlowTrans: 'SlowTrans'
+                          }
 
 # Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
 class HPSOs:

@@ -15,16 +15,6 @@ class SKAAPI:
     def __init__(self):
         pass
 
-    telescopes_pretty_print = {Telescopes.SKA1_Low_old: 'SKA1-Low',
-                               Telescopes.SKA1_Mid_old: 'SKA1-Mid (Band 1)',
-                               Telescopes.SKA1_Sur_old: 'SKA1-Survey (Band 1)'
-                               }
-
-    modes_pretty_print = {ImagingModes.Continuum: 'Continuum',
-                          ImagingModes.Spectral: 'Spectral',
-                          ImagingModes.SlowTrans: 'SlowTrans'
-                          }
-
     @staticmethod
     def evaluate_expression(expression, tp, tsnap, nfacet):
         """
@@ -53,28 +43,6 @@ class SKAAPI:
             results.append(result)
         return results
 
-    @staticmethod
-    def telescope_and_band_are_compatible(telescope, band):
-        """
-        Checks whether the supplied telescope and band are compatible with each other
-        @param telescope:
-        @param band:
-        @return:
-        """
-        is_compatible = False
-        if telescope in {Telescopes.SKA1_Low_old, Telescopes.SKA1_Low}:
-            is_compatible = (band in Bands.low_bands)
-        elif telescope in {Telescopes.SKA1_Mid_old, Telescopes.SKA1_Mid}:
-            is_compatible = (band in Bands.mid_bands)
-        elif telescope == Telescopes.SKA1_Sur_old:
-            is_compatible = (band in Bands.survey_bands)
-        elif telescope == Telescopes.SKA2_Low:
-            is_compatible = (band in Bands.low_ska2_bands)
-        elif telescope == Telescopes.SKA2_Mid:
-            is_compatible = (band in Bands.mid_ska2_bands)
-        else:
-            raise ValueError("Unknown telescope %s" % telescope)
-        return is_compatible
 
     @staticmethod
     def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, BL_dep_time_av=False,
@@ -89,10 +57,10 @@ class SKAAPI:
         @param nr_frequency_channels: (optional) the maximum number of frequency channels
         @return: a dictionary of result values
         """
-        SKAAPI.telescope_and_band_are_compatible(telescope, band)
+        assert imp.telescope_and_band_are_compatible(telescope, band)
 
         mode_lookup = {}
-        for key in SKAAPI.modes_pretty_print:
+        for key in ImagingModes.modes_pretty_print:
             mode_lookup[key] = key
 
         # And now the results:

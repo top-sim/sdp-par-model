@@ -10,6 +10,7 @@ themselves. Instead, it specifies how values are substituted, optimized, and sum
 """
 
 import sympy.physics.units as u
+from parameter_definitions import Telescopes, ImagingModes, Bands
 from parameter_definitions import ParameterDefinitions as p
 from formulae import Formulae as f
 from sympy import simplify, lambdify, Max
@@ -78,6 +79,30 @@ class Implementation:
 
         f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
         return telescope_params
+
+    @staticmethod
+    def telescope_and_band_are_compatible(telescope, band):
+        """
+        Checks whether the supplied telescope and band are compatible with each other
+        @param telescope:
+        @param band:
+        @return:
+        """
+        is_compatible = False
+        if telescope in {Telescopes.SKA1_Low_old, Telescopes.SKA1_Low}:
+            is_compatible = (band in Bands.low_bands)
+        elif telescope in {Telescopes.SKA1_Mid_old, Telescopes.SKA1_Mid}:
+            is_compatible = (band in Bands.mid_bands)
+        elif telescope == Telescopes.SKA1_Sur_old:
+            is_compatible = (band in Bands.survey_bands)
+        elif telescope == Telescopes.SKA2_Low:
+            is_compatible = (band in Bands.low_ska2_bands)
+        elif telescope == Telescopes.SKA2_Mid:
+            is_compatible = (band in Bands.mid_ska2_bands)
+        else:
+            raise ValueError("Unknown telescope %s" % telescope)
+
+        return is_compatible
 
     @staticmethod
     def update_derived_parameters(telescope_params, mode, bldta, verbose=False):

@@ -153,8 +153,8 @@ class IPythonAPI(api):
         tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
         tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
-        if not (api.telescope_and_band_are_compatible(Telescope_1, Band) and
-                api.telescope_and_band_are_compatible(Telescope_2, Band)):
+        if not (imp.telescope_and_band_are_compatible(Telescope_1, Band) and
+                imp.telescope_and_band_are_compatible(Telescope_2, Band)):
             msg = 'ERROR: At least one of the Telescopes is incompatible with the selected Band'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
@@ -240,7 +240,7 @@ class IPythonAPI(api):
         param_units = ('km', '', '', '', '', 'sec', '')
         IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
-        if not api.telescope_and_band_are_compatible(Telescope, Band):
+        if not imp.telescope_and_band_are_compatible(Telescope, Band):
             msg = 'ERROR: Telescope and Band are not compatible'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
@@ -295,7 +295,7 @@ class IPythonAPI(api):
         param_units = ('km', '', '', '', '')
         IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
-        if not api.telescope_and_band_are_compatible(Telescope, Band):
+        if not imp.telescope_and_band_are_compatible(Telescope, Band):
             msg = 'ERROR: Telescope and Band are not compatible'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
