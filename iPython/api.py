@@ -1,11 +1,12 @@
 """
 This file contains methods for programmatically interacting with the SKA SDP Parametric Model using Python.
 """
+import copy
 
 from parameter_definitions import Telescopes, ImagingModes, Bands
 from implementation import Implementation as imp
 import sympy.physics.units as u
-
+import numpy as np
 
 class SKAAPI:
     """
@@ -33,6 +34,41 @@ class SKAAPI:
         return result
 
     @staticmethod
+    def eval_expression_sweep(expression, telescope_params, parameter, param_val_min, param_val_max, number_steps,
+                              unit_string = None, verbose=False):
+        """
+        Computes an array of values for expression, by varying a parameter between two values in a number of steps
+        :param expression:
+        :param telescope_params:
+        :param parameter:
+        :param param_val_min:
+        :param param_val_max:
+        :param number_steps:
+        :param unit_string
+        :return:
+        """
+        assert param_val_max > param_val_min
+        param_values = np.linspace(param_val_min, param_val_max, num=number_steps+1)
+        results = []
+
+        for i in range(len(param_values)):
+            tp = copy.deepcopy(telescope_params)
+            param_value = param_values[i]
+
+            # In some cases the parameter has an SI unit (like meters). We then need to multiply that in
+            if unit_string is None:
+                exec('tp.%s = %g' % (parameter, param_value))
+            else:
+                print 'tp.%s = %g * %s' % (parameter, param_value, unit_string)
+                exec('tp.%s = %g * %s' % (parameter, param_value, unit_string))
+
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result_expression = eval('tp.%s' % expression)
+            results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
+
+        return results
+
+    @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet):
         """
         Evaluate a sequence of expressions by substituting the telescope_parameters into them. Returns the result
@@ -42,7 +78,6 @@ class SKAAPI:
             result = SKAAPI.evaluate_expression(expression, tp, tsnap, nfacet)
             results.append(result)
         return results
-
 
     @staticmethod
     def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, BL_dep_time_av=False,
