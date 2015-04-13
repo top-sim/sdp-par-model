@@ -1,3 +1,14 @@
+"""
+This Python file contains two classes.
+
+ParameterContainer is centrally important and used throughout the iPython model, but essentially is only a container
+class that is passed around between modules, and contains a set of parameters, values and variables that constitute
+the inputs and outputs of computations.
+
+Implementation contains a collection of methods for performing computations, but do not define the equations
+themselves. Instead, it specifies how values are substituted, optimized, and summed across bins.
+"""
+
 import sympy.physics.units as u
 from parameter_definitions import ParameterDefinitions as p
 from formulae import Formulae as f

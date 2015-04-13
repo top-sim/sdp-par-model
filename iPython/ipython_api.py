@@ -1,22 +1,30 @@
-__author__ = 'Francois'
+"""
+This file contains methods for interacting with the SKA SDP Parametric Model using Python from the IPython Notebook
+(Jupyter) environment. It extends the methods defined in API.py
+The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
+notebooks easier.
+"""
+from api import SKAAPI as api  # This class' (IPythonAPI's) parent class
 
 from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
-import numpy as np
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
-from api import SKAAPI as api  # methods for interfacing with the parametric model
 
-class IPythonAPI:
+class IPythonAPI(api):
     """
-    This class (IPython API) offer a set of methods for interacting witht he SKA SDP Parametric Model in the
-    IPython Notebook (Jupyter) environment. The reason the code is implemented here is to keep the notebook itself
-    free from clutter, and to make coding easier
+    This class (IPython API) is a subclass of its parent, SKA-API. It offers a set of methods for interacting with the
+    SKA SDP Parametric Model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
+    to keep the notebook itself free from clutter, and to make coding easier.
     """
+    def __init__(self):
+        api.__init__(self)
+        pass
+
     @staticmethod
     def show_table(header, titles, values, units):
         """
@@ -73,12 +81,15 @@ class IPythonAPI:
             assert len(colours) == len(values)
         nr_slices = len(values)
 
+        # The values need to sum to one, for a pie plot. Let's enforce that.
+        values_norm = values / np.linalg.norm(values)
+
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
 
         # The slices will be ordered and plotted counter-clockwise.
         explode = np.ones(nr_slices) * 0.05  # The radial offset of the slices
 
-        plt.pie(values, explode=explode, labels=titles, colors=colours,
+        plt.pie(values_norm, explode=explode, labels=titles, colors=colours,
                 autopct='%1.1f%%', shadow=True, startangle=90)
         # Set aspect ratio to be equal so that pie is drawn as a circle.
         plt.axis('equal')
@@ -171,9 +182,10 @@ class IPythonAPI:
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
                                       tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
                                       tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
-                result_titles = ('Telescope', 'Band', 'Mode', 'BLDTA', 'Max Baseline', 'Max # channels',
-                                 'Optimal Number of Facets', 'Optimal Snapshot Time', 'Visibility Buffer',
-                                 'Working (cache) memory', 'Image side length', 'I/O Rate', 'Total Compute Requirement',
+                result_titles = ('Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.', 'Max Baseline',
+                                 'Max # channels', 'Optimal Number of Facets', 'Optimal Snapshot Time',
+                                 'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                                 'Total Compute Requirement',
                                  '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
                 result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
                                 'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
@@ -195,7 +207,7 @@ class IPythonAPI:
             IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
                                           tels_result_strings[1], result_units)
 
-            labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
+            labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
             bldta_text = {True : ' (with BLDTA)', False : ' (no BLDTA)'}
 
             telescope_labels = ('%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA]),
@@ -318,10 +330,9 @@ class IPythonAPI:
                         result_value_string.append('%d' % result_values[i])
 
                 IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-                labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phrot')
+                labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
                 colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
                 values = result_values[-5:]  # the last five values
-
                 IPythonAPI.plot_flops_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
             else:
                 msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' % max_allowed_baseline

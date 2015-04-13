@@ -1,4 +1,6 @@
-__author__ = 'Francois'
+"""
+This file contains methods for programmatically interacting with the SKA SDP Parametric Model using Python.
+"""
 
 from parameter_definitions import Telescopes, ImagingModes, Bands
 from implementation import Implementation as imp
@@ -10,7 +12,6 @@ class SKAAPI:
     This class (SKA API) represents an API by which the SKA Parametric Model can be called programmatically, without
     making use of the iPython Notebook infrastructure.
     """
-
     def __init__(self):
         pass
 
