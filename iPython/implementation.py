@@ -173,9 +173,7 @@ class Implementation:
             expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
 
             if verbose:
-                print 'Bin with Bmax %.2f km contains %.3f %% of the baselines for this telescope' % \
-                      (bins[i]/(u.m*1e3), binfrac_value*100)
-                print 'Verbose variable printout: <empty>'
+                pass
 
             if take_max:  # For example when computing Npix, we take the max
                 temp_result = Max(temp_result, expr_subst)

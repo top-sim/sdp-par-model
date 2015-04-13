@@ -157,7 +157,7 @@ class IPythonAPI(api):
 
         if not (imp.telescope_and_band_are_compatible(Telescope_1, Band_1) and
                 imp.telescope_and_band_are_compatible(Telescope_2, Band_2)):
-            msg = 'ERROR: At least one of the Telescopes is incompatible with the selected Band'
+            msg = 'ERROR: At least one of the Telescopes is incompatible with its selected Band'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
         else:
