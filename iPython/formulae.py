@@ -120,7 +120,6 @@ class Formulae:
 
         o.Rgrid = o.Rgrid_backward + o.Rgrid_predict
 
-
         o.Rccf_backward = o.Nf_vis_backward * o.Nfacet**2 * 5 * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(o.Tion*o.Qfcv)
         #reduce by multiplication by o.binfrac (RCB), add in extra multiplication by Nfacet-squared.
 

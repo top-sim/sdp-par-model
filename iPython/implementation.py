@@ -195,7 +195,7 @@ class Implementation:
         bins[nbins_used-1] = tp.Bmax
         counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
-        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False,
+        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose,
                                                              take_max=take_max)
 
         # Remove string literals from the telescope_params, as they can't be evaluated by lambdify

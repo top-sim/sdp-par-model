@@ -295,7 +295,7 @@ class IPythonAPI:
             if max_baseline <= max_allowed_baseline:
                 tp.Bmax = max_baseline * u.km
                 tp.Nf_max = Nf_max
-                imp.update_derived_parameters(tp, Mode, bldta=BL_dep_time_av, verbose=False)
+                imp.update_derived_parameters(tp, Mode, bldta=BL_dep_time_av, verbose=verbose)
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
