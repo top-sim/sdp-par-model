@@ -45,7 +45,7 @@ class Formulae:
 
         o.Npix_linear = o.Theta_fov / o.Theta_pix
         if verbose:
-            print "Npix_linear, per facet", o.Npix_linear
+            print ("Npix_linear, per facet", o.Npix_linear)
 
         # The linear number of pixels along the image's side
         # (assumed to be square) (Consistent with PDR05 280115) Per facet.
@@ -80,7 +80,7 @@ class Formulae:
 
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
         if verbose:
-            print "Dump time: ", o.Tdump_scaled
+            print ("Dump time: ", o.Tdump_scaled)
 
         # Set this up to allow switchable BL dep averaging
         if BL_dep_time_av:
@@ -90,20 +90,20 @@ class Formulae:
             # multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
             # See Skipper memo (REF needed).
             if verbose:
-                print "USING BASELINE DEPENDENT TIME AVERAGING, combining this number of time samples: ", o.combine_time_samples
+                print ("USING BASELINE DEPENDENT TIME AVERAGING, combining this number of time samples: ", o.combine_time_samples)
         else:
             o.Tdump_skipper = o.Tdump_scaled
             if verbose:
-                print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
+                print ("NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING")
 
         o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s)
         if verbose:
-            print "Tdump_predict =", o.Tdump_predict
+            print ("Tdump_predict =", o.Tdump_predict)
         # Visibility integration time for predict step; limit this at 1.2s maximum.
 
         o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet, o.Tion * u.s)
         if verbose:
-            print "Tdump_backward =", o.Tdump_backward
+            print ("Tdump_backward =", o.Tdump_backward)
         # Visibility integration time at gridding (backward) step;
         # cannot be longer than the update timescale for the convolution kernels,
         # and must also avoid smearing at the faceted FoV.
@@ -174,7 +174,7 @@ class Formulae:
         o.Rflop_conv = Rflop_common_factor * o.Rccf
         o.Rflop_fft  = Rflop_common_factor * o.Nf_out * o.Rfft
         if verbose:
-            print "Rflop fft ", o.Rflop_fft
+            print ("Rflop fft ", o.Rflop_fft)
         o.Rflop_proj = Rflop_common_factor * o.Nf_out * o.Rrp
         o.Rflop_phrot = o.Rphrot
 

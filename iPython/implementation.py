@@ -39,14 +39,14 @@ class Implementation:
 
         # Lower bound cannot be higher than the uppper bound.
         if bound_upper <= bound_lower:
-            # print 'Unable to optimize free variable as upper bound is lower that the lower bound
+            # print ('Unable to optimize free variable as upper bound is lower that the lower bound)
             return bound_lower
         else:
             result = opt.minimize_scalar(expr_eval_float, bounds=(bound_lower, bound_upper), method='bounded')
             if not result.success:
-                print 'WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x
+                print ('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
             else:
-                # print 'Optimized free variable = %f' % result.x
+                # print ('Optimized free variable = %f' % result.x)
                 pass
             return result.x
 
@@ -130,12 +130,12 @@ class Implementation:
             expression_original = definitions.Rflop
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
-                print 'Searching for minimum Rflop with nfacets > 20... this is a bit odd (and may take long)'
+                print ('Searching for minimum Rflop with nfacets > 20... this is a bit odd (and may take long)')
                 warned = True
 
             i = nfacets-1 # zero-based index
             if verbose:
-                print 'Evaluating Nfacets = %d' % nfacets
+                print ('Evaluating Nfacets = %d' % nfacets)
 
             Rflops = expression_original.subs({definitions.Nfacet : nfacets})
             answer = Implementation.minimize_binned_expression_by_Tsnap(expression=Rflops,
@@ -148,15 +148,15 @@ class Implementation:
             if nfacets >= 2:
                 if flop_array[i] >= flop_array[i-1]:
                     if verbose:
-                        print '\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
-                              % nfacets
+                        print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
+                              % nfacets)
                     break
 
         i = np.argmin(np.array(flop_array))
         nfacets = i + 1
         if verbose:
-            print '\n%f PetaFLOPS was the lowest FLOP value, found for (Nfacet, Tsnap) = (%d, %.2f)' \
-                  % (flop_array[i]/1e15, nfacets,  Tsnap_array[i])
+            print ('\n%f PetaFLOPS was the lowest FLOP value, found for (Nfacet, Tsnap) = (%d, %.2f)' \
+                  % (flop_array[i]/1e15, nfacets,  Tsnap_array[i]))
 
         return (Tsnap_array[i], nfacets)
 
@@ -239,6 +239,6 @@ class Implementation:
         Tsnap_optimal = Implementation.optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
         value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
         if verbose:
-            print "Tsnap has been optimized as : %f. (Cost function = %f)" % \
-                  (Tsnap_optimal, value_optimal / u.peta)
+            print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
+                  (Tsnap_optimal, value_optimal / u.peta))
         return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
