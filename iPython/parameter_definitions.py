@@ -138,7 +138,7 @@ class ParameterDefinitions:
         o.Qgcf = 8.0
         o.Qw = 1.0
         o.Tion = 60.0
-        o.Tsnap_min = 1.2
+        o.Tsnap_min = 1.0
         o.amp_f_max = 1.01  # Added by Rosie Bolton
 
     @staticmethod
@@ -158,7 +158,8 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6 * u.s  # Correlator dump time in reference design
             o.baseline_bins = np.array((4.9, 7.1, 10.4, 15.1, 22.1, 32.2, 47.0, 80.0)) * u.km
             o.nr_baselines = 10180233
-            o.baseline_bin_distribution = np.array((49.421, 7.195, 7.829, 5.765, 10.515, 9.224, 8.063, 1.988))
+            #o.baseline_bin_distribution = np.array((49.421, 7.195, 7.829, 5.765, 10.515, 9.224, 8.063, 1.988))
+            o.baseline_bin_distribution=np.array((52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
             o.B_dump_ref = 80 * u.km
             o.Tdump_ref = 0.6 * u.s  # Correlator dump time in reference design
         elif telescope == Telescopes.SKA1_Low_old:
@@ -182,8 +183,9 @@ class ParameterDefinitions:
             o.B_dump_ref = 200 * u.km
             o.baseline_bins = np.array((4.4, 6.7, 10.3, 15.7, 24.0, 36.7, 56.0, 85.6, 130.8, 150)) * u.km
             o.nr_baselines = 1165860
-            o.baseline_bin_distribution = np.array(
-                (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
+            o.baseline_bin_distribution = np.array((57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064)) #Original distribution
+            #o.baseline_bin_distribution = np.array((56.78620346,   5.25152534,   5.6811107,    5.72469182,   6.21031005, 5.64375545,   6.21653592,   6.00485618 ,  2.42186527,   0.05914581))
+            #Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200 * u.km  # Actually constructed kilometers of max baseline
             o.Ds = 15 * u.m  # station "diameter" in meters
@@ -349,7 +351,7 @@ class ParameterDefinitions:
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500,
                            o.Nf_max)  # Initially this value was computed, but Rosie has since specified that it should just be set to 500.
-            o.Tobs = 1.2 * u.s  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tobs = 1.0 * u.s  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
         else:
             raise Exception('Unknown mode!')
 
