@@ -135,9 +135,12 @@ class IPythonAPI(api):
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band_1, Band_2, Mode_1, Mode_2, Tel1_BLDTA=False, Tel2_BLDTA=False, verbose=False):
+    def compare_telescopes_default(Telescope_1, Telescope_2, Band_1, Band_2, Mode_1, Mode_2,
+                                   Tel1_BLDTA=False, Tel2_BLDTA=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
+        A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
+        pretty interactive results.
         E.g.: The two telescopes may have different (default) maximum baselines. Plots the results side by side.
         @param Telescope_1:
         @param Telescope_2:
@@ -150,8 +153,8 @@ class IPythonAPI(api):
         """
         telescopes = (Telescope_1, Telescope_2)
         bdtas = (Tel1_BLDTA, Tel2_BLDTA)
-        modes=(Mode_1, Mode_2)
-        bands =(Band_1, Band_2)
+        modes = (Mode_1, Mode_2)
+        bands = (Band_1, Band_2)
         tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
         tels_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
@@ -163,49 +166,97 @@ class IPythonAPI(api):
         else:
             # And now the results:
             display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-            tels_params = []  # Maps each telescope to its parameter set
-            for i in range(2):
+            tels_params = []  # Maps each telescope to its parameter set (one parameter set for each mode)
+
+            for i in range(len(telescopes)):
                 telescope = telescopes[i]
                 bldta = bdtas[i]
-                Mode=modes[i]
-                Band=bands[i]
-                tp = imp.calc_tel_params(telescope, Mode, band=Band, bldta=bldta,
-                                         verbose=verbose)  # Calculate the telescope parameters
-                imp.update_derived_parameters(tp, Mode, bldta=bldta, verbose=verbose)
+                mode = modes[i]
+                band = bands[i]
+                tps = {}
+                # We make a distinction against the "pure" modes, and summed modes
+                if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                    tp = imp.calc_tel_params(telescope, mode, band=band, bldta=bldta,
+                                             verbose=verbose)  # Calculate the telescope parameters
+                    imp.update_derived_parameters(tp, mode, bldta=bldta, verbose=verbose)
 
-                (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                tp.Tsnap_opt = Tsnap
-                tp.Nfacet_opt = Nfacet
-                tels_params.append(tp)
+                    (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                    tp.Tsnap_opt = Tsnap
+                    tp.Nfacet_opt = Nfacet
+                    tps = {mode : tp}
 
-            for i in range(2):
+                elif mode == ImagingModes.CSS:
+                    # This mode consists of the *sum* of the Continuum, SlowTrans and Spectral modes,
+                    # of which each has a separate set of telescope parameters
+
+                    for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                        tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta,
+                                                 verbose=verbose)  # Calculate the telescope parameters
+                        imp.update_derived_parameters(tp, submode, bldta=bldta, verbose=verbose)
+
+                        (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                        tp.Tsnap_opt = tsnap
+                        tp.Nfacet_opt = nfacet
+                        tps[submode] = tp
+                else:
+                    raise Exception("The imaging mode %s is currently not supported" % str(mode))
+
+                tels_params.append(tps)
+
+            # End for-loop. We have now computed the telescope parameters for each mode
+            result_titles = ('Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.', 'Max Baseline',
+                             'Max # channels', 'Optimal Number of Facets', 'Optimal Snapshot Time',
+                             'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                             'Total Compute Requirement',
+                             '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
+            result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
+                            'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
+
+            nr_result_expressions = 10  # The number of computed values in the result_values array (see below)
+
+            for i in range(len(telescopes)):
+                mode = modes[i]
+                band = bands[i]
+                bdta = bdtas[i]
                 telescope = telescopes[i]
-                tp = tels_params[i]
+                result_values = np.zeros(nr_result_expressions)
 
-                # The result expressions need to be defined here as they depend on tp (updated in the line above)
-                result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                      tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
-                                      tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
-                result_titles = ('Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.', 'Max Baseline',
-                                 'Max # channels', 'Optimal Number of Facets', 'Optimal Snapshot Time',
-                                 'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
-                                 'Total Compute Requirement',
-                                 '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
-                result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
-                                'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
-                result_value_string = [telescope, bands[i], modes[i], bdtas[i], '%d' % (tp.Bmax / u.km), '%d' % tp.Nf_max,
-                                       '%d' % tp.Nfacet_opt, '%.3g' % tp.Tsnap_opt]  # Start building result string
-                result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
-                for i in range(len(result_values)):
-                    expression = result_expressions[i]
-                    if expression is not tp.Npix_linear:
-                        result_value_string.append('%.3g' % result_values[i])
-                    else:
+                if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                    tp = tels_params[i][mode]
+                    # The result expressions need to be defined here as they depend on tp (read above)
+                    result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
+                                          tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta,
+                                          tp.Rflop_proj/u.peta, tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
+                    # Start building result string
+                    result_value_string = [telescope, band, mode, bdta, '%d' % (tp.Bmax / u.km),
+                                           '%d' % tp.Nf_max, '%d' % tp.Nfacet_opt, '%.3g' % tp.Tsnap_opt]
+                    result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
+
+                elif mode == ImagingModes.CSS:
+                    if verbose:
+                        print 'SUMMING!@@@'
+                    for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                        tp = tels_params[i][submode]
+                        # The result expressions need to be defined here as they depend on tp (read above)
+                        result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
+                                              tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta,
+                                              tp.Rflop_proj/u.peta, tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
+                        result_value_string = [telescope, band, mode, bdta, '%d' % (tp.Bmax / u.km),
+                                               'n/a', 'n/a', 'n/a']
+
+                        result_values += api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
+                else:
+                    raise Exception("The imaging mode %s is currently not supported" % str(mode))
+
+                for i in range(nr_result_expressions):
+                    if i == 2: # The third expression is Npix_linear, that we want to print as an integer value
                         result_value_string.append('%d' % result_values[i])
-
+                    else:
+                        result_value_string.append('%.3g' % result_values[i])
                 tels_result_strings.append(result_value_string)
                 tels_result_values.append(result_values[-5:])  # the last five values
+
             display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
             IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],

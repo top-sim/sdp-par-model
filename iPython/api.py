@@ -34,22 +34,28 @@ class SKAAPI:
         return result
 
     @staticmethod
-    def eval_expression_sweep(expression, telescope_params, parameter, param_val_min, param_val_max, number_steps,
-                              unit_string = None, verbose=False):
+    def eval_exp_param_sweep(expression, telescope_params, parameter, param_val_min, param_val_max, number_steps,
+                             unit_string, verbose=False):
         """
-        Computes an array of values for expression, by varying a parameter between two values in a number of steps
-        :param expression:
-        :param telescope_params:
-        :param parameter:
-        :param param_val_min:
-        :param param_val_max:
-        :param number_steps:
-        :param unit_string
+        Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
+        a specified range in a number of steps
+
+        :param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
+        :param telescope_params: ParameterContainer (class) containing the initial set of telescope parameters
+        :param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
+        :param param_val_min: minimum value for the parameter's value sweep
+        :param param_val_max: maximum value for the parameter's value sweep
+        :param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+        :param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
+                            otherwise, if there are no units, the unit-string must be set to "None"
         :return:
         """
         assert param_val_max > param_val_min
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps+1)
         results = []
+
+        print "Starting sweep of parameter %s, evaluating expression %s at %d steps." % \
+              (parameter, expression, number_steps)
 
         for i in range(len(param_values)):
             tp = copy.deepcopy(telescope_params)
@@ -59,13 +65,15 @@ class SKAAPI:
             if unit_string is None:
                 exec('tp.%s = %g' % (parameter, param_value))
             else:
-                print 'tp.%s = %g * %s' % (parameter, param_value, unit_string)
+                if verbose:
+                    print '\nSetting param tp.%s = %g * %s' % (parameter, param_value, unit_string)
                 exec('tp.%s = %g * %s' % (parameter, param_value, unit_string))
 
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
             results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
+        print 'done with parameter sweep!'
         return results
 
     @staticmethod

@@ -31,9 +31,9 @@ class Implementation:
 
     @staticmethod
     def optimize_expr(expression, free_var, bound_lower, bound_upper):
-        '''
+        """
         Optimized Tsnap so that the supplied expression is minimized
-        '''
+        """
         expr_eval = lambdify(free_var, expression, modules=("sympy",))
         expr_eval_float = lambda x: float(expr_eval(x))
 
@@ -115,11 +115,11 @@ class Implementation:
 
     @staticmethod
     def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
-        '''
+        """
         Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop
         according to its definition in the supplied definitions object
         Returns result as a 2-tuple (Tsnap_opt, Nfacet_opt)
-        '''
+        """
 
         flop_results = {} # Maps nfacet values to flops
         flop_array = []
@@ -162,18 +162,15 @@ class Implementation:
 
     @staticmethod
     def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False, take_max=False):
-        '''
+        """
         Substitute relevant variables for each bin, summing the result
-        '''
+        """
         nbaselines = sum(counts)
         temp_result = 0
         for i in range(nbins_used):
             binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
             # Substitute bin-dependent variables
             expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
-
-            if verbose:
-                pass
 
             if take_max:  # For example when computing Npix, we take the max
                 temp_result = Max(temp_result, expr_subst)
@@ -211,10 +208,10 @@ class Implementation:
 
     @staticmethod
     def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, verbose=False, take_max=False):
-        '''
+        """
         Minimizes an expression by substituting the supplied telescope parameters into the expression, then minimizing it
         by varying the free parameter, Tsnap
-        '''
+        """
         #TODO: can make the free expression a parameter of this method (should something else than Tsnap be desired)
 
         tp = telescope_parameters
