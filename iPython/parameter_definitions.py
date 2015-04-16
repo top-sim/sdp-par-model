@@ -59,11 +59,13 @@ class ImagingModes:
     Spectral = 'Spectral'
     SlowTrans = 'SlowTrans'
     ContAndSpectral = 'CS'  # A special case for some of the HPSOs where continuum and spectral are done sequentially
+    CSS = 'Summed (Cont+Spec+Slow)'
 
     # Supply string representations that are nice to read for humans
     modes_pretty_print = {Continuum: 'Continuum',
                           Spectral: 'Spectral',
-                          SlowTrans: 'SlowTrans'
+                          SlowTrans: 'SlowTrans',
+                          CSS: 'All Modes'
                           }
 
 # Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
