@@ -14,6 +14,7 @@ import matplotlib.pylab as pylab
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
+from implementation import ParameterContainer
 
 class IPythonAPI(api):
     """
@@ -63,6 +64,21 @@ class IPythonAPI(api):
                  '</td><td>{3}</td></tr>\n'.format(titles[i], values_1[i], values_2[i], units[i])
         s += '</table>'
         display(HTML(s))
+
+    @staticmethod
+    def plot_line_datapoints(header, xx, yy):
+        """
+        Plots a series of values (yy) against a series of x-values (xx) using a line and data-point visualization.
+        @param header:
+        @param xx:
+        @param yy:
+        @return:
+        """
+        pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
+        assert len(xx) == len(yy)
+        plt.plot(xx, yy, 'bo', xx, yy, 'k')
+        plt.title('%s\n' % header)
+        plt.show()
 
     @staticmethod
     def plot_flops_pie(header, titles, values, colours=None):
@@ -178,7 +194,6 @@ class IPythonAPI(api):
                 if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                     tp = imp.calc_tel_params(telescope, mode, band=band, bldta=bldta,
                                              verbose=verbose)  # Calculate the telescope parameters
-                    imp.update_derived_parameters(tp, mode, bldta=bldta, verbose=verbose)
 
                     (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                     tp.Tsnap_opt = Tsnap
@@ -192,7 +207,6 @@ class IPythonAPI(api):
                     for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                         tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta,
                                                  verbose=verbose)  # Calculate the telescope parameters
-                        imp.update_derived_parameters(tp, submode, bldta=bldta, verbose=verbose)
 
                         (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                         tp.Tsnap_opt = tsnap
@@ -300,13 +314,19 @@ class IPythonAPI(api):
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
         else:
-            # And now the results:
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band, bldta=BL_dep_time_av, verbose=verbose)  # Calculate the telescope parameters
-            max_allowed_baseline = tp.baseline_bins[-1] / u.km
-            if max_baseline <= max_allowed_baseline:
-                tp.Bmax = max_baseline * u.km
-                tp.Nf_max = Nf_max
-                imp.update_derived_parameters(tp, mode=Mode, bldta=BL_dep_time_av, verbose=verbose)
+            tp_basic = ParameterContainer()
+            ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
+            max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
+            if max_baseline > max_allowed_baseline:
+                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' \
+                    % max_allowed_baseline
+                s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
+                display(HTML(s))
+            else:
+                tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max,
+                                         verbose=verbose)  # Calculate the telescope parameters
+
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
                                       tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
@@ -326,11 +346,6 @@ class IPythonAPI(api):
                         result_value_string.append('%d' % result_values[i])
 
                 IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-            else :
-                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' \
-                    % max_allowed_baseline
-                s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-                display(HTML(s))
 
     @staticmethod
     def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, BL_dep_time_av=False, verbose=False):
@@ -355,14 +370,20 @@ class IPythonAPI(api):
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
         else:
-            # And now the results:
-            display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-            tp = imp.calc_tel_params(Telescope, Mode, band=Band, bldta=BL_dep_time_av, verbose=verbose)  # Calculate the telescope parameters
-            max_allowed_baseline = tp.baseline_bins[-1] / u.km
-            if max_baseline <= max_allowed_baseline:
-                tp.Bmax = max_baseline * u.km
-                tp.Nf_max = Nf_max
-                imp.update_derived_parameters(tp, Mode, bldta=BL_dep_time_av, verbose=verbose)
+            tp_basic = ParameterContainer()
+            ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
+            max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
+            if max_baseline > max_allowed_baseline:
+                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' \
+                    % max_allowed_baseline
+                s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
+                display(HTML(s))
+            else:
+                display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
+                             '</font>'))
+                tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max,
+                                         verbose=verbose)  # Calculate the telescope parameters
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
@@ -389,7 +410,3 @@ class IPythonAPI(api):
                 colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
                 values = result_values[-5:]  # the last five values
                 IPythonAPI.plot_flops_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
-            else:
-                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' % max_allowed_baseline
-                s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-                display(HTML(s))
