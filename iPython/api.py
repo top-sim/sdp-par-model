@@ -3,16 +3,20 @@ This file contains methods for programmatically interacting with the SKA SDP Par
 """
 import copy
 
-from parameter_definitions import Telescopes, ImagingModes, Bands
+from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
+from formulae import Formulae
 from implementation import Implementation as imp
+from implementation import ParameterContainer
 import sympy.physics.units as u
 import numpy as np
+
 
 class SKAAPI:
     """
     This class (SKA API) represents an API by which the SKA Parametric Model can be called programmatically, without
     making use of the iPython Notebook infrastructure.
     """
+
     def __init__(self):
         pass
 
@@ -34,8 +38,10 @@ class SKAAPI:
         return result
 
     @staticmethod
-    def eval_exp_param_sweep(expression, telescope_params, parameter, param_val_min, param_val_max, number_steps,
-                             unit_string, verbose=False):
+    def eval_exp_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
+                                max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                                parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
+                                verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
@@ -51,30 +57,39 @@ class SKAAPI:
         :return:
         """
         assert param_val_max > param_val_min
-        param_values = np.linspace(param_val_min, param_val_max, num=number_steps+1)
+
+        print "Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps " \
+              "(i.e. %d data points)" % \
+              (parameter, expression, str(param_val_min), str(param_val_max), number_steps, number_steps+1)
+
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, max_baseline,
+                                               nr_frequency_channels, verbose)
+
+        param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
         results = []
-
-        print "Starting sweep of parameter %s, evaluating expression %s at %d steps." % \
-              (parameter, expression, number_steps)
-
         for i in range(len(param_values)):
             tp = copy.deepcopy(telescope_params)
             param_value = param_values[i]
 
             # In some cases the parameter has an SI unit (like meters). We then need to multiply that in
             if unit_string is None:
-                exec('tp.%s = %g' % (parameter, param_value))
+                exec ('tp.%s = %g' % (parameter, param_value))
             else:
                 if verbose:
                     print '\nSetting param tp.%s = %g * %s' % (parameter, param_value, unit_string)
-                exec('tp.%s = %g * %s' % (parameter, param_value, unit_string))
+                exec ('tp.%s = %g * %s' % (parameter, param_value, unit_string))
 
+            if verbose:
+                param_val_string = eval('tp.%s' % parameter)
+                print ">> Evaluating %s for %s = %s | %s" % (expression, parameter, param_val_string, str(param_value))
+
+            Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
             results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print 'done with parameter sweep!'
-        return results
+        return (param_values, results)
 
     @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet):
@@ -102,25 +117,19 @@ class SKAAPI:
         """
         assert imp.telescope_and_band_are_compatible(telescope, band)
 
-        mode_lookup = {}
-        for key in ImagingModes.modes_pretty_print:
-            mode_lookup[key] = key
-
         # And now the results:
-        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=BL_dep_time_av,
-                                 verbose=verbose)  # Calculate the telescope parameters
-        max_allowed_baseline = tp.baseline_bins[-1] / u.km
-
+        tp_basic = ParameterContainer()
+        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+        max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
         if max_baseline is not None:
-            max_baseline = max_allowed_baseline
+            assert max_baseline <= max_allowed_baseline
         else:
-            if max_baseline > max_allowed_baseline:
-                raise AssertionError('max_baseline exceeds the maximum allowed baseline of %g km for this telescope.'
-                                     % max_allowed_baseline)
+            max_baseline = max_allowed_baseline
 
-        tp.Bmax = max_baseline * u.km
-        tp.Nf_max = nr_frequency_channels
-        imp.update_derived_parameters(tp, mode=mode_lookup[mode], bldta=BL_dep_time_av, verbose=verbose)
+        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=BL_dep_time_av,
+                                 max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
+                                 verbose=verbose)  # Calculate the telescope parameters
+
         (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
         # The following variables will be evaluated:
@@ -138,7 +147,7 @@ class SKAAPI:
                         'PetaFLOPS', 'PetaFLOPS', 'PetaFLOPS', 'PetaFLOPS', 'PetaFLOPS')
 
         assert len(result_variable_strings) == len(result_titles)  # sanity check
-        assert len(result_variable_strings) == len(result_units)   # sanity check
+        assert len(result_variable_strings) == len(result_units)  # sanity check
 
         # The results are returned as a dictionary
         result_dict = {'Tsnap': tsnap, 'NFacet': nfacet}

@@ -51,9 +51,11 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, verbose=False):
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False,
+                        max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
-        This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO
+        This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
+        Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
         @param bldta: Baseline dependent time averaging
         """
         telescope_params = ParameterContainer()
@@ -76,6 +78,11 @@ class Implementation:
             p.apply_hpso_parameters(telescope_params, hpso)
         else:
             raise Exception("Either band or hpso must not be None")
+
+        if max_baseline is not None:
+            p.Bmax = max_baseline * u.km
+        if nr_frequency_channels is not None:
+            p.Nf_max = nr_frequency_channels
 
         f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
         return telescope_params
@@ -103,15 +110,6 @@ class Implementation:
             raise ValueError("Unknown telescope %s" % telescope)
 
         return is_compatible
-
-    @staticmethod
-    def update_derived_parameters(telescope_params, mode, bldta, verbose=False):
-        """
-        Used for updating the derived parameters if, e.g., some of the initial parameters was manually changed
-        @param bldta: Baseline dependent time averaging
-        """
-        p.apply_imaging_mode_parameters(telescope_params, mode)
-        f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
 
     @staticmethod
     def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
