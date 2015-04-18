@@ -38,10 +38,10 @@ class SKAAPI:
         return result
 
     @staticmethod
-    def eval_exp_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
-                                max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                                parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
-                                verbose=False):
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
+                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
+                            verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
@@ -80,8 +80,7 @@ class SKAAPI:
                 exec ('tp.%s = %g * %s' % (parameter, param_value, unit_string))
 
             if verbose:
-                param_val_string = eval('tp.%s' % parameter)
-                print ">> Evaluating %s for %s = %s | %s" % (expression, parameter, param_val_string, str(param_value))
+                print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
             Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
@@ -90,6 +89,85 @@ class SKAAPI:
 
         print 'done with parameter sweep!'
         return (param_values, results)
+
+    @staticmethod
+    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False,
+                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                            parameters=None, params_ranges=None, number_steps=2, unit_strings=None,
+                            verbose=False):
+        """
+        Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
+        linearly in a specified range in a number of steps
+
+        @param telescope:
+        @param mode:
+        @param band:
+        @param hpso:
+        @param bldta:
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param expression:
+        @param parameters:
+        @param params_ranges:
+        @param number_steps:
+        @param unit_strings:
+        @param verbose:
+        @return:
+        """
+        assert (parameters is not None) and (len(parameters) == 2)
+        assert (params_ranges is not None) and (len(params_ranges) == 2)
+        for prange in params_ranges:
+            assert len(prange) == 2
+            assert prange[1] > prange[0]
+
+        print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D doman [%s, %s] x [%s, %s] in %d " \
+              "steps each,\nfor a total of %d data evaluation points" % \
+              (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
+               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
+
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, max_baseline,
+                                               nr_frequency_channels, verbose)
+
+        param1_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=number_steps + 1)
+        param2_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=number_steps + 1)
+        results = np.zeros((len(param1_values), len(param2_values)))  # Create an empty numpy matrix to hold results
+
+        # Nested 2D loop over all values for param1 and param2
+        for i in range(len(param1_values)):
+            param1_value = param1_values[i]
+            for j in range(len(param2_values)):
+                param2_value = param2_values[j]
+
+                tp = copy.deepcopy(telescope_params)
+
+                # In some cases parameters have SI units (like meters). We then need to multiply that in
+                if unit_strings[0] is None:
+                    exec ('tp.%s = %g' % (parameters[0], param1_value))
+                else:
+                    if verbose:
+                        print '\nSetting param tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0])
+                    exec ('tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0]))
+                if unit_strings[1] is None:
+                    exec ('tp.%s = %g' % (parameters[1], param2_value))
+                else:
+                    if verbose:
+                        print '\nSetting param tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1])
+                    exec ('tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1]))
+
+                if verbose:
+                    print ">> Evaluating %s for (%s, %s) = (%s, %s)" % (expression, parameters[0], parameters[1],
+                                                                        str(param1_value), str(param2_value))
+
+                Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+                (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                result_expression = eval('tp.%s' % expression)
+
+                # Note, the line below assumes that the result will not have any units, but is numerical.
+                # TODO: make this work for expressions that have units also.
+                results[i,j] = SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        print 'done with parameter sweep!'
+        return (param1_values, param2_values, results)
 
     @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet):
