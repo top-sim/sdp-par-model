@@ -83,6 +83,13 @@ class SKAAPI:
                 print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
             Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+            parameter_final_value = None
+            exec('parameter_final_value = tp.%s' % parameter)
+            if parameter_final_value != param_value:
+                raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                     'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                     % parameter)
+
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
             results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
@@ -144,15 +151,34 @@ class SKAAPI:
                 if unit_strings[0] is None:
                     exec ('tp.%s = %g' % (parameters[0], param1_value))
                 else:
-                    if verbose:
-                        print '\nSetting param tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0])
                     exec ('tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0]))
                 if unit_strings[1] is None:
                     exec ('tp.%s = %g' % (parameters[1], param2_value))
                 else:
-                    if verbose:
-                        print '\nSetting param tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1])
                     exec ('tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1]))
+
+                # Look at value directly after assignment
+                param1_value = eval('tp.%s' % parameters[0])
+                param2_value = eval('tp.%s' % parameters[1])
+
+                if verbose:
+                    print '\nSet param tp.%s = %s' % (parameters[0], str(param1_value))
+                    print '\nSet param tp.%s = %s' % (parameters[1], str(param2_value))
+
+                parameter1_final_value = None
+                parameter2_final_value = None
+                exec('parameter1_final_value = tp.%s' % parameters[0])
+                exec('parameter2_final_value = tp.%s' % parameters[1])
+                if (parameter1_final_value != param1_value):
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[0])
+                if (parameter2_final_value != param2_value):
+                    print parameter2_final_value
+                    print param2_value
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[1])
 
                 if verbose:
                     print ">> Evaluating %s for (%s, %s) = (%s, %s)" % (expression, parameters[0], parameters[1],
