@@ -85,7 +85,7 @@ class Implementation:
             p.Nf_max = nr_frequency_channels
 
         f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
-        print "Using maximum baseline of", p.Bmax
+        #print "Using maximum baseline of", p.Bmax
         return telescope_params
 
     @staticmethod

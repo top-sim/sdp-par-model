@@ -54,6 +54,7 @@ class Formulae:
         
 
         o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV
+        o.Nf_no_smear_predict_full_resolution = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV, at max baseline
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV
 
         o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
@@ -127,6 +128,8 @@ class Formulae:
 # The following workaround is (still) needed. Note: gridding done at maximum of either Nf_out or Nf_no_smear.
         o.Nf_vis_backward=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_backward)))+(o.Nf_no_smear_backward*sign(floor(o.Nf_no_smear_backward/o.Nf_out)))
         o.Nf_vis_predict=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict)))+(o.Nf_no_smear_predict*sign(floor(o.Nf_no_smear_predict/o.Nf_out)))
+        o.Nf_vis_full_resolution=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict_full_resolution)))+(o.Nf_no_smear_predict_full_resolution*sign(floor(o.Nf_no_smear_predict_full_resolution/o.Nf_out)))
+        o.Nf_vis_predict=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict_full_resolution)))+(o.Nf_no_smear_predict_full_resolution*sign(floor(o.Nf_no_smear_predict_full_resolution/o.Nf_out)))
 
 # ===============================================================================================
 # PDR05 Sec 12.8
@@ -135,8 +138,9 @@ class Formulae:
 #
 # ===============================================================================================
 
-        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) * u.s 	# Eq. 31
-        o.Nvis_predict = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_predict/(2.*o.Tdump_predict) * u.s 		# Eq. 31
+        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) * u.s 	# Eq. 31 Visibility rate for backward step
+        o.Nvis_predict = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_predict/(2.*o.Tdump_predict) * u.s 		# Eq. 31 Visibility rate for predict step
+        
         Rflop_common_factor = o.Nmajor * o.Nbeam * o.Npp # no factor 2 because forward & backward steps are both in Rflop numbers
         # Gridding:
         o.Rgrid_backward = 8.*o.Nmm*o.Nvis_backward*(o.Ngw**2+o.Naa**2)	# Eq 32
@@ -147,7 +151,7 @@ class Formulae:
 		# Do FFT:
         o.Rfft_backward = o.binfrac * o.Nfacet**2 * 5. * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap 	# Eq. 33
         o.Rfft_predict = o.binfrac * 5. * (o.Npix_linear*o.Nfacet)**2 * log((o.Npix_linear*o.Nfacet),2) / o.Tsnap 	# Eq. 33
-        o.Rfft = ( o.Rfft_backward * o.Nf_out ) + ( o.Rfft_predict*o.Nf_no_smear_predict )
+        o.Rfft = ( o.Rfft_backward * o.Nf_out ) + ( o.Rfft_predict*o.Nf_vis_predict )
         o.Rflop_fft  = Rflop_common_factor * o.Rfft
 		# Do re-projection for snapshots:
         if imaging_mode == ImagingModes.Continuum:
@@ -160,7 +164,7 @@ class Formulae:
         else:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
-        o.Rflop_proj = Rflop_common_factor * o.Nf_out * o.Rrp # should this be Nf_vis_predict rather than Nf_out
+        o.Rflop_proj = Rflop_common_factor * o.Nf_vis_full_resolution * o.Rrp # should this be Nf_vis_predict rather than Nf_out
         
 		# Make GCF:
         o.Rccf_backward = o.Nf_vis_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion * o.Qfcv) 	# Eq. 35
