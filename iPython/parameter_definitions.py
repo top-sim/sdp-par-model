@@ -136,12 +136,13 @@ class ParameterDefinitions:
         o.Npp = 4
         o.Nw = 2  # Bytes per value
         o.Qbw = 1.0
-        o.Qfcv = 10.0
+        o.Qfcv = 1.0 #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
         o.Qw = 1.0
-        o.Tion = 60.0
+        o.Tion = 10.0 #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
         o.amp_f_max = 1.01  # Added by Rosie Bolton
+        o.minimum_channels = 500    #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):

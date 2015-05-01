@@ -53,8 +53,7 @@ class Formulae:
 # ===============================================================================================
         
 
-        o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV
-        o.Nf_no_smear_predict_full_resolution = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV, at max baseline
+        o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV, at max baseline
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV
 
         o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
@@ -65,7 +64,7 @@ class Formulae:
                 o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
         else:
             o.Tdump_skipper = o.Tdump_scaled
-        o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s)
+        o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s, o.Tion * u.s)
         o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s)
         if verbose:
 			print "Channelization Characteristics:"
@@ -128,8 +127,7 @@ class Formulae:
 # The following workaround is (still) needed. Note: gridding done at maximum of either Nf_out or Nf_no_smear.
         o.Nf_vis_backward=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_backward)))+(o.Nf_no_smear_backward*sign(floor(o.Nf_no_smear_backward/o.Nf_out)))
         o.Nf_vis_predict=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict)))+(o.Nf_no_smear_predict*sign(floor(o.Nf_no_smear_predict/o.Nf_out)))
-        o.Nf_vis_full_resolution=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict_full_resolution)))+(o.Nf_no_smear_predict_full_resolution*sign(floor(o.Nf_no_smear_predict_full_resolution/o.Nf_out)))
-        o.Nf_vis_predict=(o.Nf_out*sign(floor(o.Nf_out/o.Nf_no_smear_predict_full_resolution)))+(o.Nf_no_smear_predict_full_resolution*sign(floor(o.Nf_no_smear_predict_full_resolution/o.Nf_out)))
+
 
 # ===============================================================================================
 # PDR05 Sec 12.8
@@ -149,32 +147,47 @@ class Formulae:
         o.Rflop_grid = Rflop_common_factor * o.Rgrid
             
 		# Do FFT:
+        if imaging_mode == ImagingModes.Continuum:
+            o.Nf_FFT_backward = o.minimum_channels
+        elif imaging_mode == ImagingModes.Spectral:
+            o.Nf_out = o.Nf_max
+            o.Nf_FFT_backward = o.Nf_max
+        elif imaging_mode == ImagingModes.SlowTrans:
+            o.Nf_FFT_backward = o.minimum_channels
+        else:
+            raise Exception("Unknown Imaging Mode %s" % imaging_mode)
+
+        o.Nf_FFT_predict=o.Nf_vis_predict
         o.Rfft_backward = o.binfrac * o.Nfacet**2 * 5. * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap 	# Eq. 33
         o.Rfft_predict = o.binfrac * 5. * (o.Npix_linear*o.Nfacet)**2 * log((o.Npix_linear*o.Nfacet),2) / o.Tsnap 	# Eq. 33
-        o.Rfft = ( o.Rfft_backward * o.Nf_out ) + ( o.Rfft_predict*o.Nf_vis_predict )
-        o.Rflop_fft  = Rflop_common_factor * o.Rfft
+        o.Rfft_intermediate_cycles = ( o.Rfft_backward * o.Nf_FFT_backward) + ( o.Rfft_predict*o.Nf_vis_predict )
+        #the backward step was previosuly set to Nf_out, which could be too small. Must Fft at least enough grids to maintain distributability.
+        o.Rfft_final_cycle = ( o.Rfft_backward * o.Nf_out) + ( o.Rfft_predict*o.Nf_vis_predict )#final major cycle, create final data products
+        o.Rflop_fft  = o.Nmajor * o.Nbeam * o.Npp * ((o.Nmajor-1)* o.Rfft_intermediate_cycles + o.Rfft_final_cycle) #do nmajor-1 cycles before doing the final major cycle.
+
+
 		# Do re-projection for snapshots:
         if imaging_mode == ImagingModes.Continuum:
             o.Rrp = o.Nfacet**2 * 50. * o.Npix_linear**2 / o.Tsnap # Eq. 34
         elif imaging_mode == ImagingModes.Spectral:
-			o.Nf_out = o.Nf_max
 			o.Rrp = o.Nfacet**2 * 50. * o.Npix_linear**2 / o.Tsnap # Eq. 34
         elif imaging_mode == ImagingModes.SlowTrans:
             o.Rrp = 0*u.s / u.s  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
-        o.Rflop_proj = Rflop_common_factor * o.Nf_vis_full_resolution * o.Rrp # should this be Nf_vis_predict rather than Nf_out
+        o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor-1) * o.Nf_FFT_backward + o.Nf_out) # Reproj intermetiate major cycle FFTs (Nmaj -1) times, then do the final ones for the last cycle at the full output spectral resolution.
         
-		# Make GCF:
-        o.Rccf_backward = o.Nf_vis_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion * o.Qfcv) 	# Eq. 35
-        o.Rccf_predict = o.Nf_vis_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion * o.Qfcv) 	# Eq. 35
+		# Make GCF
+        o.Nf_gcf_backward=o.Nf_vis_backward
+        o.Nf_gcf_predict=o.Nf_vis_predict
+        o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion *o.Qfcv) 	# Eq. 35
+        o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion * o.Qfcv) 	# Eq. 35
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
         
 		# Add in some phase rotation for the faceting:
-        o.Rphrot = 2. * o.Nvis_predict * o.Nfacet**2 * 25. * sign(o.Nfacet-1) 	# Eq. 29 - but extra factor of 2?
-        o.Rflop_phrot = Rflop_common_factor * o.Rphrot
+        o.Rflop_phrot =o .Nmajor * o.Nbeam * o.Npp * (o.Nvis_predict + o.Nvis_backward) * o.Nfacet**2 * 25. * sign(o.Nfacet-1) 	# Eq. 29
 
 		# Calculate revised Eq. 30:
         o.Rflop = o.Rflop_phrot + o.Rflop_proj + o.Rflop_fft + o.Rflop_conv + o.Rflop_grid  # Overall flop rate
@@ -186,7 +199,7 @@ class Formulae:
 
         o.Rio = o.Mvis * (o.Nmajor+1) * o.Nbeam * o.Npp * o.Nvis_predict * o.Nfacet**2 #added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
 
-        print "Bmax bin, Bmax", o.Bmax_bin, o.Bmax
+
         o.Npix_linear = o.Npix_linear * o.binfrac
             #        if o.Bmax_bin/o.Bmax != 1:
 #o.Npix_linear = 0. #only output non-zero value of Npix_linear once, not for each baseline bin
