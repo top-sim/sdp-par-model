@@ -270,7 +270,6 @@ class IPythonAPI(api):
                 telescope = telescopes[i]
                 result_values = np.zeros(nr_result_expressions)
 
-
                 if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                     tp = tels_params[i][mode]
                     # The result expressions need to be defined here as they depend on tp (read above)
@@ -283,8 +282,6 @@ class IPythonAPI(api):
                     result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
 
                 elif mode == ImagingModes.CSS:
-                    if verbose:
-                        print 'SUMMING!@@@'
                     for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                         tp = tels_params[i][submode]
                         # The result expressions need to be defined here as they depend on tp (read above)
@@ -311,7 +308,7 @@ class IPythonAPI(api):
             IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
                                           tels_result_strings[1], result_units)
 
-            labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
+            labels = ('(de)Gridding', '(i)FFT', '(re)Projection', 'Convolution', 'Phase rot.')
             bldta_text = {True : ' (with BLDTA)', False : ' (no BLDTA)'}
 
             telescope_labels = ('%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA]),
@@ -441,7 +438,7 @@ class IPythonAPI(api):
                         result_value_string.append('%d' % result_values[i])
 
                 IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-                labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
+                labels = ('(de)Gridding', '(i)FFT', '(re)Projection', 'Convolution', 'Phase rot.')
                 colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
                 values = result_values[-5:]  # the last five values
                 IPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)

@@ -46,15 +46,22 @@ class SKAAPI:
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
 
-        :param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
-        :param telescope_params: ParameterContainer (class) containing the initial set of telescope parameters
-        :param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
-        :param param_val_min: minimum value for the parameter's value sweep
-        :param param_val_max: maximum value for the parameter's value sweep
-        :param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
-        :param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
+        @param telescope:
+        @param mode:
+        @param band:
+        @param hpso:
+        @param bldta:
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
+        @param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
+        @param param_val_min: minimum value for the parameter's value sweep
+        @param param_val_max: maximum value for the parameter's value sweep
+        @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+        @param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
                             otherwise, if there are no units, the unit-string must be set to "None"
-        :return:
+        @param verbose:
+        @return: @raise AssertionError:
         """
         assert param_val_max > param_val_min
 
@@ -84,7 +91,11 @@ class SKAAPI:
 
             Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
             parameter_final_value = None
-            exec('parameter_final_value = tp.%s' % parameter)
+            if unit_string is None:
+                exec('parameter_final_value = tp.%s' % parameter)
+            else:
+                exec('parameter_final_value = tp.%s / %s' % (parameter, unit_string))
+
             if parameter_final_value != param_value:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                      'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
@@ -104,7 +115,8 @@ class SKAAPI:
                             verbose=False):
         """
         Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
-        linearly in a specified range in a number of steps
+        linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
+        a 2D parameter space, returning a matrix of values.
 
         @param telescope:
         @param mode:
@@ -167,13 +179,21 @@ class SKAAPI:
 
                 parameter1_final_value = None
                 parameter2_final_value = None
-                exec('parameter1_final_value = tp.%s' % parameters[0])
-                exec('parameter2_final_value = tp.%s' % parameters[1])
-                if (parameter1_final_value != param1_value):
+
+                if unit_strings[0] is None:
+                    exec('parameter1_final_value = tp.%s' % parameters[0])
+                else:
+                    exec('parameter1_final_value = tp.%s / %s' % (parameters[0], unit_strings[0]))
+                if unit_strings[1] is None:
+                    exec('parameter2_final_value = tp.%s' % parameters[1])
+                else:
+                    exec('parameter2_final_value = tp.%s / %s' % (parameters[1], unit_strings[1]))
+
+                if parameter1_final_value != param1_value:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[0])
-                if (parameter2_final_value != param2_value):
+                if parameter2_final_value != param2_value:
                     print parameter2_final_value
                     print param2_value
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
