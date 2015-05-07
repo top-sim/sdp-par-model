@@ -80,9 +80,9 @@ class Implementation:
             raise Exception("Either band or hpso must not be None")
 
         if max_baseline is not None:
-            p.Bmax = max_baseline * u.km
+            telescope_params.Bmax = max_baseline * u.km
         if nr_frequency_channels is not None:
-            p.Nf_max = nr_frequency_channels
+            telescope_params.Nf_max = nr_frequency_channels
 
         f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
         #print "Using maximum baseline of", p.Bmax
