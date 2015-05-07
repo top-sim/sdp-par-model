@@ -7,7 +7,7 @@ class Formulae:
     def __init__(self):
 		pass
     @staticmethod
-    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av, verbose=False):
+    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av, On_the_fly, verbose=False):
         """
                 Computes a host of important values from the originally supplied telescope parameters, using the parametric
 		equations. These equations are based on the PDR05 document
@@ -57,15 +57,16 @@ class Formulae:
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV
 
         o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
-        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
+        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax #get correlator output averaging time as scaled for max baseline.
 		
         if BL_dep_time_av:
-                o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
-                o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
+            o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
+            o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
+            o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s, o.Tion * u.s) # use whatever is smaller. Don't let any BLdep averaging be for longer than 1.2s or Tion.
+            o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s) #For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit (alongside freq coalesing) only for BLDep averaging case.
         else:
-            o.Tdump_skipper = o.Tdump_scaled
-        o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s, o.Tion * u.s)
-        o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s)
+            o.Tdump_predict = o.Tdump_scaled
+            o.Tdump_backward = o.Tdump_scaled
         if verbose:
 			print "Channelization Characteristics:"
 			print "-------------------------------"
@@ -97,9 +98,13 @@ class Formulae:
         o.DeltaW_Earth = o.Bmax_bin**2/(o.R_Earth*o.wl*8.) # Eq. 19
         o.DeltaW_SShot = o.Bmax_bin*o.Tsnap*o.Omega_E/(o.wl*2.) # Eq. 26 w-deviation for snapshot **PDR05 uses lambda_min, not mean
         o.DeltaW_max = o.Qw * Max(o.DeltaW_SShot, o.DeltaW_Earth)
-        # Q = (0,1) allows for not maximum dev. corrected
+        # Qw = (0,1) allows for not maximum dev. corrected
         o.Ngw = 2.*o.Theta_fov * sqrt((o.DeltaW_max**2 * o.Theta_fov**2/4.0)+(o.DeltaW_max**1.5 * o.Theta_fov/(o.epsilon_w*pi*2.))) # Eq. 25 w-kernel support size **Note difference in cellsize assumption**
-        o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2)
+        if On_the_fly==1:
+            o.Ncvff = sqrt(o.Naa**2+o.Ngw**2) #Test: what happens if we calculate convolution functions on the fly for each visibility? Make smaller kernels, no reuse.
+        else:
+            o.Ncvff = o.Qgcf*sqrt(o.Naa**2+o.Ngw**2)
+    
         # Eq. 23 combined kernel support size
 
         if verbose:
@@ -116,10 +121,12 @@ class Formulae:
             print "-------------------------------"
             print ""
             print "Support of w-kernel: ",o.Ngw," pixels"
-            print "Support of combined GCF: ",o.Ncvff," pixels"
+            print "Support of combined GCF: ",o.Ncvff," sub-pixels"
             print ""
             print "------------------------------"
             print ""
+        if On_the_fly ==1:
+                print "WARNING! Experimental!: On the fly kernels in use. Set o.On_the_fly =0 to disable"
 
 # ===============================================================================================
         
@@ -136,7 +143,7 @@ class Formulae:
 #
 # ===============================================================================================
 
-        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) * u.s 	# Eq. 31 Visibility rate for backward step
+        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) * u.s 	# Eq. 31 Visibility rate for backward step, allow coalescing in time and freq prior to gridding
         o.Nvis_predict = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_predict/(2.*o.Tdump_predict) * u.s 		# Eq. 31 Visibility rate for predict step
         
         Rflop_common_factor = o.Nmajor * o.Nbeam * o.Npp # no factor 2 because forward & backward steps are both in Rflop numbers
@@ -148,7 +155,7 @@ class Formulae:
             
 		# Do FFT:
         if imaging_mode == ImagingModes.Continuum:
-            o.Nf_FFT_backward = o.minimum_channels
+            o.Nf_FFT_backward = o.minimum_channels #make only enough FFT grids to extract necessary spectral info and retain distributability.
         elif imaging_mode == ImagingModes.Spectral:
             o.Nf_out = o.Nf_max
             o.Nf_FFT_backward = o.Nf_max
@@ -158,11 +165,10 @@ class Formulae:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
         o.Nf_FFT_predict=o.Nf_vis_predict
-        o.Rfft_backward = o.binfrac * o.Nfacet**2 * 5. * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap 	# Eq. 33
-        o.Rfft_predict = o.binfrac * 5. * (o.Npix_linear*o.Nfacet)**2 * log((o.Npix_linear*o.Nfacet),2) / o.Tsnap 	# Eq. 33
-        o.Rfft_intermediate_cycles = ( o.Rfft_backward * o.Nf_FFT_backward) + ( o.Rfft_predict*o.Nf_vis_predict )
-        #the backward step was previosuly set to Nf_out, which could be too small. Must Fft at least enough grids to maintain distributability.
-        o.Rfft_final_cycle = ( o.Rfft_backward * o.Nf_out) + ( o.Rfft_predict*o.Nf_vis_predict )#final major cycle, create final data products
+        o.Rfft_backward = o.binfrac * o.Nfacet**2 * 5. * o.Npix_linear**2 * log(o.Npix_linear,2) / o.Tsnap 	# Eq. 33, per output grid (i.e. frequency)
+        o.Rfft_predict = o.binfrac * 5. * (o.Npix_linear*o.Nfacet)**2 * log((o.Npix_linear*o.Nfacet),2) / o.Tsnap 	# Eq. 33 per predicted grid (i.e. frequency)
+        o.Rfft_intermediate_cycles = ( o.Rfft_backward * o.Nf_FFT_backward) + ( o.Rfft_predict*o.Nf_FFT_predict )
+        o.Rfft_final_cycle = ( o.Rfft_backward * o.Nf_out) + ( o.Rfft_predict*o.Nf_FFT_predict )#final major cycle, create final data products (at Nf_out channels)
         o.Rflop_fft  = o.Nmajor * o.Nbeam * o.Npp * ((o.Nmajor-1)* o.Rfft_intermediate_cycles + o.Rfft_final_cycle) #do nmajor-1 cycles before doing the final major cycle.
 
 
@@ -179,10 +185,18 @@ class Formulae:
         o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor-1) * o.Nf_FFT_backward + o.Nf_out) # Reproj intermetiate major cycle FFTs (Nmaj -1) times, then do the final ones for the last cycle at the full output spectral resolution.
         
 		# Make GCF
-        o.Nf_gcf_backward=o.Nf_vis_backward
-        o.Nf_gcf_predict=o.Nf_vis_predict
-        o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion *o.Qfcv) 	# Eq. 35
-        o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion * o.Qfcv) 	# Eq. 35
+        o.Nf_gcf_backward_nosmear=log(o.wl_max/o.wl_min) / log((3.*o.wl*o.Npix_linear/(o.Ncvff*o.Qkernel*2.*o.Bmax_bin * o.Theta_fov*o.Qbw))+1.) # allow uv positional errors up to 1/Qgcf*1/Qkernel of a cell from frequency smearing. Using faceted FoV
+        o.Nf_gcf_predict_nosmear=log(o.wl_max/o.wl_min) / log((3.*o.wl*o.Npix_linear/(o.Ncvff*o.Qkernel*2.*o.Bmax * o.Theta_fov*o.Nfacet*o.Qbw))+1.)  # allow uv positional errors up to 1/Qgcf*1/Qkernel of a cell from frequency smearing, assuming max baseline, full FoV
+        if On_the_fly ==1:
+            o.Nf_gcf_backward=o.Nf_vis_backward
+            o.Nf_gcf_predict=o.Nf_vis_predict
+
+        else:
+            o.Nf_gcf_backward=Min(o.Nf_max, o.Nf_gcf_backward_nosmear)
+            o.Nf_gcf_predict=Min(o.Nf_max, o.Nf_gcf_predict_nosmear)
+
+        o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion) 	# Eq. 35
+        o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion) 	# Eq. 35
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
         

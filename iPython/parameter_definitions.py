@@ -138,11 +138,13 @@ class ParameterDefinitions:
         o.Qbw = 1.0
         o.Qfcv = 1.0 #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
+        o.Qkernel = 2.0 #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
         o.Qw = 1.0
         o.Tion = 10.0 #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
         o.amp_f_max = 1.01  # Added by Rosie Bolton
         o.minimum_channels = 500    #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
+    
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):
