@@ -10,6 +10,8 @@ from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
@@ -112,11 +114,54 @@ class IPythonAPI(api):
             C = pylab.contour(xx, yy, z_values, levels = contours, colors=contour_colour,
                               linewidths=[2], linestyles='dashed')
             pylab.clabel(C, inline=1, fontsize=10)
+            plt.clabel(C, inline=1, fontsize=10)
 
         C.ax.set_xlabel(xlabel)
         C.ax.set_ylabel(ylabel)
         C.ax.set_title(title, fontsize=16)
         pylab.show()
+
+    @staticmethod
+    def plot_3D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
+        """
+        Plots a series of (x,y) values using a line and data-point visualization.
+        @param title: The plot's title
+        @param x_values: a 1D numpy array
+        @param y_values: a 1D numpy array
+        @param z_values: a 2D numpy array, indexed as (x,y)
+        @param contours: optional array of values at which contours should be drawn
+        @return:
+        """
+        colourmap = cm.coolwarm  # options include: 'afmhot', 'coolwarm'
+        contour_colour = [(1., 0., 0., 1.)]  # red
+
+        pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
+        assert len(x_values) == len(y_values)
+        #plt.title('%s\n' % title)
+        #plt.show()
+
+        sizex = len(x_values)
+        sizey = len(y_values)
+        assert np.shape(z_values)[0] == sizex
+        assert np.shape(z_values)[1] == sizey
+        xx = np.tile(x_values, (sizey, 1))
+        yy = np.transpose(np.tile(y_values, (sizex, 1)))
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(xx, yy, z_values, rstride=3, cstride=3, cmap=colourmap, linewidth=0.5, alpha=0.5, antialiased=False)
+
+        if contours is not None:
+            cset = ax.contour(xx, yy, z_values, contours, zdir='z', linewidths = (2.0), colors=contour_colour)
+            plt.clabel(cset, inline=1, fontsize=10)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_zlabel(zlabel)
+
+        ax.set_title(title, fontsize=16)
+
+        plt.show()
 
     @staticmethod
     def plot_pie(title, labels, values, colours=None):

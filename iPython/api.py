@@ -179,15 +179,8 @@ class SKAAPI:
 
                 parameter1_final_value = None
                 parameter2_final_value = None
-
-                if unit_strings[0] is None:
-                    exec('parameter1_final_value = tp.%s' % parameters[0])
-                else:
-                    exec('parameter1_final_value = tp.%s / %s' % (parameters[0], unit_strings[0]))
-                if unit_strings[1] is None:
-                    exec('parameter2_final_value = tp.%s' % parameters[1])
-                else:
-                    exec('parameter2_final_value = tp.%s / %s' % (parameters[1], unit_strings[1]))
+                exec('parameter1_final_value = tp.%s' % parameters[0])
+                exec('parameter2_final_value = tp.%s' % parameters[1])
 
                 if parameter1_final_value != param1_value:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
