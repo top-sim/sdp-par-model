@@ -38,23 +38,30 @@ class SKAAPI:
         return result
 
     @staticmethod
-    def eval_exp_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
-                                max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                                parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
-                                verbose=False):
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
+                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
+                            verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
 
-        :param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
-        :param telescope_params: ParameterContainer (class) containing the initial set of telescope parameters
-        :param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
-        :param param_val_min: minimum value for the parameter's value sweep
-        :param param_val_max: maximum value for the parameter's value sweep
-        :param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
-        :param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
+        @param telescope:
+        @param mode:
+        @param band:
+        @param hpso:
+        @param bldta:
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
+        @param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
+        @param param_val_min: minimum value for the parameter's value sweep
+        @param param_val_max: maximum value for the parameter's value sweep
+        @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+        @param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
                             otherwise, if there are no units, the unit-string must be set to "None"
-        :return:
+        @param verbose:
+        @return: @raise AssertionError:
         """
         assert param_val_max > param_val_min
 
@@ -80,16 +87,129 @@ class SKAAPI:
                 exec ('tp.%s = %g * %s' % (parameter, param_value, unit_string))
 
             if verbose:
-                param_val_string = eval('tp.%s' % parameter)
-                print ">> Evaluating %s for %s = %s | %s" % (expression, parameter, param_val_string, str(param_value))
+                print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
             Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+            parameter_final_value = None
+            if unit_string is None:
+                exec('parameter_final_value = tp.%s' % parameter)
+            else:
+                exec('parameter_final_value = tp.%s / %s' % (parameter, unit_string))
+
+            if parameter_final_value != param_value:
+                raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                     'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                     % parameter)
+
+            percentage_done = i * 100.0 / len(param_values)
+            print "> %.1f%% done: Evaluating %s for %s = %s" % (percentage_done, expression,
+                                                                parameter, str(param_value))
+
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
             results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print 'done with parameter sweep!'
         return (param_values, results)
+
+    @staticmethod
+    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False,
+                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                            parameters=None, params_ranges=None, number_steps=2, unit_strings=None,
+                            verbose=False):
+        """
+        Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
+        linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
+        a 2D parameter space, returning a matrix of values.
+
+        @param telescope:
+        @param mode:
+        @param band:
+        @param hpso:
+        @param bldta:
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param expression:
+        @param parameters:
+        @param params_ranges:
+        @param number_steps:
+        @param unit_strings:
+        @param verbose:
+        @return:
+        """
+        assert (parameters is not None) and (len(parameters) == 2)
+        assert (params_ranges is not None) and (len(params_ranges) == 2)
+        for prange in params_ranges:
+            assert len(prange) == 2
+            assert prange[1] > prange[0]
+
+        print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
+              "steps each,\nfor a total of %d data evaluation points" % \
+              (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
+               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
+
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, max_baseline,
+                                               nr_frequency_channels, verbose)
+
+        param1_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=number_steps + 1)
+        param2_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=number_steps + 1)
+        results = np.zeros((len(param1_values), len(param2_values)))  # Create an empty numpy matrix to hold results
+
+        nr_evaluations = len(param1_values) * len(param2_values)
+
+        # Nested 2D loop over all values for param1 and param2
+        for i in range(len(param1_values)):
+            param1_value = param1_values[i]
+            for j in range(len(param2_values)):
+                param2_value = param2_values[j]
+
+                tp = copy.deepcopy(telescope_params)
+
+                # In some cases parameters have SI units (like meters). We then need to multiply that in
+                if unit_strings[0] is None:
+                    exec ('tp.%s = %g' % (parameters[0], param1_value))
+                else:
+                    exec ('tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0]))
+                if unit_strings[1] is None:
+                    exec ('tp.%s = %g' % (parameters[1], param2_value))
+                else:
+                    exec ('tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1]))
+
+                # Look at value directly after assignment
+                param1_value = eval('tp.%s' % parameters[0])
+                param2_value = eval('tp.%s' % parameters[1])
+
+                parameter1_final_value = None
+                parameter2_final_value = None
+                exec('parameter1_final_value = tp.%s' % parameters[0])
+                exec('parameter2_final_value = tp.%s' % parameters[1])
+
+                if parameter1_final_value != param1_value:
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[0])
+                if parameter2_final_value != param2_value:
+                    print parameter2_final_value
+                    print param2_value
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[1])
+
+                percentage_done = (i*len(param2_values) + j) * 100.0 / nr_evaluations
+                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
+                                                                                 parameters[0], parameters[1],
+                                                                                 str(param1_value), str(param2_value))
+
+                Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+                (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                result_expression = eval('tp.%s' % expression)
+
+                # Note, the line below assumes that the result will not have any units, but is numerical.
+                # TODO: make this work for expressions that have units also.
+                results[i,j] = SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        print 'done with parameter sweep!'
+        return (param1_values, param2_values, results)
 
     @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet):
