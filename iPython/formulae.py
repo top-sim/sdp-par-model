@@ -54,16 +54,16 @@ class Formulae:
         
 
         o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV, at max baseline
-        o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV
+        o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV. Ensures correct location of visibility on grid.
 
         o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
+        #print "Epsilon approx :", o.epsilon_f_approx
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax #get correlator output averaging time as scaled for max baseline.
-		
+        o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
+        o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
         if BL_dep_time_av:
-            o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
-            o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
             o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s, o.Tion * u.s) # use whatever is smaller. Don't let any BLdep averaging be for longer than 1.2s or Tion.
-            o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s) #For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit (alongside freq coalesing) only for BLDep averaging case.
+            o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s) #For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit only for BLDep averaging case.
         else:
             o.Tdump_predict = o.Tdump_scaled
             o.Tdump_backward = o.Tdump_scaled
@@ -126,7 +126,10 @@ class Formulae:
             print "------------------------------"
             print ""
         if On_the_fly ==1:
-                print "WARNING! Experimental!: On the fly kernels in use. Set o.On_the_fly =0 to disable"
+                print "WARNING! Experimental!: On the fly kernels in use. (Set On_the_fly =0 to disable)"
+                print "On the fly kernels is a new option forcing convolution kernels to be recalculated"
+                print "for each and every viibility point, but only at the actual size needed  - i.e. not"
+                print "oversampled by a factor of Qgcf (8)."
 
 # ===============================================================================================
         
@@ -185,18 +188,29 @@ class Formulae:
         o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor-1) * o.Nf_FFT_backward + o.Nf_out) # Reproj intermetiate major cycle FFTs (Nmaj -1) times, then do the final ones for the last cycle at the full output spectral resolution.
         
 		# Make GCF
-        o.Nf_gcf_backward_nosmear=log(o.wl_max/o.wl_min) / log((3.*o.wl*o.Npix_linear/(o.Ncvff*o.Qkernel*2.*o.Bmax_bin * o.Theta_fov*o.Qbw))+1.) # allow uv positional errors up to 1/Qgcf*1/Qkernel of a cell from frequency smearing. Using faceted FoV
-        o.Nf_gcf_predict_nosmear=log(o.wl_max/o.wl_min) / log((3.*o.wl*o.Npix_linear/(o.Ncvff*o.Qkernel*2.*o.Bmax * o.Theta_fov*o.Nfacet*o.Qbw))+1.)  # allow uv positional errors up to 1/Qgcf*1/Qkernel of a cell from frequency smearing, assuming max baseline, full FoV
+        o.dfonF=o.grid_cell_error/o.Qkernel/(o.Ncvff/o.Qgcf)
+        o.Nf_gcf_backward_nosmear=log(o.wl_max/o.wl_min) / log(o.dfonF+1.) # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
+        o.Nf_gcf_predict_nosmear=log(o.wl_max/o.wl_min) / log(o.dfonF+1.)  # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
         if On_the_fly ==1:
             o.Nf_gcf_backward=o.Nf_vis_backward
             o.Nf_gcf_predict=o.Nf_vis_predict
+            o.Tkernel_backward=o.Tdump_backward/u.s
+            o.Tkernel_predict=o.Tdump_predict/u.s
+
 
         else:
-            o.Nf_gcf_backward=Min(o.Nf_max, o.Nf_gcf_backward_nosmear)
-            o.Nf_gcf_predict=Min(o.Nf_max, o.Nf_gcf_predict_nosmear)
+            o.Nf_gcf_backward=Max(o.Nf_gcf_backward_nosmear, o.minimum_channels) #maintain distributability, need at least minimum_channels (500) kernels.
+            o.Nf_gcf_predict=Max(o.Nf_gcf_predict_nosmear, o.minimum_channels) #maintain distributability, need at least minimum_channels (500) kernels.
 
-        o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion) 	# Eq. 35
-        o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tion) 	# Eq. 35
+            o.Tkernel_backward=o.Tion
+            o.Tkernel_predict=o.Tion
+
+        if verbose:
+            print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_FFT_backward
+            print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_FFT_predict
+
+        o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tkernel_backward) 	# Eq. 35
+        o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tkernel_predict) 	# Eq. 35
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
         

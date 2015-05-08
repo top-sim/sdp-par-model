@@ -293,7 +293,7 @@ class IPythonAPI(api):
             IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, otf=0, verbose=False):
+    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, On_the_fly=0, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
         @param Telescope:
@@ -326,7 +326,7 @@ class IPythonAPI(api):
                 display(HTML(s))
             else:
                 tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
-                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, On_the_fly=otf,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, On_the_fly=On_the_fly,
                                          verbose=verbose)  # Calculate the telescope parameters
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
