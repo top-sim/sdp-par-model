@@ -101,6 +101,10 @@ class SKAAPI:
                                      'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                      % parameter)
 
+            percentage_done = i * 100.0 / len(param_values)
+            print "> %.1f%% done: Evaluating %s for %s = %s" % (percentage_done, expression,
+                                                                parameter, str(param_value))
+
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
             results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
@@ -139,7 +143,7 @@ class SKAAPI:
             assert len(prange) == 2
             assert prange[1] > prange[0]
 
-        print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D doman [%s, %s] x [%s, %s] in %d " \
+        print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
               "steps each,\nfor a total of %d data evaluation points" % \
               (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
                str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
@@ -150,6 +154,8 @@ class SKAAPI:
         param1_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=number_steps + 1)
         param2_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=number_steps + 1)
         results = np.zeros((len(param1_values), len(param2_values)))  # Create an empty numpy matrix to hold results
+
+        nr_evaluations = len(param1_values) * len(param2_values)
 
         # Nested 2D loop over all values for param1 and param2
         for i in range(len(param1_values)):
@@ -173,10 +179,6 @@ class SKAAPI:
                 param1_value = eval('tp.%s' % parameters[0])
                 param2_value = eval('tp.%s' % parameters[1])
 
-                if verbose:
-                    print '\nSet param tp.%s = %s' % (parameters[0], str(param1_value))
-                    print '\nSet param tp.%s = %s' % (parameters[1], str(param2_value))
-
                 parameter1_final_value = None
                 parameter2_final_value = None
                 exec('parameter1_final_value = tp.%s' % parameters[0])
@@ -193,9 +195,10 @@ class SKAAPI:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                if verbose:
-                    print ">> Evaluating %s for (%s, %s) = (%s, %s)" % (expression, parameters[0], parameters[1],
-                                                                        str(param1_value), str(param2_value))
+                percentage_done = (i*len(param2_values) + j) * 100.0 / nr_evaluations
+                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
+                                                                                 parameters[0], parameters[1],
+                                                                                 str(param1_value), str(param2_value))
 
                 Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)

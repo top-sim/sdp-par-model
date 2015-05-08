@@ -68,7 +68,7 @@ class IPythonAPI(api):
         display(HTML(s))
 
     @staticmethod
-    def plot_line_datapoints(title, x_values, y_values):
+    def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title:
@@ -80,6 +80,8 @@ class IPythonAPI(api):
         assert len(x_values) == len(y_values)
         plt.plot(x_values, y_values, 'ro', x_values, y_values, 'b')
         plt.title('%s\n' % title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.show()
 
     @staticmethod
@@ -98,8 +100,6 @@ class IPythonAPI(api):
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
         assert len(x_values) == len(y_values)
-        #plt.title('%s\n' % title)
-        #plt.show()
 
         sizex = len(x_values)
         sizey = len(y_values)
@@ -113,7 +113,6 @@ class IPythonAPI(api):
         if contours is not None:
             C = pylab.contour(xx, yy, z_values, levels = contours, colors=contour_colour,
                               linewidths=[2], linestyles='dashed')
-            pylab.clabel(C, inline=1, fontsize=10)
             plt.clabel(C, inline=1, fontsize=10)
 
         C.ax.set_xlabel(xlabel)
@@ -137,8 +136,6 @@ class IPythonAPI(api):
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
         assert len(x_values) == len(y_values)
-        #plt.title('%s\n' % title)
-        #plt.show()
 
         sizex = len(x_values)
         sizey = len(y_values)
@@ -149,7 +146,9 @@ class IPythonAPI(api):
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        ax.plot_surface(xx, yy, z_values, rstride=3, cstride=3, cmap=colourmap, linewidth=0.5, alpha=0.5, antialiased=False)
+        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+                               antialiased=True, shade=True)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
 
         if contours is not None:
             cset = ax.contour(xx, yy, z_values, contours, zdir='z', linewidths = (2.0), colors=contour_colour)
@@ -158,9 +157,7 @@ class IPythonAPI(api):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_zlabel(zlabel)
-
         ax.set_title(title, fontsize=16)
-
         plt.show()
 
     @staticmethod
