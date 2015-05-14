@@ -10,6 +10,8 @@ from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
@@ -27,72 +29,147 @@ class IPythonAPI(api):
         pass
 
     @staticmethod
-    def show_table(header, titles, values, units):
+    def show_table(title, labels, values, units):
         """
-        Plots a table of values
-        @param header:
-        @param titles:
+        Plots a table of label-value pairs
+        @param title:
+        @param labels:
         @param values:
         @param units:
         @return:
         """
-        s = '<h3>%s:</h3><table>\n' % header
-        assert len(titles) == len(values)
-        assert len(titles) == len(units)
-        for i in range(len(titles)):
-            s += '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(titles[i], values[i], units[i])
+        s = '<h3>%s:</h3><table>\n' % title
+        assert len(labels) == len(values)
+        assert len(labels) == len(units)
+        for i in range(len(labels)):
+            s += '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(labels[i], values[i], units[i])
         s += '</table>'
         display(HTML(s))
 
     @staticmethod
-    def show_table_compare(header, titles, values_1, values_2, units):
+    def show_table_compare(title, labels, values_1, values_2, units):
         """
-        Plots a table that compares two sets of values with each other
-        @param header:
-        @param titles:
+        Plots a table that for a set of labels, compares each' value with the other
+        @param title:
+        @param labels:
         @param values_1:
         @param values_2:
         @param units:
         @return:
         """
-        s = '<h4>%s:</h4><table>\n' % header
-        assert len(titles) == len(values_1)
-        assert len(titles) == len(values_2)
-        assert len(titles) == len(units)
-        for i in range(len(titles)):
-            s += '<tr><td>{0}</td><td><font color="blue">{1}</font></td><td><font color="darkcyan">{2}</font>' \
-                 '</td><td>{3}</td></tr>\n'.format(titles[i], values_1[i], values_2[i], units[i])
+        s = '<h4>%s:</h4><table>\n' % title
+        assert len(labels) == len(values_1)
+        assert len(labels) == len(values_2)
+        assert len(labels) == len(units)
+        for i in range(len(labels)):
+            s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
+                 '</td><td>{3}</td></tr>\n'.format(labels[i], values_1[i], values_2[i], units[i])
         s += '</table>'
         display(HTML(s))
 
     @staticmethod
-    def plot_line_datapoints(header, xx, yy):
+    def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
         """
-        Plots a series of values (yy) against a series of x-values (xx) using a line and data-point visualization.
-        @param header:
-        @param xx:
-        @param yy:
+        Plots a series of (x,y) values using a line and data-point visualization.
+        @param title:
+        @param x_values:
+        @param y_values:
         @return:
         """
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-        assert len(xx) == len(yy)
-        plt.plot(xx, yy, 'bo', xx, yy, 'k')
-        plt.title('%s\n' % header)
+        assert len(x_values) == len(y_values)
+        plt.plot(x_values, y_values, 'ro', x_values, y_values, 'b')
+        plt.title('%s\n' % title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.show()
 
     @staticmethod
-    def plot_flops_pie(header, titles, values, colours=None):
+    def plot_2D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
         """
-        Plot FLOPS as a pie chart
-        @param header:
-        @param rflop_grid:
-        @param rflop_fft:
-        @param rflop_proj:
-        @param rflop_conv:
-        @param rflop_phrot:
+        Plots a series of (x,y) values using a line and data-point visualization.
+        @param title: The plot's title
+        @param x_values: a 1D numpy array
+        @param y_values: a 1D numpy array
+        @param z_values: a 2D numpy array, indexed as (x,y)
+        @param contours: optional array of values at which contours should be drawn
         @return:
         """
-        assert len(titles) == len(values)
+        colourmap = 'coolwarm'  # options include: 'afmhot', 'coolwarm'
+        contour_colour = [(1., 0., 0., 1.)]  # red
+
+        pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
+        assert len(x_values) == len(y_values)
+
+        sizex = len(x_values)
+        sizey = len(y_values)
+        assert np.shape(z_values)[0] == sizex
+        assert np.shape(z_values)[1] == sizey
+        xx = np.tile(x_values, (sizey, 1))
+        yy = np.transpose(np.tile(y_values, (sizex, 1)))
+
+        C = pylab.contourf(xx, yy, z_values, 15, alpha=.75, cmap=colourmap)
+        pylab.colorbar(shrink=.92)
+        if contours is not None:
+            C = pylab.contour(xx, yy, z_values, levels = contours, colors=contour_colour,
+                              linewidths=[2], linestyles='dashed')
+            plt.clabel(C, inline=1, fontsize=10)
+
+        C.ax.set_xlabel(xlabel)
+        C.ax.set_ylabel(ylabel)
+        C.ax.set_title(title, fontsize=16)
+        pylab.show()
+
+    @staticmethod
+    def plot_3D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
+        """
+        Plots a series of (x,y) values using a line and data-point visualization.
+        @param title: The plot's title
+        @param x_values: a 1D numpy array
+        @param y_values: a 1D numpy array
+        @param z_values: a 2D numpy array, indexed as (x,y)
+        @param contours: optional array of values at which contours should be drawn
+        @return:
+        """
+        colourmap = cm.coolwarm  # options include: 'afmhot', 'coolwarm'
+        contour_colour = [(1., 0., 0., 1.)]  # red
+
+        pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
+        assert len(x_values) == len(y_values)
+
+        sizex = len(x_values)
+        sizey = len(y_values)
+        assert np.shape(z_values)[0] == sizex
+        assert np.shape(z_values)[1] == sizey
+        xx = np.tile(x_values, (sizey, 1))
+        yy = np.transpose(np.tile(y_values, (sizex, 1)))
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+                               antialiased=True, shade=True)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+
+        if contours is not None:
+            cset = ax.contour(xx, yy, z_values, contours, zdir='z', linewidths = (2.0), colors=contour_colour)
+            plt.clabel(cset, inline=1, fontsize=10)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_zlabel(zlabel)
+        ax.set_title(title, fontsize=16)
+        plt.show()
+
+    @staticmethod
+    def plot_pie(title, labels, values, colours=None):
+        """
+        Plots a pie chart
+        @param title:
+        @param labels:
+        @param values: a numpy array
+        @param colous:
+        """
+        assert len(labels) == len(values)
         if colours is not None:
             assert len(colours) == len(values)
         nr_slices = len(values)
@@ -105,21 +182,21 @@ class IPythonAPI(api):
         # The slices will be ordered and plotted counter-clockwise.
         explode = np.ones(nr_slices) * 0.05  # The radial offset of the slices
 
-        plt.pie(values_norm, explode=explode, labels=titles, colors=colours,
+        plt.pie(values_norm, explode=explode, labels=labels, colors=colours,
                 autopct='%1.1f%%', shadow=True, startangle=90)
         # Set aspect ratio to be equal so that pie is drawn as a circle.
         plt.axis('equal')
-        plt.title('%s\n' % header)
+        plt.title('%s\n' % title)
 
         plt.show()
 
     @staticmethod
-    def plot_flops_stacked(header, bar_titles, dictionary_of_value_arrays, colours=None):
+    def plot_stacked_bars(title, labels, dictionary_of_value_arrays, colours=None):
         """
         Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
-        @param header:
-        @param bar_titles: The title belonging to each bar
-        @param dictionary_of_value_arrays: A dictionary that maps each bar title to an array of values (to be stacked).
+        @param title:
+        @param labels: The label belonging to each bar
+        @param dictionary_of_value_arrays: A dictionary that maps each label to an array of values (to be stacked).
         @return:
         """
         # Do some sanity checks
@@ -127,11 +204,11 @@ class IPythonAPI(api):
         if colours is not None:
             assert number_of_elements == len(colours)
         for key in dictionary_of_value_arrays:
-            assert len(dictionary_of_value_arrays[key]) == len(bar_titles)
+            assert len(dictionary_of_value_arrays[key]) == len(labels)
 
         #Plot a stacked bar chart
         width = 0.35
-        nr_bars = len(bar_titles)
+        nr_bars = len(labels)
         indices = np.arange(nr_bars)  # The indices of the bars
         bottoms = np.zeros(nr_bars)   # The height of each bar, i.e. the bottom of the next stacked block
 
@@ -145,8 +222,8 @@ class IPythonAPI(api):
             bottoms += values
             index += 1
 
-        plt.xticks(indices+width/2., bar_titles)
-        plt.title(header)
+        plt.xticks(indices+width/2., labels)
+        plt.title(title)
         plt.legend(dictionary_of_value_arrays.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
@@ -237,7 +314,6 @@ class IPythonAPI(api):
                 telescope = telescopes[i]
                 result_values = np.zeros(nr_result_expressions)
 
-
                 if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                     tp = tels_params[i][mode]
                     # The result expressions need to be defined here as they depend on tp (read above)
@@ -250,8 +326,6 @@ class IPythonAPI(api):
                     result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
 
                 elif mode == ImagingModes.CSS:
-                    if verbose:
-                        print 'SUMMING!@@@'
                     for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                         tp = tels_params[i][submode]
                         # The result expressions need to be defined here as they depend on tp (read above)
@@ -278,7 +352,7 @@ class IPythonAPI(api):
             IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
                                           tels_result_strings[1], result_units)
 
-            labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
+            labels = ('(de)Gridding', '(i)FFT', '(re)Projection', 'Convolution', 'Phase rot.')
             bldta_text = {True : ' (with BLDTA)', False : ' (no BLDTA)'}
 
             telescope_labels = ('%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA]),
@@ -290,7 +364,7 @@ class IPythonAPI(api):
                 i += 1
                 values[label] = (tels_result_values[0][i], tels_result_values[1][i])
 
-            IPythonAPI.plot_flops_stacked('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
+            IPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, On_the_fly=0, verbose=False):
@@ -408,7 +482,7 @@ class IPythonAPI(api):
                         result_value_string.append('%d' % result_values[i])
 
                 IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-                labels = ('(de)Gridding', '(i)FFT', '(Re)Projection', 'Convolution', 'Phase rot.')
+                labels = ('(de)Gridding', '(i)FFT', '(re)Projection', 'Convolution', 'Phase rot.')
                 colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
                 values = result_values[-5:]  # the last five values
-                IPythonAPI.plot_flops_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
+                IPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
