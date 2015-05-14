@@ -9,7 +9,6 @@ telescope_parameter object (locally referred to as o). These can then be numeric
 soon as all remaining unknown symbolic variables are suitably substituted.
 """
 
-import sympy.physics.units as u
 from sympy import log, Min, Max, sqrt, sign, ceiling, floor
 from numpy import pi
 from parameter_definitions import ImagingModes
@@ -31,8 +30,8 @@ class Formulae:
         """
         o = telescope_parameters  # Used for shorthand in the equations below
 
-        o.wl_max = u.c / o.freq_min  # Maximum Wavelength
-        o.wl_min = u.c / o.freq_max  # Minimum Wavelength
+        o.wl_max = o.c / o.freq_min  # Maximum Wavelength
+        o.wl_min = o.c / o.freq_max  # Minimum Wavelength
         o.wl = 0.5 * (o.wl_max + o.wl_min)  # Representative Wavelength
         o.Theta_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds * o.Nfacet)
         # added Nfacet dependence (c.f. PDR05 uses lambda max not mean here)
@@ -84,7 +83,7 @@ class Formulae:
 
         # Set this up to allow switchable BL dep averaging
         if BL_dep_time_av:
-            o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
+            o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin)) / o.Tdump_scaled), 1)
             o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
             
             # multiply theta_fov by Nfacet so averaging time is set by total field of view, not faceted FoV.
@@ -96,12 +95,12 @@ class Formulae:
             if verbose:
                 print ("NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING")
 
-        o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s)
+        o.Tdump_predict = Min(o.Tdump_skipper, 1.2)
         if verbose:
             print ("Tdump_predict =", o.Tdump_predict)
         # Visibility integration time for predict step; limit this at 1.2s maximum.
 
-        o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet, o.Tion * u.s)
+        o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet, o.Tion)
         if verbose:
             print ("Tdump_backward =", o.Tdump_backward)
         # Visibility integration time at gridding (backward) step;
@@ -115,7 +114,8 @@ class Formulae:
             o.Nf_out = o.Nf_max
             o.Rrp = o.Nfacet**2 * 50 * o.Npix_linear**2 / o.Tsnap # Reprojection Flop rate, per output channel (Consistent with PDR05 280115)
         elif imaging_mode == ImagingModes.SlowTrans:
-            o.Rrp = 0 * u.s / u.s  # (Consistent with PDR05 280115)
+            o.Rrp = 0  # (Consistent with PDR05 280115)
+            o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
@@ -126,10 +126,10 @@ class Formulae:
         o.Nf_vis_predict = (o.Nf_out * sign(floor(o.Nf_out / o.Nf_no_smear_predict))) + (
             o.Nf_no_smear_predict * sign(floor(o.Nf_no_smear_predict / o.Nf_out)))
 
-        o.Nvis_backward = o.binfrac * o.Na * (o.Na - 1) * o.Nf_vis_backward / (2 * o.Tdump_backward) * u.s
-        # Number of visibilities per second to be gridded. Note multiplication by u.s to get rid of /s
+        o.Nvis_backward = o.binfrac * o.Na * (o.Na - 1) * o.Nf_vis_backward / (2 * o.Tdump_backward)
+        # Number of visibilities per second to be gridded.
 
-        o.Nvis_predict = o.binfrac * o.Na * (o.Na - 1) * o.Nf_vis_predict / (2 * o.Tdump_predict) * u.s
+        o.Nvis_predict = o.binfrac * o.Na * (o.Na - 1) * o.Nf_vis_predict / (2 * o.Tdump_predict)
         # Number of visibilities per second to used in the predict step.
 
         o.Rgrid_backward = 8 * o.Nmm * o.Nvis_backward * (o.Ngw ** 2 + o.Naa ** 2)
@@ -158,8 +158,7 @@ class Formulae:
         # Last factor ensures that answer is zero if Nfacet is 1.
         # This needs to be at time and frequency resolution appropriate for full FoV (we think)
 
-        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis_predict * o.Tobs / u.s
-        # Note the division by u.s to get rid of pesky SI unit.
+        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis_predict * o.Tobs
         # Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while
         # simultaneously capturing the next)
 

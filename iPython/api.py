@@ -7,7 +7,6 @@ from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefi
 from formulae import Formulae
 from implementation import Implementation as imp
 from implementation import ParameterContainer
-import sympy.physics.units as u
 import numpy as np
 
 
@@ -40,8 +39,7 @@ class SKAAPI:
     @staticmethod
     def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
-                            verbose=False):
+                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
@@ -58,8 +56,7 @@ class SKAAPI:
         @param param_val_min: minimum value for the parameter's value sweep
         @param param_val_max: maximum value for the parameter's value sweep
         @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
-        @param unit_string: If the swept param has units (e.g. kilometres) this *must* be supplied as text, e.g. "u.km"
-                            otherwise, if there are no units, the unit-string must be set to "None"
+
         @param verbose:
         @return: @raise AssertionError:
         """
@@ -78,23 +75,14 @@ class SKAAPI:
             tp = copy.deepcopy(telescope_params)
             param_value = param_values[i]
 
-            # In some cases the parameter has an SI unit (like meters). We then need to multiply that in
-            if unit_string is None:
-                exec ('tp.%s = %g' % (parameter, param_value))
-            else:
-                if verbose:
-                    print '\nSetting param tp.%s = %g * %s' % (parameter, param_value, unit_string)
-                exec ('tp.%s = %g * %s' % (parameter, param_value, unit_string))
+            exec ('tp.%s = %g' % (parameter, param_value))
 
             if verbose:
                 print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
             Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
             parameter_final_value = None
-            if unit_string is None:
-                exec('parameter_final_value = tp.%s' % parameter)
-            else:
-                exec('parameter_final_value = tp.%s / %s' % (parameter, unit_string))
+            exec('parameter_final_value = tp.%s' % parameter)
 
             if parameter_final_value != param_value:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
@@ -115,8 +103,7 @@ class SKAAPI:
     @staticmethod
     def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                            parameters=None, params_ranges=None, number_steps=2, unit_strings=None,
-                            verbose=False):
+                            parameters=None, params_ranges=None, number_steps=2, verbose=False):
         """
         Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
         linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
@@ -133,7 +120,6 @@ class SKAAPI:
         @param parameters:
         @param params_ranges:
         @param number_steps:
-        @param unit_strings:
         @param verbose:
         @return:
         """
@@ -165,15 +151,8 @@ class SKAAPI:
 
                 tp = copy.deepcopy(telescope_params)
 
-                # In some cases parameters have SI units (like meters). We then need to multiply that in
-                if unit_strings[0] is None:
-                    exec ('tp.%s = %g' % (parameters[0], param1_value))
-                else:
-                    exec ('tp.%s = %g * %s' % (parameters[0], param1_value, unit_strings[0]))
-                if unit_strings[1] is None:
-                    exec ('tp.%s = %g' % (parameters[1], param2_value))
-                else:
-                    exec ('tp.%s = %g * %s' % (parameters[1], param2_value, unit_strings[1]))
+                exec ('tp.%s = %g' % (parameters[0], param1_value))
+                exec ('tp.%s = %g' % (parameters[1], param2_value))
 
                 # Look at value directly after assignment
                 param1_value = eval('tp.%s' % parameters[0])
@@ -204,8 +183,6 @@ class SKAAPI:
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 result_expression = eval('tp.%s' % expression)
 
-                # Note, the line below assumes that the result will not have any units, but is numerical.
-                # TODO: make this work for expressions that have units also.
                 results[i,j] = SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         print 'done with parameter sweep!'
@@ -240,7 +217,7 @@ class SKAAPI:
         # And now the results:
         tp_basic = ParameterContainer()
         ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
-        max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
+        max_allowed_baseline = tp_basic.baseline_bins[-1]
         if max_baseline is not None:
             assert max_baseline <= max_allowed_baseline
         else:

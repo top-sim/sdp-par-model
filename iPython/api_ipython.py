@@ -14,6 +14,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
+from parameter_definitions import Constants as c
 from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
 from implementation import ParameterContainer
@@ -300,7 +301,7 @@ class IPythonAPI(api):
                              'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
                              'Total Compute Requirement',
                              '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
-            result_units = ('', '', '', '', 'km', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
+            result_units = ('', '', '', '', 'm', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
                             'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
             nr_result_expressions = 10  # The number of computed values in the result_values array (see below)
@@ -315,11 +316,11 @@ class IPythonAPI(api):
                 if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                     tp = tels_params[i][mode]
                     # The result expressions need to be defined here as they depend on tp (read above)
-                    result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                          tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta,
-                                          tp.Rflop_proj/u.peta, tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
+                    result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+                                          tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
+                                          tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
                     # Start building result string
-                    result_value_string = [telescope, band, mode, bdta, '%d' % (tp.Bmax / u.km),
+                    result_value_string = [telescope, band, mode, bdta, '%d' % tp.Bmax,
                                            '%d' % tp.Nf_max, '%d' % tp.Nfacet_opt, '%.3g' % tp.Tsnap_opt]
                     result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
 
@@ -327,10 +328,10 @@ class IPythonAPI(api):
                     for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
                         tp = tels_params[i][submode]
                         # The result expressions need to be defined here as they depend on tp (read above)
-                        result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                              tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta,
-                                              tp.Rflop_proj/u.peta, tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
-                        result_value_string = [telescope, band, mode, bdta, '%d' % (tp.Bmax / u.km),
+                        result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+                                              tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
+                                              tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
+                        result_value_string = [telescope, band, mode, bdta, '%d' % tp.Bmax,
                                                'n/a', 'n/a', 'n/a']
 
                         result_values += api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
@@ -380,7 +381,7 @@ class IPythonAPI(api):
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode', 'Tsnap', 'Nfacet')
         param_values = (max_baseline, Nf_max, Telescope, Band, Mode, Tsnap, Nfacet)
-        param_units = ('km', '', '', '', '', 'sec', '')
+        param_units = ('m', '', '', '', '', 'sec', '')
         IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         if not imp.telescope_and_band_are_compatible(Telescope, Band):
@@ -390,9 +391,9 @@ class IPythonAPI(api):
         else:
             tp_basic = ParameterContainer()
             ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
-            max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
+            max_allowed_baseline = tp_basic.baseline_bins[-1]
             if max_baseline > max_allowed_baseline:
-                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' \
+                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
                     % max_allowed_baseline
                 s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
                 display(HTML(s))
@@ -402,9 +403,9 @@ class IPythonAPI(api):
                                          verbose=verbose)  # Calculate the telescope parameters
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
-                result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                      tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
-                                      tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
+                result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+                                      tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_proj/c.peta,
+                                      tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
                 result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
                                  'Total Compute Requirement',
                                  '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
@@ -436,7 +437,7 @@ class IPythonAPI(api):
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode')
         param_values = (max_baseline, Nf_max, Telescope, Band, Mode)
-        param_units = ('km', '', '', '', '')
+        param_units = ('m', '', '', '', '')
         IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         if not imp.telescope_and_band_are_compatible(Telescope, Band):
@@ -446,9 +447,9 @@ class IPythonAPI(api):
         else:
             tp_basic = ParameterContainer()
             ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
-            max_allowed_baseline = tp_basic.baseline_bins[-1] / u.km
+            max_allowed_baseline = tp_basic.baseline_bins[-1]
             if max_baseline > max_allowed_baseline:
-                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g km for this telescope.' \
+                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
                     % max_allowed_baseline
                 s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
                 display(HTML(s))
@@ -461,9 +462,9 @@ class IPythonAPI(api):
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
-                result_expressions = (tp.Mbuf_vis/u.peta, tp.Mw_cache/u.tera, tp.Npix_linear, tp.Rio/u.tera,
-                                      tp.Rflop/u.peta, tp.Rflop_grid/u.peta, tp.Rflop_fft/u.peta, tp.Rflop_proj/u.peta,
-                                      tp.Rflop_conv/u.peta, tp.Rflop_phrot/u.peta)
+                result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+                                      tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_proj/c.peta,
+                                      tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
                 result_titles = ('Optimal Number of Facets', 'Optimal Snapshot Time', 'Visibility Buffer', 'Working (cache) memory',
                                  'Image side length', 'I/O Rate', 'Total Compute Requirement',
                                  '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
