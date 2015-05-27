@@ -159,10 +159,19 @@ class Implementation:
         return (Tsnap_array[i], nfacets)
 
     @staticmethod
-    def substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose=False, take_max=False):
+    def substitute_parameters_binned(expression, tp, bins, counts, verbose=False, take_max=False):
         """
-        Substitute relevant variables for each bin, summing the result
+        Substitute relevant variables for each bin, by defaukt summing the result. If take_max == True, then
+        the maximum expression value over all bins is returns instead of the sum.
+        @param expression:
+        @param tp: ParameterContainer containing the telescope parameters
+        @param bins: An array containing the max baseline length of each bin
+        @param counts: The number of baselines in each of the bins
+        @param verbose:
+        @param take_max: iff True, returns the maximum instead of the sum of the bins' expression values
         """
+        nbins_used = len(bins)
+        assert nbins_used == len(counts)
         nbaselines = sum(counts)
         temp_result = 0
         for i in range(nbins_used):
@@ -196,12 +205,12 @@ class Implementation:
         Bmax_num_value = tp.Bmax
         # Compute the index of the first bin whose baseline exceeds the max baseline used (must be <= number of bins)
         nbins_used = min(bins_unitless.searchsorted(Bmax_num_value) + 1, len(bins))
-        bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
+        # Restrict the bins used to only those bins that are used
+        bins = bins[:nbins_used]  # This operation creates a copy; i.e. does not modify tp.baseline_bins
         bins[nbins_used-1] = tp.Bmax
         counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
-        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose,
-                                                             take_max=take_max)
+        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, verbose, take_max=take_max)
         return float(result)
 
     @staticmethod
@@ -224,8 +233,7 @@ class Implementation:
         bins[nbins_used-1] = tp.Bmax
         counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
 
-        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, nbins_used, verbose,
-                                                             take_max=take_max)
+        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, verbose, take_max=take_max)
 
         # Remove string literals from the telescope_params, as they can't be evaluated by lambdify
         bound_lower = tp.Tsnap_min
