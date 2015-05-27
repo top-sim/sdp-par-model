@@ -59,13 +59,13 @@ class ImagingModes:
     Spectral = 'Spectral'
     SlowTrans = 'SlowTrans'
     ContAndSpectral = 'CS'  # A special case for some of the HPSOs where continuum and spectral are done sequentially
-    CSS = 'Summed (Cont+Spec+Slow)'
+    All = 'All, Summed (Cont+Spec+Slow)'
 
     # Supply string representations that are nice to read for humans
     modes_pretty_print = {Continuum: 'Continuum',
                           Spectral: 'Spectral',
                           SlowTrans: 'SlowTrans',
-                          CSS: 'All Modes'
+                          All: 'All Modes Summed (Cont+Spec+Slow)'
                           }
 
 # Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
@@ -115,11 +115,12 @@ class ParameterDefinitions:
         the output formula to be optimized by varying this variable (such as with Tsnap and Nfacet)
         @param o:
         """
-        o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
-        o.Bmax_bin = symbols("Bmax\,bin", positive=True)
-        o.binfrac = symbols("f_bin",
-                            positive=True)  # The fraction of baselines that fall in a given bin (used for baseline-dependent calculations)
-        o.Nfacet = symbols("N_facet", integer=True, positive=True)
+        o.Tsnap = symbols("T_snap", positive=True)                  # Snapshot timescale implemented
+        o.Nfacet = symbols("N_facet", integer=True, positive=True)  # Number of facets
+
+        # The following two parameters are used for baseline-dependent calculations
+        o.Bmax_bin = symbols("Bmax\,bin", positive=True)  # The maximum baseline corresponding to a given bin
+        o.binfrac = symbols("f_bin", positive=True)       # Fraction of total baselines in a given bin - value in (0,1)
 
     @staticmethod
     def apply_global_parameters(o):
