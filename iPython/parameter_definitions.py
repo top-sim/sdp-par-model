@@ -136,13 +136,17 @@ class ParameterDefinitions:
         o.Nmm = 4
         o.Npp = 4
         o.Nw = 2  # Bytes per value
-        o.Qbw = 1.0
-        o.Qfcv = 10.0
+        o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated.
+        o.Qfcv = 1.0 #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
+        o.Qkernel = 10.0 #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
+        o.grid_cell_error = 0.5 #found from tump time as given by SKAO at largest FoV (continuum). Used only for kernel freq re-use at present
         o.Qw = 1.0
-        o.Tion = 60.0
+        o.Tion = 10.0 #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
-        o.amp_f_max = 1.01  # Added by Rosie Bolton
+        o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+        o.minimum_channels = 500    #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
+    
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):
