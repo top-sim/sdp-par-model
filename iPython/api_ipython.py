@@ -14,7 +14,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
-from formulae import *  # formulae that derive secondary telescope-specific parameters from input parameters
+from equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
 from implementation import ParameterContainer
 

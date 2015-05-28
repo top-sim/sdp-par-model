@@ -4,7 +4,7 @@ This file contains methods for programmatically interacting with the SKA SDP Par
 import copy
 
 from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
-from formulae import Formulae
+from equations import Equations
 from implementation import Implementation as imp
 from implementation import ParameterContainer
 import sympy.physics.units as u
@@ -40,7 +40,7 @@ class SKAAPI:
     @staticmethod
     def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
+                            parameter='Rccf', param_val_min=9, param_val_max=10, number_steps=1, unit_string=None,
                             verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
@@ -89,7 +89,7 @@ class SKAAPI:
             if verbose:
                 print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
-            Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+            Equations.apply_imaging_equations(tp, mode, bldta, verbose)  # modifies tp in-place
             parameter_final_value = None
             if unit_string is None:
                 exec('parameter_final_value = tp.%s' % parameter)
@@ -200,7 +200,7 @@ class SKAAPI:
                                                                                  parameters[0], parameters[1],
                                                                                  str(param1_value), str(param2_value))
 
-                Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+                Equations.apply_imaging_equations(tp, mode, bldta, verbose)   # modifies tp in-place
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 result_expression = eval('tp.%s' % expression)
 

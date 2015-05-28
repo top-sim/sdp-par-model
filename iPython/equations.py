@@ -14,18 +14,19 @@ from sympy import log, Min, Max, sqrt, sign, ceiling, floor
 from numpy import pi
 from parameter_definitions import ImagingModes
 
-class Formulae:
+class Equations:
     def __init__(self):
         pass
 
     @staticmethod
-    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av, verbose=False):
+    def apply_imaging_equations(telescope_parameters, imaging_mode, bl_dep_time_av, verbose=False):
         """
-        Computes a host of important values from the originally supplied telescope parameters, using the parametric
-        equations. These equations are based on the PDR05 document
-        @param o:
-        @param imaging_mode:
-        @param BL_dep_time_av: True iff baseline dependent time averaging should be used.
+        Computes several derived parameter values using the parametric imaging equations applied to the the supplied
+        telescope parameters. The imaging equations are described in the PDR05 document.
+        @param telescope_parameters: ParameterContainer object containing the telescope parameters.
+               This ParameterContainer object is modified in-place by appending all derived values as fields
+        @param imaging_mode: The telecope's imaging mode
+        @param bl_dep_time_av: True iff baseline dependent time averaging should be used.
         @param verbose: displays verbose command-line output
         @raise Exception:
         """
@@ -83,7 +84,7 @@ class Formulae:
             print ("Dump time: ", o.Tdump_scaled)
 
         # Set this up to allow switchable BL dep averaging
-        if BL_dep_time_av:
+        if bl_dep_time_av:
             o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
             o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
             
@@ -180,3 +181,5 @@ class Formulae:
 
         o.Rflop = o.Rflop_phrot + o.Rflop_proj + o.Rflop_fft + o.Rflop_conv + o.Rflop_grid  # Overall flop rate
         o.Npix_linear = o.Npix_linear * o.binfrac #output this multiplied by binfrac so that the totalled value of npix over baseline bins is correct
+
+        return o

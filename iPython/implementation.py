@@ -12,7 +12,7 @@ themselves. Instead, it specifies how values are substituted, optimized, and sum
 import sympy.physics.units as u
 from parameter_definitions import Telescopes, ImagingModes, Bands
 from parameter_definitions import ParameterDefinitions as p
-from formulae import Formulae as f
+from equations import Equations as f
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
@@ -84,7 +84,7 @@ class Implementation:
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.compute_derived_parameters(telescope_params, mode, bldta, verbose=verbose)
+        f.apply_imaging_equations(telescope_params, mode, bldta, verbose=verbose)   # modifies telescope_params in-place
         return telescope_params
 
     @staticmethod
