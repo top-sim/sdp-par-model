@@ -136,7 +136,7 @@ class ParameterDefinitions:
         o.Nmm = 4
         o.Npp = 4
         o.Nw = 2  # Bytes per value
-        o.Qbw = 1.0
+        o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated.
         o.Qfcv = 1.0 #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
         o.Qkernel = 10.0 #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.

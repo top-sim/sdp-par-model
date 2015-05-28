@@ -197,18 +197,17 @@ class Formulae:
             o.Tkernel_backward=o.Tdump_backward/u.s
             o.Tkernel_predict=o.Tdump_predict/u.s
 
-
         else:
             o.Nf_gcf_backward=Max(o.Nf_gcf_backward_nosmear, o.minimum_channels) #maintain distributability, need at least minimum_channels (500) kernels.
             o.Nf_gcf_predict=Max(o.Nf_gcf_predict_nosmear, o.minimum_channels) #maintain distributability, need at least minimum_channels (500) kernels.
-
             o.Tkernel_backward=o.Tion
             o.Tkernel_predict=o.Tion
 
-        if verbose:
-            print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_FFT_backward
-            print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_FFT_predict
 
+        if verbose:
+            print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_gcf_backward
+            print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_gcf_predict
+                
         o.Rccf_backward = o.Nf_gcf_backward * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tkernel_backward) 	# Eq. 35
         o.Rccf_predict = o.Nf_gcf_predict * o.Nfacet**2 * 5. * o.binfrac *(o.Na-1)* o.Na * o.Nmm * o.Ncvff**2 * log(o.Ncvff,2)/(2. * o.Tkernel_predict) 	# Eq. 35
         o.Rccf = o.Rccf_backward + o.Rccf_predict
