@@ -38,7 +38,7 @@ class SKAAPI:
         return result
 
     @staticmethod
-    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False,
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False, otf=0,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, unit_string=None,
                             verbose=False):
@@ -69,7 +69,7 @@ class SKAAPI:
               "(i.e. %d data points)" % \
               (parameter, expression, str(param_val_min), str(param_val_max), number_steps, number_steps+1)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, max_baseline,
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, otf, max_baseline,
                                                nr_frequency_channels, verbose)
 
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
@@ -89,7 +89,7 @@ class SKAAPI:
             if verbose:
                 print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
-            Formulae.compute_derived_parameters(tp, mode, bldta, verbose)
+            Formulae.compute_derived_parameters(tp, mode, bldta, otf, verbose)
             parameter_final_value = None
             if unit_string is None:
                 exec('parameter_final_value = tp.%s' % parameter)

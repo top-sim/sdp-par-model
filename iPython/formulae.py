@@ -7,7 +7,7 @@ class Formulae:
     def __init__(self):
 		pass
     @staticmethod
-    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av, On_the_fly, verbose=False):
+    def compute_derived_parameters(telescope_parameters, imaging_mode, BL_dep_time_av=False, On_the_fly=0, verbose=False):
         """
                 Computes a host of important values from the originally supplied telescope parameters, using the parametric
 		equations. These equations are based on the PDR05 document
@@ -32,6 +32,9 @@ class Formulae:
         o.Theta_beam = 3. * o.wl/(2.*o.Bmax)								# Synthesized beam
         o.Theta_pix = o.Theta_beam/(2.*o.Qpix) 							# Pixel size
         o.Npix_linear = o.Theta_fov / o.Theta_pix 						# Number of pixels on side of facet
+        o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
+        #print "Epsilon approx :", o.epsilon_f_approx
+        o.Qbw=1.47/o.epsilon_f_approx
         if verbose:
             print "Image Characteristics:"
             print "----------------------"
@@ -40,11 +43,13 @@ class Formulae:
             print "PSF size:  ",o.Theta_beam," rads"
             print "Pixel size:",o.Theta_pix," rads"
             print "No. pixels on facet side:",o.Npix_linear
+            print "Found Qbw =", o.Qbw, "and cell frac error, epsilon =", o.epsilon_f_approx
             print "----------------------"
             print ""
 
     # ===============================================================================================
-       
+        print "Found Qbw = %8.3f, and cell frac error, epsilon,  %8.3f"  % (o.Qbw, o.epsilon_f_approx)
+     
        
 # ===============================================================================================
 # PDR05 Sec 9.1
@@ -56,8 +61,6 @@ class Formulae:
         o.Nf_no_smear_predict = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax)/(o.Theta_fov*o.Nfacet*o.Qbw))+1.) # Eq. 4 for full FOV, at max baseline
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV. Ensures correct location of visibility on grid.
 
-        o.epsilon_f_approx = sqrt(6.*(1.-(1.0/o.amp_f_max))) 				# expansion of sine to solve epsilon = arcsinc(1/amp_f_max).
-        #print "Epsilon approx :", o.epsilon_f_approx
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax #get correlator output averaging time as scaled for max baseline.
         o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
         o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
@@ -87,7 +90,15 @@ class Formulae:
 			print ""
             
 # ===============================================================================================
-        
+        if BL_dep_time_av:
+            print "USING BASELINE DEPENDENT TIME AVERAGING, combining this number of time samples: ", o.combine_time_samples
+        else:
+            print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
+        if On_the_fly==1:
+            print "On the fly kernels..."
+        else:
+            print "Not on the fly kernels..."
+    
 		
 
 # ===============================================================================================
@@ -188,6 +199,7 @@ class Formulae:
         o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor-1) * o.Nf_FFT_backward + o.Nf_out) # Reproj intermetiate major cycle FFTs (Nmaj -1) times, then do the final ones for the last cycle at the full output spectral resolution.
         
 		# Make GCF
+        o.grid_cell_error=o.epsilon_f_approx
         o.dfonF=o.grid_cell_error/o.Qkernel/(o.Ncvff/o.Qgcf)
         o.Nf_gcf_backward_nosmear=log(o.wl_max/o.wl_min) / log(o.dfonF+1.) # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
         o.Nf_gcf_predict_nosmear=log(o.wl_max/o.wl_min) / log(o.dfonF+1.)  # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
