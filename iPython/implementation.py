@@ -9,9 +9,9 @@ Implementation contains a collection of methods for performing computations, but
 themselves. Instead, it specifies how values are substituted, optimized, and summed across bins.
 """
 
-import sympy.physics.units as u
 from parameter_definitions import Telescopes, ImagingModes, Bands
 from parameter_definitions import ParameterDefinitions as p
+from parameter_definitions import Constants as c
 from equations import Equations as f
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
@@ -51,7 +51,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False,
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, On_the_fly=0,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
@@ -80,11 +80,12 @@ class Implementation:
             raise Exception("Either band or hpso must not be None")
 
         if max_baseline is not None:
-            telescope_params.Bmax = max_baseline * u.km
+            telescope_params.Bmax = max_baseline
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.apply_imaging_equations(telescope_params, mode, bldta, verbose=verbose)   # modifies telescope_params in-place
+        f.apply_imaging_equations(telescope_params, mode, bldta, On_the_fly, verbose=verbose)   # modifies telescope_params in-place
+        #print "Using maximum baseline of", p.Bmax
         return telescope_params
 
     @staticmethod
@@ -200,9 +201,9 @@ class Implementation:
         bins = tp.baseline_bins         # Remove the array of baselines from the parameter dictionary
         counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
 
-        bins_unitless = bins / u.m
+        bins_unitless = bins
         assert tp.Bmax is not None
-        Bmax_num_value = tp.Bmax / u.m
+        Bmax_num_value = tp.Bmax
         # Compute the index of the first bin whose baseline exceeds the max baseline used (must be <= number of bins)
         nbins_used = min(bins_unitless.searchsorted(Bmax_num_value) + 1, len(bins))
         # Restrict the bins used to only those bins that are used
@@ -225,9 +226,9 @@ class Implementation:
         bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
         counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
 
-        bins_unitless = bins / u.m
+        bins_unitless = bins
         assert tp.Bmax is not None
-        Bmax_num_value = tp.Bmax / u.m
+        Bmax_num_value = tp.Bmax
         nbins_used = bins_unitless.searchsorted(Bmax_num_value) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
         bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
         bins[nbins_used-1] = tp.Bmax
@@ -237,11 +238,11 @@ class Implementation:
 
         # Remove string literals from the telescope_params, as they can't be evaluated by lambdify
         bound_lower = tp.Tsnap_min
-        bound_upper = 0.5 * tp.Tobs / u.s
+        bound_upper = 0.5 * tp.Tobs
 
         Tsnap_optimal = Implementation.optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
         value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
         if verbose:
             print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
-                  (Tsnap_optimal, value_optimal / u.peta))
+                  (Tsnap_optimal, value_optimal / c.peta))
         return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
