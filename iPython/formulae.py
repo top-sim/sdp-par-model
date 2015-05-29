@@ -1,4 +1,14 @@
-import sympy.physics.units as u
+"""
+This class contains the actual equations that are used to compute the telescopes' performance values and computional
+requirements from the supplied basic parameters defined in ParameterDefinitions.
+Input parameters are contined in the parameter telescope_parameters, and include things such as baseline length,
+number and channels, etc.
+
+This class contains a method for (symbolically) computing the derived parameters, and adding these to the
+telescope_parameter object (locally referred to as o). These can then be numerically evaluated at a later stage, as
+soon as all remaining unknown symbolic variables are suitably substituted.
+"""
+
 from sympy import log, Min, Max, sqrt, sign, ceiling, floor
 from numpy import pi
 from parameter_definitions import ImagingModes
@@ -19,14 +29,14 @@ class Formulae:
         """
         o = telescope_parameters  # Used for shorthand in the equations below
 
+        o.wl_max = o.c / o.freq_min  # Maximum Wavelength
+        o.wl_min = o.c / o.freq_max  # Minimum Wavelength
         # ===============================================================================================
         # PDR05 Sec 9.2
         #
         #
         # ===============================================================================================
         
-        o.wl_max = u.c / o.freq_min             						# Maximum Wavelength
-        o.wl_min = u.c / o.freq_max             						# Minimum Wavelength
         o.wl = 0.5*(o.wl_max + o.wl_min)          						# Representative Wavelength
         o.Theta_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds * o.Nfacet)		# Facet Field-of-view **PDR05 uses lambda_max, not mean
         o.Theta_beam = 3. * o.wl/(2.*o.Bmax)								# Synthesized beam
@@ -62,11 +72,11 @@ class Formulae:
         o.Nf_no_smear_backward = log(o.wl_max/o.wl_min) / log((3.*o.wl/(2.*o.Bmax_bin)/(o.Theta_fov*o.Qbw))+1.)			# Eq. 4 for facet FOV. Ensures correct location of visibility on grid.
 
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax #get correlator output averaging time as scaled for max baseline.
-        o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin) * u.s) / o.Tdump_scaled), 1)
+        o.combine_time_samples = Max(floor((o.epsilon_f_approx * o.wl/(o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin)) / o.Tdump_scaled), 1)
         o.Tdump_skipper=o.Tdump_scaled * o.combine_time_samples
         if BL_dep_time_av:
-            o.Tdump_predict = Min(o.Tdump_skipper, 1.2 * u.s, o.Tion * u.s) # use whatever is smaller. Don't let any BLdep averaging be for longer than 1.2s or Tion.
-            o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion * u.s) #For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit only for BLDep averaging case.
+            o.Tdump_predict = Min(o.Tdump_skipper, 1.2, o.Tion) # use whatever is smaller. Don't let any BLdep averaging be for longer than 1.2s or Tion.
+            o.Tdump_backward = Min(o.Tdump_skipper*o.Nfacet, o.Tion) #For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit only for BLDep averaging case.
         else:
             o.Tdump_predict = o.Tdump_scaled
             o.Tdump_backward = o.Tdump_scaled
@@ -157,8 +167,8 @@ class Formulae:
 #
 # ===============================================================================================
 
-        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) * u.s 	# Eq. 31 Visibility rate for backward step, allow coalescing in time and freq prior to gridding
-        o.Nvis_predict = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_predict/(2.*o.Tdump_predict) * u.s 		# Eq. 31 Visibility rate for predict step
+        o.Nvis_backward = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_backward/(2.*o.Tdump_backward) 	# Eq. 31 Visibility rate for backward step, allow coalescing in time and freq prior to gridding
+        o.Nvis_predict = o.binfrac*o.Na*(o.Na-1)*o.Nf_vis_predict/(2.*o.Tdump_predict) 		# Eq. 31 Visibility rate for predict step
         
         Rflop_common_factor = o.Nmajor * o.Nbeam * o.Npp # no factor 2 because forward & backward steps are both in Rflop numbers
         # Gridding:
@@ -192,7 +202,7 @@ class Formulae:
         elif imaging_mode == ImagingModes.Spectral:
 			o.Rrp = o.Nfacet**2 * 50. * o.Npix_linear**2 / o.Tsnap # Eq. 34
         elif imaging_mode == ImagingModes.SlowTrans:
-            o.Rrp = 0*u.s / u.s  # (Consistent with PDR05 280115)
+            o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode %s" % imaging_mode)
 
@@ -206,8 +216,8 @@ class Formulae:
         if On_the_fly ==1:
             o.Nf_gcf_backward=o.Nf_vis_backward
             o.Nf_gcf_predict=o.Nf_vis_predict
-            o.Tkernel_backward=o.Tdump_backward/u.s
-            o.Tkernel_predict=o.Tdump_predict/u.s
+            o.Tkernel_backward=o.Tdump_backward
+            o.Tkernel_predict=o.Tdump_predict
 
         else:
             o.Nf_gcf_backward=Max(o.Nf_gcf_backward_nosmear, o.minimum_channels) #maintain distributability, need at least minimum_channels (500) kernels.
@@ -231,8 +241,8 @@ class Formulae:
 		# Calculate revised Eq. 30:
         o.Rflop = o.Rflop_phrot + o.Rflop_proj + o.Rflop_fft + o.Rflop_conv + o.Rflop_grid  # Overall flop rate
 		# ===============================================================================================
-        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis_predict * o.Tobs / u.s # Note the division by u.s to get rid of pesky SI unit.
-        #Also note the factor 2 -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
+        # Note the factor 2 in the line below -- we have a double buffer (allowing storage of a full observation while simultaneously capturing the next)
+        o.Mbuf_vis = 2 * o.Mvis * o.Nbeam * o.Npp * o.Nvis_predict * o.Tobs
 
         o.Mw_cache = o.Ngw**3 * o.Qgcf**3 * o.Nbeam * o.Nf_vis_predict * 8
 
