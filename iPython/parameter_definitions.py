@@ -4,19 +4,34 @@ etc. Several methods are supplied by which values can be found by lookup as well
 (e.g. finding the telescope that is associated with a given mode)
 """
 
-from sympy import symbols
 import numpy as np
+from sympy import symbols
 
-# A new class that takes over the roles of sympy.physics.units and astropy.const, because it is simpler this way
+
+class ParameterContainer:
+    """
+    The ParameterContainer class is used throughout the Python implementation to store parameters and pass them
+    around. It is basically an empty class to which fields can be added, read from or overwritten
+    """
+    def __init__(self):
+        pass
+
+
 class Constants:
+    """
+    A new class that takes over the roles of sympy.physics.units and astropy.const, because it is simpler this way
+    """
     kilo = 1000
     mega = 1000000
     giga = 1000000000
     tera = 1000000000000
     peta = 1000000000000000
 
-# Enumerate the possible telescopes to choose from (used in the ParameterDefinitions class)
+
 class Telescopes:
+    """
+    Enumerate the possible telescopes to choose from (used in the ParameterDefinitions class)
+    """
     # The originally planned SKA1 telescopes
     SKA1_Low_old = 'SKA1_Low_old'
     SKA1_Mid_old = 'SKA1_Mid_old'
@@ -28,14 +43,11 @@ class Telescopes:
     SKA2_Low = 'SKA2_Low'
     SKA2_Mid = 'SKA2_Mid'
 
-    # Supply string representations that are nice to read for humans
-    telescopes_pretty_print = {SKA1_Low_old: 'SKA1-Low',
-                               SKA1_Mid_old: 'SKA1-Mid (Band 1)',
-                               SKA1_Sur_old: 'SKA1-Survey (Band 1)'
-                               }
 
-# Enumerate all possible bands (used in the ParameterDefinitions class)
 class Bands:
+    """
+    Enumerate all possible bands (used in the ParameterDefinitions class)
+    """
     Low = 'Low'
     Mid1 = 'Mid1'
     Mid2 = 'Mid2'
@@ -51,30 +63,29 @@ class Bands:
     SKA2Low = 'LOWSKA2'
     SKA2Mid = 'MIDSKA2'
 
+    # group the bands defined above into logically coherent sets
     low_bands = {Low}
     mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B}
     survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}
-    low_ska2_bands = {SKA2Low}
-    mid_ska2_bands = {SKA2Mid}
+    low_bands_ska2 = {SKA2Low}
+    mid_bands_ska2 = {SKA2Mid}
 
 
-# Enumerate the possible imaging modes (used in the ParameterDefinitions class)
 class ImagingModes:
+    """
+    Enumerate the possible imaging modes (used in the ParameterDefinitions class)
+    """
     Continuum = 'Continuum'
     Spectral = 'Spectral'
     SlowTrans = 'SlowTrans'
-    ContAndSpectral = 'CS'  # A special case for some of the HPSOs where continuum and spectral are done sequentially
+    ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run continuum and spectral modes sequentially
     All = 'All, Summed (Cont+Spec+Slow)'
 
-    # Supply string representations that are nice to read for humans
-    modes_pretty_print = {Continuum: 'Continuum',
-                          Spectral: 'Spectral',
-                          SlowTrans: 'SlowTrans',
-                          All: 'All Modes Summed (Cont+Spec+Slow)'
-                          }
 
-# Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
 class HPSOs:
+    """
+    Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
+    """
     hpso01 = '01'
     hpso02A = '02A'
     hpso02B = '02B'
@@ -105,6 +116,7 @@ class HPSOs:
     hpso38a = '38a'
     hpso38b = '38b'
 
+    # group the HPSOs according to which telescope they refer to
     hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B, hpso03A, hpso03B}
     hpsos_using_SKA1Mid = {hpso04A, hpso04B, hpso05A, hpso05B, hpso14, hpso19, hpso22, hpso37a, hpso37b, hpso38a,
                            hpso38b, hpso14c, hpso14s, hpso14sfull}
@@ -112,58 +124,71 @@ class HPSOs:
 
 
 class ParameterDefinitions:
+    """
+    This class contains several methods for defining parameters. These include Telecope parameters, as well as
+    physical constants. Generally, the output of the methods of this class is a ParameterContainer object
+    (usually referred to by the variable o in the methods below) that has parameters as fields.
+    """
+
     @staticmethod
     def define_symbolic_variables(o):
         """
         This method defines the *symbolic* variables that we will use during computations
         and that need to be kept symbolic during evaluation of formulae. One reason to do this would be to allow
         the output formula to be optimized by varying this variable (such as with Tsnap and Nfacet)
-        @param o:
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+        @rtype : ParameterContainer
         """
-        o.Tsnap = symbols("T_snap", positive=True)                  # Snapshot timescale implemented
+        assert isinstance(o, ParameterContainer)
+        o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
         o.Nfacet = symbols("N_facet", integer=True, positive=True)  # Number of facets
 
         # The following two parameters are used for baseline-dependent calculations
         o.Bmax_bin = symbols("Bmax\,bin", positive=True)  # The maximum baseline corresponding to a given bin
-        o.binfrac = symbols("f_bin", positive=True)       # Fraction of total baselines in a given bin - value in (0,1)
+        o.binfrac = symbols("f_bin", positive=True)  # Fraction of total baselines in a given bin - value in (0,1)
+        return o
 
     @staticmethod
     def apply_global_parameters(o):
         """
-        Applies the global parameters to the parameter container object o
-        @param o:
+        Applies the global parameters to the parameter container object o.
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+        @rtype : ParameterContainer
         """
-        o.c = 299792458          # The speed of light, in m/s (from sympy.physics.units.c)
+        assert isinstance(o, ParameterContainer)
+        o.c = 299792458  # The speed of light, in m/s (from sympy.physics.units.c)
         o.Omega_E = 7.292115e-5  # Rotation relative to the fixed stars in radians/second
-        o.R_Earth = 6378136      # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
+        o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01
         o.Mvis = 12.0  # back to 12. Likely to change in future
-        o.Naa = 10     # Changed to 10, after PDR submission
+        o.Naa = 10  # Changed to 10, after PDR submission
         o.Nmm = 4
         o.Npp = 4
         o.Nw = 2  # Bytes per value
-        #o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
-        o.Qfcv = 1.0 #changed to 1 to disable but retain ability to see affect in parameter sweep.
+        # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
+        o.Qfcv = 1.0  #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
-        o.Qkernel = 10.0 #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
+        o.Qkernel = 10.0  #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
         #o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
-        o.Tion = 10.0 #This was previously set to 60s (for PDR) May wish to use much smaller value.
+        o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-        o.minimum_channels = 500    #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
-    
+        o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
+        return o
 
     @staticmethod
     def apply_telescope_parameters(o, telescope):
         """
         Applies the parameters that apply to the supplied telescope to the parameter container object o
-        @param o:
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
         @param telescope:
+        @rtype : ParameterContainer
         """
+        assert isinstance(o, ParameterContainer)
         if telescope == Telescopes.SKA1_Low:
             o.Bmax = 80000  # Actually constructed max baseline in *m*
-            o.Ds = 35    # station "diameter" in meters
+            o.Ds = 35  # station "diameter" in meters
             o.Na = 512  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
@@ -171,7 +196,8 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6  # Correlator dump time in reference design in *seconds*
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
             o.nr_baselines = 10180233
-            o.baseline_bin_distribution=np.array((52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
+            o.baseline_bin_distribution = np.array(
+                (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
             o.Ds = 35  # station "diameter" in meters
@@ -189,11 +215,12 @@ class ParameterDefinitions:
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
-            o.Tdump_ref = 0.08   # Correlator dump time in reference design in *sec*
+            o.Tdump_ref = 0.08  # Correlator dump time in reference design in *sec*
             o.B_dump_ref = 200000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 150000))  # m
             o.nr_baselines = 1165860
-            o.baseline_bin_distribution = np.array((57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064)) #Original distribution
+            o.baseline_bin_distribution = np.array(
+                (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
             # o.baseline_bin_distribution = np.array((56.78620346,   5.25152534,   5.6811107,    5.72469182,   6.21031005, 5.64375545,   6.21653592,   6.00485618 ,  2.42186527,   0.05914581))
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
         elif telescope == Telescopes.SKA1_Mid_old:
@@ -209,7 +236,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
         elif telescope == Telescopes.SKA1_Sur_old:
-            o.Bmax = 50000 # Actually constructed max baseline, in *m*
+            o.Bmax = 50000  # Actually constructed max baseline, in *m*
             o.Ds = 15  # station "diameter" in meters
             o.Na = 96  # number of antennas
             o.Nbeam = 36  # number of beams
@@ -220,7 +247,7 @@ class ParameterDefinitions:
             o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
         elif telescope == Telescopes.SKA2_Low:
-            o.Bmax = 180000 # Actually constructed max baseline, in *m*
+            o.Bmax = 180000  # Actually constructed max baseline, in *m*
             o.Ds = 180  # station "diameter" in meters
             o.Na = 155  # number of antennas
             o.Nbeam = 200  # number of beams
@@ -233,7 +260,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
         elif telescope == Telescopes.SKA2_Mid:
-            o.Bmax = 1800000 # Actually constructed max baseline, in *m*
+            o.Bmax = 1800000  # Actually constructed max baseline, in *m*
             o.Ds = 15  # station "diameter" in meters
             o.Na = 155  # number of antennas
             o.Nbeam = 200  # number of beams
@@ -247,6 +274,8 @@ class ParameterDefinitions:
         else:
             raise Exception('Unknown Telescope!')
 
+        return o
+
     @staticmethod
     def get_telescope_from_hpso(hpso):
         """
@@ -255,7 +284,6 @@ class ParameterDefinitions:
         @return: the telescope corresponding to this HPSO
         @raise Exception:
         """
-        telescope = None
         if hpso in HPSOs.hpsos_using_SKA1Low:
             telescope = Telescopes.SKA1_Low
         elif hpso in HPSOs.hpsos_using_SKA1Mid:
@@ -271,12 +299,14 @@ class ParameterDefinitions:
     def apply_band_parameters(o, band):
         """
         Applies the parameters that apply to the band to the parameter container object o
-        @param o:
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
         @param band:
+        @rtype : ParameterContainer
         """
+        assert isinstance(o, ParameterContainer)
         if band == Bands.Low:
             o.telescope = Telescopes.SKA1_Low
-            o.freq_min = 50e6   # in Hz
+            o.freq_min = 50e6  # in Hz
             o.freq_max = 350e6  # in Hz
         elif band == Bands.Mid1:
             o.telescope = Telescopes.SKA1_Mid
@@ -333,14 +363,18 @@ class ParameterDefinitions:
         else:
             raise Exception('Unknown Band!')
 
+        return o
+
     @staticmethod
     def apply_imaging_mode_parameters(o, mode):
         """
         Applies the parameters that apply to the imaging mode to the parameter container object o
-        @param o:
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
         @param mode:
         @raise Exception:
+        @rtype : ParameterContainer
         """
+        assert isinstance(o, ParameterContainer)
         if mode == ImagingModes.Continuum:
             o.Qfov = 1.8  # Field of view factor
             o.Nmajor = 10  # Number of major CLEAN cycles to be done
@@ -364,13 +398,17 @@ class ParameterDefinitions:
         else:
             raise Exception('Unknown mode!')
 
+        return o
+
     @staticmethod
     def apply_hpso_parameters(o, hpso):
         """
         Applies the parameters that apply to the supplied HPSO to the parameter container object o
-        @param o:
+        @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
         @param hpso:
+        @rtype : ParameterContainer
         """
+        assert isinstance(o, ParameterContainer)
         if hpso == HPSOs.hpso01:
             o.telescope = Telescopes.SKA1_Low_old
             o.mode = ImagingModes.Continuum
@@ -698,3 +736,5 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         else:
             raise Exception('Unknown HPSO!')
+
+        return o

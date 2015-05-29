@@ -4,7 +4,7 @@ This file contains methods for interacting with the SKA SDP Parametric Model usi
 The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
 notebooks easier.
 """
-from api import SKAAPI as api  # This class' (IPythonAPI's) parent class
+from api import SkaPythonAPI as api  # This class' (SkaIPythonAPI's) parent class
 
 from IPython.display import clear_output, display, HTML
 
@@ -14,11 +14,13 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
+from parameter_definitions import Constants as c
 from equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
 from implementation import ParameterContainer
 
-class IPythonAPI(api):
+
+class SkaIPythonAPI(api):
     """
     This class (IPython API) is a subclass of its parent, SKA-API. It offers a set of methods for interacting with the
     SKA SDP Parametric Model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
@@ -349,7 +351,7 @@ class IPythonAPI(api):
 
             display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
-            IPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
+            SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_strings[0],
                                           tels_result_strings[1], result_units)
 
             labels = ('Gridding', 'FFT', 'Projection', 'Convolution', 'Phase rot.')
@@ -364,7 +366,7 @@ class IPythonAPI(api):
                 i += 1
                 values[label] = (tels_result_values[0][i], tels_result_values[1][i])
 
-            IPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
+            SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, On_the_fly=0, verbose=False):
@@ -383,7 +385,7 @@ class IPythonAPI(api):
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode', 'Tsnap', 'Nfacet')
         param_values = (max_baseline, Nf_max, Telescope, Band, Mode, Tsnap, Nfacet)
         param_units = ('m', '', '', '', '', 'sec', '')
-        IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         if not imp.telescope_and_band_are_compatible(Telescope, Band):
             msg = 'ERROR: Telescope and Band are not compatible'
@@ -421,7 +423,7 @@ class IPythonAPI(api):
                     else:
                         result_value_string.append('%d' % result_values[i])
 
-                IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+                SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
     @staticmethod
     def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, BL_dep_time_av=False, otf=0, verbose=False):
@@ -439,7 +441,7 @@ class IPythonAPI(api):
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode')
         param_values = (max_baseline, Nf_max, Telescope, Band, Mode)
         param_units = ('m', '', '', '', '')
-        IPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         if not imp.telescope_and_band_are_compatible(Telescope, Band):
             msg = 'ERROR: Telescope and Band are not compatible'
@@ -481,8 +483,8 @@ class IPythonAPI(api):
                     else:
                         result_value_string.append('%d' % result_values[i])
 
-                IPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+                SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
                 labels = ('Gridding', 'FFT', 'Projection', 'Convolution', 'Phase rot.')
                 colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
                 values = result_values[-5:]  # the last five values
-                IPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
+                SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)

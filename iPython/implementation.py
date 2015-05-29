@@ -9,6 +9,7 @@ Implementation contains a collection of methods for performing computations, but
 themselves. Instead, it specifies how values are substituted, optimized, and summed across bins.
 """
 
+from parameter_definitions import ParameterContainer
 from parameter_definitions import Telescopes, ImagingModes, Bands
 from parameter_definitions import ParameterDefinitions as p
 from parameter_definitions import Constants as c
@@ -17,9 +18,6 @@ from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
 
-class ParameterContainer:
-    def __init__(self):
-        pass
 
 class Implementation:
     def __init__(self):
@@ -104,9 +102,9 @@ class Implementation:
         elif telescope == Telescopes.SKA1_Sur_old:
             is_compatible = (band in Bands.survey_bands)
         elif telescope == Telescopes.SKA2_Low:
-            is_compatible = (band in Bands.low_ska2_bands)
+            is_compatible = (band in Bands.low_bands_ska2)
         elif telescope == Telescopes.SKA2_Mid:
-            is_compatible = (band in Bands.mid_ska2_bands)
+            is_compatible = (band in Bands.mid_bands_ska2)
         else:
             raise ValueError("Unknown telescope %s" % telescope)
 
@@ -178,7 +176,10 @@ class Implementation:
         for i in range(nbins_used):
             binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
             # Substitute bin-dependent variables
-            expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
+            if not (isinstance(expression, (int, long)) or isinstance(expression, float)):
+                expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
+            else:
+                expr_subst = expression
 
             if take_max:  # For example when computing Npix, we take the max
                 temp_result = Max(temp_result, expr_subst)

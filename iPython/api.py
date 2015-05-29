@@ -10,7 +10,7 @@ from implementation import ParameterContainer
 import numpy as np
 
 
-class SKAAPI:
+class SkaPythonAPI:
     """
     This class (SKA API) represents an API by which the SKA Parametric Model can be called programmatically, without
     making use of the iPython Notebook infrastructure.
@@ -95,7 +95,7 @@ class SKAAPI:
 
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result_expression = eval('tp.%s' % expression)
-            results.append(SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
+            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print 'done with parameter sweep!'
         return (param_values, results)
@@ -183,7 +183,7 @@ class SKAAPI:
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 result_expression = eval('tp.%s' % expression)
 
-                results[i,j] = SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+                results[i,j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         print 'done with parameter sweep!'
         return (param1_values, param2_values, results)
@@ -195,7 +195,7 @@ class SKAAPI:
         """
         results = []
         for expression in expressions:
-            result = SKAAPI.evaluate_expression(expression, tp, tsnap, nfacet)
+            result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet)
             results.append(result)
         return results
 
@@ -250,7 +250,7 @@ class SKAAPI:
         result_dict = {'Tsnap': tsnap, 'NFacet': nfacet}
         for variable_string in result_variable_strings:
             result_expression = eval('tp.%s' % variable_string)
-            result = SKAAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+            result = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
             result_dict[variable_string] = result
 
         return result_dict
