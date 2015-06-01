@@ -49,7 +49,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, On_the_fly=0,
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
@@ -82,7 +82,7 @@ class Implementation:
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.apply_imaging_equations(telescope_params, mode, bldta, On_the_fly, verbose=verbose)   # modifies telescope_params in-place
+        f.apply_imaging_equations(telescope_params, mode, bldta, on_the_fly, verbose)
         #print "Using maximum baseline of", p.Bmax
         return telescope_params
 

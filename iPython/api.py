@@ -6,7 +6,7 @@ import copy
 from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
 from equations import Equations
 from implementation import Implementation as imp
-from implementation import ParameterContainer
+from parameter_definitions import ParameterContainer
 import numpy as np
 
 
@@ -37,7 +37,7 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
-    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False, otf=0,
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
         """
@@ -49,6 +49,7 @@ class SkaPythonAPI:
         @param band:
         @param hpso:
         @param bldta:
+        @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
         @param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
@@ -66,7 +67,7 @@ class SkaPythonAPI:
               "(i.e. %d data points)" % \
               (parameter, expression, str(param_val_min), str(param_val_max), number_steps, number_steps+1)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, otf, max_baseline,
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, on_the_fly, max_baseline,
                                                nr_frequency_channels, verbose)
 
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
@@ -80,7 +81,7 @@ class SkaPythonAPI:
             if verbose:
                 print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
 
-            Equations.apply_imaging_equations(tp, mode, bldta, otf, verbose)  # modifies tp in-place
+            Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)  # modifies tp in-place
             parameter_final_value = None
             exec('parameter_final_value = tp.%s' % parameter)
 
@@ -101,7 +102,7 @@ class SkaPythonAPI:
         return (param_values, results)
 
     @staticmethod
-    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False,
+    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameters=None, params_ranges=None, number_steps=2, verbose=False):
         """
@@ -114,6 +115,7 @@ class SkaPythonAPI:
         @param band:
         @param hpso:
         @param bldta:
+        @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
         @param expression:
@@ -134,8 +136,9 @@ class SkaPythonAPI:
               (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
                str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, max_baseline,
-                                               nr_frequency_channels, verbose)
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, on_the_fly=on_the_fly,
+                                               max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
+                                               verbose=verbose)
 
         param1_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=number_steps + 1)
         param2_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=number_steps + 1)
@@ -179,7 +182,7 @@ class SkaPythonAPI:
                                                                                  parameters[0], parameters[1],
                                                                                  str(param1_value), str(param2_value))
 
-                Equations.apply_imaging_equations(tp, mode, bldta, verbose)   # modifies tp in-place
+                Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)   # modifies tp in-place
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 result_expression = eval('tp.%s' % expression)
 
@@ -200,16 +203,19 @@ class SkaPythonAPI:
         return results
 
     @staticmethod
-    def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, BL_dep_time_av=False,
-                        verbose=False):
+    def compute_results(telescope, band, mode, max_baseline=None, nr_frequency_channels=None, bl_dep_time_av=False,
+                        on_the_fly=False, verbose=False):
         """
         Computes a set of results for a given telescope in a given band and mode. The max baseline and number of
         frequency channels may be specified as well, if the defaults are not to be used.
+        @param verbose:
         @param telescope
         @param band:
         @param mode:
         @param max_baseline: (optional) the maximum baseline to be used
         @param nr_frequency_channels: (optional) the maximum number of frequency channels
+        @param bl_dep_time_av: Baseline dependent time averaging
+        @param on_the_fly: "On the fly" kernels
         @return: a dictionary of result values
         """
         assert imp.telescope_and_band_are_compatible(telescope, band)
@@ -223,7 +229,7 @@ class SkaPythonAPI:
         else:
             max_baseline = max_allowed_baseline
 
-        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=BL_dep_time_av,
+        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bl_dep_time_av, on_the_fly=on_the_fly,
                                  max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                  verbose=verbose)  # Calculate the telescope parameters
 

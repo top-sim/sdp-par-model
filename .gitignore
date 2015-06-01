@@ -10,7 +10,7 @@
 /*.wxm
 
 *.pyc
-
+*.orig
 *.rej
 *.stackdump
 

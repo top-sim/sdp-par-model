@@ -7,7 +7,6 @@ etc. Several methods are supplied by which values can be found by lookup as well
 import numpy as np
 from sympy import symbols
 
-
 class ParameterContainer:
     """
     The ParameterContainer class is used throughout the Python implementation to store parameters and pass them
@@ -15,7 +14,6 @@ class ParameterContainer:
     """
     def __init__(self):
         pass
-
 
 class Constants:
     """
@@ -279,7 +277,8 @@ class ParameterDefinitions:
     @staticmethod
     def get_telescope_from_hpso(hpso):
         """
-        Returns the telescope that is associated with the provided HPSO
+        Returns the telescope that is associated with the provided HPSO. Not really necessary any more, as the HPSO
+        definitions now contain the relevant telescope.
         @param hpso:
         @return: the telescope corresponding to this HPSO
         @raise Exception:

@@ -12,26 +12,28 @@ soon as all remaining unknown symbolic variables are suitably substituted.
 from sympy import log, Min, Max, sqrt, sign, ceiling, floor
 from numpy import pi
 from parameter_definitions import ImagingModes
-
+from parameter_definitions import ParameterContainer
 
 class Equations:
     def __init__(self):
         pass
 
     @staticmethod
-    def apply_imaging_equations(telescope_parameters, imaging_mode, bl_dep_time_av, On_the_fly=0, verbose=False):
+    def apply_imaging_equations(telescope_parameters, imaging_mode, bl_dep_time_av, on_the_fly=False, verbose=False):
         """
         Computes several derived parameter values using the parametric imaging equations applied to the the supplied
         telescope parameters. The imaging equations are described in the PDR05 document.
         @param telescope_parameters: ParameterContainer object containing the telescope parameters.
-               This ParameterContainer object is modified in-place by appending all derived values as fields
+               This ParameterContainer object is modified in-place by appending / overwriting the relevant fields
         @param imaging_mode: The telecope's imaging mode
         @param bl_dep_time_av: True iff baseline dependent time averaging should be used.
+        @param on_the_fly: True iff using on-the-fly kernels
         @param verbose: displays verbose command-line output
         @raise Exception:
         """
         o = telescope_parameters  # Used for shorthand in the equations below
-
+        assert isinstance(o, ParameterContainer)
+        assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
         # ===============================================================================================
@@ -114,7 +116,7 @@ class Equations:
             print "USING BASELINE DEPENDENT TIME AVERAGING, combining this number of time samples: ", o.combine_time_samples
         else:
             print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
-        if On_the_fly == 1:
+        if on_the_fly:
             print "On the fly kernels..."
         else:
             print "Not on the fly kernels..."
@@ -132,7 +134,7 @@ class Equations:
         o.Ngw = 2. * o.Theta_fov * sqrt((o.DeltaW_max ** 2 * o.Theta_fov ** 2 / 4.0) + (
             o.DeltaW_max ** 1.5 * o.Theta_fov / (
                 o.epsilon_w * pi * 2.)))  # Eq. 25 w-kernel support size **Note difference in cellsize assumption**
-        if On_the_fly == 1:
+        if on_the_fly:
             o.Ncvff = sqrt(
                 o.Naa ** 2 + o.Ngw ** 2)  # Test: what happens if we calculate convolution functions on the fly for each visibility? Make smaller kernels, no reuse.
         else:
@@ -158,7 +160,7 @@ class Equations:
             print ""
             print "------------------------------"
             print ""
-        if On_the_fly == 1:
+        if on_the_fly:
             print "WARNING! Experimental!: On the fly kernels in use. (Set On_the_fly =0 to disable)"
             print "On the fly kernels is a new option forcing convolution kernels to be recalculated"
             print "for each and every viibility point, but only at the actual size needed  - i.e. not"
@@ -234,7 +236,7 @@ class Equations:
             o.dfonF + 1.)  # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
         o.Nf_gcf_predict_nosmear = log(o.wl_max / o.wl_min) / log(
             o.dfonF + 1.)  # allow uv positional errors up to grid_cell_error*1/Qkernel of a cell from frequency smearing.
-        if On_the_fly == 1:
+        if on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
             o.Nf_gcf_predict = o.Nf_vis_predict
             o.Tkernel_backward = o.Tdump_backward
