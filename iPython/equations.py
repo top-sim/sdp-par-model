@@ -9,7 +9,7 @@ telescope_parameter object (locally referred to as o). These can then be numeric
 soon as all remaining unknown symbolic variables are suitably substituted.
 """
 
-from sympy import log, Min, Max, sqrt, floor
+from sympy import log, Min, Max, sqrt, floor, sign
 from numpy import pi
 from parameter_definitions import ImagingModes
 from parameter_definitions import ParameterContainer
@@ -256,11 +256,8 @@ class Equations:
         # Phase rotation (for the facetting):
         # --------------
         # TODO: the equation below is labeled as Eq 29, but bears very little resemblance to PDR05's Eq 29. Check pls.
-        # Eq. 29
-        if o.Nfacet > 1:
-            o.Rflop_phrot = 25 * Rflop_common_factor * (o.Nvis_predict + o.Nvis_backward) * o.Nfacet ** 2
-        else:
-            o.Rflop_phrot = 0
+        # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
+        o.Rflop_phrot = sign(o.Nfacet - 1) * 25 * Rflop_common_factor * (o.Nvis_predict + o.Nvis_backward) * o.Nfacet ** 2
 
         # Calculate overall flop rate : revised Eq. 30
         # ================================================================================
