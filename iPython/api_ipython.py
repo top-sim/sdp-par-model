@@ -372,7 +372,8 @@ class SkaIPythonAPI(api):
             SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False, On_the_fly=0, verbose=False):
+    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False,
+                                  on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
         @param Telescope:
@@ -405,7 +406,7 @@ class SkaIPythonAPI(api):
                 display(HTML(s))
             else:
                 tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
-                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, on_the_fly=On_the_fly,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, on_the_fly=on_the_fly,
                                          verbose=verbose)  # Calculate the telescope parameters
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
@@ -429,7 +430,8 @@ class SkaIPythonAPI(api):
                 SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
     @staticmethod
-    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, BL_dep_time_av=False, otf=0, verbose=False):
+    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline, Nf_max, bl_dep_time_av=False,
+                                     on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -462,8 +464,8 @@ class SkaIPythonAPI(api):
             else:
                 display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
                              '</font>'))
-                tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
-                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, on_the_fly=otf,
+                tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=bl_dep_time_av,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, on_the_fly=on_the_fly,
                                          verbose=verbose)  # Calculate the telescope parameters
                 (Tsnap, Nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
