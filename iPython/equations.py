@@ -141,6 +141,8 @@ class Equations:
             o.Ncvff = o.Qgcf * sqrt(o.Naa ** 2 + o.Ngw ** 2)
 
         # Eq. 23 combined kernel support size
+        o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward)
+        o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict)
 
         if verbose:
             print "Geometry Assumptions:"
@@ -160,19 +162,11 @@ class Equations:
             print ""
             print "------------------------------"
             print ""
-        if on_the_fly:
-            print "WARNING! Experimental!: On the fly kernels in use. (Set On_the_fly =0 to disable)"
-            print "On the fly kernels is a new option forcing convolution kernels to be recalculated"
-            print "for each and every viibility point, but only at the actual size needed  - i.e. not"
-            print "oversampled by a factor of Qgcf (8)."
-
-        # ===============================================================================================
-        # The following workaround is (still) needed. Note: gridding done at maximum of either Nf_out or Nf_no_smear.
-        o.Nf_vis_backward = (o.Nf_out * sign(floor(o.Nf_out / o.Nf_no_smear_backward))) + (
-            o.Nf_no_smear_backward * sign(floor(o.Nf_no_smear_backward / o.Nf_out)))
-        o.Nf_vis_predict = (o.Nf_out * sign(floor(o.Nf_out / o.Nf_no_smear_predict))) + (
-            o.Nf_no_smear_predict * sign(floor(o.Nf_no_smear_predict / o.Nf_out)))
-
+            if on_the_fly:
+                print "WARNING! On the fly kernels in use. Experimental!:  (Set on_the_fly = False to disable)"
+                print "On the fly kernels is a new option forcing convolution kernels to be recalculated"
+                print "for each and every viibility point, but only at the actual size needed  - i.e. not"
+                print "oversampled by a factor of Qgcf (8)."
 
         # ===============================================================================================
         # PDR05 Sec 12.8
