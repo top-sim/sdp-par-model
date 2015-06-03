@@ -71,31 +71,30 @@ class SkaPythonAPI:
                                                nr_frequency_channels, verbose)
 
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
+
         results = []
         for i in range(len(param_values)):
             tp = copy.deepcopy(telescope_params)
-            param_value = param_values[i]
-
-            exec ('tp.%s = %g' % (parameter, param_value))
-
-            if verbose:
-                print ">> Evaluating %s for %s = %s" % (expression, parameter, str(param_value))
-
-            Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)  # modifies tp in-place
-            parameter_final_value = None
-            exec('parameter_final_value = tp.%s' % parameter)
-
-            if parameter_final_value != param_value:
-                raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
-                                     'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
-                                     % parameter)
+            exec('tp.%s = param_values[i]' % parameter)  # Assigns the parameter to its temporary evaluation-value
 
             percentage_done = i * 100.0 / len(param_values)
-            print "> %.1f%% done: Evaluating %s for %s = %s" % (percentage_done, expression,
-                                                                parameter, str(param_value))
+            print "> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression,
+                                                                parameter, param_values[i])
 
-            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)  # modifies tp in-place
+
+            # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
+            # otherwise the assigned value would have been lost (i.e. not a free parameter)
+            parameter_final_value = None
+            exec('parameter_final_value = tp.%s' % parameter)
+            if parameter_final_value != param_values[i]:
+                raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                     'by the method compute_derived_parameters(). (%g -> %g). '
+                                     'Cannot peform parameter sweep.'
+                                     % (parameter, param_values[i], parameter_final_value))
+
             result_expression = eval('tp.%s' % expression)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print 'done with parameter sweep!'
@@ -154,18 +153,23 @@ class SkaPythonAPI:
 
                 tp = copy.deepcopy(telescope_params)
 
-                exec ('tp.%s = %g' % (parameters[0], param1_value))
-                exec ('tp.%s = %g' % (parameters[1], param2_value))
+                # Assigns the parameters to their temporary evaluation-values
+                exec('tp.%s = param1_value' % parameters[0])
+                exec('tp.%s = param2_value' % parameters[1])
 
-                # Look at value directly after assignment
-                param1_value = eval('tp.%s' % parameters[0])
-                param2_value = eval('tp.%s' % parameters[1])
+                percentage_done = (i*len(param2_values) + j) * 100.0 / nr_evaluations
+                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
+                                                                                 parameters[0], parameters[1],
+                                                                                 str(param1_value), str(param2_value))
 
+                Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)   # modifies tp in-place
+
+                # Perform a check to see that the value of the assigned parameters weren't changed by the imaging
+                # equations, otherwise the assigned values would have been lost (i.e. not free parameters)
                 parameter1_final_value = None
                 parameter2_final_value = None
                 exec('parameter1_final_value = tp.%s' % parameters[0])
                 exec('parameter2_final_value = tp.%s' % parameters[1])
-
                 if parameter1_final_value != param1_value:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
@@ -177,16 +181,9 @@ class SkaPythonAPI:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                percentage_done = (i*len(param2_values) + j) * 100.0 / nr_evaluations
-                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
-                                                                                 parameters[0], parameters[1],
-                                                                                 str(param1_value), str(param2_value))
-
-                Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)   # modifies tp in-place
-                (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 result_expression = eval('tp.%s' % expression)
-
-                results[i,j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+                (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                results[i, j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         print 'done with parameter sweep!'
         return (param1_values, param2_values, results)
@@ -260,5 +257,3 @@ class SkaPythonAPI:
             result_dict[variable_string] = result
 
         return result_dict
-
-
