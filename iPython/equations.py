@@ -1,12 +1,9 @@
 """
 This class contains the actual equations that are used to compute the telescopes' performance values and computional
 requirements from the supplied basic parameters defined in ParameterDefinitions.
-Input parameters are contined in the parameter telescope_parameters, and include things such as baseline length,
-number and channels, etc.
 
-This class contains a method for (symbolically) computing the derived parameters, and adding these to the
-telescope_parameter object (locally referred to as o). These can then be numerically evaluated at a later stage, as
-soon as all remaining unknown symbolic variables are suitably substituted.
+This class contains a method for (symbolically) computing derived parameters using imaging equations described
+in PDR05 (version 1.85).
 """
 
 from sympy import log, Min, Max, sqrt, floor, sign
@@ -21,8 +18,13 @@ class Equations:
     @staticmethod
     def apply_imaging_equations(telescope_parameters, imaging_mode, bl_dep_time_av, on_the_fly=False, verbose=False):
         """
-        Computes several derived parameter values using the parametric imaging equations applied to the the supplied
-        telescope parameters. The imaging equations are described in the PDR05 document.
+        (Symbolically) computes a set of derived parameters using imaging equations described in PDR05 (version 1.85).
+
+        The derived parameters are added to the supplied telescope_parameter object (locally referred to as o).
+        Where parameters are only described symbolically (using sympy) they can be numerically evaluated at a later
+        stage, when unknown symbolic variables are suitably substituted. This is typically done in external code
+        contained, e.g. in implementation.py.
+
         @param telescope_parameters: ParameterContainer object containing the telescope parameters.
                This ParameterContainer object is modified in-place by appending / overwriting the relevant fields
         @param imaging_mode: The telecope's imaging mode
@@ -70,7 +72,7 @@ class Equations:
         log_wl_ratio = log(o.wl_max / o.wl_min)
         # The two equations below => combination of Eq 4 and Eq 5 for full and facet FOV at max baseline respectively.
         # These "ensure correct location of visibility on grid".
-        # TODO: PDR05 => o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * Theta_fov * o.Qbw)). Is this equivalent?
+        # TODO: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * Theta_fov * o.Qbw)). Looks different: 0.6 != 3/2.0
         o.Nf_no_smear_predict =  log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Theta_fov * o.Qbw * o.Nfacet)))
         o.Nf_no_smear_backward = log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax_bin * o.Theta_fov * o.Qbw)))
 
@@ -122,6 +124,7 @@ class Equations:
         o.Ngw = 2 * o.Theta_fov * sqrt((o.DeltaW_max * o.Theta_fov / 2.) ** 2 +
                                        (o.DeltaW_max ** 1.5 * o.Theta_fov / (2 * pi * o.epsilon_w)))  # Eq. 25
 
+        # The following two TODO lines were added by Anna and/or Rosie
         # TODO: Test what happens if we calculate convolution functions on the fly for each visibility?
         # TODO: Make smaller kernels, no reuse.
         Nkernel2 = o.Ngw ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
@@ -193,7 +196,7 @@ class Equations:
 
         # Eq. 33, per output grid (i.e. frequency)
         # TODO: please check correctness of 2 eqns below.
-        # TODO: Where is Nf_out factor? Should the common factor Nfacet_x_Npix be repeated in both?
+        # TODO: Where is the Nf_out factor? Should the common factor Nfacet_x_Npix be repeated in both eqns?
         o.Rfft_backward = o.binfrac * 5. * Nfacet_x_Npix ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
         o.Rfft_predict  = o.binfrac * 5. * Nfacet_x_Npix ** 2 * log(Nfacet_x_Npix, 2) / o.Tsnap
@@ -202,13 +205,13 @@ class Equations:
         o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
 
         # do Nmajor-1 cycles before doing the final major cycle.
-        # TODO: doesn't the line below now contain the Nmajor factor twice? (also contained in Rflop_common_factor)
+        # TODO: doesn't the line below now contain the Nmajor factor twice? (as it is also contained in Rflop_common_factor)
         o.Rflop_fft = Rflop_common_factor * ((o.Nmajor - 1) * o.Rfft_intermediate_cycles + o.Rfft_final_cycle)
 
         # Re-Projection:
         # -------------
         if imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
-            # TODO: Where is Nf_out factor?
+            # TODO: Where is the Nf_out factor in line below?
             o.Rrp = 50. * Nfacet_x_Npix ** 2 / o.Tsnap  # Eq. 34
         elif imaging_mode == ImagingModes.SlowTrans:
             o.Rrp = 0  # (Consistent with PDR05 280115)
@@ -217,7 +220,7 @@ class Equations:
 
         # Reproj intermetiate major cycle FFTs (Nmaj -1) times,
         # then do the final ones for the last cycle at the full output spectral resolution.
-        # TODO: this line does NOT contain the Rflop_common_factor in its completeness, as Nmajor is factored in separately. This is probably correct. But may be a problem see previous TODO (line 205)
+        # TODO: this line does not contain the Rflop_common_factor in its completeness, as Nmajor is factored in separately. This is probably correct. But may be a problem see previous TODO (line 213)
         o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out)
 
         # Convolution:
@@ -245,8 +248,9 @@ class Equations:
             print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_gcf_backward
             print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_gcf_predict
 
-        Ncvff2 = (o.Nfacet * o.Ncvff) ** 2  # TODO: the Nfacet factor is not propagated to the log term below?
-        # TODO: the denominator below does not seem to include the Qfcv factor used in PDR05. Is this correct?
+        Ncvff2 = (o.Nfacet * o.Ncvff) ** 2
+        # TODO: the Nfacet factor included above is not repeated in the argument of the log terms in the two eqns below?
+        # TODO: the denominators below do not seem to include the Qfcv factor used in PDR05 eq 35. Is this correct?
         # The following two equations correspond to Eq. 35
         o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * ncomb * Ncvff2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
         o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * ncomb * Ncvff2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
@@ -271,14 +275,15 @@ class Equations:
 
         # Note the factor 2 in the line below -- we have a double buffer
         # (allowing storage of a full observation while simultaneously capturing the next)
-        # TODO: The o.Nbeam factor is not mentioned in PDR05. Why?
+        # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why?
         o.Mbuf_vis = 2 * o.Npp * o.Nvis_predict * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
 
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
         # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors. Is PDR05 lacking in this regard?
         o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict * o.Mvis * o.Nfacet ** 2  # Eq 50
 
-        # TODO : This very late modification of o.Npix_linear looks suspect to me. Why is the value overwritten? Where is it used in its new form? Why? Only in api_ipython it seems.
+        # TODO : In this block of code, the last action is a modification of o.Npix_linear that looks suspect to me.
+        # TODO : Why is the value overwritten? Where is it used in its new form? Only in api_ipython it seems. Is this correct / intended?
         o.Npix_linear = o.Npix_linear * o.binfrac
 
         return o
