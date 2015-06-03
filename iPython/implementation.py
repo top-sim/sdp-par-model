@@ -111,51 +111,64 @@ class Implementation:
         return is_compatible
 
     @staticmethod
-    def find_optimal_Tsnap_Nfacet(definitions, max_number_nfacets=200, verbose=False):
+    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize='Rflop', max_number_nfacets=200,
+                                  verbose=False):
         """
-        Computes the optimal value for Tsnap and Nfacet that minimizes the value of Rflop
-        according to its definition in the supplied definitions object
+        Computes the optimal value for Tsnap and Nfacet that minimizes the value of an expression (typically Rflop)
         Returns result as a 2-tuple (Tsnap_opt, Nfacet_opt)
-        """
 
-        flop_results = {} # Maps nfacet values to flops
-        flop_array = []
-        Tsnap_array = []
+        @param telescope_parameters: Contains the definition of the expression that needs to be minimzed. This should
+                                     be a symbolic expression that involves Tsnap and/or Nfacet.
+        @param expr_to_minimize: The expression that should be minimized. This is typically assumed to be the
+                                 computational load, but may also be, for example, buffer size.
+        @param max_number_nfacets: Provides an upper limit to Nfacet. Because we currently do a linear search for the
+                                   minimum value, using a for loop, we need to know when to quit. Max should never be
+                                   reached unless in pathological cases
+        @param verbose:
+        """
+        assert isinstance(telescope_parameters, ParameterContainer)
+        assert hasattr(telescope_parameters, expr_to_minimize)
+
+        result_per_nfacet = {}
+        result_array = []
+        optimal_Tsnap_array = []
         warned = False
+        expression_original = None
 
         for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
-            expression_original = definitions.Rflop
+            exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
-                print ('Searching for minimum Rflop with nfacets > 20... this is a bit odd (and may take long)')
+                print ('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
+                       '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
                 warned = True
 
-            i = nfacets-1 # zero-based index
+            i = nfacets-1  # zero-based index
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            Rflops = expression_original.subs({definitions.Nfacet : nfacets})
-            answer = Implementation.minimize_binned_expression_by_Tsnap(expression=Rflops,
-                                                                        telescope_parameters=definitions,
+            expression = expression_original.subs({telescope_parameters.Nfacet : nfacets})
+            result = Implementation.minimize_binned_expression_by_Tsnap(expression=expression,
+                                                                        telescope_parameters=telescope_parameters,
                                                                         verbose=verbose)
 
-            flop_array.append(float(answer['value']))
-            Tsnap_array.append(answer[definitions.Tsnap])
-            flop_results[nfacets] = flop_array[i]/1e15
+            result_array.append(float(result['value']))
+            optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
+            result_per_nfacet[nfacets] = result_array[i]
             if nfacets >= 2:
-                if flop_array[i] >= flop_array[i-1]:
+                if result_array[i] >= result_array[i-1]:
                     if verbose:
                         print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
                               % nfacets)
                     break
 
-        i = np.argmin(np.array(flop_array))
-        nfacets = i + 1
+        index = np.argmin(np.array(result_array))
+        nfacets = index + 1
         if verbose:
-            print ('\n%f PetaFLOPS was the lowest FLOP value, found for (Nfacet, Tsnap) = (%d, %.2f)' \
-                  % (flop_array[i]/1e15, nfacets,  Tsnap_array[i]))
+            print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
+                   % (nfacets,  optimal_Tsnap_array[index], expr_to_minimize, result_array[index]))
 
-        return (Tsnap_array[i], nfacets)
+        return (optimal_Tsnap_array[index], nfacets)
 
     @staticmethod
     def substitute_parameters_binned(expression, tp, bins, counts, verbose=False, take_max=False):
