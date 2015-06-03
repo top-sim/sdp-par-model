@@ -77,7 +77,7 @@ class ImagingModes:
     Spectral = 'Spectral'
     SlowTrans = 'SlowTrans'
     ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run continuum and spectral modes sequentially
-    All = 'All, Summed (Cont+Spec+Slow)'
+    All = 'All, Summed (Cont+Spec+SlowTrans)'
 
 
 class HPSOs:

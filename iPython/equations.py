@@ -221,6 +221,7 @@ class Equations:
         # Reproj intermetiate major cycle FFTs (Nmaj -1) times,
         # then do the final ones for the last cycle at the full output spectral resolution.
         # TODO: this line does not contain the Rflop_common_factor in its completeness, as Nmajor is factored in separately. This is probably correct. But may be a problem see previous TODO (line 213)
+        # TODO: Additionally, the results I see for Projection seem way too low -- ten orders of magnitude less than the other Rflop components for Mid1
         o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out)
 
         # Convolution:
