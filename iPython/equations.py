@@ -71,8 +71,8 @@ class Equations:
 
         log_wl_ratio = log(o.wl_max / o.wl_min)
         # The two equations below => combination of Eq 4 and Eq 5 for full and facet FOV at max baseline respectively.
-        # These "ensure correct location of visibility on grid".
-        # TODO: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * Theta_fov * o.Qbw)). Looks different: 0.6 != 3/2.0
+        # These limit bandwidth smearing to within a fraction (epsilon_f_approx) of a uv cell.
+        # Done: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * o.Q_fov * o.Qbw)). This is fine - substituting in the equation for theta_fov shows it is indeed correct.
         o.Nf_no_smear_predict =  log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Theta_fov * o.Qbw * o.Nfacet)))
         o.Nf_no_smear_backward = log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax_bin * o.Theta_fov * o.Qbw)))
 
@@ -176,9 +176,9 @@ class Equations:
         # Gridding:
         # --------
         o.Rgrid_backward = 8. * o.Nvis_backward * Nkernel2 * o.Nmm  # Eq 32; FLOPS
-        o.Rgrid_predict  = 8. * o.Nvis_predict  * Nkernel2 * o.Nmm  # Eq 32; FLOPS
+        o.Rgrid_predict  = 8. * o.Nvis_predict  * Nkernel2 * o.Nmm  # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet
         o.Rgrid = o.Rgrid_backward + o.Rgrid_predict
-        o.Rflop_grid = Rflop_common_factor * o.Rgrid
+        o.Rflop_grid = Rflop_common_factor * o.Rgrid *o.Nfacet**2 #TODO: Multiply by Nfacet**2. Pretty major bug - how did we manage that / double check.
 
         # FFT:
         # ---
@@ -192,46 +192,48 @@ class Equations:
             raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
 
         o.Nf_FFT_predict = o.Nf_vis_predict
-        Nfacet_x_Npix = o.Nfacet * o.Npix_linear
+        Nfacet_x_Npix = o.Nfacet * o.Npix_linear #This is mathematically correct below but potentially misleading (lines 201,203) as the Nln(N,2) is familiar to many users.
 
         # Eq. 33, per output grid (i.e. frequency)
         # TODO: please check correctness of 2 eqns below.
-        # TODO: Where is the Nf_out factor? Should the common factor Nfacet_x_Npix be repeated in both eqns?
+        # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
+        # note: o.binfrac serves to handle the fact that the FFT step is done once for all baselines and not on a baseline-bin basis.
         o.Rfft_backward = o.binfrac * 5. * Nfacet_x_Npix ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = o.binfrac * 5. * Nfacet_x_Npix ** 2 * log(Nfacet_x_Npix, 2) / o.Tsnap
+        o.Rfft_predict  = o.binfrac * 5. * Nfacet_x_Npix ** 2 * log(Nfacet_x_Npix, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix)
         o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
         # final major cycle, create final data products (at Nf_out channels)
         o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
 
         # do Nmajor-1 cycles before doing the final major cycle.
-        # TODO: doesn't the line below now contain the Nmajor factor twice? (as it is also contained in Rflop_common_factor)
-        o.Rflop_fft = Rflop_common_factor * ((o.Nmajor - 1) * o.Rfft_intermediate_cycles + o.Rfft_final_cycle)
+        # TODO: Done - bug found and fixed!: doesn't the line below now contain the Nmajor factor twice? (yes, this was a bug!) (as it is also contained in Rflop_common_factor)
+        o.Rflop_fft = o.Npp * o.Nbeam* ((o.Nmajor - 1) * o.Rfft_intermediate_cycles + o.Rfft_final_cycle)
 
         # Re-Projection:
         # -------------
         if imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
-            # TODO: Where is the Nf_out factor in line below?
+            # TODO: Where is the Nf_out factor in line below? Moved to line 226 (but line 226 needs to be multiplied by o.Rrp - bug; fixed)
             o.Rrp = 50. * Nfacet_x_Npix ** 2 / o.Tsnap  # Eq. 34
         elif imaging_mode == ImagingModes.FastImg:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode : %s" % imaging_mode)
 
-        # Reproj intermetiate major cycle FFTs (Nmaj -1) times,
+        # Reproj intermediate major cycle FFTs (Nmaj -1) times,
         # then do the final ones for the last cycle at the full output spectral resolution.
         # TODO: this line does not contain the Rflop_common_factor in its completeness, as Nmajor is factored in separately. This is probably correct. But may be a problem see previous TODO (line 213)
         # TODO: Additionally, the results I see for Projection seem way too low -- ten orders of magnitude less than the other Rflop components for Mid1
-        o.Rflop_proj = (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out)
+        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out)
 
-        # Convolution:
-        # -----------
+
+        # Convolution kernels:
+        # --------------------
         o.grid_cell_error = o.epsilon_f_approx
         o.dfonF = o.grid_cell_error * o.Qgcf / (o.Qkernel * o.Ncvff)
 
         # allow uv positional errors up to grid_cell_error * 1/Qkernel of a cell from frequency smearing.
         o.Nf_gcf_backward_nosmear = log(o.wl_max / o.wl_min) / log(o.dfonF + 1.)
-        o.Nf_gcf_predict_nosmear  = o.Nf_gcf_backward_nosmear
+        o.Nf_gcf_predict_nosmear  = o.Nf_gcf_backward_nosmear #TODO: Placeholder since we don't know how many frequecy kernels we need for predict step.
 
         if on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
@@ -249,18 +251,17 @@ class Equations:
             print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_gcf_backward
             print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_gcf_predict
 
-        Ncvff2 = (o.Nfacet * o.Ncvff) ** 2
-        # TODO: the Nfacet factor included above is not repeated in the argument of the log terms in the two eqns below?
-        # TODO: the denominators below do not seem to include the Qfcv factor used in PDR05 eq 35. Is this correct?
+        # TODO Done: the Nfacet factor included above is not repeated in the argument of the log terms in the two eqns below. No, it's an out and out multiplier of parallelism. I've removed the somewhat misleading Ncvff2.
+        # TODO Done: the denominators below do not seem to include the Qfcv factor used in PDR05 eq 35. This is correct - see line 133.
         # The following two equations correspond to Eq. 35
-        o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * ncomb * Ncvff2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
-        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * ncomb * Ncvff2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
+        o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * ncomb * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
+        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * ncomb * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
 
         # Phase rotation (for the facetting):
         # --------------
-        # TODO: the equation below is labeled as Eq 29, but bears very little resemblance to PDR05's Eq 29. Check pls.
+        # TODO Done: the equation below is labeled as Eq 29, but bears very little resemblance to PDR05's Eq 29. 25 FLOPS per visiblity. Only do it if we need to facet. It's OK.
         # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
         o.Rflop_phrot = sign(o.Nfacet - 1) * 25 * Rflop_common_factor * (o.Nvis_predict + o.Nvis_backward) * o.Nfacet ** 2
 
@@ -280,11 +281,13 @@ class Equations:
         o.Mbuf_vis = 2 * o.Npp * o.Nvis_predict * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
 
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
-        # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors. Is PDR05 lacking in this regard?
+        # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors. Is PDR05 lacking in this regard? Yes. Document must be updated.
         o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict * o.Mvis * o.Nfacet ** 2  # Eq 50
 
         # TODO : In this block of code, the last action is a modification of o.Npix_linear that looks suspect to me.
         # TODO : Why is the value overwritten? Where is it used in its new form? Only in api_ipython it seems. Is this correct / intended?
+        # TODO : Agreed - this is an ugly workaround because Npix_linear is the same in all baseline bins and we just want the one value of it fed back in the results, just do this at the very end so it doesn't screw up other calculations.
+        # TODO : since binfrac is normalised to unity this "works" but it's ugly. Previously, we were getting numbers N_bins x too big.
         o.Npix_linear = o.Npix_linear * o.binfrac
 
         return o
