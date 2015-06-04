@@ -75,9 +75,9 @@ class ImagingModes:
     """
     Continuum = 'Continuum'
     Spectral = 'Spectral'
-    SlowTrans = 'SlowTrans'
-    ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run continuum and spectral modes sequentially
-    All = 'All, Summed (Cont+Spec+SlowTrans)'
+    FastImg = 'Fast Imaging'
+    ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run (only) continuum and spectral modes sequentially
+    All = 'All, Summed (Cont+Spec+FastImg)'
 
 
 class HPSOs:
@@ -388,7 +388,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Tobs = 6 * 3600
 
-        elif mode == ImagingModes.SlowTrans:
+        elif mode == ImagingModes.FastImg:
             o.Qfov = 0.9  # Field of view factor
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
@@ -446,7 +446,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso03A:
             o.telescope = Telescopes.SKA1_Low_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate'
             o.freq_min = 150e6
             o.freq_max = 350e6
@@ -458,7 +458,7 @@ class ParameterDefinitions:
             o.Nmajor = 10
         elif hpso == HPSOs.hpso03B:
             o.telescope = Telescopes.SKA1_Low_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate'
             o.freq_min = 150e6
             o.freq_max = 350e6
@@ -470,7 +470,7 @@ class ParameterDefinitions:
             o.Nmajor = 10
         elif hpso == HPSOs.hpso04A:
             o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 650e6
             o.freq_max = 950e6
@@ -482,7 +482,7 @@ class ParameterDefinitions:
             o.Nmajor = 10
         elif hpso == HPSOs.hpso04B:
             o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 1.25e9
             o.freq_max = 1.55e9
@@ -494,7 +494,7 @@ class ParameterDefinitions:
             o.Nmajor = 10
         elif hpso == HPSOs.hpso05A:
             o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Timing. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 15km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 0.95e9
             o.freq_max = 1.76e9
@@ -506,7 +506,7 @@ class ParameterDefinitions:
             o.Nmajor = 10
         elif hpso == HPSOs.hpso05B:
             o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Timing. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 15km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 1.65e9
             o.freq_max = 3.05e9
@@ -628,7 +628,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso19:
             o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Transients. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 650e6
             o.freq_max = 950e6
@@ -673,7 +673,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso35:
             o.telescope = Telescopes.SKA1_Sur_old
-            o.mode = ImagingModes.SlowTrans
+            o.mode = ImagingModes.FastImg
             o.comment = 'Autocorrelation'
             o.freq_min = 650e6
             o.freq_max = 1.15e9

@@ -182,7 +182,7 @@ class Equations:
 
         # FFT:
         # ---
-        if imaging_mode in (ImagingModes.Continuum, ImagingModes.SlowTrans):
+        if imaging_mode in (ImagingModes.Continuum, ImagingModes.FastImg):
             # make only enough FFT grids to extract necessary spectral info and retain distributability.
             o.Nf_FFT_backward = o.minimum_channels
         elif imaging_mode == ImagingModes.Spectral:
@@ -213,7 +213,7 @@ class Equations:
         if imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
             # TODO: Where is the Nf_out factor in line below?
             o.Rrp = 50. * Nfacet_x_Npix ** 2 / o.Tsnap  # Eq. 34
-        elif imaging_mode == ImagingModes.SlowTrans:
+        elif imaging_mode == ImagingModes.FastImg:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode : %s" % imaging_mode)

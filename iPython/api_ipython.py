@@ -273,7 +273,7 @@ class SkaIPythonAPI(api):
                 otf = on_the_fly[i]
                 tps = {}
                 # We make a distinction against the "pure" modes, and summed modes
-                if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                if mode in (ImagingModes.Continuum, ImagingModes.FastImg, ImagingModes.Spectral):
                     tp = imp.calc_tel_params(telescope, mode, band=band, bldta=bldta, on_the_fly=otf,
                                              verbose=verbose)  # Calculate the telescope parameters
 
@@ -286,7 +286,7 @@ class SkaIPythonAPI(api):
                     # This mode consists of the *sum* of the Continuum, SlowTrans and Spectral modes,
                     # of which each has a separate set of telescope parameters
 
-                    for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                    for submode in (ImagingModes.Continuum, ImagingModes.FastImg, ImagingModes.Spectral):
                         tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, on_the_fly=otf,
                                                  verbose=verbose)  # Calculate the telescope parameters
 
@@ -295,7 +295,7 @@ class SkaIPythonAPI(api):
                         tp.Nfacet_opt = nfacet
                         tps[submode] = tp
                 else:
-                    raise Exception("The imaging mode %s is currently not supported" % str(mode))
+                    raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
 
                 tels_params.append(tps)
 
@@ -317,7 +317,7 @@ class SkaIPythonAPI(api):
                 telescope = telescopes[i]
                 result_values = np.zeros(nr_result_expressions)
 
-                if mode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                if mode in (ImagingModes.Continuum, ImagingModes.FastImg, ImagingModes.Spectral):
                     tp = tels_params[i][mode]
                     # The result expressions need to be defined here as they depend on tp (read above)
                     result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
@@ -329,7 +329,7 @@ class SkaIPythonAPI(api):
                     result_values = api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
 
                 elif mode == ImagingModes.All:
-                    for submode in (ImagingModes.Continuum, ImagingModes.SlowTrans, ImagingModes.Spectral):
+                    for submode in (ImagingModes.Continuum, ImagingModes.FastImg, ImagingModes.Spectral):
                         tp = tels_params[i][submode]
                         # The result expressions need to be defined here as they depend on tp (read above)
                         result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
@@ -340,7 +340,7 @@ class SkaIPythonAPI(api):
 
                         result_values += api.evaluate_expressions(result_expressions, tp, tp.Tsnap_opt, tp.Nfacet_opt)
                 else:
-                    raise Exception("The imaging mode %s is currently not supported" % str(mode))
+                    raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
 
                 for i in range(nr_result_expressions):
                     if i == 2: # The third expression is Npix_linear, that we want to print as an integer value
