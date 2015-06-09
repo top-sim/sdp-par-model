@@ -395,7 +395,7 @@ class ParameterDefinitions:
             o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
             o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
         else:
-            raise Exception('Unknown mode!')
+            raise Exception('Unknown mode: %s!' % str(mode))
 
         return o
 
