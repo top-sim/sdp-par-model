@@ -78,7 +78,7 @@ class ImagingModes:
     FastImg = 'Fast Imaging'
     ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run (only) continuum and spectral modes sequentially
     All = 'All, Summed (Cont+Spec+FastImg)'
-
+    pure_modes = (Continuum, Spectral, FastImg)
 
 class HPSOs:
     """
