@@ -31,6 +31,14 @@ class SkaIPythonAPI(api):
         pass
 
     @staticmethod
+    def defualt_rflop_plotting_colours():
+        """
+        Defines a default colour order used in plotting Rflop components
+        @return:
+        """
+        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral')
+
+    @staticmethod
     def show_table(title, labels, values, units):
         """
         Plots a table of label-value pairs
@@ -313,12 +321,12 @@ class SkaIPythonAPI(api):
                                           tels_result_strings[1], result_units)
 
         labels = ('Gridding', 'FFT', 'Projection', 'Convolution', 'Phase rot.')
+        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
         telescope_labels = ('%s\n%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA], otf_text[Tel1_OTF_kernels]),
                             '%s\n%s\n%s' % (Telescope_2, bldta_text[Tel2_BLDTA], otf_text[Tel2_OTF_kernels]))
-        colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
         values = {}
         i = -1
         for label in labels:
@@ -367,11 +375,11 @@ class SkaIPythonAPI(api):
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
                 result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
-                                      tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_proj/c.peta,
-                                      tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
+                                      tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_phrot/c.peta,
+                                      tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
                 result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
                                  'Total Compute Requirement',
-                                 '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
+                                 '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
                 result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
                                 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
                 result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet)
@@ -417,7 +425,7 @@ class SkaIPythonAPI(api):
         result_titles = ('Optimal Number of Facets', 'Optimal Snapshot Time',
                          'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
                          'Total Compute Requirement',
-                         '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
+                         '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
         result_units = ('', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
@@ -453,8 +461,8 @@ class SkaIPythonAPI(api):
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-        labels = ('Gridding', 'FFT', 'Projection', 'Convolution', 'Phase rot.')
-        colours = ('yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'green')
+        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-5:]  # the last five values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
 
@@ -484,7 +492,7 @@ class SkaIPythonAPI(api):
 
             result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
                                   tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
-                                  tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta, tp.Rflop_phrot/c.peta)
+                                  tp.Rflop_phrot/c.peta, tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
 
             result_value_string[0] += str('%d, ') % nfacet_opt
             result_value_string[1] += str('%.1f, ') % tsnap_opt
