@@ -129,8 +129,10 @@ class Equations:
         # TODO: Make smaller kernels, no reuse.
         Nkernel2 = o.Ngw ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
         o.Ncvff = sqrt(Nkernel2)  # Partially Eq. 23 : combined kernel support size
-        if not on_the_fly:
-            o.Ncvff *= o.Qgcf  # Completes Eq 23.
+        if on_the_fly:
+            o.Qgcf = 1.0
+        
+        o.Ncvff = sqrt(Nkernel2)*o.Qgcf  # Partially Eq. 23 : combined kernel support size and oversampling
 
         o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward)
         o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict)
@@ -149,7 +151,7 @@ class Equations:
             print "-------------------------------"
             print ""
             print "Support of w-kernel: ", o.Ngw, " pixels"
-            print "Support of combined GCF: ", o.Ncvff, " sub-pixels"
+            print "Support of combined, oversampled GCF at far field: ", o.Ncvff, " sub-pixels"
             print ""
             print "------------------------------"
             print ""

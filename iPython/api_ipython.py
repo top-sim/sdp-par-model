@@ -254,7 +254,7 @@ class SkaIPythonAPI(api):
         bldtas = (Tel1_BLDTA, Tel2_BLDTA)
         modes = (Mode_1, Mode_2)
         bands = (Band_1, Band_2)
-        on_the_fly = (Tel1_OTF_kernels, Tel2_OTF_kernels)
+        on_the_flys = (Tel1_OTF_kernels, Tel2_OTF_kernels)
         tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
         tels_stackable_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
@@ -289,7 +289,7 @@ class SkaIPythonAPI(api):
             bldta = bldtas[i]
             mode = modes[i]
             band = bands[i]
-            otf = on_the_fly[i]
+            on_the_fly = on_the_flys[i]
             tps = {}
 
             # We now make a distinction between "pure" and composite modes
