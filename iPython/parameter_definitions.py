@@ -166,7 +166,7 @@ class ParameterDefinitions:
         # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
         o.Qfcv = 1.0  #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
-        o.Qkernel = 10.0  #  1/(o.Qfcv * o.Qkernel) is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
+        o.Qkernel = 10.0  #  epsilon_f/ o.Qkernel is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
         #o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
@@ -186,7 +186,7 @@ class ParameterDefinitions:
         assert isinstance(o, ParameterContainer)
         if telescope == Telescopes.SKA1_Low:
             o.Bmax = 80000  # Actually constructed max baseline in *m*
-            o.Ds = 35  # station "diameter" in meters
+            o.Ds = 35  # station "diameter" in metres
             o.Na = 512  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
@@ -198,7 +198,7 @@ class ParameterDefinitions:
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
-            o.Ds = 35  # station "diameter" in meters
+            o.Ds = 35  # station "diameter" in metres
             o.Na = 1024  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
@@ -209,7 +209,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
-            o.Ds = 15  # station "diameter" in meters
+            o.Ds = 15  # station "diameter" in metres
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
