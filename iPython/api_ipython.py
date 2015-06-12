@@ -238,36 +238,36 @@ class SkaIPythonAPI(api):
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def compare_telescopes_default(Telescope_1, Telescope_2, Band_1, Band_2, Mode_1, Mode_2,
-                                   Tel1_BLDTA=False, Tel2_BLDTA=False,
-                                   Tel1_OTF_kernels=False, Tel2_OTF_kernels=False, verbose=False):
+    def compare_telescopes_default(telescope_1, telescope_2, band_1, band_2, mode_1, mode_2,
+                                   tel1_bldta=False, tel2_bldta=False,
+                                   tel1_otf=False, tel2_otf=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
         pretty interactive results. Plots the results side by side.
-        @param Telescope_1:
-        @param Telescope_2:
-        @param Band_1:
-        @param Band_2:
-        @param Mode_1:
-        @param Mode_2:
-        @param Tel1_OTF_kernels:
-        @param Tel2_OTF_kernels:
-        @param Tel1_BLDTA: Use baseline dependent time averaging for Telescope1 ?
-        @param Tel2_BLDTA: Use baseline dependent time averaging for Telescope2 ?
+        @param telescope_1:
+        @param telescope_2:
+        @param band_1:
+        @param band_2:
+        @param mode_1:
+        @param mode_2:
+        @param tel1_otf: On the fly kernels for telescope 1
+        @param tel2_otf: On the fly kernels for telescope 2
+        @param tel1_bldta: Use baseline dependent time averaging for Telescope1
+        @param tel2_bldta: Use baseline dependent time averaging for Telescope2
         @param verbose: print verbose output during execution
         @return:
         """
-        telescopes = (Telescope_1, Telescope_2)
-        bldtas = (Tel1_BLDTA, Tel2_BLDTA)
-        modes = (Mode_1, Mode_2)
-        bands = (Band_1, Band_2)
-        on_the_fly = (Tel1_OTF_kernels, Tel2_OTF_kernels)
+        telescopes = (telescope_1, telescope_2)
+        bldtas = (tel1_bldta, tel2_bldta)
+        modes = (mode_1, mode_2)
+        bands = (band_1, band_2)
+        on_the_flys = (tel1_otf, tel2_otf)
         tels_result_strings = []  # Maps each telescope to its results expressed as text, for display in HTML table
         tels_stackable_result_values = []   # Maps each telescope to its numerical results, to be plotted in bar chart
 
-        if not (imp.telescope_and_band_are_compatible(Telescope_1, Band_1) and
-                imp.telescope_and_band_are_compatible(Telescope_2, Band_2)):
+        if not (imp.telescope_and_band_are_compatible(telescope_1, band_1) and
+                imp.telescope_and_band_are_compatible(telescope_2, band_2)):
             msg = 'ERROR: At least one of the Telescopes is incompatible with its selected Band'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
@@ -297,8 +297,7 @@ class SkaIPythonAPI(api):
             bldta = bldtas[i]
             mode = modes[i]
             band = bands[i]
-            otf = on_the_fly[i]
-            tps = {}
+            on_the_fly = on_the_flys[i]
 
             # We now make a distinction between "pure" and composite modes
             relevant_modes = (mode,)  # A list with one element
@@ -307,8 +306,8 @@ class SkaIPythonAPI(api):
                     relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
                 else:
                     raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-            (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, mode, bldta,
-                                                                                  on_the_fly, relevant_modes, verbose)
+            (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
+                                                                                      bldta, on_the_fly, verbose)
             result_value_string = [telescope, band, mode, bldta, '%g' % max_baseline , '%d' % Nf_max]
             result_value_string.extend(result_value_string_end)
 
@@ -325,8 +324,8 @@ class SkaIPythonAPI(api):
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
-        telescope_labels = ('%s\n%s\n%s' % (Telescope_1, bldta_text[Tel1_BLDTA], otf_text[Tel1_OTF_kernels]),
-                            '%s\n%s\n%s' % (Telescope_2, bldta_text[Tel2_BLDTA], otf_text[Tel2_OTF_kernels]))
+        telescope_labels = ('%s\n%s\n%s' % (telescope_1, bldta_text[tel1_bldta], otf_text[tel1_otf]),
+                            '%s\n%s\n%s' % (telescope_2, bldta_text[tel2_bldta], otf_text[tel2_otf]))
         values = {}
         i = -1
         for label in labels:
@@ -336,32 +335,35 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(Telescope, Band, Mode, max_baseline, Nf_max, Nfacet, Tsnap, BL_dep_time_av=False,
+    def evaluate_telescope_manual(telescope, band, mode, max_baseline, Nf_max, Nfacet, Tsnap, bldta=False,
                                   on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
-        @param Telescope:
-        @param Band:
-        @param Mode:
+        @param telescope:
+        @param band:
+        @param mode:
         @param max_baseline:
         @param Nf_max:
         @param Nfacet:
         @param Tsnap:
+        @param bldta:
+        @param on_the_fly:
+        @param verbose:
         @return:
         """
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode', 'Tsnap', 'Nfacet')
-        param_values = (max_baseline, Nf_max, Telescope, Band, Mode, Tsnap, Nfacet)
+        param_values = (max_baseline, Nf_max, telescope, band, mode, Tsnap, Nfacet)
         param_units = ('m', '', '', '', '', 'sec', '')
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
-        if not imp.telescope_and_band_are_compatible(Telescope, Band):
+        if not imp.telescope_and_band_are_compatible(telescope, band):
             msg = 'ERROR: Telescope and Band are not compatible'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
         else:
             tp_basic = ParameterContainer()
-            ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
+            ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
             max_allowed_baseline = tp_basic.baseline_bins[-1]
             if max_baseline > max_allowed_baseline:
                 msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
@@ -369,8 +371,8 @@ class SkaIPythonAPI(api):
                 s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
                 display(HTML(s))
             else:
-                tp = imp.calc_tel_params(telescope=Telescope, mode=Mode, band=Band, bldta=BL_dep_time_av,
-                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, on_the_fly=on_the_fly,
+                tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bldta,
+                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, otfk=on_the_fly,
                                          verbose=verbose)  # Calculate the telescope parameters
 
                 # The result expressions need to be defined here as they depend on tp (updated in the line above)
@@ -394,20 +396,23 @@ class SkaIPythonAPI(api):
                 SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
     @staticmethod
-    def evaluate_telescope_optimized(Telescope, Band, Mode, max_baseline=("default",), Nf_max=("default",),
-                                     bl_dep_time_av=False, on_the_fly=False, verbose=False):
+    def evaluate_telescope_optimized(telescope, band, mode, max_baseline=("default",), Nf_max=("default",),
+                                     bldta=False, on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
-        @param Telescope:
-        @param Band:
-        @param Mode:
+        @param telescope:
+        @param band:
+        @param mode:
         @param max_baseline:
         @param Nf_max:
+        @param bldta:
+        @param on_the_fly:
+        @param verbose:
         @return:
         """
         tp_basic = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_basic, Telescope)
+        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
 
         # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
         if isinstance(max_baseline, unicode):
@@ -417,7 +422,7 @@ class SkaIPythonAPI(api):
 
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode')
-        param_values = (max_baseline, Nf_max, Telescope, Band, Mode)
+        param_values = (max_baseline, Nf_max, telescope, band, mode)
         param_units = ('m', '', '', '', '')
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
@@ -431,7 +436,7 @@ class SkaIPythonAPI(api):
 
         assert len(result_titles) == len(result_units)
 
-        if not imp.telescope_and_band_are_compatible(Telescope, Band):
+        if not imp.telescope_and_band_are_compatible(telescope, band):
             msg = 'ERROR: Telescope and Band are not compatible'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
@@ -449,14 +454,14 @@ class SkaIPythonAPI(api):
                      '</font>'))
 
         # We now make a distinction between "pure" and composite modes
-        relevant_modes = (Mode,)  # A list with one element
-        if Mode not in ImagingModes.pure_modes:
-            if Mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
             else:
-                raise Exception("The '%s' imaging mode is currently not supported" % str(Mode))
-        (result_values, result_value_string) = SkaIPythonAPI._compute_results(Telescope, Band, Mode, bl_dep_time_av,
-                                                                              on_the_fly, relevant_modes, verbose)
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
+        (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
+                                                                              bldta, on_the_fly, verbose)
 
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
@@ -464,29 +469,60 @@ class SkaIPythonAPI(api):
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-5:]  # the last five values
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def _compute_results(Telescope, Band, Mode, bl_dep_time_av, on_the_fly, relevant_modes, verbose):
+    def compute_results(telescope, band, mode, bldta=True, otfk=False, verbose=False):
         """
-        A specialized utility method used for display purposes.
+        A specialized utility for computing results. This is a slightly easier-to-interface-with version of
+        the private method _compute_results (below)
+        @param telescope:
+        @param band:
+        @param mode:
+        @param bldta:
+        @param otfk:
+        @param verbose:
+        @return: @raise Exception:
+        """
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
+            else:
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
+        (result_values, result_values_strings) \
+            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, verbose)
+
+        result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
+                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                         'Total Compute Requirement',
+                         '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation']
+
+        assert len(result_titles) == len(result_values)
+        assert len(result_titles) == len(result_values_strings)
+
+        return (result_values, result_values_strings, result_titles)
+
+    @staticmethod
+    def _compute_results(telescope, band, relevant_modes, bldta, otfk, verbose):
+        """
+        A specialized utility for computing results. This is a private method.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
         returned as a tuple, and used for display purposes in graphs. Both are needed, because results of composite
         modes are either summed (such as FLOPS) or concatenanted (such as optimal Tsnap values).
-        @param Telescope:
-        @param Band:
-        @param Mode:
-        @param bl_dep_time_av:
-        @param on_the_fly:
+        @param telescope:
+        @param band:
+        @param bldta:
+        @param otfk: on the fly kernels
         @param relevant_modes:
         @param verbose:
-        @return: (result_values, result_value_string) arrays of length 12. The first two numerical values are always zero.
+        @return: (result_values, result_value_string) arrays of length 12. The first two numerical values always = zero.
         """
         result_values = np.zeros(12)  # The number of computed values in the result_values array
         result_value_string = ['', '']
         for submode in relevant_modes:
             # Calculate the telescope parameters
-            tp = imp.calc_tel_params(Telescope, submode, band=Band, bldta=bl_dep_time_av, on_the_fly=on_the_fly,
+            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
                                      verbose=verbose)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
@@ -501,7 +537,8 @@ class SkaIPythonAPI(api):
         # String formatting of the first two results (Tsnap_opt and NFacet_opt)
         result_value_string[0] = result_value_string[0][:-2]
         result_value_string[1] = result_value_string[1][:-2]
-        composite_result = Mode not in ImagingModes.pure_modes
+
+        composite_result = len(relevant_modes) > 1
         if composite_result:
             result_value_string[0] = '(%s)' % result_value_string[0]
             result_value_string[1] = '(%s)' % result_value_string[1]
