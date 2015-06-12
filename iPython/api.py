@@ -37,6 +37,43 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
+    def eval_expression_default(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
+                                   max_baseline=None, nr_frequency_channels=None, expression='Rflop', verbose=False):
+        """
+        Evaluating a parameter for its default parameter value
+        @param telescope:
+        @param mode:
+        @param band:
+        @param hpso:
+        @param bldta:
+        @param on_the_fly:
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param expression:
+        @param verbose:
+        """
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
+            elif mode == ImagingModes.ContAndSpectral:
+                relevant_modes = (ImagingModes.Continuum, ImagingModes.Spectral) # to be summed
+            else:
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
+
+        result = 0
+        for submode in relevant_modes:
+            tp = imp.calc_tel_params(telescope, submode, band, hpso, bldta, on_the_fly, max_baseline,
+                                                   nr_frequency_channels, verbose)
+            Equations.apply_imaging_equations(tp, submode, bldta, on_the_fly, verbose)  # modifies tp in-place
+
+            result_expression = eval('tp.%s' % expression)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        return result
+
+    @staticmethod
     def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
