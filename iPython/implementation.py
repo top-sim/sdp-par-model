@@ -49,40 +49,50 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, otfk=False,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
+        @param telescope:
+        @param mode: (can be omitted if HPSO specified)
+        @param band: (can be omitted if HPSO specified)
+        @param hpso: High Priority Science Objective ID (can be omitted if band specified)
         @param bldta: Baseline dependent time averaging
+        @param otfk: On the fly kernels (True or False)
+        @param max_baseline:
+        @param nr_frequency_channels:
+        @param verbose:
         """
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
 
-        assert (band is None) or (hpso is None)
+        assert not ((band is None) and (hpso is None))  # At least one of the two must be True
+        assert (band is None) or (hpso is None)  # These are mutually exclusive
 
-        # Note the order in which these settings are applied, with each one (possibly) overwriting previous definitions,
-        # should they overlap (as happens with e.g. frequency bands)
+        # Note the order in which these settings are applied.
+        # Each one (possibly) overwrites previous definitions if they should they overlap
+        # (as happens with e.g. frequency bands)
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
         p.apply_telescope_parameters(telescope_params, telescope)
-        # Second: The imaging mode (Observation time, number of cycles, quality factor, (possibly) number of channels)
-        p.apply_imaging_mode_parameters(telescope_params, mode)
-        # Third: Frequency-band (frequency range - and in the case of HPSOs - other application-dependent settings)
+
+        # Then: Imaging mode and Frequency-band (Order depends on whether we are dealing with a defined HPSO)
+        # Including: frequency range, Observation time, number of cycles, quality factor, number of channels, etc
         if band is not None:
             p.apply_band_parameters(telescope_params, band)
-        elif hpso is not None:
-            p.apply_hpso_parameters(telescope_params, hpso)
+            p.apply_imaging_mode_parameters(telescope_params, mode)
         else:
-            raise Exception("Either band or hpso must not be None")
+            p.apply_hpso_parameters(telescope_params, hpso)
+            p.apply_imaging_mode_parameters(telescope_params, telescope_params.mode)
 
         if max_baseline is not None:
             telescope_params.Bmax = max_baseline
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.apply_imaging_equations(telescope_params, mode, bldta, on_the_fly, verbose)
+        f.apply_imaging_equations(telescope_params, mode, bldta, otfk, verbose)
         #print "Using maximum baseline of", p.Bmax
         return telescope_params
 

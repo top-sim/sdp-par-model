@@ -135,7 +135,7 @@ class SkaPythonAPI:
               (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
                str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, on_the_fly=on_the_fly,
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, otfk=on_the_fly,
                                                max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                                verbose=verbose)
 
@@ -226,7 +226,7 @@ class SkaPythonAPI:
         else:
             max_baseline = max_allowed_baseline
 
-        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bl_dep_time_av, on_the_fly=on_the_fly,
+        tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bl_dep_time_av, otfk=on_the_fly,
                                  max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                  verbose=verbose)  # Calculate the telescope parameters
 
