@@ -472,9 +472,41 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
+    def compute_results(telescope, band, mode, bldta=True, otfk=False, verbose=False):
+        """
+        A specialized utility for computing results. This is a slightly easier-to-interface-with version of
+        the private method _compute_results (below)
+        @param telescope:
+        @param band:
+        @param mode:
+        @param bldta:
+        @param otfk:
+        @param verbose:
+        @return: @raise Exception:
+        """
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
+            else:
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
+        (result_values, result_values_strings) \
+            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, verbose)
+
+        result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
+                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                         'Total Compute Requirement',
+                         '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation']
+
+        assert len(result_titles) == len(result_values)
+        assert len(result_titles) == len(result_values_strings)
+
+        return (result_values, result_values_strings, result_titles)
+
+    @staticmethod
     def _compute_results(telescope, band, relevant_modes, bldta, otfk, verbose):
         """
-        A specialized utility method used for display purposes.
+        A specialized utility for computing results. This is a private method.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
         returned as a tuple, and used for display purposes in graphs. Both are needed, because results of composite
         modes are either summed (such as FLOPS) or concatenanted (such as optimal Tsnap values).

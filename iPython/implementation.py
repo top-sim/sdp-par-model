@@ -84,8 +84,9 @@ class Implementation:
             p.apply_band_parameters(telescope_params, band)
             p.apply_imaging_mode_parameters(telescope_params, mode)
         else:
+            # This has to be an HPSO case
             p.apply_hpso_parameters(telescope_params, hpso)
-            p.apply_imaging_mode_parameters(telescope_params, telescope_params.mode)
+            p.apply_imaging_mode_parameters(telescope_params, mode)
 
         if max_baseline is not None:
             telescope_params.Bmax = max_baseline
