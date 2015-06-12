@@ -307,8 +307,8 @@ class SkaIPythonAPI(api):
                     relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
                 else:
                     raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-            (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, mode, bldta,
-                                                                                  on_the_fly, relevant_modes, verbose)
+            (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
+                                                                                      bldta, on_the_fly, verbose)
             result_value_string = [telescope, band, mode, bldta, '%g' % max_baseline , '%d' % Nf_max]
             result_value_string.extend(result_value_string_end)
 
@@ -452,11 +452,11 @@ class SkaIPythonAPI(api):
         relevant_modes = (Mode,)  # A list with one element
         if Mode not in ImagingModes.pure_modes:
             if Mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
+                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
             else:
                 raise Exception("The '%s' imaging mode is currently not supported" % str(Mode))
-        (result_values, result_value_string) = SkaIPythonAPI._compute_results(Telescope, Band, Mode, bl_dep_time_av,
-                                                                              on_the_fly, relevant_modes, verbose)
+        (result_values, result_value_string) = SkaIPythonAPI._compute_results(Telescope, Band, relevant_modes,
+                                                                              bl_dep_time_av, on_the_fly, verbose)
 
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
@@ -467,7 +467,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % Telescope, labels, values, colours)
 
     @staticmethod
-    def _compute_results(Telescope, Band, Mode, bl_dep_time_av, on_the_fly, relevant_modes, verbose):
+    def _compute_results(Telescope, Band, relevant_modes, bl_dep_time_av, on_the_fly, verbose):
         """
         A specialized utility method used for display purposes.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
@@ -475,7 +475,6 @@ class SkaIPythonAPI(api):
         modes are either summed (such as FLOPS) or concatenanted (such as optimal Tsnap values).
         @param Telescope:
         @param Band:
-        @param Mode:
         @param bl_dep_time_av:
         @param on_the_fly:
         @param relevant_modes:
@@ -501,7 +500,8 @@ class SkaIPythonAPI(api):
         # String formatting of the first two results (Tsnap_opt and NFacet_opt)
         result_value_string[0] = result_value_string[0][:-2]
         result_value_string[1] = result_value_string[1][:-2]
-        composite_result = Mode not in ImagingModes.pure_modes
+
+        composite_result = len(relevant_modes) > 1
         if composite_result:
             result_value_string[0] = '(%s)' % result_value_string[0]
             result_value_string[1] = '(%s)' % result_value_string[1]
