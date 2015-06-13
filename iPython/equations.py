@@ -280,10 +280,4 @@ class Equations:
         # TODO: PDR05 lacking in this regard and must be updated.
         o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict * o.Mvis * o.Nfacet ** 2  # Eq 50
 
-        # TODO : In this block of code, the last action is a modification of o.Npix_linear that looks suspect to me.
-        # TODO : Why is the value overwritten? Where is it used in its new form? Only in api_ipython it seems. Is this correct / intended?
-        # TODO : Agreed - this is an ugly workaround because Npix_linear is the same in all baseline bins and we just want the one value of it fed back in the results, just do this at the very end so it doesn't screw up other calculations.
-        # TODO : since binfrac is normalised to unity this "works" but it's ugly. Previously, we were getting numbers N_bins x too big.
-        o.Npix_linear = o.Npix_linear * o.binfrac
-
         return o

@@ -338,7 +338,9 @@ class SkaIPythonAPI(api):
     def evaluate_telescope_manual(telescope, band, mode, max_baseline, Nf_max, Nfacet, Tsnap, bldta=False,
                                   on_the_fly=False, verbose=False):
         """
-        Evaluates a telescope with manually supplied parameters, including NFacet and Tsnap
+        Evaluates a specific set of expressions for a manually supplied set of telescope parameters.
+        These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
+        optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
         @param telescope:
         @param band:
         @param mode:
@@ -361,39 +363,45 @@ class SkaIPythonAPI(api):
             msg = 'ERROR: Telescope and Band are not compatible'
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
+            return
+
+        tp_basic = ParameterContainer()
+        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+        max_allowed_baseline = tp_basic.baseline_bins[-1]
+        if max_baseline > max_allowed_baseline:
+            msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
+                % max_allowed_baseline
+            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
+            display(HTML(s))
         else:
-            tp_basic = ParameterContainer()
-            ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
-            max_allowed_baseline = tp_basic.baseline_bins[-1]
-            if max_baseline > max_allowed_baseline:
-                msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
-                    % max_allowed_baseline
-                s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-                display(HTML(s))
-            else:
-                tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bldta,
-                                         max_baseline=max_baseline, nr_frequency_channels=Nf_max, otfk=on_the_fly,
-                                         verbose=verbose)  # Calculate the telescope parameters
+            tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bldta,
+                                     max_baseline=max_baseline, nr_frequency_channels=Nf_max, otfk=on_the_fly,
+                                     verbose=verbose)  # Calculate the telescope parameters
 
-                # The result expressions need to be defined here as they depend on tp (updated in the line above)
-                result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
-                                      tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_phrot/c.peta,
-                                      tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
-                result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
-                                 'Total Compute Requirement',
-                                 '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
-                result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
-                                'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
-                result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet)
-                result_value_string = []
-                for i in range(len(result_values)):
-                    expression = result_expressions[i]
-                    if expression is not tp.Npix_linear:
-                        result_value_string.append('%.3g' % result_values[i])
-                    else:
-                        result_value_string.append('%d' % result_values[i])
+            # The result expressions need to be defined here as they depend on tp (updated in the line above)
+            result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+                                  tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_phrot/c.peta,
+                                  tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
+            result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                             'Total Compute Requirement',
+                             '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
+            result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
+                            'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
+            # The parameters are mostly summed across bins. The exception to this
+            # rule is Npix_linear, where the maximum is taken instead
+            take_maxima = [False] * 10
+            take_maxima[2] = True  # The third entry corresponds to Npix_linear, see below
 
-                SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+            result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet, take_maxima)
+            result_value_string = []
+            for i in range(len(result_values)):
+                expression = result_expressions[i]
+                if expression is not tp.Npix_linear:
+                    result_value_string.append('%.3g' % result_values[i])
+                else:
+                    result_value_string.append('%d' % result_values[i])
+
+            SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline=("default",), Nf_max=("default",),
@@ -506,7 +514,7 @@ class SkaIPythonAPI(api):
     @staticmethod
     def _compute_results(telescope, band, relevant_modes, bldta, otfk, verbose):
         """
-        A specialized utility for computing results. This is a private method.
+        A specialized utility for computing a hard-coded set of results. This is a private method.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
         returned as a tuple, and used for display purposes in graphs. Both are needed, because results of composite
         modes are either summed (such as FLOPS) or concatenanted (such as optimal Tsnap values).
@@ -520,6 +528,10 @@ class SkaIPythonAPI(api):
         """
         result_values = np.zeros(12)  # The number of computed values in the result_values array
         result_value_string = ['', '']
+        # The parameters that care computed as binned expressions are mostly summed across bins. The exception to this
+        # rule is Npix_linear, where the maximum is taken instead
+        take_maxima = [False] * 10
+        take_maxima[2] = True  # The third entry corresponds to Npix_linear, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
@@ -532,7 +544,7 @@ class SkaIPythonAPI(api):
 
             result_value_string[0] += str('%d, ') % nfacet_opt
             result_value_string[1] += str('%.1f, ') % tsnap_opt
-            result_values[2:] += api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+            result_values[2:] += api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt, take_maxima)
 
         # String formatting of the first two results (Tsnap_opt and NFacet_opt)
         result_value_string[0] = result_value_string[0][:-2]

@@ -20,18 +20,19 @@ class SkaPythonAPI:
         pass
 
     @staticmethod
-    def evaluate_expression(expression, tp, tsnap, nfacet):
+    def evaluate_expression(expression, tp, tsnap, nfacet, take_max):
         """
         Evaluate an expression by substituting the telescopecparameters into them. Returns the result
         @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
         @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
         @param tsnap: The snapshot time to use
         @param nfacet: The number of facets to use
+        @param take_max: True iff the expression's maximum value across bins is returned instead of its sum
         @return:
         """
         try:
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
-            result = imp.evaluate_binned_expression(expression_subst, tp)
+            result = imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max)
         except Exception as e:
             result = expression
         return result
@@ -62,6 +63,7 @@ class SkaPythonAPI:
         @return: @raise AssertionError:
         """
         assert param_val_max > param_val_min
+        take_max = expression in imp.EXPR_NOT_SUMMED  # For these the bins' values are not summed; max taken instead
 
         print "Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps " \
               "(i.e. %d data points)" % \
@@ -95,7 +97,7 @@ class SkaPythonAPI:
 
             result_expression = eval('tp.%s' % expression)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
+            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max))
 
         print 'done with parameter sweep!'
         return (param_values, results)
@@ -129,6 +131,8 @@ class SkaPythonAPI:
         for prange in params_ranges:
             assert len(prange) == 2
             assert prange[1] > prange[0]
+
+        take_max = expression in imp.EXPR_NOT_SUMMED  # For these the bins' values are not summed; max taken instead
 
         print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
               "steps each,\nfor a total of %d data evaluation points" % \
@@ -183,18 +187,27 @@ class SkaPythonAPI:
 
                 result_expression = eval('tp.%s' % expression)
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                results[i, j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+                results[i, j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max)
 
         print 'done with parameter sweep!'
         return (param1_values, param2_values, results)
 
     @staticmethod
-    def evaluate_expressions(expressions, tp, tsnap, nfacet):
+    def evaluate_expressions(expressions, tp, tsnap, nfacet, take_maxima):
         """
         Evaluate a sequence of expressions by substituting the telescope_parameters into them. Returns the result
+        @param expressions: An array of expressions to be evaluated
+        @param tp: The set of telescope parameters that should be used to evaluate each expression
+        @param tsnap: The relevant (typically optimal) snapshot time
+        @param nfacet: The relevant (typically optimal) number of facets to use
+        @param take_maxima: An array of boolean values, true if the corresponding variable's max across all bine
+                            should be used instead of its sum
         """
         results = []
-        for expression in expressions:
-            result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet)
+        assert len(expressions) == len(take_maxima)
+        for i in range(len(expressions)):
+            expression = expressions[i]
+            take_max = take_maxima[i]
+            result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet, take_max)
             results.append(result)
         return results
