@@ -78,6 +78,30 @@ class SkaIPythonAPI(api):
         display(HTML(s))
 
     @staticmethod
+    def show_table_compare3(title, labels, values_1, values_2, values_3, units):
+        """
+        Plots a table that for a set of 3 values pe label compares each' value with the other
+        @param title:
+        @param labels:
+        @param values_1:
+        @param values_2:
+        @param values_3:
+        @param units:
+        @return:
+        """
+        s = '<h5>%s:</h5><table>\n' % title
+        assert len(labels) == len(values_1)
+        assert len(labels) == len(values_2)
+        assert len(labels) == len(values_3)
+        assert len(labels) == len(units)
+        for i in range(len(labels)):
+            s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
+                 '</td><td><font color="purple">{3}</font>''</td><td>{4}</td></tr>\n'.format(
+                labels[i], values_1[i], values_2[i], values_3[i], units[i])
+        s += '</table>'
+        display(HTML(s))
+
+    @staticmethod
     def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
