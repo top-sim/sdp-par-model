@@ -84,11 +84,11 @@ class Equations:
         o.Tdump_skipper = o.Tdump_scaled * o.combine_time_samples
 
         if bl_dep_time_av:
-            # Don't let any bl-dependent time averaging be for longer than either 1.2s or Tion.
+            # Don't let any bl-dependent time averaging be for longer than either 1.2s or Tion. ?Why 1.2s?
             o.Tdump_predict = Min(o.Tdump_skipper, 1.2, o.Tion)
             # For backward step at gridding only, allow coalescance of visibility points at Facet FoV
             # smearing limit only for BLDep averaging case.
-            o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet, o.Tion)
+            o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet/(1+o.facet_overlap_frac), o.Tion) #scale Skipper time to smaller field of view of facet, rather than full FoV.
         else:
             o.Tdump_predict = o.Tdump_scaled
             o.Tdump_backward = o.Tdump_scaled
@@ -96,7 +96,7 @@ class Equations:
         if verbose:
             print "Channelization Characteristics:"
             print "-------------------------------\n"
-            print "Ionospheric timescale: ", o.Tion, " sec"
+            print "Ionospheric timescale (for updating kernels and limiting any time averaging): ", o.Tion, " sec"
             print "T_dump predict: ", o.Tdump_predict, " sec"
             print "T_dump backward: ", o.Tdump_backward, " sec"
             print ""
