@@ -173,6 +173,7 @@ class ParameterDefinitions:
         o.Tsnap_min = 1.0
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
+        o.facet_overlap_frac = 0.02 #fraction of overlap (linear) in adjacent facets.
         return o
 
     @staticmethod

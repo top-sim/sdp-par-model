@@ -46,13 +46,14 @@ class Equations:
         # ===============================================================================================
 
         # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also uses 7.6 instead of 7.66. Is this correct?
-        o.Theta_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view
+        o.Theta_fov = 7.66 * o.wl * o.Qfov *  o.facet_overlap_frac / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear)
+        o.Total_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds) # Total linear field of view of map
         # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
         o.Theta_beam = 3 * o.wl / (2. * o.Bmax)     # Synthesized beam. Called Theta_PSF in PDR05.
         o.Theta_pix = o.Theta_beam / (2. * o.Qpix)  # Eq 7 - Pixel size
         o.Npix_linear = o.Theta_fov / o.Theta_pix   # Eq 8 - Number of pixels on side of facet
         o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))  # expansion of sine solves eps = arcsinc(1/amp_f_max).
-        o.Qbw = 1.47 / o.epsilon_f_approx  # Equation nr?
+        o.Qbw = 1.47 / o.epsilon_f_approx  # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
 
         if verbose:
             print "Image Characteristics:"
@@ -73,13 +74,13 @@ class Equations:
         # The two equations below => combination of Eq 4 and Eq 5 for full and facet FOV at max baseline respectively.
         # These limit bandwidth smearing to within a fraction (epsilon_f_approx) of a uv cell.
         # Done: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * o.Q_fov * o.Qbw)). This is fine - substituting in the equation for theta_fov shows it is indeed correct.
-        o.Nf_no_smear_predict =  log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Theta_fov * o.Qbw * o.Nfacet)))
+        o.Nf_no_smear_predict =  log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
         o.Nf_no_smear_backward = log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax_bin * o.Theta_fov * o.Qbw)))
 
         # correlator output averaging time scaled for max baseline.
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
         o.combine_time_samples = Max(
-            floor(o.epsilon_f_approx * o.wl / (o.Theta_fov * o.Nfacet * o.Omega_E * o.Bmax_bin * o.Tdump_scaled)), 1.)
+            floor(o.epsilon_f_approx * o.wl / (o.Total_fov * o.Omega_E * o.Bmax_bin * o.Tdump_scaled)), 1.)
         o.Tdump_skipper = o.Tdump_scaled * o.combine_time_samples
 
         if bl_dep_time_av:
@@ -164,11 +165,11 @@ class Equations:
         # PDR05 Sec 12.8
         # ===============================================================================================
 
-        ncomb = o.Na * (o.Na - 1) / 2.0
+        nbaselines = o.Na * (o.Na - 1) / 2.0
         # Eq. 31 Visibility rate for backward step, allow coalescing in time and freq prior to gridding
-        o.Nvis_backward = o.binfrac * ncomb * o.Nf_vis_backward / o.Tdump_backward
+        o.Nvis_backward = o.binfrac * nbaselines * o.Nf_vis_backward / o.Tdump_backward
         # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict  = o.binfrac * ncomb * o.Nf_vis_predict  / o.Tdump_predict
+        o.Nvis_predict  = o.binfrac * nbaselines * o.Nf_vis_predict  / o.Tdump_predict
 
         # Eq. 30 : R_flop = 2 * N_maj * N_pp * N_beam * ( R_grid + R_fft + R_rp + R_ccf)
         # no factor 2 in the line below, because forward & backward steps are both in Rflop numbers
@@ -248,8 +249,8 @@ class Equations:
             print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_gcf_predict
 
         # The following two equations correspond to Eq. 35
-        o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * ncomb * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
-        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * ncomb * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
+        o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
+        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
 
