@@ -128,11 +128,10 @@ class Equations:
         # TODO: Test what happens if we calculate convolution functions on the fly for each visibility?
         # TODO: Make smaller kernels, no reuse.
         Nkernel2 = o.Ngw ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Ncvff = sqrt(Nkernel2)  # Partially Eq. 23 : combined kernel support size
         if on_the_fly:
             o.Qgcf = 1.0
         
-        o.Ncvff = sqrt(Nkernel2)*o.Qgcf  # Partially Eq. 23 : combined kernel support size and oversampling
+        o.Ncvff = sqrt(Nkernel2)*o.Qgcf  #  Eq. 23 : combined kernel support size and oversampling
 
         o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward)
         o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict)
@@ -225,10 +224,10 @@ class Equations:
 
         # Convolution kernels:
         # --------------------
-        o.grid_cell_error = o.epsilon_f_approx
-        o.dfonF = o.grid_cell_error * o.Qgcf / (o.Qkernel * o.Ncvff)
 
-        # allow uv positional errors up to grid_cell_error * 1/Qkernel of a cell from frequency smearing.
+        o.dfonF = o.epsilon_f_approx / (o.Qkernel * sqrt(Nkernel2))
+
+        # allow uv positional errors up to o.epsilon_f_approx * 1/Qkernel of a cell from frequency smearing.
         o.Nf_gcf_backward_nosmear = log(o.wl_max / o.wl_min) / log(o.dfonF + 1.)
         o.Nf_gcf_predict_nosmear  = o.Nf_gcf_backward_nosmear #TODO: Placeholder since we don't know how many frequecy kernels we need for predict step.
 
