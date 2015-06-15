@@ -46,7 +46,7 @@ class Equations:
         # ===============================================================================================
 
         # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also uses 7.6 instead of 7.66. Is this correct?
-        o.Theta_fov = 7.66 * o.wl * o.Qfov *  o.facet_overlap_frac / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear)
+        o.Theta_fov = 7.66 * o.wl * o.Qfov *  (1+o.facet_overlap_frac) / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear)
         o.Total_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds) # Total linear field of view of map
         # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
         o.Theta_beam = 3 * o.wl / (2. * o.Bmax)     # Synthesized beam. Called Theta_PSF in PDR05.
@@ -103,10 +103,10 @@ class Equations:
             print "No. freq channels for predict: ", o.Nf_no_smear_predict
             print "No. freq channels for backward step: ", o.Nf_no_smear_backward
             print ""
-            if bl_dep_time_av:
-                print "USING BASELINE DEPENDENT TIME AVERAGING, combining %g time samples: " % o.combine_time_samples
-            else:
-                print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
+                #if bl_dep_time_av:
+                #print "USING BASELINE DEPENDENT TIME AVERAGING, combining %g time samples: " % o.combine_time_samples
+                #else:
+                #print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
             if on_the_fly:
                 print "On-the-fly kernels..."
             else:
@@ -245,8 +245,8 @@ class Equations:
             o.Tkernel_predict  = o.Tion
 
         if verbose:
-            print "Number of kernels to cover freq axis is Nf_FFT_backward: ", o.Nf_gcf_backward
-            print "Number of kernels to cover freq axis is Nf_FFT_predict: ", o.Nf_gcf_predict
+            print "Number of kernels to cover freq axis is Nf_gcf_backward: ", o.Nf_gcf_backward
+            print "Number of kernels to cover freq axis is Nf_gcf_predict: ", o.Nf_gcf_predict
 
         # The following two equations correspond to Eq. 35
         o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
