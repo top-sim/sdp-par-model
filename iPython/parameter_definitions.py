@@ -171,7 +171,6 @@ class ParameterDefinitions:
         o.Qw = 1.0
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
-        o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
         o.facet_overlap_frac = 0.02 #fraction of overlap (linear) in adjacent facets.
         return o
@@ -192,11 +191,13 @@ class ParameterDefinitions:
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
             o.B_dump_ref = 80000  # m
-            o.Tdump_ref = 0.6  # Correlator dump time in reference design in *seconds*
+            o.Tdump_ref = 0.9  # Correlator dump time in reference design in *seconds*
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
+            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
             o.Ds = 35  # station "diameter" in metres
@@ -208,20 +209,24 @@ class ParameterDefinitions:
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
             o.nr_baselines = 10192608
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
+            o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
             o.Ds = 15  # station "diameter" in metres
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
-            o.Tdump_ref = 0.08  # Correlator dump time in reference design in *sec*
-            o.B_dump_ref = 200000  # m
+            o.Tdump_ref = 0.14  # Correlator dump time in reference design in *sec*
+            o.B_dump_ref = 150000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 150000))  # m
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
             # o.baseline_bin_distribution = np.array((56.78620346,   5.25152534,   5.6811107,    5.72469182,   6.21031005, 5.64375545,   6.21653592,   6.00485618 ,  2.42186527,   0.05914581))
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
+            o.amp_f_max = 1.034  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
             o.Ds = 15  # station "diameter" in meters
@@ -234,6 +239,8 @@ class ParameterDefinitions:
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
+            o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA1_Sur_old:
             o.Bmax = 50000  # Actually constructed max baseline, in *m*
             o.Ds = 15  # station "diameter" in meters
@@ -245,6 +252,8 @@ class ParameterDefinitions:
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
             o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
+            o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA2_Low:
             o.Bmax = 180000  # Actually constructed max baseline, in *m*
             o.Ds = 180  # station "diameter" in meters
@@ -258,6 +267,8 @@ class ParameterDefinitions:
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
+            o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         elif telescope == Telescopes.SKA2_Mid:
             o.Bmax = 1800000  # Actually constructed max baseline, in *m*
             o.Ds = 15  # station "diameter" in meters
@@ -270,6 +281,8 @@ class ParameterDefinitions:
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
+            o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+
         else:
             raise Exception('Unknown Telescope!')
 
