@@ -196,7 +196,7 @@ class ParameterDefinitions:
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
-            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+        #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -225,7 +225,7 @@ class ParameterDefinitions:
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
             # o.baseline_bin_distribution = np.array((56.78620346,   5.25152534,   5.6811107,    5.72469182,   6.21031005, 5.64375545,   6.21653592,   6.00485618 ,  2.42186527,   0.05914581))
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
-            o.amp_f_max = 1.034  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            #o.amp_f_max = 1.034  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
 
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
@@ -394,6 +394,11 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500, o.Nf_max)
             o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
+
 
         elif mode == ImagingModes.Spectral:
             o.Qfov = 1.0  # Field of view factor
@@ -401,13 +406,22 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Tobs = 6 * 3600
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.02
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.01
 
         elif mode == ImagingModes.FastImg:
             o.Qfov = 0.9  # Field of view factor
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
-            o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tobs = 0.9  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.02
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.01
+
         else:
             raise Exception('Unknown mode: %s!' % str(mode))
 
