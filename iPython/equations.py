@@ -36,6 +36,15 @@ class Equations:
         o = telescope_parameters  # Used for shorthand in the equations below
         assert isinstance(o, ParameterContainer)
         assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
+        
+        #TODO: make this section (below0 work so that if Nfacet=1 we do not make the maps larger than they need to be
+        #i.e. only
+        #if o.Nfacet ==1:
+        #    o.facet_overlap_frac=0.0 #If we are not using facets, we mustn't unneccesarily increase the FoV!
+        #print "using Nfacet, facet_overlap:", o.Nfacet, o.facet_overlap_frac
+        using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
+        print "using Nfacet, facet_overlap:", o.Nfacet, using_facet_overlap_frac
+        
 
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
@@ -46,7 +55,7 @@ class Equations:
         # ===============================================================================================
 
         # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also uses 7.6 instead of 7.66. Is this correct?
-        o.Theta_fov = 7.66 * o.wl * o.Qfov *  (1+o.facet_overlap_frac) / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear)
+        o.Theta_fov = 7.66 * o.wl * o.Qfov *  (1+using_facet_overlap_frac) / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear)
         o.Total_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds) # Total linear field of view of map
         # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
         o.Theta_beam = 3 * o.wl / (2. * o.Bmax)     # Synthesized beam. Called Theta_PSF in PDR05.
@@ -88,7 +97,7 @@ class Equations:
             o.Tdump_predict = Min(o.Tdump_skipper, 1.2, o.Tion)
             # For backward step at gridding only, allow coalescance of visibility points at Facet FoV
             # smearing limit only for BLDep averaging case.
-            o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet/(1+o.facet_overlap_frac), o.Tion) #scale Skipper time to smaller field of view of facet, rather than full FoV.
+            o.Tdump_backward = Min(o.Tdump_skipper * o.Nfacet/(1+using_facet_overlap_frac), o.Tion) #scale Skipper time to smaller field of view of facet, rather than full FoV.
         else:
             o.Tdump_predict = o.Tdump_scaled
             o.Tdump_backward = o.Tdump_scaled
@@ -134,9 +143,8 @@ class Equations:
         
         o.Ncvff = sqrt(Nkernel2)*o.Qgcf  #  Eq. 23 : combined kernel support size and oversampling
 
-        o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward)
-        o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict)
-
+        o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward) #TODO:can't be bigger than the channel count from the correlator
+        o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict) #TODO:can't be bigger than the channel count from the correlator
         if verbose:
             print "Geometry Assumptions:"
             print "-------------------------------"
@@ -228,9 +236,9 @@ class Equations:
 
         o.dfonF = o.epsilon_f_approx / (o.Qkernel * sqrt(Nkernel2))
 
-        # allow uv positional errors up to o.epsilon_f_approx * 1/Qkernel of a cell from frequency smearing.
-        o.Nf_gcf_backward_nosmear = log(o.wl_max / o.wl_min) / log(o.dfonF + 1.)
-        o.Nf_gcf_predict_nosmear  = o.Nf_gcf_backward_nosmear #TODO: Placeholder since we don't know how many frequecy kernels we need for predict step.
+        # allow uv positional errors up to o.epsilon_f_approx * 1/Qkernel of a cell from frequency smearing.(But not more than Nf_max channels...)
+        o.Nf_gcf_backward_nosmear = log(o.wl_max / o.wl_min) / log(o.dfonF + 1.) #TODO: don't let this go above Nf_max
+        o.Nf_gcf_predict_nosmear  = o.Nf_gcf_backward_nosmear #TODO: Placeholder since we don't know how many frequency kernels we need for predict step.
 
         if on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
