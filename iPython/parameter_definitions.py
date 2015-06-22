@@ -172,7 +172,7 @@ class ParameterDefinitions:
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
-        o.facet_overlap_frac = 0.02 #fraction of overlap (linear) in adjacent facets.
+        o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         return o
 
     @staticmethod

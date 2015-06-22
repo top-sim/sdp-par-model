@@ -239,7 +239,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def compare_telescopes_default(telescope_1, telescope_2, band_1, band_2, mode_1, mode_2,
-                                   tel1_bldta=False, tel2_bldta=False,
+                                   tel1_bldta=True, tel2_bldta=True,
                                    tel1_otf=False, tel2_otf=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
@@ -335,7 +335,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(telescope, band, mode, max_baseline, Nf_max, Nfacet, Tsnap, bldta=False,
+    def evaluate_telescope_manual(telescope, band, mode, max_baseline, Nf_max, Nfacet, Tsnap, bldta=True,
                                   on_the_fly=False, verbose=False):
         """
         Evaluates a specific set of expressions for a manually supplied set of telescope parameters.
@@ -405,7 +405,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline=("default",), Nf_max=("default",),
-                                     bldta=False, on_the_fly=False, verbose=False):
+                                     bldta=True, on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters

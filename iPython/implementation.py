@@ -47,7 +47,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=False, otfk=False,
+    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=True, otfk=False,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
