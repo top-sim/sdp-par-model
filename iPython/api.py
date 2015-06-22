@@ -38,7 +38,7 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
-    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=True, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
         """
@@ -103,7 +103,7 @@ class SkaPythonAPI:
         return (param_values, results)
 
     @staticmethod
-    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=False, on_the_fly=False,
+    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=True, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameters=None, params_ranges=None, number_steps=2, verbose=False):
         """

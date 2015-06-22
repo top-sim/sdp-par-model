@@ -103,10 +103,10 @@ class Equations:
             print "No. freq channels for predict: ", o.Nf_no_smear_predict
             print "No. freq channels for backward step: ", o.Nf_no_smear_backward
             print ""
-                #if bl_dep_time_av:
-                #print "USING BASELINE DEPENDENT TIME AVERAGING, combining %g time samples: " % o.combine_time_samples
-                #else:
-                #print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
+            if bl_dep_time_av:
+                print "USING BASELINE DEPENDENT TIME AVERAGING"
+            else:
+                print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
             if on_the_fly:
                 print "On-the-fly kernels..."
             else:
