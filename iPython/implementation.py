@@ -120,7 +120,7 @@ class Implementation:
         return is_compatible
 
     @staticmethod
-    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize='Rflop', max_number_nfacets=200,
+    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize='Rflop', max_number_nfacets=20,
                                   verbose=False):
         """
         Computes the optimal value for Tsnap and Nfacet that minimizes the value of an expression (typically Rflop)
@@ -157,19 +157,19 @@ class Implementation:
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            expression = expression_original.subs({telescope_parameters.Nfacet : nfacets})
+            expression = expression_original.subs({telescope_parameters.Nfacet : nfacets+1})
             result = Implementation.minimize_binned_expression_by_Tsnap(expression, telescope_parameters,
                                                                         take_max=take_max, verbose=verbose)
 
             result_array.append(float(result['value']))
             optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
             result_per_nfacet[nfacets] = result_array[i]
-            if nfacets >= 2:
+            if nfacets >= 6:
                 if result_array[i] >= result_array[i-1]:
                     if verbose:
                         print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
                               % nfacets)
-                    break
+                    break #don't stop search after just doing Nfacet=2, do at least Nfacet=5 first, bacause there can be a local increase between nfacet=1 and 2
 
         index = np.argmin(np.array(result_array))
         nfacets = index + 1
