@@ -307,7 +307,8 @@ class SkaIPythonAPI(api):
                 else:
                     raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
             (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                                      bldta, on_the_fly, verbose)
+                                                                                      bldta, on_the_fly, max_baseline,
+                                                                                      Nf_max, verbose)
             result_value_string = [telescope, band, mode, bldta, '%g' % max_baseline , '%d' % Nf_max]
             result_value_string.extend(result_value_string_end)
 
@@ -404,7 +405,7 @@ class SkaIPythonAPI(api):
             SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
     @staticmethod
-    def evaluate_telescope_optimized(telescope, band, mode, max_baseline=("default",), Nf_max=("default",),
+    def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
                                      bldta=True, on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
@@ -423,9 +424,9 @@ class SkaIPythonAPI(api):
         ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
 
         # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
-        if isinstance(max_baseline, unicode):
+        if max_baseline == 'default':
             max_baseline = tp_basic.Bmax
-        if isinstance(Nf_max, unicode):
+        if Nf_max == 'default':
             Nf_max = tp_basic.Nf_max
 
         # First we plot a table with all the provided parameters
@@ -469,7 +470,8 @@ class SkaIPythonAPI(api):
             else:
                 raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
         (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                              bldta, on_the_fly, verbose)
+                                                                              bldta, on_the_fly, max_baseline,
+                                                                              Nf_max, verbose)
 
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
@@ -499,7 +501,8 @@ class SkaIPythonAPI(api):
             else:
                 raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
         (result_values, result_values_strings) \
-            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, verbose)
+            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, max_baseline=None,
+                                             nr_frequency_channels=None, verbose=verbose)
 
         result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
                          'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
@@ -512,7 +515,7 @@ class SkaIPythonAPI(api):
         return (result_values, result_values_strings, result_titles)
 
     @staticmethod
-    def _compute_results(telescope, band, relevant_modes, bldta, otfk, verbose):
+    def _compute_results(telescope, band, relevant_modes, bldta, otfk, max_baseline, nr_frequency_channels, verbose):
         """
         A specialized utility for computing a hard-coded set of results. This is a private method.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
@@ -523,6 +526,8 @@ class SkaIPythonAPI(api):
         @param bldta:
         @param otfk: on the fly kernels
         @param relevant_modes:
+        @param max_baseline: The maximum baseline to use
+        @param nr_frequency_channels:
         @param verbose:
         @return: (result_values, result_value_string) arrays of length 12. The first two numerical values always = zero.
         """
@@ -535,6 +540,7 @@ class SkaIPythonAPI(api):
         for submode in relevant_modes:
             # Calculate the telescope parameters
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
+                                     max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                      verbose=verbose)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
