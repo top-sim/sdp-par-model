@@ -201,6 +201,37 @@ class SkaIPythonAPI(api):
         plt.show()
 
     @staticmethod
+    def save_pie(title, labels, values, filename, colours=None):
+        """
+        Plots a pie chart
+        @param title:
+        @param labels:
+        @param values: a numpy array
+        @param colous:
+        """
+
+        assert len(labels) == len(values)
+        if colours is not None:
+            assert len(colours) == len(values)
+        nr_slices = len(values)
+
+        # The values need to sum to one, for a pie plot. Let's enforce that.
+        values_norm = values / np.linalg.norm(values)
+
+        pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
+
+        # The slices will be ordered and plotted counter-clockwise.
+        explode = np.ones(nr_slices) * 0.05  # The radial offset of the slices
+
+        plt.pie(values_norm, explode=explode, labels=labels, colors=colours,
+                autopct='%1.1f%%', shadow=True, startangle=90)
+        # Set aspect ratio to be equal so that pie is drawn as a circle.
+        plt.axis('equal')
+        plt.title('%s\n' % title)
+
+        plt.savefig(filename, format='svg', dpi=1200)
+
+    @staticmethod
     def plot_stacked_bars(title, labels, dictionary_of_value_arrays, colours=None):
         """
         Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
@@ -482,7 +513,8 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def compute_results(telescope, band, mode, bldta=True, otfk=False, verbose=False):
+    def compute_results(telescope, band, mode, bldta=True, otfk=False, max_baseline=None, nr_frequency_channels=None,
+                        verbose=False):
         """
         A specialized utility for computing results. This is a slightly easier-to-interface-with version of
         the private method _compute_results (below)
@@ -505,9 +537,9 @@ class SkaIPythonAPI(api):
                                              nr_frequency_channels=None, verbose=verbose)
 
         result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
-                         'Total Compute Requirement',
-                         '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation']
+                         'Visibility Buffer (PB)', 'Working (cache) memory (TB)', 'Image side length', 'I/O Rate (TBps)',
+                         'Total Compute Requirement (PetaFLOPS)',
+                         'Gridding', 'FFT', 'Projection', 'Convolution', 'Phase Rotation']
 
         assert len(result_titles) == len(result_values)
         assert len(result_titles) == len(result_values_strings)
@@ -539,9 +571,17 @@ class SkaIPythonAPI(api):
         take_maxima[2] = True  # The third entry corresponds to Npix_linear, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
+
+            #TODO: temporarily limit max baseline to 75km in fast imaging mode for MID (for plotting)
+            if (telescope == Telescopes.SKA1_Mid) and (submode == ImagingModes.FastImg):
+                max_baseline = 75000
+
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
                                      max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                      verbose=verbose)
+
+            print 'Max baseline = %d' % tp.Bmax #TODO: remove
+
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
             result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
