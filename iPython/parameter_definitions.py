@@ -420,7 +420,7 @@ class ParameterDefinitions:
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
-                o.amp_f_max = 1.01
+                o.amp_f_max = 1.02
 
         else:
             raise Exception('Unknown mode: %s!' % str(mode))
