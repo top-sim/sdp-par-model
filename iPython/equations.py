@@ -43,7 +43,7 @@ class Equations:
         #    o.facet_overlap_frac=0.0 #If we are not using facets, we mustn't unneccesarily increase the FoV!
         #print "using Nfacet, facet_overlap:", o.Nfacet, o.facet_overlap_frac
         using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
-        print "using Nfacet, facet_overlap:", o.Nfacet, using_facet_overlap_frac
+        
         
 
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
@@ -257,7 +257,7 @@ class Equations:
 
         # The following two equations correspond to Eq. 35
         o.Rccf_backward = o.binfrac * 5. * o.Nf_gcf_backward * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_backward
-        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict
+        o.Rccf_predict  = o.binfrac * 5. * o.Nf_gcf_predict  * nbaselines * o.Nfacet**2 * o.Ncvff**2 * log(o.Ncvff, 2) * o.Nmm / o.Tkernel_predict #TODO check nfacet^2 here
         o.Rccf = o.Rccf_backward + o.Rccf_predict
         o.Rflop_conv = Rflop_common_factor * o.Rccf
 
