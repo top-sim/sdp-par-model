@@ -185,10 +185,9 @@ class Equations:
 
         # Gridding:
         # --------
-        o.Rgrid_backward = 8. * o.Nvis_backward * Nkernel2 * o.Nmm  # Eq 32; FLOPS
-        o.Rgrid_predict  = 8. * o.Nvis_predict  * Nkernel2 * o.Nmm  # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet
-        o.Rgrid = o.Rgrid_backward + o.Rgrid_predict
-        o.Rflop_grid = Rflop_common_factor * o.Rgrid *o.Nfacet**2 #TODO: Multiply by Nfacet**2. Pretty major bug - how did we manage that / double check.
+        o.Rgrid_backward = 8. * o.Nvis_backward * Nkernel2 * o.Nmm * Rflop_common_factor *o.Nfacet**2# Eq 32; FLOPS
+        o.Rgrid_predict  = 8. * o.Nvis_predict  * Nkernel2 * o.Nmm * Rflop_common_factor # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet
+        o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
 
         # FFT:
         # ---
