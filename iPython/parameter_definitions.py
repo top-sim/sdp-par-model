@@ -219,12 +219,10 @@ class ParameterDefinitions:
             o.Nf_max = 65536  # maximum number of channels
             o.Tdump_ref = 0.14  # Correlator dump time in reference design in *sec*
             o.B_dump_ref = 150000  # m
-            o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 150000))  # m
             o.nr_baselines = 1165860
-            #o.baseline_bin_distribution = np.array((57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
-            #o.amp_f_max = 1.034  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.baseline_bin_distribution = np.array((59.774,   5.331,   4.596,   5.409,4.948,   5.4660 ,  5.642,   5.803, 2.989,   0.04145)) #July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt
+            o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
+            o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
 
 
         elif telescope == Telescopes.SKA1_Mid_old:
