@@ -221,11 +221,11 @@ class ParameterDefinitions:
             o.B_dump_ref = 150000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 150000))  # m
             o.nr_baselines = 1165860
-            o.baseline_bin_distribution = np.array(
-                (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
-            # o.baseline_bin_distribution = np.array((56.78620346,   5.25152534,   5.6811107,    5.72469182,   6.21031005, 5.64375545,   6.21653592,   6.00485618 ,  2.42186527,   0.05914581))
+            #o.baseline_bin_distribution = np.array((57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))  # Original distribution
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
             #o.amp_f_max = 1.034  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.baseline_bin_distribution = np.array((59.774,   5.331,   4.596,   5.409,4.948,   5.4660 ,  5.642,   5.803, 2.989,   0.04145)) #July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt
+
 
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
