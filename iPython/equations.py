@@ -147,8 +147,9 @@ class Equations:
         o.Ncvff_backward = sqrt(Nkernel2_backward)*o.Qgcf  #  Eq. 23 : combined kernel support size and oversampling
         o.Ncvff_predict = sqrt(Nkernel2_predict)*o.Qgcf  #  Eq. 23 : combined kernel support size and oversampling
 
-        o.Nf_vis_backward = Max(o.Nf_out, o.Nf_no_smear_backward) #TODO:can't be bigger than the channel count from the correlator
-        o.Nf_vis_predict = Max(o.Nf_out, o.Nf_no_smear_predict) #TODO:can't be bigger than the channel count from the correlator
+        o.Nf_vis_backward = Min(Max(o.Nf_out, o.Nf_no_smear_backward),o.Nf_max) #TODO:can't be bigger than the channel count from the correlator
+        o.Nf_vis_predict = Min(Max(o.Nf_out, o.Nf_no_smear_predict),o.Nf_max) #TODO:can't be bigger than the channel count from the correlator
+        
         if verbose:
             print "Geometry Assumptions:"
             print "-------------------------------"
@@ -219,7 +220,7 @@ class Equations:
         o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
 
         # do Nmajor-1 cycles before doing the final major cycle.
-        o.Rflop_fft = o.Npp * o.Nbeam* ((o.Nmajor - 1) * o.Rfft_intermediate_cycles + o.Rfft_final_cycle)
+        o.Rflop_fft = o.Npp * o.Nbeam* (((o.Nmajor - 1) * o.Rfft_intermediate_cycles) + o.Rfft_final_cycle)
 
         # Re-Projection:
         # -------------
