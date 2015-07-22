@@ -140,7 +140,7 @@ class Equations:
 
         # TODO: Check split of kernel size for backward and predict steps.
         Nkernel2_backward = o.Ngw_backward ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        Nkernel2_predict = o.Ngw_backward ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
+        Nkernel2_predict = o.Ngw_predict ** 2 + o.Naa ** 2  # squared linear size of combined W and A kernels; used in eqs 23 and 32
         if on_the_fly:
             o.Qgcf = 1.0
         
