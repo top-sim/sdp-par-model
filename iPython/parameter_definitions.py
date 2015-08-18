@@ -173,6 +173,7 @@ class ParameterDefinitions:
         o.Tsnap_min = 1.0
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
+        o.Number_imaging_subbands = 5 #The number of subbands. Within each subband, images at all frequencies are the same size and have identically-sized pixels.
         return o
 
     @staticmethod
