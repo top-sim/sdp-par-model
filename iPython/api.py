@@ -205,7 +205,7 @@ class SkaPythonAPI:
                                          % parameters[1])
 
                 result_expression = eval('%s' % expression)
-                results[i, j] = result_expression
+                results[j, i] = result_expression
 
         print 'done with parameter sweep!'
         return (param1_values, param2_values, results)
