@@ -169,39 +169,39 @@ class SkaPythonAPI:
             assert len(prange) == 2
             assert prange[1] > prange[0]
 
-        take_max = expression in imp.EXPR_NOT_SUMMED  # For these the bins' values are not summed; max taken instead
+        take_max = expression in imp.EXPR_NOT_SUMMED  # Iff true, bins' values are not summed; max taken instead
+        n_param_x_values = number_steps + 1
+        n_param_y_values = number_steps + 1
+        nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
 
         print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
               "steps each,\nfor a total of %d data evaluation points" % \
               (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
-               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, (number_steps+1)**2)
+               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations)
 
         telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, otfk=on_the_fly,
                                                max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                                verbose=verbose)
 
-        param1_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=number_steps + 1)
-        param2_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=number_steps + 1)
-        results = np.zeros((len(param1_values), len(param2_values)))  # Create an empty numpy matrix to hold results
+        param_x_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=n_param_x_values)
+        param_y_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=n_param_y_values)
+        results = np.zeros((n_param_x_values, n_param_y_values))  # Create an empty numpy matrix to hold results
 
-        nr_evaluations = len(param1_values) * len(param2_values)
-
-        # Nested 2D loop over all values for param1 and param2
-        for i in range(len(param1_values)):
-            param1_value = param1_values[i]
-            for j in range(len(param2_values)):
-                param2_value = param2_values[j]
+        # Nested 2D loop over all values for param1 and param2. Indexes iterate over y (inner loop), then x (outer loop)
+        for ix in range(n_param_x_values):
+            param_x_value = param_x_values[ix]
+            for iy in range(n_param_y_values):
+                param_y_value = param_y_values[iy]
 
                 tp = copy.deepcopy(telescope_params)
+                # Overwrite the corresponding fields of tp with the to-be-evaluated values
+                exec('tp.%s = param_x_value' % parameters[0])
+                exec('tp.%s = param_y_value' % parameters[1])
 
-                # Assigns the parameters to their temporary evaluation-values
-                exec('tp.%s = param1_value' % parameters[0])
-                exec('tp.%s = param2_value' % parameters[1])
-
-                percentage_done = (i*len(param2_values) + j) * 100.0 / nr_evaluations
+                percentage_done = (ix * n_param_y_values + iy) * 100.0 / nr_evaluations
                 print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
                                                                                  parameters[0], parameters[1],
-                                                                                 str(param1_value), str(param2_value))
+                                                                                 str(param_x_value), str(param_y_value))
 
                 Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)   # modifies tp in-place
 
@@ -211,23 +211,23 @@ class SkaPythonAPI:
                 parameter2_final_value = None
                 exec('parameter1_final_value = tp.%s' % parameters[0])
                 exec('parameter2_final_value = tp.%s' % parameters[1])
-                if parameter1_final_value != param1_value:
+                if parameter1_final_value != param_x_value:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[0])
-                if parameter2_final_value != param2_value:
+                if parameter2_final_value != param_y_value:
                     print parameter2_final_value
-                    print param2_value
+                    print param_y_value
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
                 result_expression = eval('tp.%s' % expression)
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                results[i, j] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max)
+                results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max)
 
         print 'done with parameter sweep!'
-        return (param1_values, param2_values, results)
+        return (param_x_values, param_y_values, results)
 
     @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet, take_maxima):

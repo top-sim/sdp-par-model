@@ -303,10 +303,10 @@ class SkaIPythonAPI(api):
 
         result_titles = ('Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.', 'Max Baseline',
                          'Max # channels', 'Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                         'Image side length', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
                          'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
-        result_units = ('', '', '', '', 'm', '', '', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
+        result_units = ('', '', '', '', 'm', '', '', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
         for i in range(len(telescopes)):
@@ -360,29 +360,50 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(telescope, band, mode, max_baseline, Nf_max, Nfacet, Tsnap, bldta=True,
-                                  on_the_fly=False, verbose=False):
+    def evaluate_telescope_manual(telescope, band, mode, max_baseline="default", Nf_max="default", Nfacet=-1, Tsnap=-1,
+                                  bldta=True, on_the_fly=False, verbose=False):
         """
-        Evaluates a specific set of expressions for a manually supplied set of telescope parameters.
+        Evaluates a telescope with manually supplied parameters.
         These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
         optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
         @param telescope:
         @param band:
         @param mode:
-        @param max_baseline:
-        @param Nf_max:
         @param Nfacet:
         @param Tsnap:
+        @param max_baseline:
+        @param Nf_max:
         @param bldta:
         @param on_the_fly:
         @param verbose:
         @return:
         """
+        tp_basic = ParameterContainer()
+        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+
+        # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
+        if max_baseline == 'default':
+            max_baseline = tp_basic.Bmax
+        if Nf_max == 'default':
+            Nf_max = tp_basic.Nf_max
+
+        assert Nfacet > 0
+        assert Tsnap > 0
+
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode', 'Tsnap', 'Nfacet')
         param_values = (max_baseline, Nf_max, telescope, band, mode, Tsnap, Nfacet)
         param_units = ('m', '', '', '', '', 'sec', '')
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+
+        # End for-loop. We have now computed the telescope parameters for each mode
+        result_titles = ('Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
+                         'Total Compute Requirement',
+                         '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
+        result_units = ('pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
+                        'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
+
+        assert len(result_titles) == len(result_units)
 
         if not imp.telescope_and_band_are_compatible(telescope, band):
             msg = 'ERROR: Telescope and Band are not compatible'
@@ -390,43 +411,61 @@ class SkaIPythonAPI(api):
             display(HTML(s))
             return
 
-        tp_basic = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
         max_allowed_baseline = tp_basic.baseline_bins[-1]
         if max_baseline > max_allowed_baseline:
             msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
                 % max_allowed_baseline
             s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
             display(HTML(s))
-        else:
-            tp = imp.calc_tel_params(telescope=telescope, mode=mode, band=band, bldta=bldta,
-                                     max_baseline=max_baseline, nr_frequency_channels=Nf_max, otfk=on_the_fly,
-                                     verbose=verbose)  # Calculate the telescope parameters
+            return
 
-            # The result expressions need to be defined here as they depend on tp (updated in the line above)
-            result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
-                                  tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta, tp.Rflop_phrot/c.peta,
-                                  tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
-            result_titles = ('Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
-                             'Total Compute Requirement',
-                             '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
-            result_units = ('PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s','PetaFLOPS',
-                            'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
-            # The parameters are mostly summed across bins. The exception to this
-            # rule is Npix_linear, where the maximum is taken instead
-            take_maxima = [False] * 10
-            take_maxima[2] = True  # The third entry corresponds to Npix_linear, see below
+        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
+                     '</font>'))
 
-            result_values = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet, take_maxima)
-            result_value_string = []
-            for i in range(len(result_values)):
-                expression = result_expressions[i]
-                if expression is not tp.Npix_linear:
-                    result_value_string.append('%.3g' % result_values[i])
-                else:
-                    result_value_string.append('%d' % result_values[i])
+        # We now make a distinction between "pure" and composite modes
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
+            else:
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
 
-            SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+        result_values = np.zeros(10)  # The number of computed values in the result_expressions array
+        result_value_string = ['', ]  # The non-summed value: Npix_linear
+        take_maxima = [False] * 10
+        take_maxima[0] = True  # The first entry corresponds to Npix_linear, see below
+        for submode in relevant_modes:
+            # Calculate the telescope parameters
+            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=on_the_fly,
+                                     max_baseline=max_baseline, nr_frequency_channels=Nf_max,
+                                     verbose=verbose)
+
+            result_expressions = (tp.Npix_linear, tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Rio/c.tera,
+                                  tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
+                                  tp.Rflop_phrot/c.peta, tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
+
+            results_for_submode = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet, take_maxima)
+            result_value_string[0] += str('%.d, ') % results_for_submode[0]  # Npix_linear
+            result_values[1:] += results_for_submode[1:]  # Sum the rest of the values
+
+        # String formatting of the first result (Npix_linear)
+        result_value_string[0] = result_value_string[0][:-2]
+        if len(relevant_modes) > 1:
+            result_value_string[0] = '(%s)' % result_value_string[0]
+
+        for i in range(len(result_values)):
+            if i == 0:
+                pass
+            else:  # floating point expression
+                result_value_string.append('%.3g' % result_values[i])
+
+        display(HTML('<font color="blue">Done computing. Results follow:</font>'))
+
+        SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        values = result_values[-5:]  # the last five values
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
@@ -459,12 +498,11 @@ class SkaIPythonAPI(api):
         param_units = ('m', '', '', '', '')
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
-        # End for-loop. We have now computed the telescope parameters for each mode
-        result_titles = ('Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+        result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
+                         'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
                          'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
-        result_units = ('', 'sec.', 'PetaBytes', 'TeraBytes', 'pixels', 'TeraBytes/s',
+        result_units = ('', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
         assert len(result_titles) == len(result_units)
@@ -529,7 +567,7 @@ class SkaIPythonAPI(api):
                                              nr_frequency_channels=None, verbose=verbose)
 
         result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Visibility Buffer', 'Working (cache) memory', 'Image side length', 'I/O Rate',
+                         'Image side length', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
                          'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation']
 
@@ -555,12 +593,12 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return: (result_values, result_value_string) arrays of length 12. The first two numerical values always = zero.
         """
-        result_values = np.zeros(12)  # The number of computed values in the result_values array
-        result_value_string = ['', '']
+        result_values = np.zeros(12)  # The number of computed values in the result_expressions array + tsnap + nfacet
+        result_value_string = ['', '', '']  # The non-summed values: nfacet_opt, tsnap_opt and Npix_linear
         # The parameters that care computed as binned expressions are mostly summed across bins. The exception to this
         # rule is Npix_linear, where the maximum is taken instead
         take_maxima = [False] * 10
-        take_maxima[2] = True  # The third entry corresponds to Npix_linear, see below
+        take_maxima[0] = True  # The first entry corresponds to Npix_linear, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
@@ -568,29 +606,31 @@ class SkaIPythonAPI(api):
                                      verbose=verbose)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
-            result_expressions = (tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Npix_linear, tp.Rio/c.tera,
+            result_expressions = (tp.Npix_linear, tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Rio/c.tera,
                                   tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
                                   tp.Rflop_phrot/c.peta, tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
 
             result_value_string[0] += str('%d, ') % nfacet_opt
             result_value_string[1] += str('%.1f, ') % tsnap_opt
-            result_values[2:] += api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt, take_maxima)
+            results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt, take_maxima)
+            result_value_string[2] += str('%.d, ') % results_for_submode[0]  # Npix_linear
+            result_values[3:] += results_for_submode[1:]  # Sum the rest of the values
 
         # String formatting of the first two results (Tsnap_opt and NFacet_opt)
         result_value_string[0] = result_value_string[0][:-2]
         result_value_string[1] = result_value_string[1][:-2]
+        result_value_string[2] = result_value_string[2][:-2]
 
         composite_result = len(relevant_modes) > 1
         if composite_result:
             result_value_string[0] = '(%s)' % result_value_string[0]
             result_value_string[1] = '(%s)' % result_value_string[1]
+            result_value_string[2] = '(%s)' % result_value_string[2]
 
         for i in range(len(result_values)):
-            if i < 2:
+            if i < 3:
                 pass
-            elif i == 2: # The expressions with these indices are integers
-                result_value_string.append('%d' % result_values[i])
-            else: # general / floating point expression
+            else:  # floating point expression
                 result_value_string.append('%.3g' % result_values[i])
 
         return (result_values, result_value_string)
