@@ -7,8 +7,7 @@ in PDR05 (version 1.85).
 """
 
 from sympy import log, Min, Max, sqrt, floor, sign
-from numpy import pi, round
-import math
+from numpy import pi
 from parameter_definitions import ImagingModes
 from parameter_definitions import ParameterContainer
 
@@ -56,19 +55,13 @@ class Equations:
         # ===============================================================================================
 
         # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also uses 7.6 instead of 7.66. Is this correct?
-        o.Number_imaging_subbands = math.ceil(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
-        subband_frequency_ratio = (o.wl_max/o.wl_min)**(1./o.Number_imaging_subbands)
-        
-        o.wl_sb_max = o.wl *sqrt(subband_frequency_ratio) #max subband wavelength to set image FoV
-        o.wl_sb_min =o.wl_sb_max / subband_frequency_ratio #min subband wavelength to set pixel size
-
-        o.Theta_fov = 7.66 * o.wl_sb_max * o.Qfov *  (1+using_facet_overlap_frac) / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear) at fiducial wavelength
-        o.Total_fov = 7.66 * o.wl_sb_max * o.Qfov / (pi * o.Ds) # Total linear field of view of map
+        o.Theta_fov = 7.66 * o.wl * o.Qfov *  (1+using_facet_overlap_frac) / (pi * o.Ds * o.Nfacet)  # Eq 6 - Facet Field-of-view (linear) at fiducial wavelength
+        o.Total_fov = 7.66 * o.wl * o.Qfov / (pi * o.Ds) # Total linear field of view of map
         # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
-        o.Theta_beam = 3 * o.wl_sb_min / (2. * o.Bmax)     # Synthesized beam at fiducial wavelength. Called Theta_PSF in PDR05.
+        o.Theta_beam = 3 * o.wl / (2. * o.Bmax)     # Synthesized beam at fiducial wavelength. Called Theta_PSF in PDR05.
         o.Theta_pix = o.Theta_beam / (2. * o.Qpix)  # Eq 7 - Pixel size at fiducial wavelength.
-
-        o.Npix_linear = (o.Theta_fov / o.Theta_pix) # Eq 8 - Number of pixels on side of facet in subband.
+        subband_frequency_ratio = (o.wl_max/o.wl_min)**(1./o.Number_imaging_subbands)
+        o.Npix_linear = (o.Theta_fov / o.Theta_pix) * subband_frequency_ratio  # Eq 8 - Number of pixels on side of facet in subband.
         o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))  # expansion of sine solves eps = arcsinc(1/amp_f_max).
         o.Qbw = 1.47 / o.epsilon_f_approx  # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
 
@@ -81,10 +74,6 @@ class Equations:
             print "No. pixels on facet side:", o.Npix_linear
             print "Epsilon approx :", o.epsilon_f_approx
             print "Found Qbw = %8.3f, and cell frac error, epsilon,  %8.3f" % (o.Qbw, o.epsilon_f_approx)
-            print "Max subband ratio", o.max_subband_freq_ratio
-            print "Subband Freq ratio used:", subband_frequency_ratio
-            print "Number subbands", o.Number_imaging_subbands
-            print "Maximum baseline", o.Bmax
             print "\n---------------------\n"
 
         # ===============================================================================================

@@ -173,7 +173,7 @@ class ParameterDefinitions:
         o.Tsnap_min = 1.0
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
-        o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
+        o.Number_imaging_subbands = 5 #The number of subbands. Within each subband, images at all frequencies are the same size and have identically-sized pixels.
         return o
 
     @staticmethod
@@ -399,6 +399,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.034
+
 
         elif mode == ImagingModes.Spectral:
             o.Qfov = 1.0  # Field of view factor
