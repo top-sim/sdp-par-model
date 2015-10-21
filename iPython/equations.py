@@ -45,7 +45,8 @@ class Equations:
         #print "using Nfacet, facet_overlap:", o.Nfacet, o.facet_overlap_frac
         using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
         
-        
+        #Hack to make station diameter and station number inter-related...comment it out after use
+        #o.Na = 512 * (35.0/o.Ds)**2
 
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
@@ -83,8 +84,10 @@ class Equations:
             print "Found Qbw = %8.3f, and cell frac error, epsilon,  %8.3f" % (o.Qbw, o.epsilon_f_approx)
             print "Max subband ratio", o.max_subband_freq_ratio
             print "Subband Freq ratio used:", subband_frequency_ratio
-            print "Number subbands", o.Number_imaging_subbands
+            print "Number subbands use in imaging", o.Number_imaging_subbands
             print "Maximum baseline", o.Bmax
+            print "Station (or antenna) diameter", o.Ds
+            print "Number of stations (or antennas)", o.Na
             print "\n---------------------\n"
 
         # ===============================================================================================
