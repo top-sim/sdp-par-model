@@ -197,7 +197,11 @@ class Equations:
         # Eq. 31 Visibility rate for backward step, allow coalescing in time and freq prior to gridding
         o.Nvis_backward = o.binfrac * nbaselines * o.Nf_vis_backward / o.Tcoal_backward
         # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict  = o.binfrac * nbaselines * o.Nf_vis_predict  / o.Tcoal_predict
+        o.Nvis_predict             = o.binfrac * nbaselines * o.Nf_vis_predict / o.Tcoal_predict
+        Nvis_predict_no_averaging  = o.binfrac * nbaselines * o.Nf_vis_predict / o.Tdump_scaled
+        # The line above uses Tdump_scaled independent of whether BLDTA is used.
+        # This is because BLDTA is only done for gridding, and doesn't affect the amount of data to be buffered
+
 
         # Eq. 30 : R_flop = 2 * N_maj * N_pp * N_beam * ( R_grid + R_fft + R_rp + R_ccf)
         # no factor 2 in the line below, because forward & backward steps are both in Rflop numbers
@@ -300,12 +304,13 @@ class Equations:
         o.Mw_cache = (o.Ngw_predict ** 3) * (o.Qgcf ** 3) * o.Nbeam * o.Nf_vis_predict * 8.0  # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
         # Note the factor 2 in the line below -- we have a double buffer
         # (allowing storage of a full observation while simultaneously capturing the next)
-        # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why?
-        o.Mbuf_vis = 2 * o.Npp * o.Nvis_predict * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
+        # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
+        o.Mbuf_vis = 2 * o.Npp * Nvis_predict_no_averaging * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
 
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
         # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors.
         # TODO: PDR05 lacking in this regard and must be updated.
-        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict * o.Mvis * o.Nfacet ** 2  # Eq 50 TODO: is this correct if we have only got facets for the backward step and use Nfacet=1 for predict step?
+        # TODO: is this correct if we have only got facets for the backward step and use Nfacet=1 for predict step?
+        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * Nvis_predict_no_averaging * o.Mvis * o.Nfacet ** 2  # Eq 50
 
         return o

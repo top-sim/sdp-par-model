@@ -157,11 +157,11 @@ class ParameterDefinitions:
         o.c = 299792458  # The speed of light, in m/s (from sympy.physics.units.c)
         o.Omega_E = 7.292115e-5  # Rotation relative to the fixed stars in radians/second
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
-        o.epsilon_w = 0.01
-        o.Mvis = 12.0  # back to 12. Likely to change in future
+        o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
+        o.Mvis = 12.0  # Memory size of a single visibility datum in bytes. Back to 12; likely to change in future
         o.Naa = 10  # Changed to 10, after PDR submission
-        o.Nmm = 4
-        o.Npp = 4
+        o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
+        o.Npp = 4  # Number of polarization products
         o.Nw = 2  # Bytes per value
         # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
         o.Qfcv = 1.0  #changed to 1 to disable but retain ability to see affect in parameter sweep.
