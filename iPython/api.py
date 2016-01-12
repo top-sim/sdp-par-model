@@ -70,7 +70,7 @@ class SkaPythonAPI:
 
             result_expression = eval('tp.%s' % expression)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, False)
 
         return result
 
