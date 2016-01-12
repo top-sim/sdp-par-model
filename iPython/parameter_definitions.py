@@ -438,7 +438,7 @@ class ParameterDefinitions:
         """
         assert isinstance(o, ParameterContainer)
         if hpso == HPSOs.hpso01:
-            o.telescope = Telescopes.SKA1_Low_old
+            o.telescope = Telescopes.SKA1_Low
             o.mode = ImagingModes.Continuum
             o.freq_min = 50e6
             o.freq_max = 200e6
@@ -446,11 +446,11 @@ class ParameterDefinitions:
             o.Nf_out = 1500  # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Tobs = 6 * 3600
             o.Nf_max = 1500
-            o.Bmax = 100000  # m
+            o.Bmax = 80000  # m
             o.Texp = 2500 * 3600  # sec
             o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso02A:
-            o.telescope = Telescopes.SKA1_Low_old
+            o.telescope = Telescopes.SKA1_Low
             o.mode = ImagingModes.Continuum
             o.freq_min = 50e6
             o.freq_max = 200e6
@@ -458,11 +458,11 @@ class ParameterDefinitions:
             o.Tobs = 6 * 3600  # sec
             # o.Nf_max    = 256000
             o.Nf_out = 1500  # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
-            o.Bmax = 100000  # m
+            o.Bmax = 80000  # m
             o.Texp = 2500 * 3600  # sec
             o.Tpoint = 100 * 3600  # sec
         elif hpso == HPSOs.hpso02B:
-            o.telescope = Telescopes.SKA1_Low_old
+            o.telescope = Telescopes.SKA1_Low
             o.mode = ImagingModes.Continuum
             o.freq_min = 50e6
             o.freq_max = 200e6
@@ -470,11 +470,11 @@ class ParameterDefinitions:
             o.Tobs = 6 * 3600  # sec
             o.Nf_max = 256000
             o.Nf_out = 1500  # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
-            o.Bmax = 100000  # m
+            o.Bmax = 80000  # m
             o.Texp = 2500 * 3600  # sec
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso03A:
-            o.telescope = Telescopes.SKA1_Low_old
+            o.telescope = Telescopes.SKA1_Low
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate'
             o.freq_min = 150e6
@@ -486,7 +486,7 @@ class ParameterDefinitions:
             o.Tpoint = 0.17 * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso03B:
-            o.telescope = Telescopes.SKA1_Low_old
+            o.telescope = Telescopes.SKA1_Low
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate'
             o.freq_min = 150e6
@@ -498,7 +498,7 @@ class ParameterDefinitions:
             o.Tpoint = 0.17 * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso04A:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 650e6
@@ -510,7 +510,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 / 60.0 * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso04B:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Search. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 1.25e9
@@ -522,7 +522,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 / 60.0 * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso05A:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Timing. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 15km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 0.95e9
@@ -534,7 +534,7 @@ class ParameterDefinitions:
             o.Tpoint = (10 / 60.0) * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso05B:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.FastImg
             o.comment = 'Pulsar Timing. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 15km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 1.65e9
@@ -546,7 +546,7 @@ class ParameterDefinitions:
             o.Tpoint = (10 / 60.0) * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso13:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.ContAndSpectral
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
@@ -555,9 +555,9 @@ class ParameterDefinitions:
             o.Nf_max = 3200  # Assume 500 in continuum as well - defualt.
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600  # sec
-            o.Tpoint = 2500 * 3600  # sec
+            o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso13c:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Continuum
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
@@ -566,9 +566,9 @@ class ParameterDefinitions:
             o.Nf_max = 3200  # Assume 500 in continuum as well - defualt.
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600  # sec
-            o.Tpoint = 2500 * 3600  # sec
+            o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso13s:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Spectral
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
@@ -577,86 +577,75 @@ class ParameterDefinitions:
             o.Nf_max = 3200  # Assume 500 in continuum as well - defualt.
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600  # sec
-            o.Tpoint = 2500 * 3600  # sec
+            o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso14:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.ContAndSpectral
             o.comment = 'HI'
             o.freq_min = 1.3e9
             o.freq_max = 1.4e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_max = 5000  # Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 2000 * 3600  # sec
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso14c:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.comment = 'HI'
             o.freq_min = 1.3e9
             o.freq_max = 1.4e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_max = 5000  # Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 2000 * 3600  # sec
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso14s:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Spectral
             o.comment = 'HI'
             o.freq_min = 1.3e9
             o.freq_max = 1.4e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_max = 5000  # Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
-            o.Bmax = 200000  # m
-            o.Texp = 2000 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
-        elif hpso == HPSOs.hpso14sfull:
-            o.telescope = Telescopes.SKA1_Mid_old
-            o.mode = ImagingModes.Spectral
-            o.comment = 'HI'
-            o.freq_min = 1.3e9
-            o.freq_max = 1.4e9
-            o.Tobs = 6 * 3600  # sec
-            o.Nf_max = 50000  # Only 5,000 spectral line channels. Assume 500 - default - for continuum as well.
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 2000 * 3600  # sec
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso15:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.ContAndSpectral
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.415e9
             o.freq_max = 1.425e9
-            o.Tobs = 6 * 3600  # sec
+            o.Tobs = 4.4 * 3600  # sec
             o.Nf_max = 2500  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
             o.Bmax = 13000  # m
-            o.Texp = 2000 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
+            o.Texp = 12600 * 3600  # sec
+            o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso15c:
             o.telescope = Telescopes.SKA1_Sur_old
             o.mode = ImagingModes.Continuum
             o.comment = 'HI, limited spatial resolution'
-            o.freq_min = 1.415e9
+            o.freq_min = 1.415e9 #change this to give larger frac BW for continuum accuracy
             o.freq_max = 1.425e9
-            o.Tobs = 6 * 3600  # sec
-            o.Nf_max = 2500  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
+            o.Tobs = 4.4 * 3600  # sec
+            o.Nf_max = 2500  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well. Probably want continuum across whole band, or at least 35% frac BW
             o.Bmax = 13000  # m
-            o.Texp = 2000 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
+            o.Texp = 12600 * 3600  # sec
+            o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso15s:
             o.telescope = Telescopes.SKA1_Sur_old
             o.mode = ImagingModes.Spectral
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.415e9
             o.freq_max = 1.425e9
-            o.Tobs = 6 * 3600  # sec
+            o.Tobs = 4.4 * 3600  # sec
             o.Nf_max = 2500  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well.
             o.Bmax = 13000  # m
-            o.Texp = 2000 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
+            o.Texp = 12600 * 3600  # sec
+            o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso19:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.FastImg
             o.comment = 'Transients. Real time calibration loading; assume this is like SlowTrans FLOP rate. Assuming using only baselines out to 10km for real time calibration, allowing 10 major cycles.'
             o.freq_min = 650e6
@@ -668,7 +657,7 @@ class ParameterDefinitions:
             o.Tpoint = (10 / 60.0) * 3600  # sec
             o.Nmajor = 10
         elif hpso == HPSOs.hpso22:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.comment = 'Cradle of life'
             o.freq_min = 10e9
@@ -680,50 +669,38 @@ class ParameterDefinitions:
             o.Texp = 6000 * 3600  # sec
             o.Tpoint = 600 * 3600  # sec
         elif hpso == HPSOs.hpso27:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9
-            o.Tobs = 6 * 3600  # sec
+            o.Tobs = 0.123 * 3600  # sec
             o.Nf_max = 256000
             o.Nf_out = 500  # continuum experiment with 500 output channels
             o.Bmax = 50000  # m
-            o.Texp = 17500 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
+            o.Texp = 10000 * 3600  # sec
+            o.Tpoint = 0.123 * 3600  # sec
         elif hpso == HPSOs.hpso33:
             o.telescope = Telescopes.SKA1_Sur_old
             o.mode = ImagingModes.Continuum
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9
-            o.Tobs = 6 * 3600  # sec
+            o.Tobs = 0.123 * 3600  # sec
             o.Nf_out = 500  # continuum experiment with 500 output channels
             o.Bmax = 50000  # m
-            o.Texp = 17500 * 3600  # sec
-            o.Tpoint = 10 * 3600  # sec
-        elif hpso == HPSOs.hpso35:
-            o.telescope = Telescopes.SKA1_Sur_old
-            o.mode = ImagingModes.FastImg
-            o.comment = 'Autocorrelation'
-            o.freq_min = 650e6
-            o.freq_max = 1.15e9
-            o.Tobs = 0 * 3600  # sec
-            o.Nf_max = 256000
-            o.Nf_out = 500
-            o.Bmax = 10000  # m
-            o.Texp = 5500 * 3600  # sec
-            o.Tpoint = 3.3 * 3600  # sec
+            o.Texp = 10000 * 3600  # sec
+            o.Tpoint = 0.123 * 3600  # sec
         elif hpso == HPSOs.hpso37a:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 1e9
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_out = 700  # 700 channels required in output continuum cubes
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 2000 * 3600  # sec
             o.Tpoint = 95 * 3600  # sec
         elif hpso == HPSOs.hpso37b:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 1e9
             o.freq_max = 1.7e9
@@ -733,33 +710,33 @@ class ParameterDefinitions:
             o.Texp = 2000 * 3600  # sec
             o.Tpoint = 2000 * 3600  # sec
         elif hpso == HPSOs.hpso37c:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 1e9
             o.freq_max = 1.5e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_out = 500  # 500 channels in output cube
-            o.Bmax = 50000  # m
-            o.Texp = 5300 * 3600  # sec
+            o.Bmax = 93000  # m
+            o.Texp = 10000 * 3600  # sec
             o.Tpoint = 95 * 3600  # sec
         elif hpso == HPSOs.hpso38a:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_out = 1000
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 1000 * 3600  # sec
             o.Tpoint = 16.4 * 3600  # sec
         elif hpso == HPSOs.hpso38b:
-            o.telescope = Telescopes.SKA1_Mid_old
+            o.telescope = Telescopes.SKA1_Mid
             o.mode = ImagingModes.Continuum
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600  # sec
             o.Nf_out = 1000
-            o.Bmax = 200000  # m
+            o.Bmax = 150000  # m
             o.Texp = 1000 * 3600  # sec
             o.Tpoint = 1000 * 3600  # sec
         else:
