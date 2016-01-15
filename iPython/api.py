@@ -6,7 +6,6 @@ import copy
 from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
 from equations import Equations
 from implementation import Implementation as imp
-from parameter_definitions import ParameterContainer
 import numpy as np
 
 

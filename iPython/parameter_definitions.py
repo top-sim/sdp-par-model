@@ -93,9 +93,9 @@ class ImagingModes:
     Enumerate the possible imaging modes (used in the ParameterDefinitions class)
     """
     Continuum = 'Continuum'
-    Spectral = 'Spectral'
+    Spectral = 'Spectral'  # Spectral only. Spectral mode will usually follow Continuum mode. See ContAntSpectral.
     FastImg = 'Fast Imaging'
-    ContAndSpectral = 'Sequential (Cont+Spec)'  # Some of the HPSOs run (only) continuum and spectral modes sequentially
+    ContAndSpectral = 'Sequential (Cont+Spec)'  # Continuum and Spectral modes run sequentially, as in some HPSOs
     All = 'All, Summed (Cont+Spec+FastImg)'
     pure_modes = (Continuum, Spectral, FastImg)
 
@@ -113,15 +113,15 @@ class HPSOs:
     hpso05A = '05A'
     hpso05B = '05B'
     hpso13 = '13'
-    hpso13c = '13c'
-    hpso13s = '13s'
+    hpso13c = '13c'  # Continuum component of HPSO 13
+    hpso13s = '13s'  # Spectral component of HPSO 13
     hpso14 = '14'
-    hpso14c = '14c'
-    hpso14s = '14s'
+    hpso14c = '14c'  # Continuum component of HPSO 14
+    hpso14s = '14s'  # Spectral  component of HPSO 14
     hpso14sfull = '14sfull'
     hpso15 = '15'
-    hpso15c = '15c'
-    hpso15s = '15s'
+    hpso15c = '15c'  # Continuum component of HPSO 15
+    hpso15s = '15s'  # Spectral  component of HPSO 15
     hpso19 = '19'
     hpso22 = '22'
     hpso27 = '27'
@@ -137,8 +137,9 @@ class HPSOs:
     hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B, hpso03A, hpso03B}
     hpsos_using_SKA1Mid = {hpso04A, hpso04B, hpso05A, hpso05B, hpso14, hpso19, hpso22, hpso37a, hpso37b, hpso38a,
                            hpso38b, hpso14c, hpso14s, hpso14sfull}
-    hpsos_using_SKA1Sur = {hpso13, hpso15, hpso27, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
-
+    hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
+    # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
+    hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
 
 class ParameterDefinitions:
     """
@@ -321,7 +322,7 @@ class ParameterDefinitions:
             telescope = Telescopes.SKA1_Low
         elif hpso in HPSOs.hpsos_using_SKA1Mid:
             telescope = Telescopes.SKA1_Mid
-        elif hpso in HPSOs.hpsos_using_SKA1Sur:
+        elif hpso in HPSOs.hpsos_originally_for_SKA1Sur:
             telescope = Telescopes.SKA1_Sur_old
         else:
             raise Exception('HPSO not associated with a telescope')
@@ -408,6 +409,7 @@ class ParameterDefinitions:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
+
         if mode == ImagingModes.Continuum:
             o.Qfov = 1.8  # Field of view factor
             o.Nmajor = 10  # Number of major CLEAN cycles to be done
@@ -441,6 +443,9 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.02
+
+        elif mode == ImagingModes.ContAndSpectral:
+            raise Exception("'apply_imaging_mode_parameters' needs to compute Continuum and Spectral modes separately")
 
         else:
             raise Exception('Unknown mode: %s!' % str(mode))
@@ -642,7 +647,7 @@ class ParameterDefinitions:
             o.Texp = 12600 * 3600  # sec
             o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso15c:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Continuum
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.415e9 #change this to give larger frac BW for continuum accuracy
@@ -653,7 +658,7 @@ class ParameterDefinitions:
             o.Texp = 12600 * 3600  # sec
             o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso15s:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Spectral
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.415e9
@@ -699,7 +704,7 @@ class ParameterDefinitions:
             o.Texp = 10000 * 3600  # sec
             o.Tpoint = 0.123 * 3600  # sec
         elif hpso == HPSOs.hpso33:
-            o.telescope = Telescopes.SKA1_Sur_old
+            o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Continuum
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9

@@ -10,7 +10,7 @@ from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
@@ -342,13 +342,13 @@ class SkaIPythonAPI(api):
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
 
         for i in range(len(telescopes)):
-            tp_basic = ParameterContainer()
+            tp_default = ParameterContainer()  # temp parameter container to get default values for this telescope
             telescope = telescopes[i]
-            ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+            ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
 
             # Use default values of max_baseline and Nf_max
-            max_baseline = tp_basic.Bmax
-            Nf_max = tp_basic.Nf_max
+            max_baseline = tp_default.Bmax
+            Nf_max = tp_default.Nf_max
 
             bldta = bldtas[i]
             mode = modes[i]
@@ -410,14 +410,16 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return:
         """
-        tp_basic = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+        # We calculate a "temporary" parameter container to get default values for this telescope. This container will
+        # afterwards be discarded. The actual parameters used in the simulation are contained in "tp" further below
+        tp_default = ParameterContainer()
+        ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
 
         # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
         if max_baseline == 'default':
-            max_baseline = tp_basic.Bmax
+            max_baseline = tp_default.Bmax
         if Nf_max == 'default':
-            Nf_max = tp_basic.Nf_max
+            Nf_max = tp_default.Nf_max
 
         assert Nfacet > 0
         assert Tsnap > 0
@@ -443,7 +445,7 @@ class SkaIPythonAPI(api):
             display(HTML(s))
             return
 
-        max_allowed_baseline = tp_basic.baseline_bins[-1]
+        max_allowed_baseline = tp_default.baseline_bins[-1]
         if max_baseline > max_allowed_baseline:
             msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
                 % max_allowed_baseline
@@ -500,6 +502,148 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
+    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbose=False):
+        """
+        Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
+        @param hpso:
+        @param bldta:
+        @param on_the_fly:
+        @param verbose:
+        @return:
+        """
+        tp_default = ParameterContainer()
+        ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
+        telescope = tp_default.telescope
+        mode = tp_default.mode
+
+        if mode == ImagingModes.ContAndSpectral:
+            tpc = imp.calc_tel_params(telescope, ImagingModes.Continuum, hpso=hpso_key, bldta=bldta, otfk=on_the_fly,
+                                      verbose=verbose)
+            tps = imp.calc_tel_params(telescope, ImagingModes.Spectral, hpso=hpso_key, bldta=bldta, otfk=on_the_fly,
+                                      verbose=verbose)
+
+            '''
+            (Tsnap_opt_C, Nfacet_opt_C) = imp.find_optimal_Tsnap_Nfacet(tpc, verbose=verbose)
+            (Tsnap_opt_S, Nfacet_opt_S) = imp.find_optimal_Tsnap_Nfacet(tps, verbose=verbose)
+
+            substitution_c = {tpc.Tsnap : Tsnap_opt_C, tpc.Nfacet : Nfacet_opt_C}
+            substitution_s = {tps.Tsnap : Tsnap_opt_S, tps.Nfacet : Nfacet_opt_S}
+
+            expressions_c = (tpc.Rflop_conv, tpc.Rflop_fft, tpc.Rflop_grid, tpc.Rflop_proj, tpc.Rflop_phrot, tpc.Rflop, tpc.Mbuf_vis, tpc.Mw_cache, tpc.Npix_linear, tpc.Rio)
+            expressions_s = (tps.Rflop_conv, tps.Rflop_fft, tps.Rflop_grid, tps.Rflop_proj, tps.Rflop_phrot, tps.Rflop, tps.Mbuf_vis, tps.Mw_cache, tps.Npix_linear, tps.Rio)
+            expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis', 'Mw_cache', 'Npix_linear', 'Rio')
+            key_expressions_c = zip(expression_strings, expressions_c)
+            key_expressions_s = zip(expression_strings, expressions_s)
+
+            for index in range(len(key_expressions)):
+                key_expression_c = key_expressions_c[index]
+                key_expression_s = key_expressions_s[index]
+                key = key_expression_c[0]
+                take_max = (key in values_to_take_max)
+
+                expression_c = key_expression_c[1]
+                expression_s = key_expression_s[1]
+                if not (isinstance(expression_c, (int, long)) or isinstance(expression_c, float)):
+                    expression_subst_c = expression_c.subs(substitution_c)
+                else:
+                    expression_subst_c = expression_c
+                if not (isinstance(expression_s, (int, long)) or isinstance(expression_s, float)):
+                    expression_subst_s = expression_s.subs(substitution_s)
+                else:
+                    expression_subst_s = expression_s
+
+                if take_max:
+                    result = Max(i.evaluate_binned_expression(expression_subst_c, tpc, take_max=True),
+                                 i.evaluate_binned_expression(expression_subst_s, tps, take_max=True))
+                else:
+                    result = i.evaluate_binned_expression(expression_subst_c, tpc, take_max=False) + \
+                             i.evaluate_binned_expression(expression_subst_s, tps, take_max=False)
+
+                results[(hpso_key, temp.mode, key)] = result
+
+                if key in non_peta_values:
+                    print '-> hpso %s : %s = %g' % (hpso_key, key, result)
+                else:
+                    print '-> hpso %s : %s = %.3g Peta' % (hpso_key, key, result/1e15)
+        else:
+            tp = i.calc_tel_params(tel, temp.mode, hpso=hpso_key)
+            (Tsnap_opt, Nfacet_opt) = i.find_optimal_Tsnap_Nfacet(tp)
+            print 'Optimal (Tsnap, Nfacet) values = (%.2f sec, %d)' % (Tsnap_opt, Nfacet_opt)
+            substitution = {tp.Tsnap : Tsnap_opt, tp.Nfacet : Nfacet_opt}
+
+            expressions = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop, tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
+            expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis', 'Mw_cache', 'Npix_linear', 'Rio')
+            key_expressions = zip(expression_strings, expressions)
+
+            for key_expression in key_expressions:
+                key = key_expression[0]
+                take_max = key in ('Npix_linear',)
+                expression = key_expression[1]
+                if not (isinstance( expression, ( int, long )) or isinstance(expression, float)):
+                    expression_subst = expression.subs(substitution)
+                else:
+                    expression_subst = expression
+                result = i.evaluate_binned_expression(expression_subst, tp, take_max)
+                results[(hpso_key, temp.mode, key)] = result
+        '''
+
+
+        # First we plot a table with all the provided parameters
+        param_titles = ('Telescope', 'Mode', 'Max Baseline', 'Max # of channels')
+        param_values = (telescope, mode, tp_default.Bmax, tp_default.Nf_max)
+        param_units = ('', '', 'm', '')
+        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+
+        # TODO: not done yet!
+
+        '''
+        result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
+                         'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
+                         'Total Compute Requirement',
+                         '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
+        result_units = ('', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
+                        'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
+
+        assert len(result_titles) == len(result_units)
+
+        if not imp.telescope_and_band_are_compatible(telescope, band):
+            msg = 'ERROR: Telescope and Band are not compatible'
+            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
+            display(HTML(s))
+            return
+
+        max_allowed_baseline = tp_default.baseline_bins[-1]
+        if max_baseline > max_allowed_baseline:
+            msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
+                % max_allowed_baseline
+            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
+            display(HTML(s))
+            return
+
+        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
+                     '</font>'))
+
+        # We now make a distinction between "pure" and composite modes
+        relevant_modes = (mode,)  # A list with one element
+        if mode not in ImagingModes.pure_modes:
+            if mode == ImagingModes.All:
+                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
+            else:
+                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
+        (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
+                                                                              bldta, on_the_fly, max_baseline,
+                                                                              Nf_max, verbose)
+
+        display(HTML('<font color="blue">Done computing. Results follow:</font>'))
+
+        SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        values = result_values[-5:]  # the last five values
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
+        '''
+
+    @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
                                      bldta=True, on_the_fly=False, verbose=False):
         """
@@ -515,14 +659,16 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return:
         """
-        tp_basic = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_basic, telescope)
+        # We calculate a "temporary" parameter container to get default values for this telescope. This container will
+        # afterwards be discarded. The actual parameters used in the simulation are contained in "tp" further below
+        tp_default = ParameterContainer()
+        ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
 
         # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
         if max_baseline == 'default':
-            max_baseline = tp_basic.Bmax
+            max_baseline = tp_default.Bmax
         if Nf_max == 'default':
-            Nf_max = tp_basic.Nf_max
+            Nf_max = tp_default.Nf_max
 
         # First we plot a table with all the provided parameters
         param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode')
@@ -545,7 +691,7 @@ class SkaIPythonAPI(api):
             display(HTML(s))
             return
 
-        max_allowed_baseline = tp_basic.baseline_bins[-1]
+        max_allowed_baseline = tp_default.baseline_bins[-1]
         if max_baseline > max_allowed_baseline:
             msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
                 % max_allowed_baseline

@@ -68,33 +68,31 @@ class Implementation:
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
 
-        assert not ((band is None) and (hpso is None))  # At least one of the two must be True
-        assert (band is None) or (hpso is None)  # These are mutually exclusive
-
         # Note the order in which these settings are applied.
         # Each one (possibly) overwrites previous definitions if they should they overlap
         # (as happens with e.g. frequency bands)
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
         p.apply_telescope_parameters(telescope_params, telescope)
-
-        # Then: Imaging mode and Frequency-band (Order depends on whether we are dealing with a defined HPSO)
-        # Including: frequency range, Observation time, number of cycles, quality factor, number of channels, etc
-        if band is not None:
+        # Then define imaging mode and frequency-band
+        # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
+        if (hpso is None) and (band is not None):
             p.apply_band_parameters(telescope_params, band)
             p.apply_imaging_mode_parameters(telescope_params, mode)
-        else:
-            # This has to be an HPSO case
+        elif (hpso is not None) and (band is None):
             p.apply_hpso_parameters(telescope_params, hpso)
             p.apply_imaging_mode_parameters(telescope_params, mode)
+        else:
+            raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
 
+        # Artificially limit max_baseline or nr_frequency_channels, deviating from the default for this Band or HPSO
         if max_baseline is not None:
             telescope_params.Bmax = max_baseline
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
         f.apply_imaging_equations(telescope_params, mode, bldta, otfk, verbose)
-        #print "Using maximum baseline of", p.Bmax
+
         return telescope_params
 
     @staticmethod
