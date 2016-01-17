@@ -28,6 +28,17 @@ class Implementation:
         pass
 
     @staticmethod
+    def seconds_to_hms(seconds):
+        """
+        Converts a given number of seconds into hours, minutes and seconds, returned as a tuple. Useful for display output
+        @param seconds:
+        @return: (hours, minutes, seconds)
+        """
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return (h, m, s)
+
+    @staticmethod
     def optimize_expr(expression, free_var, bound_lower, bound_upper):
         """
         Optimized Tsnap so that the supplied expression is minimized

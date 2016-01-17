@@ -512,91 +512,81 @@ class SkaIPythonAPI(api):
         @return:
         """
         tp_default = ParameterContainer()
+        ParameterDefinitions.apply_global_parameters(tp_default)
         ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
         telescope = tp_default.telescope
-        mode = tp_default.mode
-
-        if mode == ImagingModes.ContAndSpectral:
-            tpc = imp.calc_tel_params(telescope, ImagingModes.Continuum, hpso=hpso_key, bldta=bldta, otfk=on_the_fly,
-                                      verbose=verbose)
-            tps = imp.calc_tel_params(telescope, ImagingModes.Spectral, hpso=hpso_key, bldta=bldta, otfk=on_the_fly,
-                                      verbose=verbose)
-
-            '''
-            (Tsnap_opt_C, Nfacet_opt_C) = imp.find_optimal_Tsnap_Nfacet(tpc, verbose=verbose)
-            (Tsnap_opt_S, Nfacet_opt_S) = imp.find_optimal_Tsnap_Nfacet(tps, verbose=verbose)
-
-            substitution_c = {tpc.Tsnap : Tsnap_opt_C, tpc.Nfacet : Nfacet_opt_C}
-            substitution_s = {tps.Tsnap : Tsnap_opt_S, tps.Nfacet : Nfacet_opt_S}
-
-            expressions_c = (tpc.Rflop_conv, tpc.Rflop_fft, tpc.Rflop_grid, tpc.Rflop_proj, tpc.Rflop_phrot, tpc.Rflop, tpc.Mbuf_vis, tpc.Mw_cache, tpc.Npix_linear, tpc.Rio)
-            expressions_s = (tps.Rflop_conv, tps.Rflop_fft, tps.Rflop_grid, tps.Rflop_proj, tps.Rflop_phrot, tps.Rflop, tps.Mbuf_vis, tps.Mw_cache, tps.Npix_linear, tps.Rio)
-            expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis', 'Mw_cache', 'Npix_linear', 'Rio')
-            key_expressions_c = zip(expression_strings, expressions_c)
-            key_expressions_s = zip(expression_strings, expressions_s)
-
-            for index in range(len(key_expressions)):
-                key_expression_c = key_expressions_c[index]
-                key_expression_s = key_expressions_s[index]
-                key = key_expression_c[0]
-                take_max = (key in values_to_take_max)
-
-                expression_c = key_expression_c[1]
-                expression_s = key_expression_s[1]
-                if not (isinstance(expression_c, (int, long)) or isinstance(expression_c, float)):
-                    expression_subst_c = expression_c.subs(substitution_c)
-                else:
-                    expression_subst_c = expression_c
-                if not (isinstance(expression_s, (int, long)) or isinstance(expression_s, float)):
-                    expression_subst_s = expression_s.subs(substitution_s)
-                else:
-                    expression_subst_s = expression_s
-
-                if take_max:
-                    result = Max(i.evaluate_binned_expression(expression_subst_c, tpc, take_max=True),
-                                 i.evaluate_binned_expression(expression_subst_s, tps, take_max=True))
-                else:
-                    result = i.evaluate_binned_expression(expression_subst_c, tpc, take_max=False) + \
-                             i.evaluate_binned_expression(expression_subst_s, tps, take_max=False)
-
-                results[(hpso_key, temp.mode, key)] = result
-
-                if key in non_peta_values:
-                    print '-> hpso %s : %s = %g' % (hpso_key, key, result)
-                else:
-                    print '-> hpso %s : %s = %.3g Peta' % (hpso_key, key, result/1e15)
-        else:
-            tp = i.calc_tel_params(tel, temp.mode, hpso=hpso_key)
-            (Tsnap_opt, Nfacet_opt) = i.find_optimal_Tsnap_Nfacet(tp)
-            print 'Optimal (Tsnap, Nfacet) values = (%.2f sec, %d)' % (Tsnap_opt, Nfacet_opt)
-            substitution = {tp.Tsnap : Tsnap_opt, tp.Nfacet : Nfacet_opt}
-
-            expressions = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop, tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
-            expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis', 'Mw_cache', 'Npix_linear', 'Rio')
-            key_expressions = zip(expression_strings, expressions)
-
-            for key_expression in key_expressions:
-                key = key_expression[0]
-                take_max = key in ('Npix_linear',)
-                expression = key_expression[1]
-                if not (isinstance( expression, ( int, long )) or isinstance(expression, float)):
-                    expression_subst = expression.subs(substitution)
-                else:
-                    expression_subst = expression
-                result = i.evaluate_binned_expression(expression_subst, tp, take_max)
-                results[(hpso_key, temp.mode, key)] = result
-        '''
-
+        hpso_mode = tp_default.mode
 
         # First we plot a table with all the provided parameters
-        param_titles = ('Telescope', 'Mode', 'Max Baseline', 'Max # of channels')
-        param_values = (telescope, mode, tp_default.Bmax, tp_default.Nf_max)
-        param_units = ('', '', 'm', '')
-        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+        param_titles = ('HPSO Number', 'Telescope', 'Mode', 'Max Baseline', 'Max # of channels', 'Observation time', 'Texp (not used in calc)', 'Tpoint (not used in calc)')
+        (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tobs)
+        Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
+        (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Texp)
+        Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
+        (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tpoint)
+        Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
+        param_values = (hpso_key, telescope, hpso_mode, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string, Tpoint_string)
+        param_units = ('', '', '', 'm', '', '', '', '')
+        SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
-        # TODO: not done yet!
+        modes_expanded = (hpso_mode,)
+        if hpso_mode == ImagingModes.ContAndSpectral:
+            modes_expanded = (ImagingModes.Continuum, ImagingModes.Spectral)
 
-        '''
+        tps = {}
+        Tsnap_opt = {}
+        Nfacet_opt = {}
+        substitutions = {}
+        expressions = {}
+        expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis',
+                              'Mw_cache', 'Npix_linear', 'Rio')
+        nr_key_expr_per_mode = len(expression_strings)
+        values_to_take_max = ('Npix_linear')
+        key_expressions = {}
+        for key in expression_strings:
+            key_expressions[key] = {}
+
+        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
+
+        for mode in modes_expanded:
+            if verbose:
+                print 'Computing HPSO %s for %s mode' % (hpso_key, mode)
+
+            tp = imp.calc_tel_params(telescope, mode, hpso=hpso_key, bldta=bldta, otfk=on_the_fly, verbose=verbose)
+            tps[mode] = tp
+            (Tsnap_opt[mode], Nfacet_opt[mode]) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            substitutions[mode] = {tp.Tsnap : Tsnap_opt[mode], tp.Nfacet : Nfacet_opt[mode]}
+            expressions[mode] = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop, tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
+
+            for index in range(nr_key_expr_per_mode):
+                key_expressions[expression_strings[index]][mode] = expressions[mode][index]
+
+        key_results = {}
+        for key in expression_strings:
+            take_max = (key in values_to_take_max)
+            results = np.array([])
+            for mode in modes_expanded:
+                tp = tps[mode]
+                expression = key_expressions[key][mode]
+                substitution = substitutions[mode]
+                expression_subst = expression  # Will stay unchanged if a literal number (see if statement below)
+                if not (isinstance(expression, (int, long)) or isinstance(expression, float)):
+                    expression_subst = expression.subs(substitution)
+                results = np.append(results, imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max))
+
+            if take_max:
+                result = np.max(results)
+            else:
+                result = np.sum(results)
+
+            key_results[key] = result
+
+        display(HTML('<font color="blue">Done computing. Results follow:</font>'))
+
+        # Next, the computed results:
+        # TODO won't this be cleaner when we use _Compute_results ?
+        ############################
+
         result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
                          'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
                          'Total Compute Requirement',
@@ -606,42 +596,33 @@ class SkaIPythonAPI(api):
 
         assert len(result_titles) == len(result_units)
 
-        if not imp.telescope_and_band_are_compatible(telescope, band):
-            msg = 'ERROR: Telescope and Band are not compatible'
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
+        result_value_string = ['', '', '']  # The non-summed values: nfacet_opt, tsnap_opt and Npix_linear
+        if len(modes_expanded) == 1:
+            result_value_string[0] += '%d' % Nfacet_opt[modes_expanded[0]]
+            result_value_string[1] += '%.1f' % Tsnap_opt[modes_expanded[0]]
+        else:
+            for mode in modes_expanded:
+                result_value_string[0] += '%s : %d' % (mode, Nfacet_opt[mode])
+                result_value_string[1] += '%s : %.1f' % (mode, Tsnap_opt[mode])
 
-        max_allowed_baseline = tp_default.baseline_bins[-1]
-        if max_baseline > max_allowed_baseline:
-            msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
-                % max_allowed_baseline
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
+        result_value_string[2] = ('%d' % int(np.ceil(key_results['Npix_linear'])))  # Npix_linear
 
-        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
-                     '</font>'))
-
-        # We now make a distinction between "pure" and composite modes
-        relevant_modes = (mode,)  # A list with one element
-        if mode not in ImagingModes.pure_modes:
-            if mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
-            else:
-                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-        (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                              bldta, on_the_fly, max_baseline,
-                                                                              Nf_max, verbose)
-
-        display(HTML('<font color="blue">Done computing. Results follow:</font>'))
+        result_value_string.append('%.3g' % (key_results['Mbuf_vis'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Mw_cache'] / 1e12))
+        result_value_string.append('%.3g' % (key_results['Rio'] / 1e12))
+        result_value_string.append('%.3g' % (key_results['Rflop'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Rflop_grid'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Rflop_fft'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Rflop_phrot'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Rflop_proj'] / 1e15))
+        result_value_string.append('%.3g' % (key_results['Rflop_conv'] / 1e15))
 
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+
+        values = (key_results['Rflop_grid'], key_results['Rflop_fft'], key_results['Rflop_phrot'], key_results['Rflop_proj'], key_results['Rflop_conv'])
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
-        '''
+        SkaIPythonAPI.plot_pie('FLOP breakdown for HPSO %s' % hpso_key, labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
@@ -783,6 +764,7 @@ class SkaIPythonAPI(api):
 
             #TODO: temporarily limit max baseline to 75km in fast imaging mode for MID (for plotting)
             if (telescope == Telescopes.SKA1_Mid) and (submode == ImagingModes.FastImg):
+                print 'MID is being limited to use only 75km max baseline in Fase Imaging mode!'
                 max_baseline = 75000
 
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,

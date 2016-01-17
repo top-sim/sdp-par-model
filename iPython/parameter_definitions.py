@@ -480,7 +480,7 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600  # sec
-            # o.Nf_max    = 256000
+            o.Nf_max    = 256000
             o.Nf_out = 1500  # 1500 channels in output - simpler to just run as a continuum experiment - though an alternative would be to run as CS mode with 500+1500 channels
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600  # sec
