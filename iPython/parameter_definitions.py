@@ -15,24 +15,26 @@ class ParameterContainer:
     def __init__(self):
         pass
 
-    def set_param(self, param_name, value, allow_overwrite=False):
+    def set_param(self, param_name, value, prevent_overwrite=True):
         """
         Provides a method for setting a parameter. By default first checks that the value has not already been defined.
         Useful for preventing situations where values may inadvertently be overwritten.
         @param param_name: The name of the parameter/field that needs to be assigned - provided as text
         @param value: the value. Need not be text.
-        @param allow_overwrite: Allows this value to be overwritten once defined. Default = False.
+        @param prevent_overwrite: Disallows this value to be overwritten once defined. Default = True.
         @return: Nothing
         """
         assert isinstance(param_name, str)
         try:
-            if (not allow_overwrite) and hasattr(self, param_name):
-                assert eval('self.%s == None' % param_name)
+            if prevent_overwrite and hasattr(self, param_name):
+                if eval('self.%s == value' % param_name):
+                    print 'Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.'
+                else:
+                    assert eval('self.%s == None' % param_name)
         except AssertionError:
             raise AssertionError("The parameter %s has already been defined and may not be overwritten." % param_name)
 
-        eval('self.%s == value' % param_name)  # Write the value
-
+        exec('self.%s = value' % param_name)  # Write the value
 
 class Constants:
     """
