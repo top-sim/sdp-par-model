@@ -91,8 +91,9 @@ class Implementation:
             p.apply_band_parameters(telescope_params, band)
             p.apply_imaging_mode_parameters(telescope_params, mode)
         elif (hpso is not None) and (band is None):
-            p.apply_hpso_parameters(telescope_params, hpso)
+            # Note the ordering; HPSO parameters get applied last, and therefore have the final say
             p.apply_imaging_mode_parameters(telescope_params, mode)
+            p.apply_hpso_parameters(telescope_params, hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
 

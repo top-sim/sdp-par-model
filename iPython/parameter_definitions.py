@@ -207,6 +207,8 @@ class ParameterDefinitions:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
+        o.set_param('telescope', telescope)
+
         if telescope == Telescopes.SKA1_Low:
             o.Bmax = 80000  # Actually constructed max baseline in *m*
             o.Ds = 35  # station "diameter" in metres
