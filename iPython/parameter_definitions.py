@@ -234,7 +234,7 @@ class ParameterDefinitions:
 
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
-            o.Ds = 15  # station "diameter" in metres
+            o.Ds = 13.5  # station "diameter" in metres, assume 13.5 as this matches the MeerKat antennas
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
@@ -250,7 +250,7 @@ class ParameterDefinitions:
 
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
-            o.Ds = 15  # station "diameter" in meters
+            o.Ds = 13.5  # station "diameter" in meters, 13.5 for Meerkat antennas
             o.Na = 190 + 64  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
@@ -650,13 +650,15 @@ class ParameterDefinitions:
             o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Continuum
             o.comment = 'HI, limited spatial resolution'
-            o.freq_min = 1.415e9 #change this to give larger frac BW for continuum accuracy
-            o.freq_max = 1.425e9
+            o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
+            o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
             o.Tobs = 4.4 * 3600  # sec
-            o.Nf_max = 2500  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well. Probably want continuum across whole band, or at least 35% frac BW
+            o.Nf_max = 65536  # Only 2,500 spectral line channels. Assume 500 - default - for continuum as well. Probably want continuum across whole band, or at least ~20% frac BW
+            o.Nf_out = 5000
             o.Bmax = 13000  # m
             o.Texp = 12600 * 3600  # sec
             o.Tpoint = 4.4 * 3600  # sec
+            o.Nmajor=10
         elif hpso == HPSOs.hpso15s:
             o.telescope = Telescopes.SKA1_Mid #WAS SURVEY: UPDATED
             o.mode = ImagingModes.Spectral
