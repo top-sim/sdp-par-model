@@ -176,12 +176,12 @@ class Implementation:
             result_array.append(float(result['value']))
             optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
             result_per_nfacet[nfacets] = result_array[i]
-            if nfacets >= 6:
+            if nfacets >= 3: #
                 if result_array[i] >= result_array[i-1]:
                     if verbose:
                         print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
                               % nfacets)
-                    break #don't stop search after just doing Nfacet=2, do at least Nfacet=5 first, bacause there can be a local increase between nfacet=1 and 2
+                    break #don't stop search after just doing Nfacet=2, do at least Nfacet=3 first, bacause there can be a local increase between nfacet=1 and 2
 
         index = np.argmin(np.array(result_array))
         nfacets = index + 1
