@@ -51,13 +51,13 @@ class Telescopes:
     """
     Enumerate the possible telescopes to choose from (used in the ParameterDefinitions class)
     """
-    # The originally planned SKA1 telescopes
+    # The originally planned (pre-rebaselining) SKA1 telescopes
     SKA1_Low_old = 'SKA1_Low_old'
     SKA1_Mid_old = 'SKA1_Mid_old'
     SKA1_Sur_old = 'SKA1_Survey_old'
     # The rebaselined SKA1 telescopes
-    SKA1_Low = 'SKA1_Low_rebaselined'
-    SKA1_Mid = 'SKA1_Mid_rebaselined'
+    SKA1_Low = 'SKA1_Low'
+    SKA1_Mid = 'SKA1_Mid'
     # Proposed SKA2 telescopes
     SKA2_Low = 'SKA2_Low'
     SKA2_Mid = 'SKA2_Mid'
@@ -67,6 +67,7 @@ class Bands:
     """
     Enumerate all possible bands (used in the ParameterDefinitions class)
     """
+    # SKA1 Bands
     Low = 'Low'
     Mid1 = 'Mid1'
     Mid2 = 'Mid2'
@@ -74,18 +75,20 @@ class Bands:
     Mid4 = 'Mid4'
     Mid5A = 'Mid5A'
     Mid5B = 'Mid5B'
+    # SKA1 Survey bands - Now obsolete?
     Sur1 = 'Sur1'
     Sur2A = 'Sur2A'
     Sur2B = 'Sur2B'
     Sur3A = 'Sur3A'
     Sur3B = 'Sur3B'
+    # SKA2 Bands
     SKA2Low = 'LOWSKA2'
     SKA2Mid = 'MIDSKA2'
 
     # group the bands defined above into logically coherent sets
     low_bands = {Low}
     mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B}
-    survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}
+    survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}  # Now obsolete?
     low_bands_ska2 = {SKA2Low}
     mid_bands_ska2 = {SKA2Mid}
 
@@ -218,7 +221,7 @@ class ParameterDefinitions:
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
             o.B_dump_ref = 80000  # m
-            o.Tdump_ref = 0.9  # Correlator dump time in reference design in *seconds*
+            o.Tdump_ref = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
@@ -231,7 +234,7 @@ class ParameterDefinitions:
             o.Na = 1024  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
-            o.Tdump_ref = 0.6  # Correlator dump time in reference design in *sec*
+            o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
             o.nr_baselines = 10192608
@@ -244,7 +247,7 @@ class ParameterDefinitions:
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
-            o.Tdump_ref = 0.14  # Correlator dump time in reference design in *sec*
+            o.Tdump_ref = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 150000  # m
             o.nr_baselines = 1165860
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
@@ -261,7 +264,7 @@ class ParameterDefinitions:
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 200000  # m
-            o.Tdump_ref = 0.08  # Correlator dump time in reference design
+            o.Tdump_ref = 0.08  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 200000))  # m
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
@@ -275,7 +278,7 @@ class ParameterDefinitions:
             o.Nbeam = 36  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 50000  # m
-            o.Tdump_ref = 0.3  # Correlator dump time in reference design
+            o.Tdump_ref = 0.3  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
             o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
@@ -288,7 +291,7 @@ class ParameterDefinitions:
             o.Nbeam = 200  # number of beams
             o.B_dump_ref = 180000  # m
             o.Nf_max = 256000  # maximum number of channels
-            o.Tdump_ref = 0.6  # Correlator dump time in reference design
+            o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 180000))  # m
             o.nr_baselines = 1165860
@@ -303,7 +306,7 @@ class ParameterDefinitions:
             o.Nbeam = 200  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 1800000  # m
-            o.Tdump_ref = 0.008  # Correlator dump time in reference design
+            o.Tdump_ref = 0.008  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((44000, 67000, 103000, 157000, 240000, 367000, 560000, 856000, 1308000, 1800000))
             o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
