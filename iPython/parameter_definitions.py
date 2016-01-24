@@ -6,6 +6,7 @@ etc. Several methods are supplied by which values can be found by lookup as well
 
 import numpy as np
 from sympy import symbols
+import warnings
 
 class ParameterContainer:
     """
@@ -28,13 +29,30 @@ class ParameterContainer:
         try:
             if prevent_overwrite and hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
-                    print 'Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.'
+                    warnings.warn('Inefficiency: reassigning already-defined parameter "%s" with an identical value.')
                 else:
                     assert eval('self.%s == None' % param_name)
         except AssertionError:
             raise AssertionError("The parameter %s has already been defined and may not be overwritten." % param_name)
 
         exec('self.%s = value' % param_name)  # Write the value
+
+    def read_param(self, param_name):
+        """
+        Provides a method for reading a parameter that won't necessarily crash the program if the parameter has not yet
+        been defined. A nice-to-have robustness-enhancing feature but not really necessary to get a working implementation.
+        @param param_name: The name of the parameter/field that needs to be read - provided as text
+        @return: The parameter value.
+        """
+        assert isinstance(param_name, str)
+        return_value = None
+        try:
+            assert hasattr(self, param_name)
+            exec('return_value = self.%s' % param_name)  # Write the value to the return_value variable
+        except AssertionError:
+            warnings.warn("Parameter %s hasn't been defined (returning 'None')." % param_name)
+
+        return return_value
 
 class Constants:
     """
@@ -226,7 +244,8 @@ class ParameterDefinitions:
             o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
-        #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            # o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            # TODO: what is amp_f_max for Low? Seems undefined. Ronald assumes the same value as for Mid in Cal computations?
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -429,7 +448,8 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.034
-
+            else:
+                raise Exception("amp_f_max not defined for Continuum mode for the telescope %s" % o.telescope)
 
         elif mode == ImagingModes.Spectral:
             o.Qfov = 1.0  # Field of view factor
@@ -441,6 +461,8 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.01
+            else:
+                raise Exception("amp_f_max not defined for Spectral mode for the telescope %s" % o.telescope)
 
         elif mode == ImagingModes.FastImg:
             o.Qfov = 0.9  # Field of view factor
@@ -452,6 +474,8 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.02
+            else:
+                raise Exception("amp_f_max not defined for FastImg mode for the telescope %s" % o.telescope)
 
         elif mode == ImagingModes.ContAndSpectral:
             raise Exception("'apply_imaging_mode_parameters' needs to compute Continuum and Spectral modes separately")

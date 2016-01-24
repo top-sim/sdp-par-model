@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 # from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+import warnings
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from parameter_definitions import Constants as c
@@ -764,7 +765,7 @@ class SkaIPythonAPI(api):
 
             #TODO: temporarily limit max baseline to 75km in fast imaging mode for MID (for plotting)
             #if (telescope == Telescopes.SKA1_Mid) and (submode == ImagingModes.FastImg):
-            #print 'WARNING: MID is being limited to use only 75km max baseline in Fase Imaging mode - see api_ipython.py line 767!'
+            #warnings.warn('MID is being limited to use only 75km max baseline in Fase Imaging mode - see api_ipython.py line 767!')
             #max_baseline = 75000
 
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,

@@ -17,6 +17,7 @@ from equations import Equations as f
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
+import warnings
 
 
 class Implementation:
@@ -53,7 +54,7 @@ class Implementation:
         else:
             result = opt.minimize_scalar(expr_eval_float, bounds=(bound_lower, bound_upper), method='bounded')
             if not result.success:
-                print ('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
+                warnings.warn('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
             else:
                 # print ('Optimized free variable = %f' % result.x)
                 pass
@@ -161,8 +162,8 @@ class Implementation:
             exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
-                print ('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
-                       '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
+                warnings.warn('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
+                              '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
                 warned = True
 
             i = nfacets-1  # zero-based index

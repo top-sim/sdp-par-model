@@ -11,6 +11,7 @@ from numpy import pi, round
 import math
 from parameter_definitions import ImagingModes
 from parameter_definitions import ParameterContainer
+import warnings
 
 class Equations:
     def __init__(self):
@@ -184,10 +185,10 @@ class Equations:
             print "------------------------------"
             print ""
             if on_the_fly:
-                print "WARNING! On the fly kernels in use. Experimental!:  (Set on_the_fly = False to disable)"
-                print "On the fly kernels is a new option forcing convolution kernels to be recalculated"
-                print "for each and every viibility point, but only at the actual size needed  - i.e. not"
-                print "oversampled by a factor of Qgcf (8)."
+                warnings.warn("WARNING! On the fly kernels in use. Experimental!:  (Set on_the_fly = False to disable).\n"
+                              "On the fly kernels is a new option forcing convolution kernels to be recalculated\n"
+                              "for each and every viibility point, but only at the actual size needed  - i.e. not\n"
+                              "oversampled by a factor of Qgcf (8).")
 
         # ===============================================================================================
         # PDR05 Sec 12.8
