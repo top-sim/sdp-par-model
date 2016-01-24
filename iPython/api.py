@@ -7,6 +7,7 @@ from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefi
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
+import warnings
 
 
 class SkaPythonAPI:
@@ -17,6 +18,29 @@ class SkaPythonAPI:
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def evaluate_all_expressions(tp, tsnap, nfacet):
+        """
+        Because a lot of time is consumed by computing optimal tsnap and nfacet values, we might as well evaluate
+        *all* the parameters of tp by substituting these values into the fields of tp.
+        For this usecase we sum across all bins for each parameter (will be the wrong thing to do for some; use
+        evaluate_expression separately for those)
+        @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
+        @param tsnap: The snapshot time to use
+        @param nfacet: The number of facets to use
+        @return:
+        """
+        tp_eval = copy.deepcopy(tp)
+        fields = tp.__dict__
+        for key in fields.keys():
+            expression = fields[key]
+            is_literal = isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int) \
+                         or isinstance(expression, np.ndarray)
+            if not is_literal:
+                expression_eval = SkaPythonAPI.evaluate_expression(expression, tp_eval, tsnap, nfacet, False)
+                exec("tp_eval.%s = expression_eval" % key)
+        return tp_eval
 
     @staticmethod
     def evaluate_expression(expression, tp, tsnap, nfacet, take_max):
@@ -33,6 +57,7 @@ class SkaPythonAPI:
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
             result = imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max)
         except Exception as e:
+            warnings.warn("Subsitution substitution aborted with msg: %s" % str(e))
             result = expression
         return result
 
@@ -68,8 +93,8 @@ class SkaPythonAPI:
             Equations.apply_imaging_equations(tp, submode, bldta, on_the_fly, verbose)  # modifies tp in-place
 
             result_expression = eval('tp.%s' % expression)
-            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, False)
+            (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt, False)
 
         return result
 

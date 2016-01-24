@@ -16,6 +16,17 @@ class ParameterContainer:
     def __init__(self):
         pass
 
+    def __str__(self):
+        s = "Parameter Container Object with the following fields:"
+        fields = self.__dict__
+        for k in fields.keys():
+            key_string = str(k)
+            value_string = str(fields[k])
+            if len(value_string) > 40:
+                value_string = value_string[:40] + "... (truncated)"
+            s += "\n%s\t\t= %s" % (key_string, value_string)
+        return s
+
     def set_param(self, param_name, value, prevent_overwrite=True):
         """
         Provides a method for setting a parameter. By default first checks that the value has not already been defined.
@@ -37,7 +48,7 @@ class ParameterContainer:
 
         exec('self.%s = value' % param_name)  # Write the value
 
-    def read_param(self, param_name):
+    def get_param(self, param_name):
         """
         Provides a method for reading a parameter that won't necessarily crash the program if the parameter has not yet
         been defined. A nice-to-have robustness-enhancing feature but not really necessary to get a working implementation.
@@ -69,7 +80,7 @@ class Telescopes:
     """
     Enumerate the possible telescopes to choose from (used in the ParameterDefinitions class)
     """
-    # The originally planned (pre-rebaselining) SKA1 telescopes
+    # The originally planned (pre-rebaselining) SKA1 telescopes. TODO: remove?
     SKA1_Low_old = 'SKA1_Low_old'
     SKA1_Mid_old = 'SKA1_Mid_old'
     SKA1_Sur_old = 'SKA1_Survey_old'
@@ -246,6 +257,8 @@ class ParameterDefinitions:
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
             # o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             # TODO: what is amp_f_max for Low? Seems undefined. Ronald assumes the same value as for Mid in Cal computations?
+            o.set_param("beta", 76)  # From Ronald's calibration document
+            o.set_param("overhead_factor", 1.01606905040916)  # From Ronald's xls; number originally from ICD
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -274,7 +287,8 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
-
+            o.set_param("beta", 66)  # From Ronald's calibration document
+            o.set_param("overhead_factor", 1.02202947069126)  # From Ronald's xls; number originally from ICD
 
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
