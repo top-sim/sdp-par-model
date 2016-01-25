@@ -31,19 +31,20 @@ class SkaPythonAPI:
         @param nfacet: The number of facets to use
         @return:
         """
-        tp_eval = copy.deepcopy(tp)
         fields = tp.__dict__
+        tp_eval = copy.deepcopy(tp)
         for key in fields.keys():
             expression = fields[key]
-            is_literal = isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int) \
-                         or isinstance(expression, np.ndarray)
-            if not is_literal:
-                expression_eval = SkaPythonAPI.evaluate_expression(expression, tp_eval, tsnap, nfacet, False)
-                exec("tp_eval.%s = expression_eval" % key)
+            # For some reason we have to use a 'clean' tp copy to evaluate each expression, otherwise we run into
+            # all sorts of recursion depth issues in the evaluate_expression method. Not sure why...
+            tp_temp = copy.deepcopy(tp)
+            expression_eval = SkaPythonAPI.evaluate_expression(expression, tp_temp, tsnap, nfacet, False, key)
+            # We now write the evaluated expression into tp_eval
+            exec("tp_eval.%s = expression_eval" % key)
         return tp_eval
 
     @staticmethod
-    def evaluate_expression(expression, tp, tsnap, nfacet, take_max):
+    def evaluate_expression(expression, tp, tsnap, nfacet, take_max, key=None):
         """
         Evaluate an expression by substituting the telescopecparameters into them. Returns the result
         @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
@@ -51,14 +52,25 @@ class SkaPythonAPI:
         @param tsnap: The snapshot time to use
         @param nfacet: The number of facets to use
         @param take_max: True iff the expression's maximum value across bins is returned instead of its sum
+        @param key: (optional) the string name of the expression that is being evaluated. Used in error reporting.
         @return:
         """
-        try:
-            expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
-            result = imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max)
-        except Exception as e:
-            warnings.warn("Subsitution substitution aborted with msg: %s" % str(e))
+        # Literal expressions need not be evaluated, because they are already final
+        is_literal = isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int) \
+                     or isinstance(expression, np.ndarray)
+        if is_literal:
             result = expression
+        else:
+            try:
+                expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
+                result = imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max)
+            except Exception as e:
+                if key is None:
+                    msg = "Subsitution aborted with msg: %s" % str(e)
+                else:
+                    msg = "Subsitution of %s aborted with msg: %s" % (key, str(e))
+                warnings.warn(msg)
+                result = expression
         return result
 
     @staticmethod
