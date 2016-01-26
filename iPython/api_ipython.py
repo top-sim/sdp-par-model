@@ -569,9 +569,9 @@ class SkaIPythonAPI(api):
             for mode in modes_expanded:
                 tp = tps[mode]
                 expression = key_expressions[key][mode]
-                substitution = substitutions[mode]
                 expression_subst = expression  # Will stay unchanged if a literal number (see if statement below)
-                if not (isinstance(expression, (int, long)) or isinstance(expression, float)):
+                if imp.is_literal(expression):
+                    substitution = substitutions[mode]
                     expression_subst = expression.subs(substitution)
                 results = np.append(results, imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max))
 

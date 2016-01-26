@@ -29,6 +29,15 @@ class Implementation:
         pass
 
     @staticmethod
+    def is_literal(expression):
+        """
+        Returns true iff the expression is already a literal (e.g. float or integer) value that cannot be substituted
+        or evaluated further. Used to halt attempts at further evaluating symbolic expressions
+        """
+        return (isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int)
+                or isinstance(expression, long) or isinstance(expression, np.ndarray))
+
+    @staticmethod
     def seconds_to_hms(seconds):
         """
         Converts a given number of seconds into hours, minutes and seconds, returned as a tuple. Useful for display output

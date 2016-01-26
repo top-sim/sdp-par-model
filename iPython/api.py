@@ -56,9 +56,7 @@ class SkaPythonAPI:
         @return:
         """
         # Literal expressions need not be evaluated, because they are already final
-        is_literal = isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int) \
-                     or isinstance(expression, np.ndarray)
-        if is_literal:
+        if imp.is_literal(expression):
             result = expression
         else:
             try:
