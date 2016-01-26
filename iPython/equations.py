@@ -106,7 +106,7 @@ class Equations:
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
         o.combine_time_samples = Max(
             floor(o.epsilon_f_approx * o.wl / (o.Total_fov * o.Omega_E * o.Bmax_bin * o.Tdump_scaled)), 1.)
-        o.Tcoal_skipper = o.Tdump_scaled * o.combine_time_samples #coalesce visibilities in time.
+        o.Tcoal_skipper = o.Tdump_scaled * o.combine_time_samples  # coalesce visibilities in time.
 
         if bl_dep_time_av:
             # Don't let any bl-dependent time averaging be for longer than either 1.2s or Tion. ?Why 1.2s?

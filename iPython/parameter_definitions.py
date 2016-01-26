@@ -8,6 +8,7 @@ import numpy as np
 from sympy import symbols
 import warnings
 
+
 class ParameterContainer:
     """
     The ParameterContainer class is used throughout the Python implementation to store parameters and pass them
@@ -64,6 +65,7 @@ class ParameterContainer:
             warnings.warn("Parameter %s hasn't been defined (returning 'None')." % param_name)
 
         return return_value
+
 
 class Constants:
     """
@@ -133,6 +135,7 @@ class ImagingModes:
     All = 'All, Summed (Cont+Spec+FastImg)'
     pure_modes = (Continuum, Spectral, FastImg)
 
+
 class HPSOs:
     """
     Enumerate the High Priority Science Objectives (used in the ParameterDefinitions class)
@@ -177,6 +180,7 @@ class HPSOs:
     # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
     hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
 
+
 class ParameterDefinitions:
     """
     This class contains several methods for defining parameters. These include Telecope parameters, as well as
@@ -215,7 +219,7 @@ class ParameterDefinitions:
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
         o.Mvis = 12.0  # Memory size of a single visibility datum in bytes. Back to 12; likely to change in future
-        o.Naa = 10  # Changed to 10, after PDR submission
+        o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
         o.Nw = 2  # Bytes per value
@@ -223,7 +227,7 @@ class ParameterDefinitions:
         o.Qfcv = 1.0  #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
         o.Qkernel = 10.0  #  epsilon_f/ o.Qkernel is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
-        #o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
+        # o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 1.0
