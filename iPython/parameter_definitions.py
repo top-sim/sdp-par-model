@@ -182,7 +182,7 @@ class ParameterDefinitions:
         o.Omega_E = 7.292115e-5  # Rotation relative to the fixed stars in radians/second
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
-        o.Mvis = 12.0  # Memory size of a single visibility datum in bytes. Back to 12; likely to change in future
+        o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
         o.Naa = 10  # Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
