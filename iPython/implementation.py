@@ -23,7 +23,7 @@ import warnings
 class Implementation:
     # The expressions in this list are not summed across the baseline bins, but the maximum value across all bins is
     # used instead. One example is Npix_linear: the linear number of pixels (side length) required for a facet
-    EXPR_NOT_SUMMED = ('Npix_linear',)
+    EXPR_NOT_SUMMED = ('Npix_linear','Mbuf_vis')
 
     def __init__(self):
         pass

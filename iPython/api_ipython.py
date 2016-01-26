@@ -467,8 +467,10 @@ class SkaIPythonAPI(api):
 
         result_values = np.zeros(10)  # The number of computed values in the result_expressions array
         result_value_string = ['', ]  # The non-summed value: Npix_linear
+        # TODO, change the way that take_maxima are determined, as we do in in eval_param_sweep_1d
         take_maxima = [False] * 10
         take_maxima[0] = True  # The first entry corresponds to Npix_linear, see below
+        take_maxima[1] = True  # The second entry corresponds to Mbuf_vis, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=on_the_fly,
@@ -542,7 +544,6 @@ class SkaIPythonAPI(api):
         expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis',
                               'Mw_cache', 'Npix_linear', 'Rio')
         nr_key_expr_per_mode = len(expression_strings)
-        values_to_take_max = ('Npix_linear')
         key_expressions = {}
         for key in expression_strings:
             key_expressions[key] = {}
@@ -564,7 +565,7 @@ class SkaIPythonAPI(api):
 
         key_results = {}
         for key in expression_strings:
-            take_max = (key in values_to_take_max)
+            take_max = (key in imp.EXPR_NOT_SUMMED)
             results = np.array([])
             for mode in modes_expanded:
                 tp = tps[mode]
@@ -759,7 +760,9 @@ class SkaIPythonAPI(api):
         # The parameters that care computed as binned expressions are mostly summed across bins. The exception to this
         # rule is Npix_linear, where the maximum is taken instead
         take_maxima = [False] * 10
+        #TODO: improved the way that take_maxima is determined. Rather do this automatically based on the expression
         take_maxima[0] = True  # The first entry corresponds to Npix_linear, see below
+        take_maxima[1] = True  # The second entry corresponds to Mbuf_vis, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
 

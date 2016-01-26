@@ -271,7 +271,7 @@ class SkaPythonAPI:
         @param tp: The set of telescope parameters that should be used to evaluate each expression
         @param tsnap: The relevant (typically optimal) snapshot time
         @param nfacet: The relevant (typically optimal) number of facets to use
-        @param take_maxima: An array of boolean values, true if the corresponding variable's max across all bine
+        @param take_maxima: An array of boolean values, true if the corresponding variable's max across all bins
                             should be used instead of its sum
         """
         results = []

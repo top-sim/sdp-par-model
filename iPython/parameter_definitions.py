@@ -218,7 +218,6 @@ class ParameterDefinitions:
         o.Omega_E = 7.292115e-5  # Rotation relative to the fixed stars in radians/second
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
-        o.Mvis = 10  # Memory size of a single visibility datum in bytes (8 bits for time centroid + 64 bits for complex visibility + 8 bits for flagging fraction, as per CSP ICD v.1.0)
         o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
@@ -235,6 +234,17 @@ class ParameterDefinitions:
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
+        o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again)
+        """
+        From CSP we are ingesting 10 bytes per visibility (single polarization) built up as follows:
+        1 byte for time centroid + 8 bytes for complex visibility + 1 byte for flagging fraction, as per CSP ICD v.1.0.
+        , i.e. 8 bytes for a complex value + 2 extra bytes for us to reconstruct timestamps etc.
+        Another 2 bytes added by "ingest" => 12 bytes per datum. Somewhere in the Receive Visibilities Function of in
+        the Ingest Pipeline the 2 bytes additional information are dropped (or used).
+        However, now we add Weights (1 float, i.e. 4 bytes per sample) and Flags (1 bit per sample minimum).
+        So the 12 bytes is the 8 for the complex value + 4 for the Weight, which makes 12.
+        We should also add at least 1 bit for Flags + some small amount of overhead for other meta data.
+        """
         return o
 
     @staticmethod
