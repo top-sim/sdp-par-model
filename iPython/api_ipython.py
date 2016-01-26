@@ -336,7 +336,7 @@ class SkaIPythonAPI(api):
 
         result_titles = ('Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.', 'Max Baseline',
                          'Max # channels', 'Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Image side length', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
+                         'Image side length', 'Visibility Buffer (no overheads)', 'Working (cache) memory', 'I/O Rate',
                          'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Projection', '-> Convolution', '-> Phase Rotation')
         result_units = ('', '', '', '', 'm', '', '', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
@@ -432,8 +432,8 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         # End for-loop. We have now computed the telescope parameters for each mode
-        result_titles = ('Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
-                         'Total Compute Requirement',
+        result_titles = ('Image side length(s)', 'Visibility Buffer (no overheads)', 'Working (cache) memory',
+                         'I/O Rate', 'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
         result_units = ('pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
@@ -589,8 +589,8 @@ class SkaIPythonAPI(api):
         ############################
 
         result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
-                         'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
-                         'Total Compute Requirement',
+                         'Image side length(s)', 'Visibility Buffer (no overheads)', 'Working (cache) memory',
+                         'I/O Rate', 'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
         result_units = ('', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
@@ -659,8 +659,8 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
 
         result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
-                         'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
-                         'Total Compute Requirement',
+                         'Image side length(s)', 'Visibility Buffer (no overheads)', 'Working (cache) memory',
+                         'I/O Rate', 'Total Compute Requirement',
                          '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
         result_units = ('', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
                         'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
@@ -728,8 +728,8 @@ class SkaIPythonAPI(api):
                                              nr_frequency_channels=None, verbose=verbose)
 
         result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Image side length', 'Visibility Buffer (PB)', 'Working (cache) memory (TB)', 'I/O Rate (TBps)',
-                         'Total Compute Requirement (PetaFLOPS)',
+                         'Image side length', 'Visibility Buffer (no overheads, PB)', 'Working (cache) memory (TB)',
+                         'I/O Rate (TBps)', 'Total Compute Requirement (PetaFLOPS)',
                          'Gridding', 'FFT', 'Projection', 'Convolution', 'Phase Rotation']
 
         assert len(result_titles) == len(result_values)

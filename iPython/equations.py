@@ -300,13 +300,15 @@ class Equations:
 
         # ===============================================================================================
         # Compute the Buffer sizes - section 12.15 in PDR05
+        # Note: this is the size of the raw binary data that needs to be stored in the visibility buffer, and does
+        # not include inevitable overheads. However, this size does include a factor for double-buffering
         # ===============================================================================================
 
         o.Mw_cache = (o.Ngw_predict ** 3) * (o.Qgcf ** 3) * o.Nbeam * o.Nf_vis_predict * 8.0  # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
-        # Note the factor 2 in the line below -- we have a double buffer
+        # Note the factor "buffer_factor" in the line below -- by defaylt we have a double buffer (buffer_factor = 2)
         # (allowing storage of a full observation while simultaneously capturing the next)
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-        o.Mbuf_vis = 2 * o.Npp * Nvis_predict_no_averaging * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
+        o.Mbuf_vis = o.buffer_factor * o.Npp * Nvis_predict_no_averaging * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
 
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
         # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors.
