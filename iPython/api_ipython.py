@@ -766,6 +766,8 @@ class SkaIPythonAPI(api):
             #if (telescope == Telescopes.SKA1_Mid) and (submode == ImagingModes.FastImg):
             #print 'WARNING: MID is being limited to use only 75km max baseline in Fase Imaging mode - see api_ipython.py line 767!'
             #max_baseline = 75000
+            
+                        
 
             tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
                                      max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
