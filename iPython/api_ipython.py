@@ -296,7 +296,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def compare_telescopes_default(telescope_1, telescope_2, band_1, band_2, mode_1, mode_2,
-                                   tel1_bldta=True, tel2_bldta=True,
+                                   tel1_blcoal=True, tel2_blcoal=True,
                                    tel1_otf=False, tel2_otf=False, verbose=False):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
@@ -310,13 +310,13 @@ class SkaIPythonAPI(api):
         @param mode_2:
         @param tel1_otf: On the fly kernels for telescope 1
         @param tel2_otf: On the fly kernels for telescope 2
-        @param tel1_bldta: Use baseline dependent time averaging for Telescope1
-        @param tel2_bldta: Use baseline dependent time averaging for Telescope2
+        @param tel1_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope1
+        @param tel2_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope2
         @param verbose: print verbose output during execution
         @return:
         """
         telescopes = (telescope_1, telescope_2)
-        bldtas = (tel1_bldta, tel2_bldta)
+        blcoals = (tel1_blcoal, tel2_blcoal)
         modes = (mode_1, mode_2)
         bands = (band_1, band_2)
         on_the_flys = (tel1_otf, tel2_otf)
@@ -351,7 +351,7 @@ class SkaIPythonAPI(api):
             max_baseline = tp_default.Bmax
             Nf_max = tp_default.Nf_max
 
-            bldta = bldtas[i]
+            blcoal = blcoals[i]
             mode = modes[i]
             band = bands[i]
             on_the_fly = on_the_flys[i]
@@ -364,9 +364,9 @@ class SkaIPythonAPI(api):
                 else:
                     raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
             (result_values, result_value_string_end) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                                      bldta, on_the_fly, max_baseline,
+                                                                                      blcoal, on_the_fly, max_baseline,
                                                                                       Nf_max, verbose)
-            result_value_string = [telescope, band, mode, bldta, '%g' % max_baseline , '%d' % Nf_max]
+            result_value_string = [telescope, band, mode, blcoal, '%g' % max_baseline , '%d' % Nf_max]
             result_value_string.extend(result_value_string_end)
 
             tels_result_strings.append(result_value_string)
@@ -379,11 +379,11 @@ class SkaIPythonAPI(api):
 
         labels = ('Gridding', 'FFT', 'Projection', 'Convolution', 'Phase rot.')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
+        blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
-        telescope_labels = ('%s\n%s\n%s' % (telescope_1, bldta_text[tel1_bldta], otf_text[tel1_otf]),
-                            '%s\n%s\n%s' % (telescope_2, bldta_text[tel2_bldta], otf_text[tel2_otf]))
+        telescope_labels = ('%s\n%s\n%s' % (telescope_1, blcoal_text[tel1_blcoal], otf_text[tel1_otf]),
+                            '%s\n%s\n%s' % (telescope_2, blcoal_text[tel2_blcoal], otf_text[tel2_otf]))
         values = {}
         i = -1
         for label in labels:
@@ -394,7 +394,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def evaluate_telescope_manual(telescope, band, mode, max_baseline="default", Nf_max="default", Nfacet=-1, Tsnap=-1,
-                                  bldta=True, on_the_fly=False, verbose=False):
+                                  blcoal=True, on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters.
         These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
@@ -406,7 +406,7 @@ class SkaIPythonAPI(api):
         @param Tsnap:
         @param max_baseline:
         @param Nf_max:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param verbose:
         @return:
@@ -473,7 +473,7 @@ class SkaIPythonAPI(api):
         take_maxima[1] = True  # The second entry corresponds to Mbuf_vis, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
-            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=on_the_fly,
+            tp = imp.calc_tel_params(telescope, submode, band=band, blcoal=blcoal, otfk=on_the_fly,
                                      max_baseline=max_baseline, nr_frequency_channels=Nf_max,
                                      verbose=verbose)
 
@@ -505,11 +505,11 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbose=False):
+    def evaluate_hpso_optimized(hpso_key, blcoal=True, on_the_fly=False, verbose=False):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param verbose:
         @return:
@@ -554,7 +554,7 @@ class SkaIPythonAPI(api):
             if verbose:
                 print 'Computing HPSO %s for %s mode' % (hpso_key, mode)
 
-            tp = imp.calc_tel_params(telescope, mode, hpso=hpso_key, bldta=bldta, otfk=on_the_fly, verbose=verbose)
+            tp = imp.calc_tel_params(telescope, mode, hpso=hpso_key, blcoal=blcoal, otfk=on_the_fly, verbose=verbose)
             tps[mode] = tp
             (Tsnap_opt[mode], Nfacet_opt[mode]) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             substitutions[mode] = {tp.Tsnap : Tsnap_opt[mode], tp.Nfacet : Nfacet_opt[mode]}
@@ -628,7 +628,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
-                                     bldta=True, on_the_fly=False, verbose=False):
+                                     blcoal=True, on_the_fly=False, verbose=False):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -637,7 +637,7 @@ class SkaIPythonAPI(api):
         @param mode:
         @param max_baseline:
         @param Nf_max:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param verbose:
         @return:
@@ -693,7 +693,7 @@ class SkaIPythonAPI(api):
             else:
                 raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
         (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                              bldta, on_the_fly, max_baseline,
+                                                                              blcoal, on_the_fly, max_baseline,
                                                                               Nf_max, verbose)
 
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
@@ -705,7 +705,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def compute_results(telescope, band, mode, bldta=True, otfk=False, max_baseline=None, nr_frequency_channels=None,
+    def compute_results(telescope, band, mode, blcoal=True, otfk=False, max_baseline=None, nr_frequency_channels=None,
                         verbose=False):
         """
         A specialized utility for computing results. This is a slightly easier-to-interface-with version of
@@ -713,7 +713,7 @@ class SkaIPythonAPI(api):
         @param telescope:
         @param band:
         @param mode:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param otfk:
         @param verbose:
         @return: @raise Exception:
@@ -725,7 +725,7 @@ class SkaIPythonAPI(api):
             else:
                 raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
         (result_values, result_values_strings) \
-            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, max_baseline=None,
+            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, blcoal, otfk, max_baseline=None,
                                              nr_frequency_channels=None, verbose=verbose)
 
         result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
@@ -739,7 +739,7 @@ class SkaIPythonAPI(api):
         return (result_values, result_values_strings, result_titles)
 
     @staticmethod
-    def _compute_results(telescope, band, relevant_modes, bldta, otfk, max_baseline, nr_frequency_channels, verbose):
+    def _compute_results(telescope, band, relevant_modes, blcoal, otfk, max_baseline, nr_frequency_channels, verbose):
         """
         A specialized utility for computing a hard-coded set of results. This is a private method.
         Computes a fixed array of ten numerical results and twelve string results; these two result arrays are
@@ -747,7 +747,7 @@ class SkaIPythonAPI(api):
         modes are either summed (such as FLOPS) or concatenanted (such as optimal Tsnap values).
         @param telescope:
         @param band:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param otfk: on the fly kernels
         @param relevant_modes:
         @param max_baseline: The maximum baseline to use
@@ -771,7 +771,7 @@ class SkaIPythonAPI(api):
             #warnings.warn('MID is being limited to use only 75km max baseline in Fase Imaging mode - see api_ipython.py line 767!')
             #max_baseline = 75000
 
-            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
+            tp = imp.calc_tel_params(telescope, submode, band=band, blcoal=blcoal, otfk=otfk,
                                      max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                      verbose=verbose)
 

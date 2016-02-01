@@ -18,7 +18,7 @@ class Equations:
         pass
 
     @staticmethod
-    def apply_imaging_equations(telescope_parameters, imaging_mode, bl_dep_time_av, on_the_fly=False, verbose=False):
+    def apply_imaging_equations(telescope_parameters, imaging_mode, blcoal=True, on_the_fly=False, verbose=False):
         """
         (Symbolically) computes a set of derived parameters using imaging equations described in PDR05 (version 1.85).
 
@@ -30,7 +30,7 @@ class Equations:
         @param telescope_parameters: ParameterContainer object containing the telescope parameters.
                This ParameterContainer object is modified in-place by appending / overwriting the relevant fields
         @param imaging_mode: The telecope's imaging mode
-        @param bl_dep_time_av: True iff baseline dependent time averaging should be used.
+        @param blcoal: True iff baseline dependent coalescing should be used.
         @param on_the_fly: True iff using on-the-fly kernels
         @param verbose: displays verbose command-line output
         @raise Exception:
@@ -108,8 +108,8 @@ class Equations:
             floor(o.epsilon_f_approx * o.wl / (o.Total_fov * o.Omega_E * o.Bmax_bin * o.Tdump_scaled)), 1.)
         o.Tcoal_skipper = o.Tdump_scaled * o.combine_time_samples  # coalesce visibilities in time.
 
-        if bl_dep_time_av:
-            # Don't let any bl-dependent time averaging be for longer than either 1.2s or Tion. ?Why 1.2s?
+        if blcoal:
+            # Don't let any bl-dependent coalescing be done for longer than either 1.2s or Tion. ?Why 1.2s?
             o.Tcoal_predict = Min(o.Tcoal_skipper, 1.2, o.Tion)
             # For backward step at gridding only, allow coalescance of visibility points at Facet FoV
             # smearing limit only for BLDep averaging case.
@@ -128,7 +128,7 @@ class Equations:
             print "No. freq channels for predict: ", o.Nf_no_smear_predict
             print "No. freq channels for backward step: ", o.Nf_no_smear_backward
             print ""
-            if bl_dep_time_av:
+            if blcoal:
                 print "USING BASELINE DEPENDENT TIME AVERAGING"
             else:
                 print "NOT IMPLEMENTING BASELINE DEPENDENT TIME AVERAGING"
@@ -200,9 +200,8 @@ class Equations:
         # Eq. 31 Visibility rate for predict step
         o.Nvis_predict             = o.binfrac * nbaselines * o.Nf_vis_predict / o.Tcoal_predict
         Nvis_predict_no_averaging  = o.binfrac * nbaselines * o.Nf_vis_predict / o.Tdump_scaled
-        # The line above uses Tdump_scaled independent of whether BLDTA is used.
-        # This is because BLDTA is only done for gridding, and doesn't affect the amount of data to be buffered
-
+        # The line above uses Tdump_scaled independent of whether baseline dependent coalescing is used.
+        # This is because blcoal is only done for gridding, and doesn't affect the amount of data to be buffered
 
         # Eq. 30 : R_flop = 2 * N_maj * N_pp * N_beam * ( R_grid + R_fft + R_rp + R_ccf)
         # no factor 2 in the line below, because forward & backward steps are both in Rflop numbers

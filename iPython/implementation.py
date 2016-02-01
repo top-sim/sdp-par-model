@@ -70,7 +70,7 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=True, otfk=False,
+    def calc_tel_params(telescope, mode, band=None, hpso=None, blcoal=True, otfk=False,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
@@ -79,7 +79,7 @@ class Implementation:
         @param mode: (can be omitted if HPSO specified)
         @param band: (can be omitted if HPSO specified)
         @param hpso: High Priority Science Objective ID (can be omitted if band specified)
-        @param bldta: Baseline dependent time averaging
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param otfk: On the fly kernels (True or False)
         @param max_baseline:
         @param nr_frequency_channels:
@@ -113,7 +113,7 @@ class Implementation:
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.apply_imaging_equations(telescope_params, mode, bldta, otfk, verbose)
+        f.apply_imaging_equations(telescope_params, mode, blcoal, otfk, verbose)
 
         return telescope_params
 

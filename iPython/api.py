@@ -72,15 +72,15 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
-    def eval_expression_default(telescope, mode, band=None, hpso=None, bldta=True, on_the_fly=False,
-                                   max_baseline=None, nr_frequency_channels=None, expression='Rflop', verbose=False):
+    def eval_expression_default(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
+                                max_baseline=None, nr_frequency_channels=None, expression='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
         @param telescope:
         @param mode:
         @param band:
         @param hpso:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
@@ -98,9 +98,9 @@ class SkaPythonAPI:
 
         result = 0
         for submode in relevant_modes:
-            tp = imp.calc_tel_params(telescope, submode, band, hpso, bldta, on_the_fly, max_baseline,
-                                                   nr_frequency_channels, verbose)
-            Equations.apply_imaging_equations(tp, submode, bldta, on_the_fly, verbose)  # modifies tp in-place
+            tp = imp.calc_tel_params(telescope, submode, band, hpso, blcoal, on_the_fly, max_baseline,
+                                     nr_frequency_channels, verbose)
+            Equations.apply_imaging_equations(tp, submode, blcoal, on_the_fly, verbose)  # modifies tp in-place
 
             result_expression = eval('tp.%s' % expression)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
@@ -109,7 +109,7 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
-    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, bldta=True, on_the_fly=False,
+    def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
         """
@@ -120,7 +120,7 @@ class SkaPythonAPI:
         @param mode:
         @param band:
         @param hpso:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
@@ -140,7 +140,7 @@ class SkaPythonAPI:
               "(i.e. %d data points)" % \
               (parameter, expression, str(param_val_min), str(param_val_max), number_steps, number_steps+1)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, on_the_fly, max_baseline,
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, blcoal, on_the_fly, max_baseline,
                                                nr_frequency_channels, verbose)
 
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
@@ -154,7 +154,7 @@ class SkaPythonAPI:
             print "> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression,
                                                                 parameter, param_values[i])
 
-            Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)  # modifies tp in-place
+            Equations.apply_imaging_equations(tp, mode, blcoal, on_the_fly, verbose)  # modifies tp in-place
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
@@ -174,7 +174,7 @@ class SkaPythonAPI:
         return (param_values, results)
 
     @staticmethod
-    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, bldta=True, on_the_fly=False,
+    def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
                             max_baseline=None, nr_frequency_channels=None, expression='Rflop',
                             parameters=None, params_ranges=None, number_steps=2, verbose=False):
         """
@@ -186,7 +186,7 @@ class SkaPythonAPI:
         @param mode:
         @param band:
         @param hpso:
-        @param bldta:
+        @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
@@ -213,7 +213,7 @@ class SkaPythonAPI:
               (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
                str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations)
 
-        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, bldta, otfk=on_the_fly,
+        telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, blcoal, otfk=on_the_fly,
                                                max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                                verbose=verbose)
 
@@ -237,7 +237,7 @@ class SkaPythonAPI:
                                                                                  parameters[0], parameters[1],
                                                                                  str(param_x_value), str(param_y_value))
 
-                Equations.apply_imaging_equations(tp, mode, bldta, on_the_fly, verbose)   # modifies tp in-place
+                Equations.apply_imaging_equations(tp, mode, blcoal, on_the_fly, verbose)   # modifies tp in-place
 
                 # Perform a check to see that the value of the assigned parameters weren't changed by the imaging
                 # equations, otherwise the assigned values would have been lost (i.e. not free parameters)
