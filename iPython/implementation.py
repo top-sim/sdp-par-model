@@ -22,8 +22,11 @@ import warnings
 
 class Implementation:
     # The expressions in this list are not summed across the baseline bins, but the maximum value across all bins is
-    # used instead. One example is Npix_linear: the linear number of pixels (side length) required for a facet
-    EXPR_NOT_SUMMED = ('Npix_linear','Mbuf_vis')
+    # used instead. E.g. Npix_linear: the linear number of pixels (side length) required for a facet
+    EXPR_NOT_SUMMED_ACROSS_BINS  = ('Npix_linear')
+    # The expressions in this list are not summed across modes, but the maximum value across all modes is
+    # used instead. E.g. Mbuf_vis: The amount of binary data that needs to be stored in the visibility buffer
+    EXPR_NOT_SUMMED_ACROSS_MODES = ('Npix_linear', 'Mbuf_vis')
 
     def __init__(self):
         pass
@@ -142,7 +145,7 @@ class Implementation:
         return is_compatible
 
     @staticmethod
-    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize='Rflop', max_number_nfacets=20,
+    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop', max_number_nfacets=20,
                                   verbose=False):
         """
         Computes the optimal value for Tsnap and Nfacet that minimizes the value of an expression (typically Rflop)
@@ -150,16 +153,16 @@ class Implementation:
 
         @param telescope_parameters: Contains the definition of the expression that needs to be minimzed. This should
                                      be a symbolic expression that involves Tsnap and/or Nfacet.
-        @param expr_to_minimize: The expression that should be minimized. This is typically assumed to be the
-                                 computational load, but may also be, for example, buffer size.
+        @param expr_to_minimize_string: The expression that should be minimized. This is typically assumed to be the
+                                        computational load, but may also be, for example, buffer size.
         @param max_number_nfacets: Provides an upper limit to Nfacet. Because we currently do a linear search for the
                                    minimum value, using a for loop, we need to know when to quit. Max should never be
                                    reached unless in pathological cases
         @param verbose:
         """
         assert isinstance(telescope_parameters, ParameterContainer)
-        assert hasattr(telescope_parameters, expr_to_minimize)
-        take_max = expr_to_minimize in Implementation.EXPR_NOT_SUMMED
+        assert hasattr(telescope_parameters, expr_to_minimize_string)
+        take_max = expr_to_minimize_string in Implementation.EXPR_NOT_SUMMED_ACROSS_BINS
 
         result_per_nfacet = {}
         result_array = []
@@ -168,7 +171,7 @@ class Implementation:
         expression_original = None
 
         for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
-            exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
+            exec('expression_original = telescope_parameters.%s' % expr_to_minimize_string)
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
                 warnings.warn('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
@@ -197,7 +200,7 @@ class Implementation:
         nfacets = index + 1
         if verbose:
             print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
-                   % (nfacets,  optimal_Tsnap_array[index], expr_to_minimize, result_array[index]))
+                   % (nfacets, optimal_Tsnap_array[index], expr_to_minimize_string, result_array[index]))
 
         return (optimal_Tsnap_array[index], nfacets)
 

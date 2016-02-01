@@ -120,7 +120,7 @@ class SkaIPythonAPI(api):
         plt.show()
 
     @staticmethod
-    def plot_2D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
+    def plot_2D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title: The plot's title
@@ -128,6 +128,9 @@ class SkaIPythonAPI(api):
         @param y_values: a 1D numpy array
         @param z_values: a 2D numpy array, indexed as (x,y)
         @param contours: optional array of values at which contours should be drawn
+        @param zlabel:
+        @param ylabel:
+        @param xlabel:
         @return:
         """
         colourmap = 'coolwarm'  # options include: 'afmhot', 'coolwarm'
@@ -156,7 +159,7 @@ class SkaIPythonAPI(api):
         pylab.show()
 
     @staticmethod
-    def plot_3D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
+    def plot_3D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title: The plot's title
@@ -164,6 +167,9 @@ class SkaIPythonAPI(api):
         @param y_values: a 1D numpy array
         @param z_values: a 2D numpy array, indexed as (x,y)
         @param contours: optional array of values at which contours should be drawn
+        @param zlabel:
+        @param ylabel:
+        @param xlabel:
         @return:
         """
         colourmap = cm.coolwarm  # options include: 'afmhot', 'coolwarm'
@@ -202,7 +208,7 @@ class SkaIPythonAPI(api):
         @param title:
         @param labels:
         @param values: a numpy array
-        @param colous:
+        @param colours:
         """
         assert len(labels) == len(values)
         if colours is not None:
@@ -233,7 +239,8 @@ class SkaIPythonAPI(api):
         @param title:
         @param labels:
         @param values: a numpy array
-        @param colous:
+        @param filename
+        @param colours:
         """
 
         assert len(labels) == len(values)
@@ -264,6 +271,7 @@ class SkaIPythonAPI(api):
         @param title:
         @param labels: The label belonging to each bar
         @param dictionary_of_value_arrays: A dictionary that maps each label to an array of values (to be stacked).
+        @param colours:
         @return:
         """
         # Do some sanity checks
@@ -477,13 +485,23 @@ class SkaIPythonAPI(api):
                                      max_baseline=max_baseline, nr_frequency_channels=Nf_max,
                                      verbose=verbose)
 
+            result_expression_strings = ('Npix_linear', 'Mbuf_vis', 'Mw_cache', 'Rio', 'Rflop', 'Rflop_grid',
+                                         'Rflop_fft', 'Rflop_phrot', 'Rflop_proj', 'Rflop_conv')
+
             result_expressions = (tp.Npix_linear, tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Rio/c.tera,
                                   tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
                                   tp.Rflop_phrot/c.peta, tp.Rflop_proj/c.peta, tp.Rflop_conv/c.peta)
 
             results_for_submode = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet, take_maxima)
             result_value_string[0] += str('%.d, ') % results_for_submode[0]  # Npix_linear
-            result_values[1:] += results_for_submode[1:]  # Sum the rest of the values
+
+            # The rest of the values are computed as numbers - either summed (default) or max (for some)
+            for i in range(1, len(result_expression_strings)):
+                result = results_for_submode[i]
+                if result_expression_strings[i] in imp.EXPR_NOT_SUMMED_ACROSS_MODES:
+                    result_values[i] += result
+                else:
+                    result_values[i] = max(result_values[i], result)
 
         # String formatting of the first result (Npix_linear)
         result_value_string[0] = result_value_string[0][:-2]
@@ -521,14 +539,16 @@ class SkaIPythonAPI(api):
         hpso_mode = tp_default.mode
 
         # First we plot a table with all the provided parameters
-        param_titles = ('HPSO Number', 'Telescope', 'Mode', 'Max Baseline', 'Max # of channels', 'Observation time', 'Texp (not used in calc)', 'Tpoint (not used in calc)')
+        param_titles = ('HPSO Number', 'Telescope', 'Mode', 'Max Baseline', 'Max # of channels', 'Observation time',
+                        'Texp (not used in calc)', 'Tpoint (not used in calc)')
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tobs)
         Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Texp)
         Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tpoint)
         Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-        param_values = (hpso_key, telescope, hpso_mode, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string, Tpoint_string)
+        param_values = (hpso_key, telescope, hpso_mode, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
+                        Tpoint_string)
         param_units = ('', '', '', 'm', '', '', '', '')
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
@@ -558,14 +578,15 @@ class SkaIPythonAPI(api):
             tps[mode] = tp
             (Tsnap_opt[mode], Nfacet_opt[mode]) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             substitutions[mode] = {tp.Tsnap : Tsnap_opt[mode], tp.Nfacet : Nfacet_opt[mode]}
-            expressions[mode] = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop, tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
+            expressions[mode] = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop,
+                                 tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
 
             for index in range(nr_key_expr_per_mode):
                 key_expressions[expression_strings[index]][mode] = expressions[mode][index]
 
         key_results = {}
         for key in expression_strings:
-            take_max = (key in imp.EXPR_NOT_SUMMED)
+            take_max = (key in imp.EXPR_NOT_SUMMED_ACROSS_BINS)
             results = np.array([])
             for mode in modes_expanded:
                 tp = tps[mode]
@@ -621,7 +642,8 @@ class SkaIPythonAPI(api):
 
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
 
-        values = (key_results['Rflop_grid'], key_results['Rflop_fft'], key_results['Rflop_phrot'], key_results['Rflop_proj'], key_results['Rflop_conv'])
+        values = (key_results['Rflop_grid'], key_results['Rflop_fft'], key_results['Rflop_phrot'],
+                  key_results['Rflop_proj'], key_results['Rflop_conv'])
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         SkaIPythonAPI.plot_pie('FLOP breakdown for HPSO %s' % hpso_key, labels, values, colours)
@@ -765,12 +787,6 @@ class SkaIPythonAPI(api):
         take_maxima[1] = True  # The second entry corresponds to Mbuf_vis, see below
         for submode in relevant_modes:
             # Calculate the telescope parameters
-
-            #TODO: temporarily limit max baseline to 75km in fast imaging mode for MID (for plotting)
-            #if (telescope == Telescopes.SKA1_Mid) and (submode == ImagingModes.FastImg):
-            #warnings.warn('MID is being limited to use only 75km max baseline in Fase Imaging mode - see api_ipython.py line 767!')
-            #max_baseline = 75000
-
             tp = imp.calc_tel_params(telescope, submode, band=band, blcoal=blcoal, otfk=otfk,
                                      max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
                                      verbose=verbose)
@@ -778,6 +794,9 @@ class SkaIPythonAPI(api):
             print 'Max baseline = %d' % tp.Bmax #TODO: remove
 
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+
+            result_expression_strings = ('Npix_linear', 'Mbuf_vis', 'Mw_cache', 'Rio', 'Rflop', 'Rflop_grid',
+                                         'Rflop_fft', 'Rflop_phrot', 'Rflop_proj', 'Rflop_conv')
 
             result_expressions = (tp.Npix_linear, tp.Mbuf_vis/c.peta, tp.Mw_cache/c.tera, tp.Rio/c.tera,
                                   tp.Rflop/c.peta, tp.Rflop_grid/c.peta, tp.Rflop_fft/c.peta,
@@ -787,7 +806,13 @@ class SkaIPythonAPI(api):
             result_value_string[1] += str('%.1f, ') % tsnap_opt
             results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt, take_maxima)
             result_value_string[2] += str('%.d, ') % results_for_submode[0]  # Npix_linear
-            result_values[3:] += results_for_submode[1:]  # Sum the rest of the values
+            # The rest of the values are computed as numbers - either summed (default) or max (for some)
+            for i in range(3,len(result_expression_strings)):
+                result = results_for_submode[i]
+                if result_expression_strings[i] in imp.EXPR_NOT_SUMMED_ACROSS_MODES:
+                    result_values[i] += result
+                else:
+                    result_values[i] = max(result_values[i], result)
 
         # String formatting of the first two results (Tsnap_opt and NFacet_opt)
         result_value_string[0] = result_value_string[0][:-2]

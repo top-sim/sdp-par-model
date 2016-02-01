@@ -73,7 +73,7 @@ class SkaPythonAPI:
 
     @staticmethod
     def eval_expression_default(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
-                                max_baseline=None, nr_frequency_channels=None, expression='Rflop', verbose=False):
+                                max_baseline=None, nr_frequency_channels=None, expression_string='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
         @param telescope:
@@ -84,7 +84,7 @@ class SkaPythonAPI:
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
-        @param expression:
+        @param expression_string:
         @param verbose:
         """
         relevant_modes = (mode,)  # A list with one element
@@ -102,16 +102,20 @@ class SkaPythonAPI:
                                      nr_frequency_channels, verbose)
             Equations.apply_imaging_equations(tp, submode, blcoal, on_the_fly, verbose)  # modifies tp in-place
 
-            result_expression = eval('tp.%s' % expression)
+            result_expression = eval('tp.%s' % expression_string)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt, False)
+            evaluation = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt, False)
+            if expression_string in imp.EXPR_NOT_SUMMED_ACROSS_MODES:
+                result = max(result, evaluation)
+            else:
+                result += evaluation
 
         return result
 
     @staticmethod
     def eval_param_sweep_1d(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
-                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
-                            parameter='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
+                            max_baseline=None, nr_frequency_channels=None, expression_string='Rflop',
+                            parameter_string='Rccf', param_val_min=10, param_val_max=10, number_steps=1, verbose=False):
         """
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
@@ -124,8 +128,8 @@ class SkaPythonAPI:
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
-        @param expression: The expression that needs to be evaluated, written as text (e.g. "Rflop")
-        @param parameter: the parameter that will be swept - written as text (e.g. "Bmax")
+        @param expression_string: The expression that needs to be evaluated, as string (e.g. "Rflop")
+        @param parameter_string: the parameter that will be swept - written as text (e.g. "Bmax")
         @param param_val_min: minimum value for the parameter's value sweep
         @param param_val_max: maximum value for the parameter's value sweep
         @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
@@ -134,11 +138,11 @@ class SkaPythonAPI:
         @return: @raise AssertionError:
         """
         assert param_val_max > param_val_min
-        take_max = expression in imp.EXPR_NOT_SUMMED  # For these the bins' values are not summed; max taken instead
+        take_max = expression_string in imp.EXPR_NOT_SUMMED_ACROSS_BINS  # max taken instead of sum
 
         print "Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps " \
               "(i.e. %d data points)" % \
-              (parameter, expression, str(param_val_min), str(param_val_max), number_steps, number_steps+1)
+              (parameter_string, expression_string, str(param_val_min), str(param_val_max), number_steps, number_steps + 1)
 
         telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, blcoal, on_the_fly, max_baseline,
                                                nr_frequency_channels, verbose)
@@ -148,25 +152,25 @@ class SkaPythonAPI:
         results = []
         for i in range(len(param_values)):
             tp = copy.deepcopy(telescope_params)
-            exec('tp.%s = param_values[i]' % parameter)  # Assigns the parameter to its temporary evaluation-value
+            exec('tp.%s = param_values[i]' % parameter_string)  # Assigns the parameter to its temporary evaluation-value
 
             percentage_done = i * 100.0 / len(param_values)
-            print "> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression,
-                                                                parameter, param_values[i])
+            print "> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression_string,
+                                                                parameter_string, param_values[i])
 
             Equations.apply_imaging_equations(tp, mode, blcoal, on_the_fly, verbose)  # modifies tp in-place
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
             parameter_final_value = None
-            exec('parameter_final_value = tp.%s' % parameter)
+            exec('parameter_final_value = tp.%s' % parameter_string)
             if parameter_final_value != param_values[i]:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                      'by the method compute_derived_parameters(). (%g -> %g). '
                                      'Cannot peform parameter sweep.'
-                                     % (parameter, param_values[i], parameter_final_value))
+                                     % (parameter_string, param_values[i], parameter_final_value))
 
-            result_expression = eval('tp.%s' % expression)
+            result_expression = eval('tp.%s' % expression_string)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max))
 
@@ -175,7 +179,7 @@ class SkaPythonAPI:
 
     @staticmethod
     def eval_param_sweep_2d(telescope, mode, band=None, hpso=None, blcoal=True, on_the_fly=False,
-                            max_baseline=None, nr_frequency_channels=None, expression='Rflop',
+                            max_baseline=None, nr_frequency_channels=None, expression_string='Rflop',
                             parameters=None, params_ranges=None, number_steps=2, verbose=False):
         """
         Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
@@ -190,7 +194,7 @@ class SkaPythonAPI:
         @param on_the_fly:
         @param max_baseline:
         @param nr_frequency_channels:
-        @param expression:
+        @param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
         @param parameters:
         @param params_ranges:
         @param number_steps:
@@ -203,14 +207,14 @@ class SkaPythonAPI:
             assert len(prange) == 2
             assert prange[1] > prange[0]
 
-        take_max = expression in imp.EXPR_NOT_SUMMED  # Iff true, bins' values are not summed; max taken instead
+        take_max = expression_string in imp.EXPR_NOT_SUMMED_ACROSS_BINS  # max taken instead of sum
         n_param_x_values = number_steps + 1
         n_param_y_values = number_steps + 1
         nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
 
         print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
               "steps each,\nfor a total of %d data evaluation points" % \
-              (expression, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
+              (expression_string, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
                str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations)
 
         telescope_params = imp.calc_tel_params(telescope, mode, band, hpso, blcoal, otfk=on_the_fly,
@@ -233,9 +237,9 @@ class SkaPythonAPI:
                 exec('tp.%s = param_y_value' % parameters[1])
 
                 percentage_done = (ix * n_param_y_values + iy) * 100.0 / nr_evaluations
-                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression,
-                                                                                 parameters[0], parameters[1],
-                                                                                 str(param_x_value), str(param_y_value))
+                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression_string,
+                                                                                parameters[0], parameters[1],
+                                                                                str(param_x_value), str(param_y_value))
 
                 Equations.apply_imaging_equations(tp, mode, blcoal, on_the_fly, verbose)   # modifies tp in-place
 
@@ -256,7 +260,7 @@ class SkaPythonAPI:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                result_expression = eval('tp.%s' % expression)
+                result_expression = eval('tp.%s' % expression_string)
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max)
 
