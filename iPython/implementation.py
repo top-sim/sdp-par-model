@@ -17,12 +17,9 @@ from equations import Equations as f
 from sympy import simplify, lambdify, Max
 from scipy import optimize as opt
 import numpy as np
-
+import math
 
 class Implementation:
-    # The expressions in this list are not summed across the baseline bins, but the maximum value across all bins is
-    # used instead. One example is Npix_linear: the linear number of pixels (side length) required for a facet
-    EXPR_NOT_SUMMED = ('Npix_linear',)
 
     def __init__(self):
         pass
@@ -39,19 +36,65 @@ class Implementation:
         return (h, m, s)
 
     @staticmethod
-    def optimize_expr(expression, free_var, bound_lower, bound_upper):
+    def cheap_lambdify_curry(free_vars, expression):
+        """Translate sympy expression to an actual Python expression that can
+        be evaluated quickly. This is roughly the same as sympy's
+        lambdify, with a number of differences:
+
+        1. We only support a subset of functions. Note that sympy's
+           list is incomplete as well, and actually has a wrong
+           translation rule for "Max".
+
+        2. The return is curried, so for multiple "free_vars" (x, y)
+           you will have to call the result as "f(x)(y)" instead of
+           "f(x,y)". This means we can easily obtain a function that
+           is specialised for a certain value of the outer variable.
+
         """
-        Optimized Tsnap so that the supplied expression is minimized
-        """
-        expr_eval = lambdify(free_var, expression, modules=("sympy",))
-        expr_eval_float = lambda x: float(expr_eval(x))
+
+        # Do "quick & dirty" translation. This map might need updating
+        # when new functions get used in equations.py
+        module = {
+            'Max': 'max',
+            'Min': 'min',
+            'ln': 'math.log',
+            'log': 'math.log',
+            'sqrt': 'math.sqrt',
+            'sign': 'np.sign', # No sign in math, apparently
+            'Abs': 'abs',
+            'acos': 'math.acos',
+            'acosh': 'math.acosh',
+            'arg': 'np.angle',
+            'asin': 'math.asin',
+            'asinh': 'math.asinh',
+            'atan': 'math.atan',
+            'atan2': 'math.atan2',
+            'atanh': 'math.atanh',
+            'ceiling': 'math.ceil',
+        }
+        expr_body = str(expression)
+        for (sympy_name, numpy_name) in module.iteritems():
+            expr_body = expr_body.replace(sympy_name + '(', numpy_name + '(')
+
+        # Create head of lambda expression
+        expr_head = ''
+        for free_var in free_vars:
+            expr_head += 'lambda ' + str(free_var) + ':'
+
+        # Evaluate in order to build lambda
+        return eval(expr_head + expr_body)
+
+    @staticmethod
+    def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
         # Lower bound cannot be higher than the uppper bound.
         if bound_upper <= bound_lower:
-            # print ('Unable to optimize free variable as upper bound is lower that the lower bound)
+            print 'Unable to optimize free variable as upper bound is lower that the lower bound'
             return bound_lower
         else:
-            result = opt.minimize_scalar(expr_eval_float, bounds=(bound_lower, bound_upper), method='bounded')
+            result = opt.minimize_scalar(lam,
+                                         bounds=(bound_lower, bound_upper),
+                                         method='bounded')
             if not result.success:
                 print ('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
             else:
@@ -62,6 +105,7 @@ class Implementation:
     @staticmethod
     def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=True, otfk=False,
                         max_baseline=None, nr_frequency_channels=None, verbose=False):
+
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
@@ -75,6 +119,7 @@ class Implementation:
         @param nr_frequency_channels:
         @param verbose:
         """
+
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
@@ -97,13 +142,28 @@ class Implementation:
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
 
-        # Artificially limit max_baseline or nr_frequency_channels, deviating from the default for this Band or HPSO
+        # Artificially limit max_baseline or nr_frequency_channels,
+        # deviating from the default for this Band or HPSO
         if max_baseline is not None:
             telescope_params.Bmax = max_baseline
+        assert telescope_params.Bmax is not None
         if nr_frequency_channels is not None:
             telescope_params.Nf_max = nr_frequency_channels
 
-        f.apply_imaging_equations(telescope_params, mode, bldta, otfk, verbose)
+        # Limit bins to those shorter than Bmax
+        bins = telescope_params.baseline_bins
+        nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
+        bins = bins[:nbins_used]
+
+        # Same for baseline sizes
+        counts = telescope_params.nr_baselines * telescope_params.baseline_bin_distribution
+        counts = counts[:nbins_used]
+
+        # Set maximum on last bin (TODO: maximum? scale "counts"?)
+        bins[nbins_used-1] = telescope_params.Bmax
+
+        # Apply imaging equations
+        f.apply_imaging_equations(telescope_params, mode, bldta, bins, counts, otfk, verbose)
 
         return telescope_params
 
@@ -149,7 +209,6 @@ class Implementation:
         """
         assert isinstance(telescope_parameters, ParameterContainer)
         assert hasattr(telescope_parameters, expr_to_minimize)
-        take_max = expr_to_minimize in Implementation.EXPR_NOT_SUMMED
 
         result_per_nfacet = {}
         result_array = []
@@ -157,8 +216,14 @@ class Implementation:
         warned = False
         expression_original = None
 
+        # Construct lambda from our two parameters (facet number and
+        # snapshot time) to the expression to minimise
+        exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
+        expression_lam = Implementation.cheap_lambdify_curry((telescope_parameters.Nfacet,
+                                                              telescope_parameters.Tsnap),
+                                                             expression_original)
+
         for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
-            exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
                 print ('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
@@ -169,9 +234,9 @@ class Implementation:
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            expression = expression_original.subs({telescope_parameters.Nfacet : nfacets+1})
-            result = Implementation.minimize_binned_expression_by_Tsnap(expression, telescope_parameters,
-                                                                        take_max=take_max, verbose=verbose)
+            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets+1),
+                                                                 telescope_parameters,
+                                                                 verbose=verbose)
 
             result_array.append(float(result['value']))
             optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
@@ -192,93 +257,16 @@ class Implementation:
         return (optimal_Tsnap_array[index], nfacets)
 
     @staticmethod
-    def substitute_parameters_binned(expression, tp, bins, counts, take_max, verbose=False):
-        """
-        Substitute relevant variables for each bin, by defaukt summing the result. If take_max == True, then
-        the maximum expression value over all bins is returns instead of the sum.
-        @param expression:
-        @param tp: ParameterContainer containing the telescope parameters
-        @param bins: An array containing the max baseline length of each bin
-        @param counts: The number of baselines in each of the bins
-        @param verbose:
-        @param take_max: iff True, returns the maximum value across bins, instead of the bins' values' sum.
-        """
-        nbins_used = len(bins)
-        assert nbins_used == len(counts)
-        nbaselines = sum(counts)
-        temp_result = 0
-        for i in range(nbins_used):
-            binfrac_value = float(counts[i]) / nbaselines  # NB: Ensure that this is a floating point division
-            # Substitute bin-dependent variables
-            if not (isinstance(expression, (int, long)) or isinstance(expression, float)):
-                expr_subst = expression.subs({tp.Bmax_bin: bins[i], tp.binfrac : binfrac_value})
-            else:
-                expr_subst = expression
+    def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
 
-            if take_max:  # For example when computing Npix, we take the max
-                temp_result = Max(temp_result, expr_subst)
-            else:         # For most other varibles we sum over all bins
-                temp_result += expr_subst
-
-        return temp_result
-
-    @staticmethod
-    def evaluate_binned_expression(expression, telescope_parameters, take_max, verbose=False):
-        """
-        Calculate an expression using baseline binning
-        @param expression:
-        @param telescope_parameters:
-        @param verbose:
-        @param take_max:
-        @return:
-        """
+        # Compute lower & upper bounds
         tp = telescope_parameters
-        bins = tp.baseline_bins         # Remove the array of baselines from the parameter dictionary
-        counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
-
-        bins_unitless = bins
-        assert tp.Bmax is not None
-        Bmax_num_value = tp.Bmax
-        # Compute the index of the first bin whose baseline exceeds the max baseline used (must be <= number of bins)
-        nbins_used = min(bins_unitless.searchsorted(Bmax_num_value) + 1, len(bins))
-        # Restrict the bins used to only those bins that are used
-        bins = bins[:nbins_used]  # This operation creates a copy; i.e. does not modify tp.baseline_bins
-        bins[nbins_used-1] = tp.Bmax
-        counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
-
-        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, take_max=take_max,
-                                                             verbose=verbose)
-        return float(result)
-
-    @staticmethod
-    def minimize_binned_expression_by_Tsnap(expression, telescope_parameters, take_max, verbose=False):
-        """
-        Minimizes an expression by substituting the supplied telescope parameters into the expression, then minimizing it
-        by varying the free parameter, Tsnap
-        """
-        #TODO: can make the free expression a parameter of this method (should something else than Tsnap be desired)
-
-        tp = telescope_parameters
-        bins = tp.baseline_bins # Remove the array of baselines from the parameter dictionary
-        counts = tp.nr_baselines * tp.baseline_bin_distribution # Remove the array of baselines from the parameter dictionary
-
-        bins_unitless = bins
-        assert tp.Bmax is not None
-        Bmax_num_value = tp.Bmax
-        nbins_used = bins_unitless.searchsorted(Bmax_num_value) + 1  # Gives the index of the first bin whose baseline exceeds the max baseline used
-        bins = bins[:nbins_used]  # Restrict the bins used to only those bins that are used
-        bins[nbins_used-1] = tp.Bmax
-        counts = counts[:nbins_used]  # Restrict the bins counts used to only those bins that are used
-
-        result = Implementation.substitute_parameters_binned(expression, tp, bins, counts, take_max=take_max,
-                                                             verbose=verbose)
-
-        # Remove string literals from the telescope_params, as they can't be evaluated by lambdify
         bound_lower = tp.Tsnap_min
         bound_upper = 0.5 * tp.Tobs
 
-        Tsnap_optimal = Implementation.optimize_expr(result, tp.Tsnap, bound_lower, bound_upper)
-        value_optimal = result.subs({tp.Tsnap : Tsnap_optimal})
+        # Do optimisation
+        Tsnap_optimal = Implementation.optimize_lambdified_expr(lam, bound_lower, bound_upper)
+        value_optimal = lam(Tsnap_optimal)
         if verbose:
             print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
                   (Tsnap_optimal, value_optimal / c.peta))

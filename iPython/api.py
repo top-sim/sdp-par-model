@@ -64,12 +64,12 @@ class SkaPythonAPI:
         result = 0
         for submode in relevant_modes:
             tp = imp.calc_tel_params(telescope, submode, band, hpso, bldta, on_the_fly, max_baseline,
-                                                   nr_frequency_channels, verbose)
+                                     nr_frequency_channels, verbose)
             Equations.apply_imaging_equations(tp, submode, bldta, on_the_fly, verbose)  # modifies tp in-place
 
             result_expression = eval('tp.%s' % expression)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, False)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         return result
 
@@ -99,7 +99,6 @@ class SkaPythonAPI:
         @return: @raise AssertionError:
         """
         assert param_val_max > param_val_min
-        take_max = expression in imp.EXPR_NOT_SUMMED  # For these the bins' values are not summed; max taken instead
 
         print "Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps " \
               "(i.e. %d data points)" % \
@@ -133,7 +132,7 @@ class SkaPythonAPI:
 
             result_expression = eval('tp.%s' % expression)
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max))
+            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print 'done with parameter sweep!'
         return (param_values, results)
@@ -168,7 +167,6 @@ class SkaPythonAPI:
             assert len(prange) == 2
             assert prange[1] > prange[0]
 
-        take_max = expression in imp.EXPR_NOT_SUMMED  # Iff true, bins' values are not summed; max taken instead
         n_param_x_values = number_steps + 1
         n_param_y_values = number_steps + 1
         nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
@@ -223,27 +221,23 @@ class SkaPythonAPI:
 
                 result_expression = eval('tp.%s' % expression)
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet, take_max)
+                results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         print 'done with parameter sweep!'
         return (param_x_values, param_y_values, results)
 
     @staticmethod
-    def evaluate_expressions(expressions, tp, tsnap, nfacet, take_maxima):
+    def evaluate_expressions(expressions, tp, tsnap, nfacet):
         """
         Evaluate a sequence of expressions by substituting the telescope_parameters into them. Returns the result
         @param expressions: An array of expressions to be evaluated
         @param tp: The set of telescope parameters that should be used to evaluate each expression
         @param tsnap: The relevant (typically optimal) snapshot time
         @param nfacet: The relevant (typically optimal) number of facets to use
-        @param take_maxima: An array of boolean values, true if the corresponding variable's max across all bine
-                            should be used instead of its sum
         """
         results = []
-        assert len(expressions) == len(take_maxima)
         for i in range(len(expressions)):
             expression = expressions[i]
-            take_max = take_maxima[i]
-            result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet, take_max)
+            result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet)
             results.append(result)
         return results
