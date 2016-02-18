@@ -7,7 +7,7 @@ from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefi
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
-
+from sympy import Lambda, FiniteSet
 
 class SkaPythonAPI:
     """
@@ -19,21 +19,46 @@ class SkaPythonAPI:
         pass
 
     @staticmethod
-    def evaluate_expression(expression, tp, tsnap, nfacet, take_max):
-        """
-        Evaluate an expression by substituting the telescopecparameters into them. Returns the result
+    def evaluate_expression(expression, tp, tsnap, nfacet):
+        """Evaluate an expression by substituting the telescopec parameters
+        into them. Depending on the type of expression, the result
+        might be a value, a list of values (in case it is
+        baseline-dependent) or a string (if evaluation failed).
+
         @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
         @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
         @param tsnap: The snapshot time to use
         @param nfacet: The number of facets to use
-        @param take_max: True iff the expression's maximum value across bins is returned instead of its sum
         @return:
+
         """
+
+        # Already a plain value?
+        if isinstance(expression, int) or isinstance(expression, float) or \
+           isinstance(expression, str):
+            return expression
+
+        # Otherwise try to evaluate using sympy
         try:
+
+            # First substitute parameters
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
-            result = imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max)
+
+            # Lambda? Assume it depends on baseline lengths
+            if isinstance(expression_subst, Lambda):
+                result = []
+                counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
+                for (bcount, bmax) in zip(counts, tp.baseline_bins):
+                    if expression_subst.nargs == FiniteSet(1):
+                        result.append(float(expression_subst(bmax)))
+                    else:
+                        result.append(float(expression_subst(bcount, bmax)))
+            else:
+                # Otherwise just evaluate directly
+                result = float(expression_subst)
+
         except Exception as e:
-            result = expression
+            result = "Failed to evaluate: " + str(expression)
         return result
 
     @staticmethod
