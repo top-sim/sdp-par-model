@@ -122,7 +122,8 @@ class SkaPythonAPI:
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
             parameter_final_value = None
             exec('parameter_final_value = tp.%s' % parameter)
-            if parameter_final_value != param_values[i]:
+            eta = 1e-10
+            if abs((parameter_final_value - param_values[i])/param_values[i]) > eta:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                      'by the method compute_derived_parameters(). (%g -> %g). '
                                      'Cannot peform parameter sweep.'
@@ -202,11 +203,12 @@ class SkaPythonAPI:
                 parameter2_final_value = None
                 exec('parameter1_final_value = tp.%s' % parameters[0])
                 exec('parameter2_final_value = tp.%s' % parameters[1])
-                if parameter1_final_value != param_x_value:
+                eta = 1e-10
+                if abs((parameter1_final_value - param_x_value) / param_x_value) > eta:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[0])
-                if parameter2_final_value != param_y_value:
+                if abs((parameter2_final_value - param_y_value) / param_y_value) > eta:
                     print parameter2_final_value
                     print param_y_value
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
