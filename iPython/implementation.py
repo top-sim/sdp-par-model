@@ -341,7 +341,7 @@ class Implementation:
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets+1),
+            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets),
                                                                  telescope_parameters,
                                                                  verbose=verbose)
 
