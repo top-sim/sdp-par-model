@@ -17,6 +17,7 @@ from parameter_definitions import *  # definitions of variables, primary telesco
 from parameter_definitions import Constants as c
 from equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
+from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
 
 
@@ -103,21 +104,34 @@ class SkaIPythonAPI(api):
     ]
 
     @staticmethod
-    def mk_result_titles(resultMap):
-        return map(lambda row: row[0], resultMap)
-    @staticmethod
-    def mk_result_units(resultMap):
-        return map(lambda row: row[1], resultMap)
-    @staticmethod
-    def mk_result_sum(resultMap):
+    def get_result_sum(resultMap):
         return map(lambda row: row[3], resultMap)
     @staticmethod
-    def mk_result_expressions(resultMap,tp):
+    def get_result_expressions(resultMap,tp):
         return map(lambda row: row[4](tp), resultMap)
 
     # Row names, for selection in GUI
     ALL_ROWS = map(lambda row: row[0], RESULT_MAP)
     DEFAULT_ROWS = map(lambda row: row[0], filter(lambda e: e[2], RESULT_MAP))
+
+    # Rows needed for graphs
+    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-5:])
+
+    @staticmethod
+    def mk_result_map_rows(rows = None):
+        '''Collects result map information for a given row set
+        @rows: Row set to show. If None, we will use default rows.
+        @return: A tuple of the result map, the sorted list of the row
+        names and a list of the row units.
+        '''
+
+        result_map = SkaIPythonAPI.RESULT_MAP
+        if rows is not None:
+            result_map = filter(lambda row: row[0] in rows, result_map)
+
+        return (result_map,
+                map(lambda row: row[0], result_map),
+                map(lambda row: row[1], result_map))
 
     @staticmethod
     def defualt_rflop_plotting_colours():
@@ -128,7 +142,12 @@ class SkaIPythonAPI(api):
         return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral')
 
     @staticmethod
-    def show_result(value):
+    def format_result(value):
+        """
+        Format a result value for viewing. As we expect that most numbers
+        should be in a "nice" range this means we truncate number
+        accuracy by default.
+        """
 
         # Floating point values up to 3 digits
         if isinstance(value, float):
@@ -138,7 +157,7 @@ class SkaIPythonAPI(api):
             s = '['
             for v in value:
                 if len(s) > 1: s += ', '
-                s += SkaIPythonAPI.show_result(v)
+                s += SkaIPythonAPI.format_result(v)
             return s + ']'
         # Otherwise: Trust default formatting
         return '%s' % value
@@ -157,8 +176,11 @@ class SkaIPythonAPI(api):
         assert len(labels) == len(values)
         assert len(labels) == len(units)
         for i in range(len(labels)):
+            if labels[i].startswith('--'):
+                s += '<tr><th colspan="2">{0}</th></tr>'.format(labels[i])
+                continue
             s += '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(
-                labels[i], SkaIPythonAPI.show_result(values[i]), units[i])
+                labels[i], SkaIPythonAPI.format_result(values[i]), units[i])
         s += '</table>'
         display(HTML(s))
 
@@ -178,10 +200,13 @@ class SkaIPythonAPI(api):
         assert len(labels) == len(values_2)
         assert len(labels) == len(units)
         for i in range(len(labels)):
+            if labels[i].startswith('--'):
+                s += '<tr><th colspan="4">{0}</th></tr>'.format(labels[i])
+                continue
             s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
                  '</td><td>{3}</td></tr>\n'.format(labels[i],
-                                                   SkaIPythonAPI.show_result(values_1[i]),
-                                                   SkaIPythonAPI.show_result(values_2[i]),
+                                                   SkaIPythonAPI.format_result(values_1[i]),
+                                                   SkaIPythonAPI.format_result(values_2[i]),
                                                    units[i])
         s += '</table>'
         display(HTML(s))
@@ -204,9 +229,16 @@ class SkaIPythonAPI(api):
         assert len(labels) == len(values_3)
         assert len(labels) == len(units)
         for i in range(len(labels)):
+            if labels[i].startswith('--'):
+                s += '<tr><th colspan="5">{0}</th></tr>'.format(labels[i])
+                continue
             s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
                  '</td><td><font color="purple">{3}</font>''</td><td>{4}</td></tr>\n'.format(
-                labels[i], values_1[i], values_2[i], values_3[i], units[i])
+                     labels[i],
+                     SkaIPythonAPI.format_result(values_1[i]),
+                     SkaIPythonAPI.format_result(values_2[i]),
+                     SkaIPythonAPI.format_result(values_3[i]),
+                     units[i])
         s += '</table>'
         display(HTML(s))
 
@@ -403,22 +435,18 @@ class SkaIPythonAPI(api):
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def combine_mode_results(result_value_array, result_map):
-        """Combines a number of result sets into one (e.g. from different
-        modes). Will use the result map to determine whether to output
-        a sum or a list.
+    def check_pipeline_config(cfg, pure_modes):
         """
-        result_values = []
-        flagged_rows = zip(zip(*result_value_array), SkaIPythonAPI.mk_result_sum(result_map))
-        for (row_values, sum_it) in flagged_rows:
-            if sum_it:
-                result_values.append(sum(row_values))
-            elif len(row_values) == 1:
-                result_values.append(row_values[0])
-            else:
-                result_values.append(row_values)
-        return result_values
-
+        Check pipeline configuration, displaying a message in the Notebook
+        for every problem found. Returns whether the configuration is
+        usable at all.
+        """
+        (okay, messages) = cfg.check(pure_modes=pure_modes)
+        for msg in messages:
+            display(HTML('<p><font color="red"><b>{0}</b></font></p>'.format(msg)))
+        if not okay:
+            display(HTML('<p><font color="red">Adjust to recompute.</font></p>'))
+        return okay
 
     @staticmethod
     def compare_telescopes_default(telescope_1, telescope_2, band_1,
@@ -443,70 +471,34 @@ class SkaIPythonAPI(api):
         @param verbose: print verbose output during execution
         @return:
         """
-        telescopes = (telescope_1, telescope_2)
-        bldtas = (tel1_bldta, tel2_bldta)
-        modes = (mode_1, mode_2)
-        bands = (band_1, band_2)
-        on_the_flys = (tel1_otf, tel2_otf)
 
-        if not (imp.telescope_and_band_are_compatible(telescope_1, band_1) and
-                imp.telescope_and_band_are_compatible(telescope_2, band_2)):
-            msg = 'ERROR: At least one of the Telescopes is incompatible with its selected Band'
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
+        # Make configurations and check
+        cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
+                               mode=mode_1, bldta=tel1_bldta,
+                               on_the_fly=tel1_otf)
+        cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
+                               mode=mode_2, bldta=tel2_bldta,
+                               on_the_fly=tel2_otf)
+        if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_modes=True) or \
+           not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_modes=True):
             return
 
-        # And now the results:
-        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-        tels_params = []  # Maps each telescope to its parameter set (one parameter set for each mode)
-
         # Determine which rows to show
-        result_map = SkaIPythonAPI.RESULT_MAP
-        if rows is not None:
-            result_map = filter(lambda row: row[0] in rows, result_map)
-        result_titles = ['Telescope', 'Band', 'Mode', 'Baseline Dependent Time Avg.']
-        result_titles[4:] = SkaIPythonAPI.mk_result_titles(result_map)
-        result_units = ['', '', '', '']
-        result_units[4:] = SkaIPythonAPI.mk_result_units(result_map)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
 
-        # Loop through telescope (configurations)
-        tels_result_values = []
-        for (telescope, bldta, mode, band, on_the_fly) in \
-                 zip(telescopes, bldtas, modes, bands, on_the_flys):
+        # Loop through telescope configurations, collect results
+        display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
+        tels_result_values = [
+            SkaIPythonAPI._compute_results(cfg_1, verbose, result_map),
+            SkaIPythonAPI._compute_results(cfg_2, verbose, result_map),
+        ]
+        display(HTML('<font color="blue">Done computing.</font>'))
 
-            # Use default values of max_baseline and Nf_max
-            tp_default = ParameterContainer()  # temp parameter container to get default values for this telescope
-            ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
-            max_baseline = tp_default.Bmax
-            Nf_max = tp_default.Nf_max
-
-            # Determine modes to evaluate. We now make a distinction
-            # between "pure" and composite modes
-            relevant_modes = (mode,)  # A list with one element
-            if mode not in ImagingModes.pure_modes:
-                if mode == ImagingModes.All:
-                    relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
-                else:
-                    raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-
-            # Compute result values
-            modes_result_values = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                 bldta, on_the_fly, max_baseline,
-                                                                 Nf_max, verbose, result_map)
-
-            result_values = SkaIPythonAPI.combine_mode_results(modes_result_values,
-                                                               result_map)
-
-            # Document computed configuration
-            result_values = [telescope, band, mode, bldta] + list(*result_values)
-
-            tels_result_values.append(result_values)
-
-        display(HTML('<font color="blue">Done computing. Results follow:</font>'))
-
+        # Show comparison table
         SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
                                           tels_result_values[1], result_units)
 
+        # Show comparison stacked bars
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
@@ -546,75 +538,25 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return:
         """
-        # We calculate a "temporary" parameter container to get default values for this telescope. This container will
-        # afterwards be discarded. The actual parameters used in the simulation are contained in "tp" further below
-        tp_default = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
-
-        # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
-        if max_baseline == 'default':
-            max_baseline = tp_default.Bmax
-        if Nf_max == 'default':
-            Nf_max = tp_default.Nf_max
 
         assert Nfacet > 0
         assert Tsnap > 0
 
-        # First we plot a table with all the provided parameters
-        param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode', 'Tsnap', 'Nfacet')
-        param_values = (max_baseline, Nf_max, telescope, band, mode, Tsnap, Nfacet)
-        param_units = ('m', '', '', '', '', 'sec', '')
-        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+        # Make configuration
+        cfg = PipelineConfig(telescope=telescope, mode=mode, band=band,
+                             max_baseline=max_baseline, Nf_max=Nf_max, bldta=bldta,
+                             on_the_fly=on_the_fly)
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
-        # Check compatability
-        if not imp.telescope_and_band_are_compatible(telescope, band):
-            msg = 'ERROR: Telescope and Band are not compatible'
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
-
-        max_allowed_baseline = tp_default.baseline_bins[-1]
-        if max_baseline > max_allowed_baseline:
-            msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
-                % max_allowed_baseline
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
-
-        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
+        display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
 
-        # We now make a distinction between "pure" and composite modes
-        relevant_modes = (mode,)  # A list with one element
-        if mode not in ImagingModes.pure_modes:
-            if mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
-            else:
-                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-
         # Determine which rows to calculate & show
-        result_map = SkaIPythonAPI.RESULT_MAP
-        if rows is not None:
-            result_map = filter(lambda row: row[0] in rows, result_map)
-        result_titles = SkaIPythonAPI.mk_result_titles(result_map)
-        result_units = SkaIPythonAPI.mk_result_units(result_map)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
 
         # Loop through modes
-        result_value_array = []
-        for submode in relevant_modes:
-
-            # Calculate the telescope parameters
-            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=on_the_fly,
-                                     max_baseline=max_baseline, nr_frequency_channels=Nf_max,
-                                     verbose=verbose)
-
-            # Calculate expressions
-            result_expressions = SkaIPythonAPI.mk_result_expressions(result_map, tp)
-            results_for_submode = api.evaluate_expressions(result_expressions, tp, Tsnap, Nfacet)
-            result_value_array.append(results_for_submode)
-
-        # Combine mode results
-        result_values = SkaIPythonAPI.combine_mode_results(result_value_array, result_map)
+        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map,
+                                                       Tsnap=Tsnap, Nfacet=Nfacet)
 
         # Show table of results
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
@@ -627,7 +569,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbose=False):
+    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbose=False, rows=None):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
@@ -636,6 +578,7 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return:
         """
+
         tp_default = ParameterContainer()
         ParameterDefinitions.apply_global_parameters(tp_default)
         ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
@@ -654,100 +597,25 @@ class SkaIPythonAPI(api):
         param_units = ('', '', '', 'm', '', '', '', '')
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
-        modes_expanded = (hpso_mode,)
-        if hpso_mode == ImagingModes.ContAndSpectral:
-            modes_expanded = (ImagingModes.Continuum, ImagingModes.Spectral)
+        # Make and check pipeline configuration
+        cfg = PipelineConfig(hpso=hpso_key,bldta=bldta,on_the_fly=on_the_fly)
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
-        tps = {}
-        Tsnap_opt = {}
-        Nfacet_opt = {}
-        substitutions = {}
-        expressions = {}
-        expression_strings = ('Rflop_conv', 'Rflop_fft', 'Rflop_grid', 'Rflop_proj', 'Rflop_phrot', 'Rflop', 'Mbuf_vis',
-                              'Mw_cache', 'Npix_linear', 'Rio')
-        nr_key_expr_per_mode = len(expression_strings)
-        values_to_take_max = ('Npix_linear')
-        key_expressions = {}
-        for key in expression_strings:
-            key_expressions[key] = {}
+        # Determine which rows to calculate & show
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
 
-        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.</font>'))
-
-        for mode in modes_expanded:
-            if verbose:
-                print 'Computing HPSO %s for %s mode' % (hpso_key, mode)
-
-            tp = imp.calc_tel_params(telescope, mode, hpso=hpso_key, bldta=bldta, otfk=on_the_fly, verbose=verbose)
-            tps[mode] = tp
-            (Tsnap_opt[mode], Nfacet_opt[mode]) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            substitutions[mode] = {tp.Tsnap : Tsnap_opt[mode], tp.Nfacet : Nfacet_opt[mode]}
-            expressions[mode] = (tp.Rflop_conv, tp.Rflop_fft, tp.Rflop_grid, tp.Rflop_proj, tp.Rflop_phrot, tp.Rflop, tp.Mbuf_vis, tp.Mw_cache, tp.Npix_linear, tp.Rio)
-
-            for index in range(nr_key_expr_per_mode):
-                key_expressions[expression_strings[index]][mode] = expressions[mode][index]
-
-        key_results = {}
-        for key in expression_strings:
-            take_max = (key in values_to_take_max)
-            results = np.array([])
-            for mode in modes_expanded:
-                tp = tps[mode]
-                expression = key_expressions[key][mode]
-                substitution = substitutions[mode]
-                expression_subst = expression  # Will stay unchanged if a literal number (see if statement below)
-                if not (isinstance(expression, (int, long)) or isinstance(expression, float)):
-                    expression_subst = expression.subs(substitution)
-                results = np.append(results, imp.evaluate_binned_expression(expression_subst, tp, take_max=take_max))
-
-            if take_max:
-                result = np.max(results)
-            else:
-                result = np.sum(results)
-
-            key_results[key] = result
-
+        # Compute
+        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map)
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
-        # Next, the computed results:
-        # TODO won't this be cleaner when we use _Compute_results ?
-        ############################
+        # Show table of results
+        SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
-        result_titles = ('Optimal Number(s) of Facets', 'Optimal Snapshot Time(s)',
-                         'Image side length(s)', 'Visibility Buffer', 'Working (cache) memory', 'I/O Rate',
-                         'Total Compute Requirement',
-                         '-> Gridding', '-> FFT', '-> Phase Rotation', '-> Projection', '-> Convolution')
-        result_units = ('', 'sec.', 'pixels', 'PetaBytes', 'TeraBytes', 'TeraBytes/s',
-                        'PetaFLOPS', 'PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS','PetaFLOPS')
-
-        assert len(result_titles) == len(result_units)
-
-        result_value_string = ['', '', '']  # The non-summed values: nfacet_opt, tsnap_opt and Npix_linear
-        if len(modes_expanded) == 1:
-            result_value_string[0] += '%d' % Nfacet_opt[modes_expanded[0]]
-            result_value_string[1] += '%.1f' % Tsnap_opt[modes_expanded[0]]
-        else:
-            for mode in modes_expanded:
-                result_value_string[0] += '%s : %d' % (mode, Nfacet_opt[mode])
-                result_value_string[1] += '%s : %.1f' % (mode, Tsnap_opt[mode])
-
-        result_value_string[2] = ('%d' % int(np.ceil(key_results['Npix_linear'])))  # Npix_linear
-
-        result_value_string.append('%.3g' % (key_results['Mbuf_vis'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Mw_cache'] / 1e12))
-        result_value_string.append('%.3g' % (key_results['Rio'] / 1e12))
-        result_value_string.append('%.3g' % (key_results['Rflop'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Rflop_grid'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Rflop_fft'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Rflop_phrot'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Rflop_proj'] / 1e15))
-        result_value_string.append('%.3g' % (key_results['Rflop_conv'] / 1e15))
-
-        SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
-
-        values = (key_results['Rflop_grid'], key_results['Rflop_fft'], key_results['Rflop_phrot'], key_results['Rflop_proj'], key_results['Rflop_conv'])
+        # Show pie graph of FLOP counts
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        SkaIPythonAPI.plot_pie('FLOP breakdown for HPSO %s' % hpso_key, labels, values, colours)
+        values = result_values[-5:]  # the last five values
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
@@ -765,160 +633,74 @@ class SkaIPythonAPI(api):
         @param verbose:
         @return:
         """
-        # We calculate a "temporary" parameter container to get default values for this telescope. This container will
-        # afterwards be discarded. The actual parameters used in the simulation are contained in "tp" further below
-        tp_default = ParameterContainer()
-        ParameterDefinitions.apply_telescope_parameters(tp_default, telescope)
 
-        # We allow the baseline and/or Nf_max to be undefined, in which case the default values are used.
-        if max_baseline == 'default':
-            max_baseline = tp_default.Bmax
-        if Nf_max == 'default':
-            Nf_max = tp_default.Nf_max
+        # Make configuration
+        cfg = PipelineConfig(telescope=telescope, mode=mode,
+                             band=band, max_baseline=max_baseline,
+                             Nf_max=Nf_max, bldta=bldta,
+                             on_the_fly=on_the_fly)
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
-        # First we plot a table with all the provided parameters
-        param_titles = ('Max Baseline', 'Max # of channels', 'Telescope', 'Band', 'Mode')
-        param_values = (max_baseline, Nf_max, telescope, band, mode)
-        param_units = ('m', '', '', '', '')
-        SkaIPythonAPI.show_table('Arguments', param_titles, param_values, param_units)
+        # Determine rows to show
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
 
-        result_map = SkaIPythonAPI.RESULT_MAP
-        if rows is not None:
-            result_map = filter(lambda row: row[0] in rows, result_map)
-        result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time']
-        result_titles.extend(SkaIPythonAPI.mk_result_titles(result_map))
-        result_units = ['', 'sec']
-        result_units.extend(SkaIPythonAPI.mk_result_units(result_map))
-
-        assert len(result_titles) == len(result_units)
-
-        if not imp.telescope_and_band_are_compatible(telescope, band):
-            msg = 'ERROR: Telescope and Band are not compatible'
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
-
-        max_allowed_baseline = tp_default.baseline_bins[-1]
-        if max_baseline > max_allowed_baseline:
-            msg = 'ERROR: max_baseline exceeds the maximum allowed baseline of %g m for this telescope.' \
-                % max_allowed_baseline
-            s = '<font color="red"><b>{0}</b>.<br>Adjust to recompute.</font>'.format(msg)
-            display(HTML(s))
-            return
-
-        display(HTML('<font color="blue">Computing the result -- this may take several (tens of) seconds.'
+        # Compute
+        display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
-
-        # We now make a distinction between "pure" and composite modes
-        relevant_modes = (mode,)  # A list with one element
-        if mode not in ImagingModes.pure_modes:
-            if mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes  # all three of them, to be summed
-            else:
-                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-        (result_values, result_value_string) = SkaIPythonAPI._compute_results(telescope, band, relevant_modes,
-                                                                              bldta, on_the_fly, max_baseline,
-                                                                              Nf_max, verbose)
-
+        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map)
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
-        SkaIPythonAPI.show_table('Computed Values', result_titles, result_value_string, result_units)
+        # Make table
+        SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
+
+        # Make pie plot
         labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-5:]  # the last five values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def compute_results(telescope, band, mode, bldta=True, otfk=False, max_baseline=None, nr_frequency_channels=None,
-                        verbose=False):
-        """
-        A specialized utility for computing results. This is a slightly easier-to-interface-with version of
-        the private method _compute_results (below)
-        @param telescope:
-        @param band:
-        @param mode:
-        @param bldta:
-        @param otfk:
-        @param verbose:
-        @return: @raise Exception:
-        """
-        relevant_modes = (mode,)  # A list with one element
-        if mode not in ImagingModes.pure_modes:
-            if mode == ImagingModes.All:
-                relevant_modes = ImagingModes.pure_modes # all three of them, to be summed
-            else:
-                raise Exception("The '%s' imaging mode is currently not supported" % str(mode))
-        (result_values, result_values_strings) \
-            = SkaIPythonAPI._compute_results(telescope, band, relevant_modes, bldta, otfk, max_baseline=None,
-                                             nr_frequency_channels=None, verbose=verbose)
+    def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
+        """A private method for computing a set of results.
 
-        result_titles = ['Optimal Number of Facets', 'Optimal Snapshot Time',
-                         'Image side length', 'Visibility Buffer (PB)', 'Working (cache) memory (TB)', 'I/O Rate (TBps)',
-                         'Total Compute Requirement (PetaFLOPS)',
-                         'Gridding', 'FFT', 'Projection', 'Convolution', 'Phase Rotation']
-
-        assert len(result_titles) == len(result_values)
-        assert len(result_titles) == len(result_values_strings)
-
-        return (result_values, result_values_strings, result_titles)
-
-    @staticmethod
-    def _compute_results(telescope, band, relevant_modes, bldta, otfk,
-                         max_baseline, nr_frequency_channels, verbose,
-                         result_map):
-        """A private method for computing a set of results for
-        optimised Tsnap and Nfacet values.
-
-        @param telescope:
-        @param band:
-        @param bldta:
-        @param otfk: on the fly kernels
-        @param relevant_modes:
-        @param max_baseline: The maximum baseline to use
-        @param nr_frequency_channels:
+        @param pipelineConfig: Complete pipeline configuration
         @param verbose:
         @param result_map: results to produce
+        @param Tsnap: Snapshot time. If None it will get determined by optimisation.
+        @param Nfacet: Facet count. If None it will get determined by optimisation.
         @return: result value array
         """
 
         # Loop through modes to collect result values
-        result_values = []
-        for submode in relevant_modes:
+        result_value_array = []
+        for submode in pipelineConfig.relevant_modes:
 
             # Calculate the telescope parameters
-            tp = imp.calc_tel_params(telescope, submode, band=band, bldta=bldta, otfk=otfk,
-                                     max_baseline=max_baseline, nr_frequency_channels=nr_frequency_channels,
-                                     verbose=verbose)
+            pipelineConfig.mode = submode
+            tp = imp.calc_tel_params(pipelineConfig, verbose=verbose)
 
             # Optimise Tsnap & Nfacet
-            (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            tsnap_opt = Tsnap
+            nfacet_opt = Nfacet
+            if tsnap_opt is None and nfacet_opt is None:
+                (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            elif tsnap_opt is None or nfacet_opt is None:
+                raise Exception("We can only optimise Tsnap and Nfacet together so far!")
 
             # Evaluate expressions from map
-            result_expressions = SkaIPythonAPI.mk_result_expressions(result_map, tp)
+            result_expressions = SkaIPythonAPI.get_result_expressions(result_map, tp)
             results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
-            result_values.append(results_for_submode)
+            result_value_array.append(results_for_submode)
 
-            result_value_string[0] += str('%d, ') % nfacet_opt
-            result_value_string[1] += str('%.1f, ') % tsnap_opt
-            results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt, take_maxima)
-            result_value_string[2] += str('%.d, ') % results_for_submode[0]  # Npix_linear
-            result_values[3:] += results_for_submode[1:]  # Sum the rest of the values
-
-        # String formatting of the first two results (Tsnap_opt and NFacet_opt)
-        result_value_string[0] = result_value_string[0][:-2]
-        result_value_string[1] = result_value_string[1][:-2]
-        result_value_string[2] = result_value_string[2][:-2]
-
-        composite_result = len(relevant_modes) > 1
-        if composite_result:
-            result_value_string[0] = '(%s)' % result_value_string[0]
-            result_value_string[1] = '(%s)' % result_value_string[1]
-            result_value_string[2] = '(%s)' % result_value_string[2]
-
-        for i in range(len(result_values)):
-            if i < 3:
-                pass
-            else:  # floating point expression
-                result_value_string.append('%.3g' % result_values[i])
-
-        return (result_values, result_value_string)
+        # Now transpose, then sum up results from submodes per row
+        result_values = []
+        transposed_results = zip(*result_value_array)
+        sum_results = SkaIPythonAPI.get_result_sum(result_map)
+        for (row_values, sum_it) in zip(transposed_results, sum_results):
+            if sum_it:
+                result_values.append(sum(row_values))
+            elif len(row_values) == 1:
+                result_values.append(row_values[0])
+            else:
+                result_values.append(list(row_values))
+        return result_values

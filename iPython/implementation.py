@@ -19,6 +19,126 @@ from scipy import optimize as opt
 import numpy as np
 import math
 
+
+class PipelineConfig:
+    """
+    A full SDP pipeline configuration. This collects all data required
+    to parameterise a pipeline.
+    """
+
+
+    def __init__(self, hpso=None, telescope=None, band=None, mode=None,
+                 max_baseline="default", Nf_max="default", bldta=True,
+                 on_the_fly=False):
+        """
+        @param telescope: Telescope to use (can be omitted if HPSO specified)
+        @param mode: Pipeline mode (can be omitted if HPSO specified)
+        @param band: Frequency band (can be omitted if HPSO specified)
+        @param hpso: High Priority Science Objective ID (can be omitted if telescope, mode and band specified)
+        @param max_baseline: Maximum baseline length
+        @param Nf_max: Number of frequency channels
+        @param bldta: Baseline dependent time averaging
+        @param otfk: On the fly kernels (True or False)
+        """
+
+        # Load HPSO parameters
+        if hpso is not None:
+            if not (telescope is None and band is None and mode is None):
+                raise Exception("Either telescope/band/mode or an HPSO needs to be set, not both!")
+            tp_default = ParameterContainer()
+            p.apply_hpso_parameters(tp_default, hpso)
+            telescope = tp_default.telescope
+            mode = tp_default.mode
+        else:
+            if telescope is None or band is None or mode is None:
+                raise Exception("Either telescope/band/mode or an HPSO needs to be set!")
+
+        # Save parameters
+        self.telescope = telescope
+        self.hpso = hpso
+        self.band = band
+        self.mode = mode
+        self.bldta = bldta
+        self.on_the_fly = on_the_fly
+
+        # Determine relevant modes
+        if mode == ImagingModes.All:
+            self.relevant_modes = ImagingModes.pure_modes
+        elif mode == ImagingModes.ContAndSpectral:
+            self.relevant_modes = (ImagingModes.Continuum, ImagingModes.Spectral)
+        else:
+            self.relevant_modes = (mode,)  # A list with one element
+
+        # Load telescope parameters from apply_telescope_parameters.
+        tp_default = ParameterContainer()
+        p.apply_telescope_parameters(tp_default, telescope)
+
+        # Store max allowed baseline length, load default parameters
+        self.max_allowed_baseline = tp_default.baseline_bins[-1]
+        if max_baseline == 'default':
+            self.max_baseline = tp_default.Bmax
+        else:
+            self.max_baseline = max_baseline
+        if Nf_max == 'default':
+            self.Nf_max = tp_default.Nf_max
+        else:
+            self.Nf_max = Nf_max
+
+    def telescope_and_band_are_compatible(self):
+        """
+        Checks whether the supplied telescope and band are compatible with each other
+        @param telescope:
+        @param band:
+        @return:
+        """
+        is_compatible = False
+        telescope = self.telescope
+        band = self.band
+        if telescope in {Telescopes.SKA1_Low_old, Telescopes.SKA1_Low}:
+            is_compatible = (band in Bands.low_bands)
+        elif telescope in {Telescopes.SKA1_Mid_old, Telescopes.SKA1_Mid}:
+            is_compatible = (band in Bands.mid_bands)
+        elif telescope == Telescopes.SKA1_Sur_old:
+            is_compatible = (band in Bands.survey_bands)
+        elif telescope == Telescopes.SKA2_Low:
+            is_compatible = (band in Bands.low_bands_ska2)
+        elif telescope == Telescopes.SKA2_Mid:
+            is_compatible = (band in Bands.mid_bands_ska2)
+        else:
+            raise ValueError("Unknown telescope %s" % telescope)
+
+        return is_compatible
+
+    def check(self, pure_modes=True):
+        """Checks integrity of the pipeline configuration.
+
+        @return: (okay?, list of errors/warnings)
+        """
+        messages = []
+        okay = True
+
+        # Maximum baseline
+        if self.max_baseline > self.max_allowed_baseline:
+            messages.append('WARNING: max_baseline (%g m) exceeds the maximum ' \
+                            'allowed baseline of %g m for telescope \'%s\'.' \
+                % (self.max_baseline, self.max_allowed_baseline, self.telescope))
+
+        # Only pure modes supported?
+        if pure_modes:
+            for mode in self.relevant_modes:
+                if mode not in ImagingModes.pure_modes:
+                    messages.append("ERROR: The '%s' imaging mode is currently not supported" % str(mode))
+                    okay = False
+
+        # Band compatibility. Can skip for HPSOs, as they override the
+        # band manually.
+        if self.hpso is None and not self.telescope_and_band_are_compatible():
+            messages.append("ERROR: Telescope '%s' and band '%s' are not compatible" %
+                              (str(self.telescope), str(self.band)))
+            okay = False
+
+        return (okay, messages)
+
 class Implementation:
 
     def __init__(self):
@@ -103,22 +223,16 @@ class Implementation:
             return result.x
 
     @staticmethod
-    def calc_tel_params(telescope, mode, band=None, hpso=None, bldta=True, otfk=False,
-                        max_baseline=None, nr_frequency_channels=None, verbose=False):
+    def calc_tel_params(pipelineConfig, verbose=False, adjusts={}):
 
         """
         This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
-        @param telescope:
-        @param mode: (can be omitted if HPSO specified)
-        @param band: (can be omitted if HPSO specified)
-        @param hpso: High Priority Science Objective ID (can be omitted if band specified)
-        @param bldta: Baseline dependent time averaging
-        @param otfk: On the fly kernels (True or False)
-        @param max_baseline:
-        @param nr_frequency_channels:
+        @param pipelineConfig: Valid pipeline configuration
         @param verbose:
         """
+
+        cfg = pipelineConfig
 
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
@@ -129,67 +243,60 @@ class Implementation:
         # (as happens with e.g. frequency bands)
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
-        p.apply_telescope_parameters(telescope_params, telescope)
+        p.apply_telescope_parameters(telescope_params, cfg.telescope)
         # Then define imaging mode and frequency-band
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
-        if (hpso is None) and (band is not None):
-            p.apply_band_parameters(telescope_params, band)
-            p.apply_imaging_mode_parameters(telescope_params, mode)
-        elif (hpso is not None) and (band is None):
+        if (cfg.hpso is None) and (cfg.band is not None):
+            p.apply_band_parameters(telescope_params, cfg.band)
+            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+        elif (cfg.hpso is not None) and (cfg.band is None):
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
-            p.apply_imaging_mode_parameters(telescope_params, mode)
-            p.apply_hpso_parameters(telescope_params, hpso)
+            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+            p.apply_hpso_parameters(telescope_params, cfg.hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
 
         # Artificially limit max_baseline or nr_frequency_channels,
         # deviating from the default for this Band or HPSO
-        if max_baseline is not None:
-            telescope_params.Bmax = max_baseline
+        if cfg.max_baseline is not None:
+            telescope_params.Bmax = min(telescope_params.Bmax, cfg.max_baseline)
         assert telescope_params.Bmax is not None
-        if nr_frequency_channels is not None:
-            telescope_params.Nf_max = nr_frequency_channels
+        if cfg.Nf_max is not None:
+            telescope_params.Nf_max = min(telescope_params.Nf_max, cfg.Nf_max)
+
+        # Apply parameter adjustments. Needs to be done before bin
+        # calculation in case Bmax gets changed.
+        for par, value in adjusts.iteritems():
+            exec('telescope_params.%s = %s' % (par, value))
 
         # Limit bins to those shorter than Bmax
         bins = telescope_params.baseline_bins
         nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
         bins = bins[:nbins_used]
 
-        # Same for baseline sizes
-        counts = telescope_params.nr_baselines * telescope_params.baseline_bin_distribution
-        counts = counts[:nbins_used]
+        # Same for baseline sizes. Note that we normalise /before/
+        # reducing the list.
+        binfracs = telescope_params.baseline_bin_distribution
+        binfracs /= sum(binfracs)
+        binfracs = binfracs[:nbins_used]
 
-        # Set maximum on last bin (TODO: maximum? scale "counts"?)
+        # Calculate old and new bin sizes
+        binsize = bins[nbins_used-1]
+        binsizeNew = telescope_params.Bmax
+        if nbins_used > 1:
+            binsize -= bins[nbins_used-2]
+            binsizeNew -= bins[nbins_used-2]
+
+        # Scale last bin
         bins[nbins_used-1] = telescope_params.Bmax
+        binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
 
         # Apply imaging equations
-        f.apply_imaging_equations(telescope_params, mode, bldta, bins, counts, otfk, verbose)
+        f.apply_imaging_equations(telescope_params, cfg.mode,
+                                  cfg.bldta, bins, binfracs,
+                                  cfg.on_the_fly, verbose)
 
         return telescope_params
-
-    @staticmethod
-    def telescope_and_band_are_compatible(telescope, band):
-        """
-        Checks whether the supplied telescope and band are compatible with each other
-        @param telescope:
-        @param band:
-        @return:
-        """
-        is_compatible = False
-        if telescope in {Telescopes.SKA1_Low_old, Telescopes.SKA1_Low}:
-            is_compatible = (band in Bands.low_bands)
-        elif telescope in {Telescopes.SKA1_Mid_old, Telescopes.SKA1_Mid}:
-            is_compatible = (band in Bands.mid_bands)
-        elif telescope == Telescopes.SKA1_Sur_old:
-            is_compatible = (band in Bands.survey_bands)
-        elif telescope == Telescopes.SKA2_Low:
-            is_compatible = (band in Bands.low_bands_ska2)
-        elif telescope == Telescopes.SKA2_Mid:
-            is_compatible = (band in Bands.mid_bands_ska2)
-        else:
-            raise ValueError("Unknown telescope %s" % telescope)
-
-        return is_compatible
 
     @staticmethod
     def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize='Rflop', max_number_nfacets=20,
