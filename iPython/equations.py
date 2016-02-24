@@ -233,8 +233,10 @@ class Equations:
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
         o.Nkernel2_backward = Lambda(bmax, o.Ngw_backward(bmax) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_backward = Lambda(bmax, (o.Ngw_backward(bmax) ** 2 + o.Naa ** 2)**0.5)
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
         o.Nkernel2_predict = Lambda(bmax, o.Ngw_predict(bmax) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_predict = Lambda(bmax, (o.Ngw_predict(bmax) ** 2 + o.Naa ** 2)**0.5)
         if o.on_the_fly:
             o.Qgcf = 1.0
 
