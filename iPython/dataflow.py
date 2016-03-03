@@ -19,8 +19,9 @@ class Domain:
     such as time or frequency.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, unit = ''):
         self.name = name
+        self.unit = unit
 
     def __str__(self):
         return '<Domain %s>' % self.name
@@ -276,12 +277,14 @@ class Flow:
     transferred to other nodes.
     """
 
-    def __init__(self, name, regss = [], costs = {}, attrs = {}, deps = []):
+    def __init__(self, name, regss = [], costs = {}, attrs = {}, deps = [],
+                 cluster=''):
         self.name = name
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
         self.deps = list(deps)
+        self.cluster = cluster
 
     def depend(self, flow):
         self.deps.append(flow)
@@ -301,5 +304,87 @@ class Flow:
         return self.boxes.max(prop)
 
     def cost(self, name):
-        return self.sum(self.costs[name])
+        if self.costs.has_key(name):
+            return self.sum(self.costs[name])
+        else:
+            return 0
 
+    def regions(self):
+        return self.boxes.regionsBox
+
+    def recursiveDeps(self):
+        """ Returns all direct and indirect dependencies of this node."""
+
+        active = [self]
+        recDeps = [self]
+
+        while len(active) > 0:
+            node = active.pop()
+            for dep in node.deps:
+                if not dep in recDeps:
+                    active.append(dep)
+                    recDeps.append(dep)
+
+        return list(recDeps)
+
+def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={}):
+
+    # Make digraph
+    dot = Digraph(graph_attr=graph_attr,node_attr=node_attr,edge_attr=edge_attr)
+
+    # Assign IDs to flows, collect clusters
+    flowIds = {}
+    clusters = {}
+    for i, flow in enumerate(flows):
+        flowIds[flow] = "node.%d" % i
+        if clusters.has_key(flow.cluster):
+            clusters[flow.cluster].append(flow)
+        else:
+            clusters[flow.cluster] = [flow]
+
+    # Make nodes per cluster
+    for cluster, cflows in clusters.iteritems():
+
+        if cluster == '':
+            graph = dot
+        else:
+            graph = Digraph(name="cluster_"+cluster,
+                            graph_attr={'label':cluster})
+
+        for flow in cflows:
+
+            # Start with flow name
+            text = flow.name
+
+            # Add relevant regions
+            for region in flow.regions():
+                count = flow.max(lambda rb: rb(region.domain, 'count'))
+                size = flow.max(lambda rb: rb(region.domain, 'size'))
+                if count == 1 and size == 1:
+                    continue
+                text += "\n%s: %d x %g %s" % \
+                        (region.domain.name,
+                         flow.max(lambda rb: rb(region.domain, 'count')),
+                         flow.max(lambda rb: rb(region.domain, 'size')),
+                         region.domain.unit)
+
+            # Add compute count
+            count = flow.count()
+            if count != 1:
+                text += "\nTasks: %d 1/s" % (count/t)
+            compute = flow.cost('compute')
+            if compute > 0:
+                text += "\nFLOPs: %.2f POP/s" % (compute/t/Constants.peta)
+
+            attrs = flow.attrs
+            graph.node(flowIds[flow], text, attrs)
+
+            # Add dependencies
+            for dep in flow.deps:
+                if flowIds.has_key(dep):
+                    dot.edge(flowIds[dep], flowIds[flow])
+
+        if cluster != '':
+            dot.subgraph(graph)
+
+    return dot
