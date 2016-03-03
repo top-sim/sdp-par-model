@@ -27,7 +27,7 @@ class PipelineConfig:
     """
 
 
-    def __init__(self, hpso=None, telescope=None, band=None, mode=None,
+    def __init__(self, telescope=None, mode=None, band=None, hpso=None,
                  max_baseline="default", Nf_max="default", bldta=True,
                  on_the_fly=False):
         """
