@@ -3,6 +3,9 @@ from parameter_definitions import Constants
 
 from sympy import Max, Expr
 from graphviz import Digraph
+from math import floor
+
+import unittest
 
 INDEX_PROP = 'index'
 COUNT_PROP = 'count'
@@ -75,9 +78,13 @@ class Regions:
 
         return reg
 
-    def sum(self, prop):
+    def the(self, prop):
         # Defer to RegionBoxes, which will care about enumerating the
         # regions if required.
+        return RegionBoxes([self]).the(prop)
+
+    def sum(self, prop):
+        # See above
         return RegionBoxes([self]).sum(prop)
 
     def max(self, prop):
@@ -91,7 +98,8 @@ class NeedRegionEnumerationException:
     lead to the domain getting added to the RegionBox's
     enumDomains.
     """
-    def __init__(self, domain):
+    def __init__(self, rboxes, domain):
+        self.regionBoxes = rboxes
         self.domain = domain
 
 class RegionBox:
@@ -117,13 +125,13 @@ class RegionBox:
 
             # Otherwise we need to request this region to get
             # enumerated...
-            raise NeedRegionEnumerationException(domain)
+            raise NeedRegionEnumerationException(self.regionBoxes, domain)
 
         # If we don't have the property, this might also point towards
         # the need for enumeration.
         if not self.domainProps[domain].has_key(prop) and \
            not domain in self.regionBoxes.enumDomains:
-            raise NeedRegionEnumerationException(domain)
+            raise NeedRegionEnumerationException(self.regionBoxes, domain)
 
         # Look it up
         return self.domainProps[domain][prop]
@@ -136,11 +144,13 @@ class RegionBox:
                 count *= self(dom, COUNT_PROP)
         return count
 
-    def sum(self, prop):
-        return self.count() * mk_lambda(prop)(self)
-
-    def max(self, prop):
+    def the(self, prop):
+        """Return the value of the given property for this region box"""
         return mk_lambda(prop)(self)
+
+    def sum(self, prop):
+        """Return the sum of the given property for this region box"""
+        return self.count() * mk_lambda(prop)(self)
 
 class RegionBoxes:
     """A set of region boxes. Conceptually, this is the cartesian product
@@ -182,6 +192,10 @@ class RegionBoxes:
             return code()
 
         except NeedRegionEnumerationException as e:
+
+            # Rethrow if this is for a different region boxes
+            if e.regionBoxes != self:
+                raise e
 
             # Sanity-check the domain we are supposed to enumerate
             if not self.regions.has_key(e.domain):
@@ -243,6 +257,7 @@ class RegionBoxes:
         return rboxes
 
     def count(self):
+        """Return the total number of boxes in this box set."""
         return self._withEnums(lambda: self._count())
     def _count(self):
         count = 0
@@ -250,6 +265,21 @@ class RegionBoxes:
             count += box.count()
         return count
 
+    def the(self, prop):
+        """Return the value of the given property for this box set. If it
+        cannot proven to be constant for all boxes, an exception will
+        be raised."""
+        return self._withEnums(lambda: self._the(prop))
+    def _the(self, prop):
+        s = None
+        for box in self.boxes:
+            if s is None:
+                s = box.the(prop)
+            else:
+                s2 = box.the(prop)
+                if s != s2:
+                    raise Exception("Property is not constant: %s != %s!" % (s, s2))
+        return s
     def sum(self, prop):
         return self._withEnums(lambda: self._sum(prop))
     def _sum(self, prop):
@@ -264,10 +294,84 @@ class RegionBoxes:
         s = None
         for box in self.boxes:
             if s is None:
-                s = box.max(prop)
+                s = box.the(prop)
             else:
-                s = Max(s, box.max(prop))
+                s = Max(s, box.the(prop))
         return s
+
+    def zipSum(self, rboxes, f):
+        return self._withEnums(lambda: rboxes._withEnums(
+            lambda: self._zipSum(rboxes, f)))
+    def _zipSum(left, right, f):
+
+        # Classify domains
+        leftDoms = []
+        rightDoms = []
+        commonDoms = []
+        for dom in left.regions.iterkeys():
+            if right.regions.has_key(dom):
+                commonDoms.append(dom)
+            else:
+                leftDoms.append(dom)
+        for dom in right.regions.iterkeys():
+            if not left.regions.has_key(dom):
+                rightDoms.append(dom)
+
+        # Local function to zip boxes together (to reduce indent level
+        # and be able to use return, see below)
+        def zipBoxes(lbox, rbox):
+
+            # Match common domains
+            mult = 1
+            for dom in commonDoms:
+
+                lcount = lbox(dom, COUNT_PROP)
+                rcount = rbox(dom, COUNT_PROP)
+
+                # Enumerated on both sides? Check match
+                if dom in left.enumDomains and dom in right.enumDomains:
+                    # Must match so we don't zip both sides
+                    # all-to-all. If we find that the two boxes don't
+                    # match, we conclude that this box combination is
+                    # invalid and bail out completely.
+                    lidx = lbox(dom, INDEX_PROP)
+                    ridx = rbox(dom, INDEX_PROP)
+                    # Which side has more regions?
+                    if lcount < rcount:
+                        if lidx != floor(ridx * lcount / rcount):
+                            return 0
+                    else:
+                        if ridx != floor(lidx * rcount / lcount):
+                            return 0
+                # Enumerated on just one side? Higher multiplier only
+                # if other side has higher split granularity.
+                elif dom in left.enumDomains:
+                    mult *= Max(1, rcount / lcount)
+                elif dom in right.enumDomains:
+                    mult *= Max(1, lcount / rcount)
+                # Otherwise, the higher granularity gives the number
+                # of edges.
+                else:
+                    mult *= Max(lcount, rcount)
+
+            # Domains on only one side: Simply multiply out (where
+            # un-enumerated)
+            for dom in leftDoms:
+                if not dom in left.enumDomains:
+                    mult *= lbox(dom, COUNT_PROP)
+            for dom in rightDoms:
+                if not dom in right.enumDomains:
+                    mult *= rbox(dom, COUNT_PROP)
+
+            # Okay, now call and multiply
+            return mult * f(lbox, rbox)
+
+        # Sum up result of zip
+        result = 0
+        for lbox in left.boxes:
+            for rbox in right.boxes:
+                result += zipBoxes(lbox, rbox)
+        return result
 
 class Flow:
     """A flow is a set of results, produced for the cartesian product of a
@@ -296,6 +400,9 @@ class Flow:
 
     def count(self):
         return self.boxes.count()
+
+    def the(self, prop):
+        return self.boxes.the(prop)
 
     def sum(self, prop):
         return self.boxes.sum(prop)
@@ -388,3 +495,168 @@ def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={})
             dot.subgraph(graph)
 
     return dot
+
+class DataFlowTests(unittest.TestCase):
+
+    def setUp(self):
+
+        self.size1 = 12
+        self.dom1 = Domain("Domain 1")
+        self.reg1 = self.dom1.region(self.size1, props={'dummy': 0})
+        self.split1 = self.reg1.split(self.size1, props={'dummy': 0})
+        self.split1a = self.reg1.split(self.size1 / 2, props={'dummy': 0})
+
+        self.size2 = 7
+        self.dom2 = Domain("Domain 2")
+        self.reg2 = self.dom2.region(self.size2, props={'dummy': 0})
+        self.split2 = self.reg2.split(self.size2, props={'dummy': 0})
+
+    def test_size(self):
+
+        # Expected region properties
+        self.assertEqual(self.reg1.size, self.size1)
+        self.assertEqual(self.split1.size, self.size1)
+        self.assertEqual(self.split1a.size, self.size1)
+        def countProp(rb): return rb(self.dom1, COUNT_PROP)
+        self.assertEqual(self.reg1.the(countProp), 1)
+        self.assertEqual(self.split1.the(countProp), self.size1)
+        self.assertEqual(self.split1a.the(countProp), self.size1 / 2)
+
+    def test_rboxes_1(self):
+        self._test_rboxes_1(self.reg1, 1, self.size1)
+        self._test_rboxes_1(self.split1, self.size1, 1)
+        self._test_rboxes_1(self.split1a, self.size1/2, 2)
+
+    def _test_rboxes_1(self, regs, count, boxSize):
+        rboxes = RegionBoxes([regs])
+        self.assertEqual(rboxes.count(), count)
+
+        # Summing up a value of one per box should yield the box count
+        self.assertEqual(rboxes.sum(lambda rb: 1), count)
+
+        # Summing up the box sizes should give us the region size
+        def sizeProp(rb): return rb(self.dom1, SIZE_PROP)
+        self.assertEqual(rboxes.the(sizeProp), boxSize)
+        self.assertEqual(rboxes.sum(sizeProp), self.size1)
+
+        # Should all still work when we force the boxes to be
+        # enumerated by depending on the dummy property
+        def dummySizeProp(rb): return rb(self.dom1, 'dummy') + rb(self.dom1, SIZE_PROP)
+        self.assertFalse(self.dom1 in rboxes.enumDomains)
+        self.assertEqual(rboxes.the(dummySizeProp), boxSize)
+        self.assertEqual(rboxes.sum(dummySizeProp), self.size1)
+        self.assertTrue(self.dom1 in rboxes.enumDomains)
+
+    def test_rboxes_2(self):
+
+        # Same tests as rboxes_1, but with two nested domains. We
+        # especially check that domain order does not make a difference.
+        self._test_rboxes_2([self.reg1, self.reg2], 1, self.size1 * self.size2)
+        self._test_rboxes_2([self.reg1, self.split2], self.size2, self.size1)
+        self._test_rboxes_2([self.split1, self.reg2], self.size1, self.size2)
+        self._test_rboxes_2([self.split1, self.split2], self.size1 * self.size2, 1)
+        self._test_rboxes_2([self.reg2, self.reg1], 1, self.size1 * self.size2)
+        self._test_rboxes_2([self.split2, self.reg1], self.size2, self.size1)
+        self._test_rboxes_2([self.reg2, self.split1], self.size1, self.size2)
+        self._test_rboxes_2([self.split2, self.split1], self.size1 * self.size2, 1)
+
+    def _test_rboxes_2(self, regss, count, boxSize):
+        rboxes = RegionBoxes(regss)
+        self.assertEqual(rboxes.count(), count)
+        self.assertEqual(rboxes.sum(lambda rb: 1), count)
+        def sizeProp(rb): return rb(self.dom1, SIZE_PROP) * rb(self.dom2, SIZE_PROP)
+        self.assertEqual(rboxes.the(sizeProp), boxSize)
+        self.assertEqual(rboxes.sum(sizeProp), self.size1*self.size2)
+        def dummySizeProp1(rb): return rb(self.dom1, 'dummy') + sizeProp(rb)
+        self.assertEqual(rboxes.the(dummySizeProp1), boxSize)
+        self.assertEqual(rboxes.sum(dummySizeProp1), self.size1*self.size2)
+        rboxes = RegionBoxes(regss)
+        def dummySizeProp2(rb): return rb(self.dom2, 'dummy') + sizeProp(rb)
+        self.assertEqual(rboxes.the(dummySizeProp2), boxSize)
+        self.assertEqual(rboxes.sum(dummySizeProp2), self.size1*self.size2)
+        rboxes = RegionBoxes(regss)
+        def dummySizeProp12(rb): return rb(self.dom1, 'dummy') + rb(self.dom2, 'dummy') + sizeProp(rb)
+        self.assertEqual(rboxes.the(dummySizeProp12), boxSize)
+        self.assertEqual(rboxes.sum(dummySizeProp12), self.size1*self.size2)
+        self.assertTrue(self.dom1 in rboxes.enumDomains)
+        self.assertTrue(self.dom2 in rboxes.enumDomains)
+
+    def test_rboxes_zip(self):
+
+        # Edges between regions of the same domain grow linearly
+        self._test_rboxes_zip([self.reg1],   [self.reg1],    self.dom1, self.dom1, 1)
+        self._test_rboxes_zip([self.reg1],   [self.split1],  self.dom1, self.dom1, self.size1)
+        self._test_rboxes_zip([self.reg1],   [self.split1a], self.dom1, self.dom1, self.size1 / 2)
+        self._test_rboxes_zip([self.split1], [self.reg1],    self.dom1, self.dom1, self.size1)
+        self._test_rboxes_zip([self.split1], [self.split1],  self.dom1, self.dom1, self.size1)
+        self._test_rboxes_zip([self.split1], [self.split1a], self.dom1, self.dom1, self.size1)
+
+        # Edges between regions of different domains grow quadradically
+        self._test_rboxes_zip([self.reg1],   [self.reg2],   self.dom1, self.dom2, 1)
+        self._test_rboxes_zip([self.reg1],   [self.split2], self.dom1, self.dom2, self.size2)
+        self._test_rboxes_zip([self.split1], [self.reg2],   self.dom1, self.dom2, self.size1)
+        self._test_rboxes_zip([self.split1], [self.split2], self.dom1, self.dom2, self.size1 * self.size2)
+        self._test_rboxes_zip([self.split1a],[self.split2], self.dom1, self.dom2, self.size1 * self.size2 / 2)
+        self._test_rboxes_zip([self.split2], [self.split1a],self.dom2, self.dom1, self.size1 * self.size2 / 2)
+        self._test_rboxes_zip([self.reg2],   [self.split1a],self.dom2, self.dom1, self.size1 / 2)
+        self._test_rboxes_zip([self.split1a],[self.reg2],   self.dom1, self.dom2, self.size1 / 2)
+
+        # Multidimensional boxes make edge count go up where you would
+        # expect. The number of possible cases explodes here, we just
+        # test a few representative ones.
+        self._test_rboxes_zip([self.split2, self.reg1],   [self.reg2],   self.dom1, self.dom2,
+                              self.size2)
+        self._test_rboxes_zip([self.split2, self.reg1],   [self.reg2],   self.dom2, self.dom2,
+                              self.size2)
+        self._test_rboxes_zip([self.split2, self.reg1],   [self.split2], self.dom1, self.dom2,
+                              self.size2)
+        self._test_rboxes_zip([self.split2, self.reg1],   [self.split2], self.dom2, self.dom2,
+                              self.size2)
+        self._test_rboxes_zip([self.split2, self.split1], [self.reg2],   self.dom1, self.dom2,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split2, self.split1], [self.reg2],   self.dom2, self.dom2,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split2, self.split1], [self.split2], self.dom1, self.dom2,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split2, self.split1], [self.split2], self.dom2, self.dom2,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split2, self.split1a],[self.split2], self.dom1, self.dom2,
+                              self.size1 * self.size2 / 2)
+        self._test_rboxes_zip([self.split2, self.split1a],[self.split2], self.dom2, self.dom2,
+                              self.size1 * self.size2 / 2)
+        self._test_rboxes_zip([self.split1, self.split2], [self.split1a],self.dom1, self.dom1,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split1, self.split2], [self.split1a],self.dom2, self.dom1,
+                              self.size1 * self.size2)
+        self._test_rboxes_zip([self.split1, self.reg2],   [self.split1a],self.dom1, self.dom1,
+                              self.size1)
+        self._test_rboxes_zip([self.split1, self.reg2],   [self.split1a],self.dom2, self.dom1,
+                              self.size1)
+        self._test_rboxes_zip([self.split2, self.split1a],[self.reg2],   self.dom1, self.dom2,
+                              self.size1 * self.size2 / 2)
+        self._test_rboxes_zip([self.split2, self.split1a],[self.reg2],   self.dom2, self.dom2,
+                              self.size1 * self.size2 / 2)
+
+    def _test_rboxes_zip(self, regsA, regsB, domA, domB, edges):
+        rboxesA = RegionBoxes(regsA)
+        rboxesB = RegionBoxes(regsB)
+
+        # Summing one per edge should give us the number of
+        # edges. Enumerating shouldn't make a difference, as before.
+        def oneProp(rbA, rbB): return 1
+        self.assertEqual(rboxesA.zipSum(rboxesB, oneProp), edges)
+        def onePropA(rbA, rbB): return 1 + rbA(domA, 'dummy')
+        self.assertEqual(rboxesA.zipSum(rboxesB, onePropA), edges)
+        self.assertTrue(domA in rboxesA.enumDomains)
+        self.assertFalse(domA in rboxesB.enumDomains)
+        rboxesA = RegionBoxes(regsA)
+        rboxesB = RegionBoxes(regsB)
+        def onePropB(rbA, rbB): return 1 + rbB(domB, 'dummy')
+        self.assertEqual(rboxesA.zipSum(rboxesB, onePropB), edges)
+        self.assertFalse(domB in rboxesA.enumDomains)
+        self.assertTrue(domB in rboxesB.enumDomains)
+        def onePropAB(rbA, rbB): return 1 + rbA(domA, 'dummy') + rbB(domB, 'dummy')
+        self.assertEqual(rboxesA.zipSum(rboxesB, onePropAB), edges)
+
+if __name__ == '__main__':
+    unittest.main()
