@@ -170,9 +170,6 @@ class ParameterDefinitions:
         o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
         o.Nfacet = symbols("N_facet", integer=True, positive=True)  # Number of facets
 
-        # The following two parameters are used for baseline-dependent calculations
-        o.Bmax_bin = symbols("Bmax\,bin", positive=True)  # The maximum baseline corresponding to a given bin
-        o.binfrac = symbols("f_bin", positive=True)  # Fraction of total baselines in a given bin - value in (0,1)
         return o
 
     @staticmethod
