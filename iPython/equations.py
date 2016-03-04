@@ -266,8 +266,9 @@ class Equations:
         o.Nvis_backward = Lambda((bcount, bmax),
             bcount * o.Nf_vis_backward(bmax) / o.Tcoal_backward(bmax))
         # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict = Lambda((bcount, bmax),
-            bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
+        #o.Nvis_predict = Lambda((bcount, bmax),
+        #    bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
+        o.Nvis_predict = Lambda((bcount, bmax), bcount * o.Nf_max / o.Tdump_scaled)#predict at FULL visibility resolution
         o.Nvis_predict_no_averaging = o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict / o.Tdump_scaled
         # The line above uses Tdump_scaled independent of whether
         # BLDTA is used.  This is because BLDTA is only done for
@@ -309,14 +310,11 @@ class Equations:
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
         o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
-        o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
-        # final major cycle, create final data products (at Nf_out channels)
-        o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tobs #Predict step is at full FoV (NfacetXNpix) but only once per Tobs
 
-        # do Nmajor-1 cycles before doing the final major cycle.
-        o.Rflop_fft = o.Npp * o.Nbeam* (((o.Nmajor - 1) * o.Rfft_intermediate_cycles) + o.Rfft_final_cycle)
-
+        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
+        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
+        o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
     @staticmethod
     def _apply_reprojection_equations(o):
 
