@@ -203,6 +203,7 @@ class ParameterDefinitions:
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
+        o.N_taylor_terms = 5 #This is the number of Taylor terms assumed in the TT expansion of the sky model in each subband. % is probably very generous.
         return o
 
     @staticmethod
