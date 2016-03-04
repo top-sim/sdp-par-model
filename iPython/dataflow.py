@@ -482,6 +482,9 @@ def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={})
             compute = flow.cost('compute')
             if compute > 0:
                 text += "\nFLOPs: %.2f POP/s" % (compute/t/Constants.peta)
+            transfer = flow.cost('transfer')
+            if transfer > 0:
+                text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
 
             attrs = flow.attrs
             graph.node(flowIds[flow], text, attrs)
@@ -489,7 +492,27 @@ def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={})
             # Add dependencies
             for dep in flow.deps:
                 if flowIds.has_key(dep):
-                    dot.edge(flowIds[dep], flowIds[flow])
+
+                    # Calculate number of edges, and use node counts
+                    # on both sides to calculate (average!) in and out
+                    # degrees.
+                    edges = dep.boxes.zipSum(flow.boxes, lambda l, r: 1)
+                    if dep.costs.has_key('transfer'):
+                        def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
+                        transfer = dep.boxes.zipSum(flow.boxes, transfer_prop)
+                    depcount = dep.boxes.count()
+                    flowcount = flow.boxes.count()
+                    def format_bytes(n):
+                        if n < 10**9: return '%.1f MB' % (n/10**6)
+                        return '%.1f GB' % (n/10**9)
+                    if dep.costs.has_key('transfer') and transfer > 0:
+                        label = 'out: %d (%s)\nin: %d (%s)' % \
+                                (edges/depcount, format_bytes(transfer/depcount),
+                                 edges/flowcount, format_bytes(transfer/flowcount))
+                    else:
+                        label = 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
+
+                    dot.edge(flowIds[dep], flowIds[flow], label)
 
         if cluster != '':
             dot.subgraph(graph)

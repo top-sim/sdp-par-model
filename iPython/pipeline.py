@@ -3,6 +3,7 @@ from parameter_definitions import *
 from implementation import Implementation as imp, PipelineConfig
 
 from dataflow import *
+from sympy import Lambda
 
 import unittest
 
@@ -45,6 +46,7 @@ class Pipeline:
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch')
         self.allFreqs = self.frequency.region(tp.Nf_max)
+        self.eachFreq = self.allFreqs.split(tp.Nf_max)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
         self.islandFreqs = self.allFreqs.split(self.Nisland)
         self.predFreqs = self.allFreqs.split(tp.Nf_vis_predict)
@@ -79,6 +81,22 @@ class Pipeline:
         self.allFacets = self.facet.region(tp.Nfacet**2)
         self.eachFacet = self.allFacets.split(tp.Nfacet**2)
 
+    def _transfer_cost_vis(self, Tdump):
+        """Utility transfer cost function for visibility data. Multiplies out
+        frequency, baselines, polarisations and time given a dump time"""
+
+        # Dump time might depend on baseline...
+        if isinstance(Tdump, Lambda):
+            Tdump_ = lambda rbox: Tdump(rbox(self.baseline, 'bmax'))
+        else:
+            Tdump_ = lambda rbox: Tdump
+        return (lambda rbox:
+          self.tp.Mvis * rbox(self.frequency, 'size')
+                       * rbox(self.baseline, 'size')
+                       * rbox(self.polar, 'size')
+                       * rbox(self.time, 'size')
+                       / Tdump_(rbox))
+
     def _create_dataflow(self):
         """ Creates common data flow nodes """
 
@@ -87,18 +105,39 @@ class Pipeline:
         self.lsm = Flow('Local Sky Model', cluster='input', attrs = {'pos':'0 0'},
                         deps = [self.tm])
 
-        self.corr = Flow('Correlator', [self.allBeams, self.obsTime,
-                                        self.allFreqs, self.allBaselines],
-                         cluster='input')
+        self.corr = Flow(
+            'Correlator',
+            [self.allBeams, self.dumpTime,
+             self.eachFreq, self.xyPolars, self.allBaselines],
+            cluster='input',
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)})
 
-        self.ingest = Flow('Ingest', [self.eachBeam, self.snapTime,
-                                      self.islandFreqs, self.allBaselines],
-                           deps = [self.tm, self.corr],
-                           cluster='input')
+        self.ingest = Flow(
+            'Ingest',
+            [self.eachBeam, self.dumpTime,
+             self.islandFreqs, self.xyPolars, self.allBaselines],
+            deps = [self.tm, self.corr],
+            cluster='input',
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)})
 
-        self.rfi = Flow('Flagging / Integration', [self.eachBeam,
-                                                   self.snapTime, self.islandFreqs,
-                                                   self.allBaselines], deps = [self.ingest])
+        self.rfi = Flow(
+            'Flagging / Integration',
+            [self.eachBeam, self.snapTime, self.islandFreqs,
+             self.xyPolars, self.binBaselines], deps = [self.ingest],
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tcoal_skipper)})
+
+        self.uvw = Flow(
+            'UVW Rotation',
+            [self.eachBeam, self.eachFacet, self.snapTime, self.islandFreqs,
+             self.allBaselines],
+            deps = [self.tm],
+            costs = {
+                'transfer': lambda rbox:
+                  3 * 8 * rbox(self.frequency, 'size')
+                        * rbox(self.baseline, 'size')
+                        * rbox(self.time, 'size')
+                        / self.tp.Tdump_scaled
+            })
 
     def create_predict(self,vis,model):
         """ Predicts visibilities from a model """
@@ -111,8 +150,7 @@ class Pipeline:
              self.snapTime, self.fftPredFreqs],
             costs = {
                 'compute': self.tp.Rfft_predict * self.tp.Tsnap,
-                'transfer': self.Mcpx * self.tp.Nfacet_x_Npix *
-                            (self.tp.Nfacet_x_Npix / 2 + 1)
+                'transfer': self.Mcpx * self.tp.Nfacet_x_Npix * (self.tp.Nfacet_x_Npix / 2 + 1)
             },
             deps = [model], cluster='predict',
         )
@@ -123,9 +161,11 @@ class Pipeline:
              self.kernelPredTime, self.gcfPredFreqs, self.binBaselines],
             costs = {
                 'compute': lambda rbox:
-                  rbox(self.baseline,'size') * self.tp.Rccf_predict_task(rbox(self.baseline,'bmax'))
+                  rbox(self.baseline,'size') * self.tp.Rccf_predict_task(rbox(self.baseline,'bmax')),
+                'transfer': lambda rbox:
+                  8 * self.tp.Qgcf**3 * self.tp.Ngw_predict(rbox(self.baseline,'bmax'))**3
             },
-            deps = [vis], cluster='predict' # Just UVW, strictly speaking
+            deps = [vis], cluster='predict'
         )
 
         degrid = Flow(
@@ -135,7 +175,9 @@ class Pipeline:
             costs = {
                 'compute': lambda rbox:
                   self.tp.Rgrid_predict_task(rbox(self.baseline, 'size'),
-                                             rbox(self.baseline, 'bmax'))
+                                             rbox(self.baseline, 'bmax')),
+                'transfer': lambda rbox:
+                  self.tp.Mvis * rbox(self.baseline, 'size') * rbox(self.time, 'size')
             },
             deps = [fft, gcf], cluster='predict'
         )
@@ -158,9 +200,10 @@ class Pipeline:
              self.snapTime, freqs, self.binBaselines],
             costs = {
                 'compute': lambda rbox: Rflop_phrot_task(rbox(self.baseline,'size'),
-                                                         rbox(self.baseline,'bmax'))
+                                                         rbox(self.baseline,'bmax')),
+                'transfer': self._transfer_cost_vis(self.tp.Tcoal_skipper)
             },
-            deps = [vis]
+            deps = [vis],
         )
 
         return rotate
@@ -172,7 +215,10 @@ class Pipeline:
             'Project',
             [self.eachBeam, regLoop, self.xyPolar,
              self.snapTime, freqs],
-            costs = { 'compute': self.tp.Rrp * self.tp.Tsnap },
+            costs = {
+                'compute': self.tp.Rrp * self.tp.Tsnap,
+                'transfer': self.Mdbl * self.tp.Nfacet_x_Npix**2
+            },
             deps = [facets],
             cluster = 'backend'
         )
@@ -183,11 +229,12 @@ class Pipeline:
         return Flow(
             "Subtract",
             [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.predFreqs, self.allBaselines],
-            deps = [vis, model_vis]
+             self.snapTime, self.predFreqs, self.binBaselines],
+            deps = [vis, model_vis],
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tcoal_skipper)}
         )
 
-    def create_backward(self, vis):
+    def create_backward(self, vis, uvw):
         """ Creates dirty image from visibilities """
 
         regLoop = self.eachLoop
@@ -200,9 +247,11 @@ class Pipeline:
              self.kernelBackTime, self.gcfBackFreqs, self.binBaselines],
             costs = {
                 'compute': lambda rbox:
-                  rbox(self.baseline,'size') * tp.Rccf_backward_task(rbox(self.baseline,'bmax'))
+                  rbox(self.baseline,'size') * tp.Rccf_backward_task(rbox(self.baseline,'bmax')),
+                'transfer': lambda rbox:
+                  8 * self.tp.Qgcf**3 * self.tp.Ngw_backward(rbox(self.baseline,'bmax'))**3
             },
-            deps = [vis], cluster = 'backward', # Just UVW, strictly speaking
+            deps = [uvw], cluster = 'backward',
         )
 
         grid = Flow(
@@ -211,7 +260,9 @@ class Pipeline:
              self.snapTime, self.backFreqs, self.binBaselines],
             costs = {
                 'compute': lambda rbox: tp.Rgrid_backward_task(rbox(self.baseline,'size'),
-                                                               rbox(self.baseline,'bmax'))
+                                                               rbox(self.baseline,'bmax')),
+                'transfer': lambda rbox:
+                  self.Mcpx * self.tp.Npix_linear * (self.tp.Npix_linear / 2 + 1)
             },
             deps = [vis, gcf], cluster = 'backward',
         )
@@ -224,7 +275,7 @@ class Pipeline:
             costs = {
                 # Rfft_backward is cost for all facets together
                 'compute': tp.Rfft_backward * tp.Tsnap / tp.Nfacet ** 2,
-                'transfer': self.Mcpx * tp.Nfacet_x_Npix * (tp.Nfacet_x_Npix / 2 + 1)
+                'transfer': self.Mdbl * self.tp.Npix_linear**2
             },
             deps = [grid], cluster = 'backward',
         )
@@ -257,7 +308,7 @@ class Pipeline:
             lsm = self.create_update(lsm)
 
         # UVWs are supposed to come from TM
-        uvws = self.tm
+        uvws = self.uvw
         # Visibilities from RFI
         vis = self.rfi
 
@@ -271,7 +322,7 @@ class Pipeline:
         rotate = self.create_rotate(subtract, True)
 
         # Intermediate loops
-        (fftBack, gcfBack, grid) = self.create_backward(rotate)
+        (fftBack, gcfBack, grid) = self.create_backward(rotate, uvws)
         project = self.create_project(fftBack, self.eachLoop, self.fftBackFreqs)
         clean = self.create_clean(project, self.eachLoop)
         lsm.depend(clean)
