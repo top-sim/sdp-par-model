@@ -182,8 +182,8 @@ class Equations:
             o.Nf_FFT_backward = o.Nf_max
         else:
             raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
-        o.Nf_FFT_predict = o.N_taylor_terms * o.Number_imaging_subbands #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency.
-            #o.Nf_FFT_predict = o.Nf_vis_predict
+        #o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
+        o.Nf_FFT_predict = o.Nf_vis_predict
 
     @staticmethod
     def _apply_coalesce_equations(o):
@@ -309,13 +309,15 @@ class Equations:
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
         o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
-        o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tobs #Predict step is at full FoV, once per Tobs (not Tsnap) per major cycle.
+        o.Rfft_bw_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward)
         # final major cycle, create final data products (at Nf_out channels)
-        o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
+        o.Rfft_bw_final_cycle = (o.Nf_out * o.Rfft_backward)
 
         # do Nmajor-1 cycles before doing the final major cycle.
-        o.Rflop_fft = o.Npp * o.Nbeam* (((o.Nmajor - 1) * o.Rfft_intermediate_cycles) + o.Rfft_final_cycle)
+        o.Rflop_fft_bw = o.Npp * o.Nbeam * o.Rfft_backward * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out)
+        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Rfft_predict * o.Nf_FFT_predict
+        o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
 
     @staticmethod
     def _apply_reprojection_equations(o):

@@ -98,11 +98,17 @@ class SkaIPythonAPI(api):
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
         ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
-        ('-> Gridding',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_grid/c.peta, ),
+        ('-> Gridding - bw',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_backward/c.peta, ),
+        ('-> Gridding - fw',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_predict/c.peta, ),
+        ('-> Gridding - tot',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_grid/c.peta, ),
+        ('-> FFT - bw',                     'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_bw/c.peta,  ),
+        ('-> FFT - fw',                     'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_predict/c.peta,  ),
         ('-> FFT',                     'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft/c.peta,  ),
         ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
         ('-> Projection',              'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
-        ('-> Convolution',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_conv/c.peta, )
+        ('-> Convolution - bw',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_backward/c.peta),
+        ('-> Convolution - fw',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta),
+        ('-> Convolution - tot',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_conv/c.peta),
     ]
 
     @staticmethod
