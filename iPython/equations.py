@@ -182,8 +182,7 @@ class Equations:
             o.Nf_FFT_backward = o.Nf_max
         else:
             raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
-        #o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
-        o.Nf_FFT_predict = o.Nf_vis_predict
+        o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
 
     @staticmethod
     def _apply_coalesce_equations(o):
@@ -266,9 +265,8 @@ class Equations:
         o.Nvis_backward = Lambda((bcount, bmax),
             bcount * o.Nf_vis_backward(bmax) / o.Tcoal_backward(bmax))
         # Eq. 31 Visibility rate for predict step
-        #o.Nvis_predict = Lambda((bcount, bmax),
-        #    bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
-        o.Nvis_predict = Lambda((bcount, bmax), bcount * o.Nf_max / o.Tdump_scaled)#predict at FULL visibility resolution
+        o.Nvis_predict = Lambda((bcount, bmax),
+            bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
         o.Nvis_predict_no_averaging = o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict / o.Tdump_scaled
         # The line above uses Tdump_scaled independent of whether
         # BLDTA is used.  This is because BLDTA is only done for
@@ -310,7 +308,7 @@ class Equations:
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
         o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tobs #Predict step is at full FoV (NfacetXNpix) but only once per Tobs
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV, once per Tsnap
         o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
         o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
         o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
@@ -326,9 +324,8 @@ class Equations:
         else:
             raise Exception("Unknown Imaging Mode : %s" % o.imaging_mode)
 
-        # Reproj intermediate major cycle FFTs (Nmaj -1) times,
-        # then do the final ones for the last cycle at the full output spectral resolution.
-        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out) #TODO: no reporjection for Predict step, only on backward.
+        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * o.Nmajor * o.Nf_FFT_backward
+        #TODO check: no reprojection for Predict step, only on backward.
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -376,8 +373,7 @@ class Equations:
             bcount * 5. * o.Nf_gcf_predict(bmax) *
             o.Ncvff_predict(bmax)**2 * log(o.Ncvff_predict(bmax), 2) *
             o.Nmm / o.Tkernel_predict(bmax))
-        # TODO we assume Nfacet=1 for predict step, so do we need
-        # Nfacet^2 multiplier in here? PIP.IMG check please
+        # TODO check how this step could be altered to include faceting.
 
         o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
 
