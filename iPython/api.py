@@ -72,6 +72,7 @@ class SkaPythonAPI:
 
         result = 0
         for submode in pipelineConfig.relevant_modes:
+            pipelineConfig.mode = submode
             tp = imp.calc_tel_params(pipelineConfig, verbose)
 
             result_expression = eval('tp.%s' % expression)
