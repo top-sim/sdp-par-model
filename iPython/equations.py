@@ -182,7 +182,7 @@ class Equations:
             o.Nf_FFT_backward = o.Nf_max
         else:
             raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
-        o.Nf_FFT_predict = o.Nf_vis_predict
+        o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
 
     @staticmethod
     def _apply_coalesce_equations(o):
@@ -368,23 +368,22 @@ class Equations:
 
         # The following two equations correspond to Eq. 35
         bcount = Symbol('bcount')
-        o.Rccf_backward = Equations._sum_bl_bins(o, bcount, bmax,
+        o.Rccf_backward = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, bmax,
             bcount * 5. * o.Nf_gcf_backward(bmax) * o.Nfacet**2 *
             o.Ncvff_backward(bmax)**2 * log(o.Ncvff_backward(bmax), 2) *
             o.Nmm / o.Tkernel_backward(bmax))
-        o.Rccf_predict  = Equations._sum_bl_bins(o, bcount, bmax,
+        o.Rccf_predict  = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, bmax,
             bcount * 5. * o.Nf_gcf_predict(bmax) *
             o.Ncvff_predict(bmax)**2 * log(o.Ncvff_predict(bmax), 2) *
             o.Nmm / o.Tkernel_predict(bmax))
         # TODO we assume Nfacet=1 for predict step, so do we need
         # Nfacet^2 multiplier in here? PIP.IMG check please
 
-        o.Rccf = o.Rccf_backward + o.Rccf_predict
-        o.Rflop_conv = o.Nmajor * o.Npp * o.Nbeam * o.Rccf
+        o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
 
     @staticmethod
     def _apply_phrot_equations(o):
-        """Phase rotation (for the facetting)"""
+        """Phase rotation (for the faceting)"""
 
         # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
         # 25 FLOPS per visiblity. Only do it if we need to facet.
