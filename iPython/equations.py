@@ -275,6 +275,9 @@ class Equations:
 
         # Gridding:
         # --------
+        o.Rgrid_backward_task = Lambda((bcount, b),
+            8. * o.Nmm * bcount * o.Nkernel2_backward(b) *
+            o.Tsnap / o.Tcoal_backward(b))
         o.Rgrid_backward = \
             8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet**2 * \
             Equations._sum_bl_bins(o, bcount, b,
@@ -282,6 +285,9 @@ class Equations:
             # Eq 32; FLOPS
             
         # De-gridding in Predict step
+        o.Rgrid_predict_task = Lambda((bcount, b),
+            8. * o.Nmm * bcount * o.Nkernel2_predict(b) *
+            o.Tsnap / o.Tcoal_predict(b))
         o.Rgrid_predict = \
             8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * \
             Equations._sum_bl_bins(o, bcount, b,
@@ -357,14 +363,18 @@ class Equations:
 
         # The following two equations correspond to Eq. 35
         bcount = Symbol('bcount')
+        o.Rccf_backward_task = Lambda(b,
+            5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2))
         o.Rccf_backward = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-            bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
-            o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
-            o.Nmm / o.Tkernel_backward(b))
+           bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
+           o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
+           o.Nmm / o.Tkernel_backward(b))
+        o.Rccf_predict_task = Lambda(b,
+            5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
         o.Rccf_predict  = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-            bcount * 5. * o.Nf_gcf_predict(b) *
-            o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
-            o.Nmm / o.Tkernel_predict(b))
+           bcount * 5. * o.Nf_gcf_predict(b) *
+           o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
+           o.Nmm / o.Tkernel_predict(b))
         # TODO check how this step could be altered to include faceting.
 
         o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
@@ -378,6 +388,10 @@ class Equations:
         # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
         bcount = Symbol('bcount')
         b = Symbol('b')
+        o.Rflop_phrot_predict_task = Lambda((bcount,b), \
+            sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict)
+        o.Rflop_phrot_backward_task = Lambda((bcount, b), \
+            sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
         o.Rflop_phrot = \
             sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
             Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b)) # this line was: o.Nvis_predict(bcount, b) + o.Nvis_backward(bcount, b)
