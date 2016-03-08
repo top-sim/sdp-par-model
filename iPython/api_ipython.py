@@ -54,7 +54,7 @@ class SkaIPythonAPI(api):
         ('PSF size',                   'arcs',       False,   False, lambda tp: tp.Theta_beam/c.arcsecond,),
         ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
         ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
-        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Nfacet_x_Npix,     ),
+        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_total_fov,     ),
         ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
         ('Qbw',                        '',           False,   False, lambda tp: tp.Qbw,               ),
         ('Max subband ratio',          '',           False,   False, lambda tp: tp.max_subband_freq_ratio,),

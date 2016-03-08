@@ -133,6 +133,7 @@ class Equations:
 
         # Eq 8 - Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
+        o.Npix_linear_total_fov = (o.Total_fov / o.Theta_pix)
         # expansion of sine solves eps = arcsinc(1/amp_f_max).
         o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
@@ -158,8 +159,11 @@ class Equations:
         # This is fine - substituting in the equation for theta_fov shows it is indeed correct.
         o.Nf_no_smear_predict = \
             log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
+        #Use full FoV for de-grid (predict) for high accuracy
+        
         o.Nf_no_smear_backward = Lambda(bmax,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * bmax * o.Theta_fov * o.Qbw))))
+        
 
         # Actual frequency channels for backward & predict
         # steps. Bound by minimum parallism and input channel count.
@@ -274,11 +278,14 @@ class Equations:
             Equations._sum_bl_bins(o, bcount, bmax,
                 o.Nvis_backward(bcount, bmax) * o.Nkernel2_backward(bmax))
             # Eq 32; FLOPS
+            
+        # De-gridding in Predict step
         o.Rgrid_predict = \
             8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * \
             Equations._sum_bl_bins(o, bcount, bmax,
                 o.Nvis_predict(bcount, bmax) * o.Nkernel2_predict(bmax))
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
+
         o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
 
         # FFT:
@@ -297,9 +304,9 @@ class Equations:
         # Eq. 33, per output grid (i.e. frequency)
         # TODO: please check correctness of 2 eqns below.
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
-        o.Rfft_backward = 5. * o.Nfacet_x_Npix ** 2 * log(o.Npix_linear, 2) / o.Tsnap
+        o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Nfacet_x_Npix ** 2 * log(o.Nfacet_x_Npix, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
         o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
         # final major cycle, create final data products (at Nf_out channels)
         o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
@@ -313,7 +320,7 @@ class Equations:
         # Re-Projection:
         # -------------
         if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
-            o.Rrp = 50. * o.Nfacet_x_Npix ** 2 / o.Tsnap  # Eq. 34
+            o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
         elif o.imaging_mode == ImagingModes.FastImg:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
@@ -321,7 +328,7 @@ class Equations:
 
         # Reproj intermediate major cycle FFTs (Nmaj -1) times,
         # then do the final ones for the last cycle at the full output spectral resolution.
-        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out) #TODO: does this account for backward and predict steps correctly? PIP.IMG check please.
+        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out) #TODO: no reporjection for Predict step, only on backward.
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -381,13 +388,12 @@ class Equations:
 
         # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
         # 25 FLOPS per visiblity. Only do it if we need to facet.
-        # TODO: check line below - is it correct if we don't facet in the predict step? PIP.IMG check please
+        # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
         bcount = Symbol('bcount')
         bmax = Symbol('bmax')
         o.Rflop_phrot = \
             sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-            Equations._sum_bl_bins(o, bcount, bmax,
-                o.Nvis_predict(bcount, bmax) + o.Nvis_backward(bcount, bmax))
+            Equations._sum_bl_bins(o, bcount, bmax, o.Nvis_backward(bcount, bmax)) # this line was: o.Nvis_predict(bcount, bmax) + o.Nvis_backward(bcount, bmax)
 
     @staticmethod
     def _apply_flop_equations(o):
