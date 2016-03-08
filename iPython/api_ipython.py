@@ -99,11 +99,19 @@ class SkaIPythonAPI(api):
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
         ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
-        ('-> Gridding',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_grid/c.peta, ),
-        ('-> FFT',                     'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft/c.peta,  ),
+        ('-> Gridding total',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_grid/c.peta, ),
+        ('-> FFT total',               'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft/c.peta,  ),
         ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
         ('-> Projection',              'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
-        ('-> Convolution',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_conv/c.peta, )
+        ('-> Conv Kernel Calc Total',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_conv/c.peta, ),
+        ('-> Gridding Backward',       'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_backward/c.peta, ),
+        ('-> Gridding Predict',        'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_predict/c.peta, ),
+        ('-> FFT Backward',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_bw/c.peta,  ),
+        ('-> iFFT Predict',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_predict/c.peta,  ),
+        ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
+        ('-> ReProjection',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
+        ('-> Conv Kernel Calc B-ward', 'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_backward/c.peta, ),
+        ('-> Conv Kernel Calc Predict','PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta, )
     ]
 
     @staticmethod
@@ -118,7 +126,7 @@ class SkaIPythonAPI(api):
     DEFAULT_ROWS = map(lambda row: row[0], filter(lambda e: e[2], RESULT_MAP))
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-5:])
+    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-8:])
 
     @staticmethod
     def mk_result_map_rows(rows = None):
@@ -142,7 +150,7 @@ class SkaIPythonAPI(api):
         Defines a default colour order used in plotting Rflop components
         @return:
         """
-        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral')
+        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral', 'red', 'lavender', 'chartreuse')
 
     @staticmethod
     def format_result(value):
@@ -502,7 +510,7 @@ class SkaIPythonAPI(api):
                                           tels_result_values[1], result_units)
 
         # Show comparison stacked bars
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = ('Gridding', 'deGridding', 'FFT', 'iFFT', 'Phase rot.', 'ReProjection', 'Kernel Calc BW', 'Kernel Calc Predict')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
@@ -566,9 +574,9 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = ('Gridding', 'deGridding', 'FFT', 'iFFT', 'Phase rot.', 'ReProjection', 'Kernel Calc BW', 'Kernel Calc Predict')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
@@ -615,9 +623,9 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = ('Gridding', 'deGridding', 'FFT', 'iFFT', 'Phase rot.', 'ReProjection', 'Kernel Calc BW', 'Kernel Calc Predict')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
@@ -657,9 +665,9 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Make pie plot
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = ('Gridding', 'deGridding', 'FFT', 'iFFT', 'Phase rot.', 'ReProjection', 'Kernel Calc BW', 'Kernel Calc Predict')
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod

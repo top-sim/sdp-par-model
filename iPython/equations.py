@@ -308,14 +308,10 @@ class Equations:
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
         o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
-        o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
-        # final major cycle, create final data products (at Nf_out channels)
-        o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
-
-        # do Nmajor-1 cycles before doing the final major cycle.
-        o.Rflop_fft = o.Npp * o.Nbeam* (((o.Nmajor - 1) * o.Rfft_intermediate_cycles) + o.Rfft_final_cycle)
-
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV, once per Tsnap
+        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
+        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
+        o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
     @staticmethod
     def _apply_reprojection_equations(o):
 
@@ -328,9 +324,8 @@ class Equations:
         else:
             raise Exception("Unknown Imaging Mode : %s" % o.imaging_mode)
 
-        # Reproj intermediate major cycle FFTs (Nmaj -1) times,
-        # then do the final ones for the last cycle at the full output spectral resolution.
-        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out) #TODO: no reporjection for Predict step, only on backward.
+        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * o.Nmajor * o.Nf_FFT_backward
+        #TODO check: no reprojection for Predict step, only on backward.
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -378,8 +373,7 @@ class Equations:
             bcount * 5. * o.Nf_gcf_predict(bmax) *
             o.Ncvff_predict(bmax)**2 * log(o.Ncvff_predict(bmax), 2) *
             o.Nmm / o.Tkernel_predict(bmax))
-        # TODO we assume Nfacet=1 for predict step, so do we need
-        # Nfacet^2 multiplier in here? PIP.IMG check please
+        # TODO check how this step could be altered to include faceting.
 
         o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
 
