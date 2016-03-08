@@ -292,14 +292,6 @@ class Equations:
 
         # FFT:
         # ---
-        if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.FastImg):
-            # make only enough FFT grids to extract necessary spectral info and retain distributability.
-            o.Nf_FFT_backward = o.minimum_channels
-        elif o.imaging_mode == ImagingModes.Spectral:
-            o.Nf_out = o.Nf_max
-            o.Nf_FFT_backward = o.Nf_max
-        else:
-            raise Exception("Unknown Imaging Mode defined : %s" % o.imaging_mode)
 
         o.Nfacet_x_Npix = o.Nfacet * o.Npix_linear #This is mathematically correct below but potentially misleading (lines 201,203) as the Nln(N,2) is familiar to many users.
 
