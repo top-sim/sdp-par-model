@@ -434,7 +434,8 @@ class Flow:
 
         return list(recDeps)
 
-def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={}):
+def flowsToDot(flows, t, computeSpeed=None,
+               graph_attr={}, node_attr={'shape':'box'}, edge_attr={}):
 
     # Make digraph
     dot = Digraph(graph_attr=graph_attr,node_attr=node_attr,edge_attr=edge_attr)
@@ -480,6 +481,8 @@ def flowsToDot(flows, t, graph_attr={}, node_attr={'shape':'box'}, edge_attr={})
             if count != 1:
                 text += "\nTasks: %d 1/s" % (count/t)
             compute = flow.cost('compute')
+            if compute > 0 and computeSpeed is not None:
+                text += "\nTime: %.2g s/task" % (compute/count/computeSpeed)
             if compute > 0:
                 text += "\nFLOPs: %.2f POP/s" % (compute/t/Constants.peta)
             transfer = flow.cost('transfer')
