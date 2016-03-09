@@ -106,6 +106,7 @@ class Bands:
     Mid4 = 'Mid4'
     Mid5A = 'Mid5A'
     Mid5B = 'Mid5B'
+    Mid5C = 'Mid5C'
     # SKA1 Survey bands - Now obsolete?
     Sur1 = 'Sur1'
     Sur2A = 'Sur2A'
@@ -118,7 +119,7 @@ class Bands:
 
     # group the bands defined above into logically coherent sets
     low_bands = {Low}
-    mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B}
+    mid_bands = {Mid1, Mid2, Mid3, Mid4, Mid5A, Mid5B, Mid5C}
     survey_bands = {Sur1, Sur2A, Sur2B, Sur3A, Sur3B}  # Now obsolete?
     low_bands_ska2 = {SKA2Low}
     mid_bands_ska2 = {SKA2Mid}
@@ -229,12 +230,12 @@ class ParameterDefinitions:
         # o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
-        o.Tsnap_min = 1.0
+        o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
-        o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again)
+        o.Mvis = 10  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again). Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
         """
         From CSP we are ingesting 10 bytes per visibility (single polarization) built up as follows:
         1 byte for time centroid + 8 bytes for complex visibility + 1 byte for flagging fraction, as per CSP ICD v.1.0.
@@ -423,6 +424,11 @@ class ParameterDefinitions:
             o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 11.3e9
             o.freq_max = 13.8e9
+        elif band == Bands.Mid5C:
+            print "using 2x2.5GHz subbands from 4.6-9.6GHz for band 5"
+            o.telescope = Telescopes.SKA1_Mid
+            o.freq_min = 4.6e9
+            o.freq_max = 9.6e9
         elif band == Bands.Sur1:
             o.telescope = Telescopes.SKA1_Sur_old
             o.freq_min = 350e6
@@ -498,7 +504,8 @@ class ParameterDefinitions:
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
-            o.Tobs = 0.9  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tsnap_min = o.Tobs
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:

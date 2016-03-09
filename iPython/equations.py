@@ -39,6 +39,11 @@ class Equations:
         assert isinstance(o, ParameterContainer)
         assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
         
+        if o.Tobs < 10.0:
+            o.Tsnap_min = o.Tobs
+            if verbose:
+                print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
+    
         #TODO: make this section (below0 work so that if Nfacet=1 we do not make the maps larger than they need to be
         #i.e. only
         #if o.Nfacet ==1:
