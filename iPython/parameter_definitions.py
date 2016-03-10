@@ -41,7 +41,7 @@ class ParameterContainer:
         try:
             if prevent_overwrite and hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
-                    warnings.warn('Inefficiency: reassigning already-defined parameter "%s" with an identical value.')
+                    warnings.warn('Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name)
                 else:
                     assert eval('self.%s == None' % param_name)
         except AssertionError:
@@ -76,6 +76,10 @@ class Constants:
     giga = 1000000000
     tera = 1000000000000
     peta = 1000000000000000
+
+    degree = np.pi / 180
+    arcminute = np.pi / 180 / 60
+    arcsecond = np.pi / 180 / 60 / 60
 
 
 class Telescopes:
@@ -396,6 +400,7 @@ class ParameterDefinitions:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
+        o.band = band
         if band == Bands.Low:
             o.telescope = Telescopes.SKA1_Low
             o.freq_min = 50e6  # in Hz
@@ -530,6 +535,7 @@ class ParameterDefinitions:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
+        o.band = 'HPSO ' + str(hpso)
         if  hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.mode = ImagingModes.Continuum
@@ -812,5 +818,3 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         else:
             raise Exception('Unknown HPSO!')
-
-        return o
