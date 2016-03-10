@@ -193,7 +193,7 @@ class Equations:
         o.Tcoal_skipper = Lambda(bmax,
             o.Tdump_scaled * o.combine_time_samples(bmax))
 
-        if blcoal:
+        if o.blcoal:
             # Don't let any bl-dependent coalescing be done for longer than either 1.2s or Tion. ?Why 1.2s?
             o.Tcoal_predict = Lambda(bmax,
                 Min(o.Tcoal_skipper(bmax), 1.2, o.Tion))
@@ -261,9 +261,8 @@ class Equations:
             bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
         o.Nvis_predict_no_averaging = o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict / o.Tdump_scaled
         # The line above uses Tdump_scaled independent of whether
-        # BLDTA is used.  This is because BLDTA is only done for
-        # gridding, and doesn't affect the amount of data to be
-        # buffered
+        # Baseline dependent coalescing (previously called BLDTA) is used. This is because coalescing is only done for
+        # gridding, and doesn't affect the amount of data to be buffered
 
         # Gridding:
         # --------

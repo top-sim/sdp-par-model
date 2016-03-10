@@ -27,9 +27,8 @@ class PipelineConfig:
     to parameterise a pipeline.
     """
 
-
     def __init__(self, hpso=None, telescope=None, band=None, mode=None,
-                 max_baseline="default", Nf_max="default", bldta=True,
+                 max_baseline="default", Nf_max="default", blcoal=True,
                  on_the_fly=False):
         """
         @param telescope: Telescope to use (can be omitted if HPSO specified)
@@ -38,7 +37,7 @@ class PipelineConfig:
         @param hpso: High Priority Science Objective ID (can be omitted if telescope, mode and band specified)
         @param max_baseline: Maximum baseline length
         @param Nf_max: Number of frequency channels
-        @param bldta: Baseline dependent time averaging
+        @param blcoal: Baseline dependent time averaging
         @param otfk: On the fly kernels (True or False)
         """
 
@@ -59,7 +58,7 @@ class PipelineConfig:
         self.hpso = hpso
         self.band = band
         self.mode = mode
-        self.bldta = bldta
+        self.blcoal = blcoal
         self.on_the_fly = on_the_fly
 
         # Determine relevant modes
@@ -303,7 +302,7 @@ class Implementation:
 
         # Apply imaging equations
         f.apply_imaging_equations(telescope_params, cfg.mode,
-                                  cfg.bldta, bins, binfracs,
+                                  cfg.blcoal, bins, binfracs,
                                   cfg.on_the_fly, verbose)
 
         return telescope_params
@@ -335,7 +334,7 @@ class Implementation:
 
         # Construct lambda from our two parameters (facet number and
         # snapshot time) to the expression to minimise
-        exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
+        exec('expression_original = telescope_parameters.%s' % expr_to_minimize_string)
         expression_lam = Implementation.cheap_lambdify_curry((telescope_parameters.Nfacet,
                                                               telescope_parameters.Tsnap),
                                                              expression_original)

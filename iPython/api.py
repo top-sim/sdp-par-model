@@ -20,11 +20,11 @@ class SkaPythonAPI:
         pass
 
     @staticmethod
-    def evaluate_expression(expression, tp, tsnap, nfacet):
+    def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
+        # TODO check all calls ans see whether "key" can be added
         """Evaluate an expression by substituting the telescopec parameters
         into them. Depending on the type of expression, the result
-        might be a value, a list of values (in case it is
-        baseline-dependent) or a string (if evaluation failed).
+        might be a value, a list of values (in case it is baseline-dependent) or a string (if evaluation failed).
 
         @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
         @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
@@ -41,8 +41,7 @@ class SkaPythonAPI:
             return expression
 
         # Otherwise try to evaluate using sympy
-            try:
-
+        try:
             # First substitute parameters
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
 
@@ -59,16 +58,16 @@ class SkaPythonAPI:
                 # Otherwise just evaluate directly
                 result = float(expression_subst)
 
-            except Exception as e:
-                if key is None:
-                    msg = "Failed to evaluate %s with msg: %s" % (str(expression), str(e))
-                else:
-                    msg = "Subsitution of %s aborted with msg: %s" % (key, str(e))
-                warnings.warn(msg)
+        except Exception as e:
+            if key is None:
+                msg = "Failed to evaluate %s with msg: %s" % (str(expression), str(e))
+            else:
+                msg = "Failed to evaluate %s with msg: %s" % (key, str(e))
+            warnings.warn(msg)
         return result
 
     @staticmethod
-    def eval_expression_default(pipelineConfig, expression='Rflop', verbose=False):
+    def eval_expression_default(pipelineConfig, expression_string='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
         @param pipelineConfig:
@@ -79,7 +78,6 @@ class SkaPythonAPI:
         result = 0
         for submode in pipelineConfig.relevant_modes:
             tp = imp.calc_tel_params(pipelineConfig, verbose)
-
             result_expression = eval('tp.%s' % expression_string)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
@@ -87,8 +85,8 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
-    def eval_param_sweep_1d(pipelineConfig, expression='Rflop',
-                            parameter='Rccf', param_val_min=10,
+    def eval_param_sweep_1d(pipelineConfig, expression_string='Rflop',
+                            parameter_string='Rccf', param_val_min=10,
                             param_val_max=10, number_steps=1,
                             verbose=False):
         """
@@ -115,9 +113,8 @@ class SkaPythonAPI:
 
         results = []
         for i in range(len(param_values)):
-
             # Calculate telescope parameter with adjusted parameter
-            adjusts = { parameter: str(param_values[i]) }
+            adjusts = {parameter_string: str(param_values[i])}
             tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
             percentage_done = i * 100.0 / len(param_values)
@@ -143,7 +140,7 @@ class SkaPythonAPI:
         return (param_values, results)
 
     @staticmethod
-    def eval_param_sweep_2d(pipelineConfig, expression='Rflop',
+    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop',
                             parameters=None, params_ranges=None,
                             number_steps=2, verbose=False):
         """
@@ -151,14 +148,7 @@ class SkaPythonAPI:
         linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
         a 2D parameter space, returning a matrix of values.
 
-        @param telescope:
-        @param mode:
-        @param band:
-        @param hpso:
-        @param blcoal: Baseline dependent coalescing (before gridding)
-        @param on_the_fly:
-        @param max_baseline:
-        @param nr_frequency_channels:
+        @param pipelineConfig
         @param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
         @param parameters:
         @param params_ranges:

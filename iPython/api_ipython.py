@@ -39,7 +39,7 @@ class SkaIPythonAPI(api):
         ('Telescope',                  '',           True,    False, lambda tp: tp.telescope          ),
         ('Band',                       '',           True,    False, lambda tp: str(tp.band) if tp.band is not None else ''),
         ('Mode',                       '',           True,    False, lambda tp: str(tp.imaging_mode)  ),
-        ('BL-dependent averaging',     '',           True,    False, lambda tp: tp.bl_dep_time_av     ),
+        ('Baseline coalescing',        '',           True,    False, lambda tp: tp.blcoal             ),
         ('On-the-fly kernels',         '',           True,    False, lambda tp: tp.on_the_fly         ),
         ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
         ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
@@ -460,7 +460,7 @@ class SkaIPythonAPI(api):
     @staticmethod
     def compare_telescopes_default(telescope_1, telescope_2, band_1,
                                    band_2, mode_1, mode_2,
-                                   tel1_bldta=True, tel2_bldta=True,
+                                   tel1_blcoal=True, tel2_blcoal=True,
                                    tel1_otf=False, tel2_otf=False,
                                    verbose=False, rows=None):
         """
@@ -483,10 +483,10 @@ class SkaIPythonAPI(api):
 
         # Make configurations and check
         cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
-                               mode=mode_1, bldta=tel1_bldta,
+                               mode=mode_1, blcoal=tel1_blcoal,
                                on_the_fly=tel1_otf)
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
-                               mode=mode_2, bldta=tel2_bldta,
+                               mode=mode_2, blcoal=tel2_blcoal,
                                on_the_fly=tel2_otf)
         if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_modes=True) or \
            not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_modes=True):
@@ -528,7 +528,7 @@ class SkaIPythonAPI(api):
     def evaluate_telescope_manual(telescope, band, mode,
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
-                                  Tsnap=-1, bldta=True,
+                                  Tsnap=-1, blcoal=True,
                                   on_the_fly=False, verbose=False,
                                   rows=None):
         """
@@ -538,13 +538,14 @@ class SkaIPythonAPI(api):
         @param telescope:
         @param band:
         @param mode:
-        @param Nfacet:
-        @param Tsnap:
         @param max_baseline:
         @param Nf_max:
+        @param Nfacet:
+        @param Tsnap:
         @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
         @param verbose:
+        @param rows:
         @return:
         """
 
@@ -553,9 +554,11 @@ class SkaIPythonAPI(api):
 
         # Make configuration
         cfg = PipelineConfig(telescope=telescope, mode=mode, band=band,
-                             max_baseline=max_baseline, Nf_max=Nf_max, bldta=bldta,
+                             max_baseline=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True):
+            return
 
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
@@ -578,7 +581,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbose=False, rows=None):
+    def evaluate_hpso_optimized(hpso_key, blcoal=True, on_the_fly=False, verbose=False, rows=None):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
@@ -609,7 +612,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
         # Make and check pipeline configuration
-        cfg = PipelineConfig(hpso=hpso_key,bldta=bldta,on_the_fly=on_the_fly)
+        cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
         # Determine which rows to calculate & show
@@ -630,7 +633,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
-                                     bldta=True, on_the_fly=False, verbose=False, rows=None):
+                                     blcoal=True, on_the_fly=False, verbose=False, rows=None):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -648,7 +651,7 @@ class SkaIPythonAPI(api):
         # Make configuration
         cfg = PipelineConfig(telescope=telescope, mode=mode,
                              band=band, max_baseline=max_baseline,
-                             Nf_max=Nf_max, bldta=bldta,
+                             Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 

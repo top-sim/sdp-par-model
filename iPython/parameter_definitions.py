@@ -430,7 +430,7 @@ class ParameterDefinitions:
             o.freq_min = 11.3e9
             o.freq_max = 13.8e9
         elif band == Bands.Mid5C:
-            print "using 2x2.5GHz subbands from 4.6-9.6GHz for band 5"
+            print "Band = Mid5C: using 2x2.5GHz subbands from 4.6-9.6GHz for band 5"
             o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 4.6e9
             o.freq_max = 9.6e9
