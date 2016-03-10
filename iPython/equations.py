@@ -19,7 +19,7 @@ class Equations:
 
     @staticmethod
     def apply_imaging_equations(telescope_parameters, imaging_mode,
-                                bl_dep_time_av, bins, binfracs,
+                                blcoal, bins, binfracs,
                                 on_the_fly=False, verbose=False):
         """
         (Symbolically) computes a set of derived parameters using imaging
@@ -38,7 +38,6 @@ class Equations:
             appending / overwriting the relevant fields
         @param imaging_mode: The telecope's imaging mode
         @param blcoal: True iff baseline dependent coalescing should be used.
-            averaging should be used.
         @param on_the_fly: True iff using on-the-fly kernels
         @param verbose: displays verbose command-line output
         """
@@ -48,7 +47,7 @@ class Equations:
 
         # Store parameters
         o.imaging_mode = imaging_mode
-        o.bl_dep_time_av = bl_dep_time_av
+        o.blcoal = blcoal
         o.Bmax_bins = list(bins)
         o.frac_bins = list(binfracs)
         o.on_the_fly = on_the_fly
@@ -198,9 +197,8 @@ class Equations:
             # Don't let any bl-dependent coalescing be done for longer than either 1.2s or Tion. ?Why 1.2s?
             o.Tcoal_predict = Lambda(bmax,
                 Min(o.Tcoal_skipper(bmax), 1.2, o.Tion))
-            # For backward step at gridding only, allow coalescance of
-            # visibility points at Facet FoV smearing limit only for
-            # BLDep averaging case.
+            # For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit
+            # only for blcoal case.
             o.Tcoal_backward = Lambda(bmax,
                 Min(o.Tcoal_skipper(bmax) * o.Nfacet/(1+o.using_facet_overlap_frac), o.Tion))
             # scale Skipper time to smaller field of view of facet,
