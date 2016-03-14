@@ -29,7 +29,7 @@ class PipelineConfig:
 
     def __init__(self, telescope=None, mode=None, band=None, hpso=None,
                  max_baseline="default", Nf_max="default", bldta=True,
-                 on_the_fly=False):
+                 on_the_fly=False, scale_predict_by_facet=True):
         """
         @param telescope: Telescope to use (can be omitted if HPSO specified)
         @param mode: Pipeline mode (can be omitted if HPSO specified)
@@ -39,6 +39,7 @@ class PipelineConfig:
         @param Nf_max: Number of frequency channels
         @param bldta: Baseline dependent time averaging
         @param otfk: On the fly kernels (True or False)
+        @param scale_predict_by_facet:
         """
 
         # Load HPSO parameters
@@ -60,6 +61,7 @@ class PipelineConfig:
         self.mode = mode
         self.bldta = bldta
         self.on_the_fly = on_the_fly
+        self.scale_predict_by_facet = scale_predict_by_facet
 
         # Determine relevant modes
         if mode == ImagingModes.All:
@@ -294,8 +296,8 @@ class Implementation:
         # Apply imaging equations
         f.apply_imaging_equations(telescope_params, cfg.mode,
                                   cfg.bldta, bins, binfracs,
-                                  cfg.on_the_fly, verbose)
-
+                                  cfg.on_the_fly, cfg.scale_predict_by_facet,
+                                  verbose)
         return telescope_params
 
     @staticmethod

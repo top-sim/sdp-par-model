@@ -40,6 +40,7 @@ class SkaIPythonAPI(api):
         ('Mode',                       '',           True,    False, lambda tp: str(tp.imaging_mode)  ),
         ('BL-dependent averaging',     '',           True,    False, lambda tp: tp.bl_dep_time_av     ),
         ('On-the-fly kernels',         '',           True,    False, lambda tp: tp.on_the_fly         ),
+        ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
         ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
         ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
         ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
@@ -269,7 +270,7 @@ class SkaIPythonAPI(api):
         plt.show()
 
     @staticmethod
-    def plot_2D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None):
+    def plot_2D_surface(title, x_values, y_values, z_values, contours = None, xlabel=None, ylabel=None, zlabel=None, nlevels=15):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title: The plot's title
@@ -283,16 +284,16 @@ class SkaIPythonAPI(api):
         contour_colour = [(1., 0., 0., 1.)]  # red
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-        assert len(x_values) == len(y_values)
+#        assert len(x_values) == len(y_values)
 
         sizex = len(x_values)
         sizey = len(y_values)
-        assert np.shape(z_values)[0] == sizex
-        assert np.shape(z_values)[1] == sizey
+        assert np.shape(z_values)[0] == sizey
+        assert np.shape(z_values)[1] == sizex
         xx = np.tile(x_values, (sizey, 1))
         yy = np.transpose(np.tile(y_values, (sizex, 1)))
 
-        C = pylab.contourf(xx, yy, z_values, 15, alpha=.75, cmap=colourmap)
+        C = pylab.contourf(xx, yy, z_values, nlevels, alpha=.75, cmap=colourmap)
         pylab.colorbar(shrink=.92)
         if contours is not None:
             C = pylab.contour(xx, yy, z_values, levels = contours, colors=contour_colour,
@@ -319,18 +320,18 @@ class SkaIPythonAPI(api):
         contour_colour = [(1., 0., 0., 1.)]  # red
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-        assert len(x_values) == len(y_values)
+#        assert len(x_values) == len(y_values)
 
         sizex = len(x_values)
         sizey = len(y_values)
-        assert np.shape(z_values)[0] == sizex
-        assert np.shape(z_values)[1] == sizey
+        assert np.shape(z_values)[0] == sizey
+        assert np.shape(z_values)[1] == sizex
         xx = np.tile(x_values, (sizey, 1))
         yy = np.transpose(np.tile(y_values, (sizex, 1)))
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+        surf = ax.plot_surface(xx, yy, z_values, nlevels, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
                                antialiased=True, shade=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
@@ -442,6 +443,7 @@ class SkaIPythonAPI(api):
         plt.title(title)
         plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
+        pylab.show()
 
     @staticmethod
     def check_pipeline_config(cfg, pure_modes):
@@ -462,6 +464,7 @@ class SkaIPythonAPI(api):
                                    telescope_2, band_2, mode_2,
                                    tel1_bldta=True, tel2_bldta=True,
                                    tel1_otf=False, tel2_otf=False,
+                                   scale_predict_by_facet=False,
                                    verbosity='Overview'):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
@@ -484,10 +487,12 @@ class SkaIPythonAPI(api):
         # Make configurations and check
         cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
                                mode=mode_1, bldta=tel1_bldta,
-                               on_the_fly=tel1_otf)
+                               on_the_fly=tel1_otf,
+                               scale_predict_by_facet=scale_predict_by_facet)
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
                                mode=mode_2, bldta=tel2_bldta,
-                               on_the_fly=tel2_otf)
+                               on_the_fly=tel2_otf,
+                               scale_predict_by_facet=scale_predict_by_facet)
         if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_modes=True) or \
            not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_modes=True):
             return
@@ -529,7 +534,8 @@ class SkaIPythonAPI(api):
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
                                   Tsnap=-1, bldta=True,
-                                  on_the_fly=False, verbosity='Overview'):
+                                  on_the_fly=False, scale_predict_by_facet=False,
+                                  verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters.
         These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
@@ -553,7 +559,8 @@ class SkaIPythonAPI(api):
         # Make configuration
         cfg = PipelineConfig(telescope=telescope, mode=mode, band=band,
                              max_baseline=max_baseline, Nf_max=Nf_max, bldta=bldta,
-                             on_the_fly=on_the_fly)
+                             on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
@@ -577,7 +584,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, bldta=True, on_the_fly=False, verbosity='Overview'):
+    def evaluate_hpso_optimized(hpso_key, bldta=True,
+                                on_the_fly=False,
+                                scale_predict_by_facet=False,
+                                verbosity='Overview'):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
@@ -606,7 +616,8 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
         # Make and check pipeline configuration
-        cfg = PipelineConfig(hpso=hpso_key,bldta=bldta,on_the_fly=on_the_fly)
+        cfg = PipelineConfig(hpso=hpso_key,bldta=bldta,on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
         # Determine which rows to calculate & show
@@ -621,13 +632,13 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
-                                     bldta=True, on_the_fly=False, verbosity='Overview'):
+                                     bldta=True, on_the_fly=False, scale_predict_by_facet=False, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -646,7 +657,8 @@ class SkaIPythonAPI(api):
         cfg = PipelineConfig(telescope=telescope, mode=mode,
                              band=band, max_baseline=max_baseline,
                              Nf_max=Nf_max, bldta=bldta,
-                             on_the_fly=on_the_fly)
+                             on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
 
         # Determine rows to show

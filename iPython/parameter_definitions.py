@@ -201,6 +201,7 @@ class ParameterDefinitions:
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.N_taylor_terms = 5 #This is the number of Taylor terms assumed in the TT expansion of the sky model in each subband. % is probably very generous.
+        o.scale_predict_by_facet = False
         return o
 
     @staticmethod
@@ -315,7 +316,8 @@ class ParameterDefinitions:
 
         else:
             raise Exception('Unknown Telescope!')
-
+            
+        o.telescope = telescope
         return o
 
     @staticmethod
@@ -760,3 +762,5 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         else:
             raise Exception('Unknown HPSO!')
+
+        return o
