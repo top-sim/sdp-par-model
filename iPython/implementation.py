@@ -14,7 +14,7 @@ from parameter_definitions import Telescopes, ImagingModes, Bands
 from parameter_definitions import ParameterDefinitions as p
 from parameter_definitions import Constants as c
 from equations import Equations as f
-from sympy import simplify, lambdify, Max
+from sympy import simplify, lambdify, Max, Symbol
 from scipy import optimize as opt
 import numpy as np
 import math
@@ -328,11 +328,17 @@ class Implementation:
         # Construct lambda from our two parameters (facet number and
         # snapshot time) to the expression to minimise
         exec('expression_original = telescope_parameters.%s' % expr_to_minimize)
-        expression_lam = Implementation.cheap_lambdify_curry((telescope_parameters.Nfacet,
-                                                              telescope_parameters.Tsnap),
-                                                             expression_original)
 
-        for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
+        if isinstance(telescope_parameters.Nfacet, Symbol):
+            params = (telescope_parameters.Nfacet, telescope_parameters.Tsnap)
+            nfacet_range = range(1, max_number_nfacets+1)
+        else:
+            params = (telescope_parameters.Tsnap,)
+            nfacet_range = [1] # Note we will always return Nfacet = 1 as optimal now. Bit of a hack.
+        expression_lam = Implementation.cheap_lambdify_curry(params, expression_original)
+
+        # Loop over the different integer values of NFacet
+        for nfacets in nfacet_range:
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
                 print ('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
@@ -343,7 +349,11 @@ class Implementation:
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets),
+            if isinstance(telescope_parameters.Nfacet, Symbol):
+                expression_lam2 = expression_lam(nfacets)
+            else:
+                expression_lam2 = expression_lam
+            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam2,
                                                                  telescope_parameters,
                                                                  verbose=verbose)
 
