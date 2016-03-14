@@ -151,7 +151,7 @@ class Implementation:
         or evaluated further. Used to halt attempts at further evaluating symbolic expressions
         """
         return (isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int)
-                or isinstance(expression, long) or isinstance(expression, np.ndarray))
+                or isinstance(expression, long) or isinstance(expression, np.ndarray) or isinstance(expression, list))
 
     @staticmethod
     def seconds_to_hms(seconds):

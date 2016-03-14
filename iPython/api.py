@@ -34,36 +34,31 @@ class SkaPythonAPI:
         @return:
 
         """
+        result = expression
+        if not imp.is_literal(expression):  # Only evaluate symbolically when required
+            try:
+                # Substitute parameters
+                expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
 
-        # Already a plain value?
-        if isinstance(expression, int) or isinstance(expression, float) or \
-           isinstance(expression, str) or isinstance(expression, list):
-            return expression
+                # If the expression is Lambda? it probably depends on baseline lengths and needs further evaluation
+                if isinstance(expression_subst, Lambda):
+                    result = []
+                    counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
+                    for (bcount, bmax) in zip(counts, tp.baseline_bins):
+                        if expression_subst.nargs == FiniteSet(1):
+                            result.append(float(expression_subst(bmax)))
+                        else:
+                            result.append(float(expression_subst(bcount, bmax)))
+                else:
+                    # Otherwise evaluate directly at float
+                    result = float(expression_subst)
 
-        # Otherwise try to evaluate using sympy
-        try:
-            # First substitute parameters
-            expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
-
-            # Lambda? Assume it depends on baseline lengths
-            if isinstance(expression_subst, Lambda):
-                result = []
-                counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
-                for (bcount, bmax) in zip(counts, tp.baseline_bins):
-                    if expression_subst.nargs == FiniteSet(1):
-                        result.append(float(expression_subst(bmax)))
-                    else:
-                        result.append(float(expression_subst(bcount, bmax)))
-            else:
-                # Otherwise just evaluate directly
-                result = float(expression_subst)
-
-        except Exception as e:
-            if key is None:
-                msg = "Failed to evaluate %s with msg: %s" % (str(expression), str(e))
-            else:
-                msg = "Failed to evaluate %s with msg: %s" % (key, str(e))
-            warnings.warn(msg)
+            except Exception as e:
+                if key is None:
+                    msg = "Failed to evaluate %s; message = %s" % (str(expression), str(e))
+                else:
+                    msg = "Failed to evaluate %s; message = %s" % (key, str(e))
+                warnings.warn(msg)
         return result
 
     @staticmethod
@@ -80,7 +75,7 @@ class SkaPythonAPI:
             tp = imp.calc_tel_params(pipelineConfig, verbose)
             result_expression = eval('tp.%s' % expression_string)
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
         return result
 
