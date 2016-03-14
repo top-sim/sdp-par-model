@@ -95,7 +95,8 @@ class SkaIPythonAPI(api):
         ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
         ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
         ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
-        ('I/O Rate',                   'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
+        ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
+        ('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
         ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
