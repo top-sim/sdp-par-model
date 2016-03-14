@@ -267,7 +267,7 @@ class Implementation:
         # Apply parameter adjustments. Needs to be done before bin
         # calculation in case Bmax gets changed.
         for par, value in adjusts.iteritems():
-            exec('telescope_params.%s = %s' % (par, value))
+            telescope_params.__dict__[par] = value
 
         # Limit bins to those shorter than Bmax
         bins = telescope_params.baseline_bins

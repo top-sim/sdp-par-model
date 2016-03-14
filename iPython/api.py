@@ -75,7 +75,7 @@ class SkaPythonAPI:
             pipelineConfig.mode = submode
             tp = imp.calc_tel_params(pipelineConfig, verbose)
 
-            result_expression = eval('tp.%s' % expression)
+            result_expression = tp.__dict__[expression]
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
@@ -112,7 +112,7 @@ class SkaPythonAPI:
         for i in range(len(param_values)):
 
             # Calculate telescope parameter with adjusted parameter
-            adjusts = { parameter: str(param_values[i]) }
+            adjusts = { parameter: param_values[i] }
             tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
             percentage_done = i * 100.0 / len(param_values)
@@ -121,8 +121,7 @@ class SkaPythonAPI:
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
-            parameter_final_value = None
-            exec('parameter_final_value = tp.%s' % parameter)
+            parameter_final_value = tp.__dict__[parameter]
             eta = 1e-10
             if abs((parameter_final_value - param_values[i])/param_values[i]) > eta:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
@@ -130,7 +129,7 @@ class SkaPythonAPI:
                                      'Cannot peform parameter sweep.'
                                      % (parameter, param_values[i], parameter_final_value))
 
-            result_expression = eval('tp.%s' % expression)
+            result_expression = tp.__dict__[expression]
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
@@ -188,8 +187,8 @@ class SkaPythonAPI:
 
                 # Overwrite the corresponding fields of tp with the to-be-evaluated values
                 adjusts = {
-                    parameters[0]: str(param_x_value),
-                    parameters[1]: str(param_y_value),
+                    parameters[0]: param_x_value,
+                    parameters[1]: param_y_value,
                 }
                 tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
@@ -216,7 +215,7 @@ class SkaPythonAPI:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                result_expression = eval('tp.%s' % expression)
+                result_expression = tp.__dict__[expression]
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
