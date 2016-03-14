@@ -144,7 +144,7 @@ class SkaIPythonAPI(api):
                 map(lambda row: row[1], result_map))
 
     @staticmethod
-    def defualt_rflop_plotting_colours():
+    def default_rflop_plotting_colours():
         """
         Defines a default colour order used in plotting Rflop components
         @return:
@@ -514,7 +514,7 @@ class SkaIPythonAPI(api):
 
         # Show comparison stacked bars
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours()
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
@@ -579,7 +579,7 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
@@ -675,7 +675,7 @@ class SkaIPythonAPI(api):
 
         # Make pie plot
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
