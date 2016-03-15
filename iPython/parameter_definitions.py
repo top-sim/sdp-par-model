@@ -135,6 +135,7 @@ class Pipelines:
     Ingest = 'Ingest' # Ingest pipeline
     ICAL = 'ICAL'     # ICAL (the big one):produce calibration solutions
     DPrepA = 'DPrepA' # Produce continuum taylor term images in Stokes I
+    DPrepA_Image = 'DPrepA_Image' # Produce continuum taylor term images in Stokes I as CASA does in images
     DPrepB = 'DPrepB' # Produce coarse continuum image cubes in I,Q,U,V (with Nf_out channels)
     DPrepC = 'DPrepC' # Produce fine spectral resolution image cubes un I,Q,U,V (with Nf_out channels)
     DPrepD = 'DPrepD' # Produce calibrated, averaged (In time and freq) visibility data
@@ -142,9 +143,9 @@ class Pipelines:
 
     minimum = [Ingest, ICAL, DPrepA, Fast_Img]
     preparation = [Ingest, ICAL]
-    imaging = [DPrepA, DPrepB, DPrepC, Fast_Img]
-    pure_pipelines = [Ingest, ICAL, DPrepA, DPrepB, DPrepC, DPrepD, Fast_Img]
-    all = [Ingest, ICAL, DPrepA, DPrepB, DPrepC, DPrepD, Fast_Img]
+    imaging = [DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
+    pure_pipelines = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
+    all = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
 
 
 class HPSOs:
@@ -246,11 +247,11 @@ class ParameterDefinitions:
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
-        o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
+        o.minimum_channels = 100  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
+        o.Fast_Img_channels = 100  #minimum number of channels to still enable distributed computing, and to calculate spectral images
+        o.number_taylor_terms = 5 # Number of Taylor terms to compute
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
-        o.N_taylor_terms = 5 #This is the number of Taylor terms assumed in the TT expansion of the sky model in each subband. % is probably very generous.
-        o.scale_predict_by_facet = False
         return o
 
     @staticmethod
@@ -496,6 +497,8 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.ICAL:
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_FFT_backward = o.number_taylor_terms
+            o.Nf_FFT_predict = o.number_taylor_terms
             o.Npp = 4 # We only want Stokes I, V
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -507,19 +510,39 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nmajor = 10  # Number of major CLEAN cycles to be done
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(500, o.Nf_max)
+            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_FFT_backward = o.number_taylor_terms
+            o.Nf_FFT_predict = o.number_taylor_terms
+            o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.034
 
+        elif pipeline == Pipelines.DPrepA_Image:
+            o.Qfov = 1.8  # Field of view factor
+            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
+            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.Nf_out
+            o.Npp = 2 # We only want Stokes I, V
+            o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
+
+
         elif pipeline == Pipelines.DPrepB:
             o.Qfov = 1.8  # Field of view factor
             o.Nmajor = 10  # Number of major CLEAN cycles to be done
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
-            o.Nf_out = min(500, o.Nf_max)
+            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
@@ -532,6 +555,8 @@ class ParameterDefinitions:
             o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
@@ -543,6 +568,8 @@ class ParameterDefinitions:
             o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
@@ -553,7 +580,9 @@ class ParameterDefinitions:
             o.Qfov = 0.9  # Field of view factor
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
+            o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
             o.Tsnap_min = o.Tobs
@@ -561,6 +590,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.02
+            o.Nmm = 1 # Off diagonal terms probably not needed?
 
         else:
             raise Exception('Unknown pipeline: %s' % str(pipeline))

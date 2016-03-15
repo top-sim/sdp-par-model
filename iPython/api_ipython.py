@@ -113,7 +113,8 @@ class SkaIPythonAPI(api):
         ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
         ('-> ReProjection',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
         ('-> Conv Kernel Calc B-ward', 'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_backward/c.peta, ),
-        ('-> Conv Kernel Calc Predict','PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta, )
+        ('-> Conv Kernel Calc Predict','PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta, ),
+        ('-> Spectral Fitting',        'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fitting/c.peta, )
     ]
 
     @staticmethod
@@ -124,7 +125,7 @@ class SkaIPythonAPI(api):
         return map(lambda row: row[4](tp), resultMap)
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-8:])
+    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-9:])
 
     @staticmethod
     def mk_result_map_rows(verbosity = 'Overview'):

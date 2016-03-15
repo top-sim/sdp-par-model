@@ -172,22 +172,13 @@ class Equations:
             o.Nf_no_smear_predict = Lambda(b,
                 log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Total_fov * o.Qbw))))
 
-        # Actual frequency channels for backward & predict
-        # steps. Bound by minimum parallism and input channel count.
+        # The number of visibility channels used in each direction
+        # (includes effects of averaging). Bound by minimum parallism
+        # and input channel count.
         o.Nf_vis_backward = Lambda(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
         o.Nf_vis_predict = Lambda(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_predict(b)),o.Nf_max))
-
-        # Number of frequency channels depends on imaging mode
-        if o.pipeline != Pipelines.Fast_Img:
-            o.Nf_out = o.Nf_max
-            o.Nf_FFT_backward = o.Nf_max
-        else:
-            # make only enough FFT grids to extract necessary spectral
-            # info and retain distributability.
-            o.Nf_FFT_backward = o.minimum_channels
-        o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
 
     @staticmethod
     def _apply_coalesce_equations(o):
@@ -282,13 +273,21 @@ class Equations:
         # gridding, and doesn't affect the amount of data to be
         # buffered
 
+        # For the ASKAP MSMFS, we grid all data for each taylor term
+        # with polynominal of delta freq/freq
+        o.Ntaylor_backward = 1
+        o.Ntaylor_predict = 1
+        if o.pipeline == Pipelines.DPrepA:
+            o.Ntaylor_backward = o.number_taylor_terms
+            o.Ntaylor_predict = o.number_taylor_terms
+
         # Gridding:
         # --------
         o.Rgrid_backward_task = Lambda((bcount, b),
             8. * o.Nmm * bcount * o.Nkernel2_backward(b) *
             o.Tsnap / o.Tcoal_backward(b))
         o.Rgrid_backward = \
-            8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet**2 * \
+            8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
             Equations._sum_bl_bins(o, bcount, b,
                 o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
             # Eq 32; FLOPS
@@ -302,7 +301,7 @@ class Equations:
                 8. * o.Nmm * bcount * o.Nkernel2_predict(b) *
                 o.Tsnap / o.Tcoal_predict(b))
             o.Rgrid_predict = \
-                8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * \
+                8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
                 Equations._sum_bl_bins(o, bcount, b,
                     o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
@@ -311,8 +310,6 @@ class Equations:
 
         # FFT:
         # ---
-
-        o.Nfacet_x_Npix = o.Nfacet * o.Npix_linear #This is mathematically correct below but potentially misleading (lines 201,203) as the Nln(N,2) is familiar to many users.
 
         # Eq. 33, per output grid (i.e. frequency)
         # TODO: please check correctness of 2 eqns below.
@@ -327,6 +324,7 @@ class Equations:
         o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
         o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
         o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
+
     @staticmethod
     def _apply_reprojection_equations(o):
 
@@ -336,9 +334,12 @@ class Equations:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+        o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nmajor * o.Nf_FFT_backward
 
-        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * o.Nmajor * o.Nf_FFT_backward
-        #TODO check: no reprojection for Predict step, only on backward.
+        # Spectral Fitting
+        o.Rflop_fitting = 0.0
+        if o.pipeline == Pipelines.DPrepA_Image:
+            o.Rflop_fitting = o.Nbeam * o.Npp * o.number_taylor_terms * (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Nmajor * o.Npix_linear_total_fov ** 2
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -411,15 +412,20 @@ class Equations:
         o.Rflop_phrot_backward_task = Lambda((bcount, b), \
             sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
         o.Rflop_phrot = \
-            sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-            Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b)) # this line was: o.Nvis_predict(bcount, b) + o.Nvis_backward(bcount, b)
+            sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet ** 2 * \
+            Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
+        if o.scale_predict_by_facet:
+            o.Rflop_phrot += \
+                sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
+                Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
 
     @staticmethod
     def _apply_flop_equations(o):
         """Calculate overall flop rate"""
 
         # revised Eq. 30
-        o.Rflop = o.Rflop_grid + o.Rflop_fft + o.Rflop_proj + o.Rflop_conv + o.Rflop_phrot
+        o.Rflop = o.Rflop_grid + o.Rflop_fft + o.Rflop_proj + o.Rflop_fitting + \
+                  o.Rflop_conv + o.Rflop_phrot
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
         o.Rinterfacet = (2 * o.Nmajor + 1) * min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
@@ -448,5 +454,6 @@ class Equations:
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
         # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors.
         # TODO: PDR05 lacking in this regard and must be updated.
-        # TODO: is this correct if we have only got facets for the backward step and use Nfacet=1 for predict step?
+        # This is correct if we have only got facets for the backward step and use Nfacet=1 for predict step: TJC see TCC-SDP-151123-1-1
+        # It probably can go much smaller, though: see SDPPROJECT-133
         o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict_no_averaging * o.Mvis * o.Nfacet ** 2  # Eq 50
