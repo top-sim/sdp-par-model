@@ -180,7 +180,7 @@ class Equations:
             Min(Max(o.Nf_out, o.Nf_no_smear_predict(b)),o.Nf_max))
 
         # Number of frequency channels depends on imaging mode
-        if o.pipeline == Pipelines.Fast_Img:
+        if o.pipeline != Pipelines.Fast_Img:
             o.Nf_out = o.Nf_max
             o.Nf_FFT_backward = o.Nf_max
         else:
