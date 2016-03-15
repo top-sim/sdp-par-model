@@ -144,12 +144,16 @@ class SkaIPythonAPI(api):
                 map(lambda row: row[1], result_map))
 
     @staticmethod
-    def default_rflop_plotting_colours():
+    def default_rflop_plotting_colours(rows):
         """
         Defines a default colour order used in plotting Rflop components
         @return:
         """
-        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral', 'red', 'lavender', 'chartreuse')
+
+        # Stolen from D3's category10
+        cat10 = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+                 '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+        return cat10[:len(rows)]
 
     @staticmethod
     def format_result(value):
@@ -514,7 +518,7 @@ class SkaIPythonAPI(api):
 
         # Show comparison stacked bars
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.default_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
@@ -579,7 +583,7 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.default_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
@@ -632,7 +636,7 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.default_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
@@ -675,7 +679,7 @@ class SkaIPythonAPI(api):
 
         # Make pie plot
         labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.default_rflop_plotting_colours()
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
