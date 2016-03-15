@@ -3,7 +3,7 @@ This file contains methods for programmatically interacting with the SKA SDP Par
 """
 import copy
 
-from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
+from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinitions
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
@@ -71,8 +71,8 @@ class SkaPythonAPI:
         """
 
         result = 0
-        for submode in pipelineConfig.relevant_modes:
-            pipelineConfig.mode = submode
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
             tp = imp.calc_tel_params(pipelineConfig, verbose)
 
             result_expression = tp.__dict__[expression]

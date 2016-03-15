@@ -1,5 +1,5 @@
 """
-This file contains methods for interacting with the SKA SDP Parametric Model using Python from the IPython Notebook
+This file contains methods for interacting with the SKA SDP Parametric model using Python from the IPython Notebook
 (Jupyter) environment. It extends the methods defined in API.py
 The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
 notebooks easier.
@@ -24,7 +24,7 @@ from parameter_definitions import ParameterContainer
 class SkaIPythonAPI(api):
     """
     This class (IPython API) is a subclass of its parent, SKA-API. It offers a set of methods for interacting with the
-    SKA SDP Parametric Model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
+    SKA SDP Parametric model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
     to keep the notebook itself free from clutter, and to make coding easier.
     """
     def __init__(self):
@@ -37,7 +37,7 @@ class SkaIPythonAPI(api):
         ('-- Parameters --',           '',           True,    False, lambda tp: ''                    ),
         ('Telescope',                  '',           True,    False, lambda tp: tp.telescope          ),
         ('Band',                       '',           True,    False, lambda tp: str(tp.band) if tp.band is not None else ''),
-        ('Mode',                       '',           True,    False, lambda tp: str(tp.imaging_mode)  ),
+        ('Pipeline',                   '',           True,    False, lambda tp: str(tp.pipeline)      ),
         ('BL-dependent averaging',     '',           True,    False, lambda tp: tp.bl_dep_time_av     ),
         ('On-the-fly kernels',         '',           True,    False, lambda tp: tp.on_the_fly         ),
         ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
@@ -446,13 +446,13 @@ class SkaIPythonAPI(api):
         pylab.show()
 
     @staticmethod
-    def check_pipeline_config(cfg, pure_modes):
+    def check_pipeline_config(cfg, pure_pipelines):
         """
         Check pipeline configuration, displaying a message in the Notebook
         for every problem found. Returns whether the configuration is
         usable at all.
         """
-        (okay, messages) = cfg.check(pure_modes=pure_modes)
+        (okay, messages) = cfg.check(pure_pipelines=pure_pipelines)
         for msg in messages:
             display(HTML('<p><font color="red"><b>{0}</b></font></p>'.format(msg)))
         if not okay:
@@ -460,22 +460,22 @@ class SkaIPythonAPI(api):
         return okay
 
     @staticmethod
-    def compare_telescopes_default(telescope_1, band_1, mode_1,
-                                   telescope_2, band_2, mode_2,
+    def compare_telescopes_default(telescope_1, band_1, pipeline_1,
+                                   telescope_2, band_2, pipeline_2,
                                    tel1_bldta=True, tel2_bldta=True,
                                    tel1_otf=False, tel2_otf=False,
                                    scale_predict_by_facet=False,
                                    verbosity='Overview'):
         """
-        Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
+        Evaluates two telescopes, both operating in a given band and pipeline, using their default parameters.
         A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
         pretty interactive results. Plots the results side by side.
         @param telescope_1:
         @param telescope_2:
         @param band_1:
         @param band_2:
-        @param mode_1:
-        @param mode_2:
+        @param pipeline_1:
+        @param pipeline_2:
         @param tel1_otf: On the fly kernels for telescope 1
         @param tel2_otf: On the fly kernels for telescope 2
         @param tel1_bldta: Use baseline dependent time averaging for Telescope1
@@ -486,15 +486,15 @@ class SkaIPythonAPI(api):
 
         # Make configurations and check
         cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
-                               mode=mode_1, bldta=tel1_bldta,
+                               pipeline=pipeline_1, bldta=tel1_bldta,
                                on_the_fly=tel1_otf,
                                scale_predict_by_facet=scale_predict_by_facet)
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
-                               mode=mode_2, bldta=tel2_bldta,
+                               pipeline=pipeline_2, bldta=tel2_bldta,
                                on_the_fly=tel2_otf,
                                scale_predict_by_facet=scale_predict_by_facet)
-        if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_modes=True) or \
-           not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_modes=True):
+        if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_pipelines=True) or \
+           not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_pipelines=True):
             return
 
         # Determine which rows to show
@@ -530,7 +530,7 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_manual(telescope, band, mode,
+    def evaluate_telescope_manual(telescope, band, pipeline,
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
                                   Tsnap=-1, bldta=True,
@@ -542,7 +542,7 @@ class SkaIPythonAPI(api):
         optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
         @param telescope:
         @param band:
-        @param mode:
+        @param pipeline:
         @param Nfacet:
         @param Tsnap:
         @param max_baseline:
@@ -557,11 +557,11 @@ class SkaIPythonAPI(api):
         assert Tsnap > 0
 
         # Make configuration
-        cfg = PipelineConfig(telescope=telescope, mode=mode, band=band,
+        cfg = PipelineConfig(telescope=telescope, pipeline=pipeline, band=band,
                              max_baseline=max_baseline, Nf_max=Nf_max, bldta=bldta,
                              on_the_fly=on_the_fly,
                              scale_predict_by_facet=scale_predict_by_facet)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
 
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
@@ -569,7 +569,7 @@ class SkaIPythonAPI(api):
         # Determine which rows to calculate & show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
-        # Loop through modes
+        # Loop through pipelines
         result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map,
                                                        Tsnap=Tsnap, Nfacet=Nfacet)
 
@@ -601,24 +601,24 @@ class SkaIPythonAPI(api):
         ParameterDefinitions.apply_global_parameters(tp_default)
         ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
         telescope = tp_default.telescope
-        hpso_mode = tp_default.mode
+        hpso_pipeline = tp_default.pipeline
 
         # First we plot a table with all the provided parameters
-        param_titles = ('HPSO Number', 'Telescope', 'Mode', 'Max Baseline', 'Max # of channels', 'Observation time', 'Texp (not used in calc)', 'Tpoint (not used in calc)')
+        param_titles = ('HPSO Number', 'Telescope', 'Pipeline', 'Max Baseline', 'Max # of channels', 'Observation time', 'Texp (not used in calc)', 'Tpoint (not used in calc)')
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tobs)
         Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Texp)
         Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tpoint)
         Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-        param_values = (hpso_key, telescope, hpso_mode, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string, Tpoint_string)
+        param_values = (hpso_key, telescope, hpso_pipeline, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string, Tpoint_string)
         param_units = ('', '', '', 'm', '', '', '', '')
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
         # Make and check pipeline configuration
         cfg = PipelineConfig(hpso=hpso_key,bldta=bldta,on_the_fly=on_the_fly,
                              scale_predict_by_facet=scale_predict_by_facet)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
 
         # Determine which rows to calculate & show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
@@ -637,14 +637,14 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
+    def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
                                      bldta=True, on_the_fly=False, scale_predict_by_facet=False, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
         @param telescope:
         @param band:
-        @param mode:
+        @param pipeline:
         @param max_baseline:
         @param Nf_max:
         @param bldta:
@@ -654,12 +654,12 @@ class SkaIPythonAPI(api):
         """
 
         # Make configuration
-        cfg = PipelineConfig(telescope=telescope, mode=mode,
+        cfg = PipelineConfig(telescope=telescope, pipeline=pipeline,
                              band=band, max_baseline=max_baseline,
                              Nf_max=Nf_max, bldta=bldta,
                              on_the_fly=on_the_fly,
                              scale_predict_by_facet=scale_predict_by_facet)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
 
         # Determine rows to show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
@@ -691,12 +691,12 @@ class SkaIPythonAPI(api):
         @return: result value array
         """
 
-        # Loop through modes to collect result values
+        # Loop through pipeliness to collect result values
         result_value_array = []
-        for submode in pipelineConfig.relevant_modes:
+        for pipeline in pipelineConfig.relevant_pipelines:
 
             # Calculate the telescope parameters
-            pipelineConfig.mode = submode
+            pipelineConfig.pipeline = pipeline
             tp = imp.calc_tel_params(pipelineConfig, verbose=verbose)
 
             # Optimise Tsnap & Nfacet
@@ -709,17 +709,21 @@ class SkaIPythonAPI(api):
 
             # Evaluate expressions from map
             result_expressions = SkaIPythonAPI.get_result_expressions(result_map, tp)
-            results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
-            result_value_array.append(results_for_submode)
+            results_for_pipeline = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+            result_value_array.append(results_for_pipeline)
 
-        # Now transpose, then sum up results from submodes per row
+        # Now transpose, then sum up results from pipelines per row
         result_values = []
         transposed_results = zip(*result_value_array)
         sum_results = SkaIPythonAPI.get_result_sum(result_map)
         for (row_values, sum_it) in zip(transposed_results, sum_results):
             if sum_it:
-                result_values.append(sum(row_values))
-            elif len(row_values) == 1:
+                try:
+                    result_values.append(sum(row_values))
+                    continue
+                except TypeError:
+                    pass
+            if len(row_values) == 1:
                 result_values.append(row_values[0])
             else:
                 result_values.append(list(row_values))

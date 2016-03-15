@@ -22,6 +22,7 @@ class DesignEquations:
 
         o.NfOut = symbols("N_f\,out", integer=True, positive=True)
         o.Nmajor = symbols("N_major", integer=True, positive=True)
+        o.Nfacet = symbols("N_facet", integer=True, positive=True)
         o.Ncu = symbols("N_cu", integer=True, positive=True)  # number of compute units.
         o.RcuFLOP = symbols("R_cu\,FLOP", positive=True)  # peak FLOP capability of the compute unit
         o.RcuInter = symbols("R_cu\,inter", positive=True)  # maximum bandwidth of interconnect per Compute Unit

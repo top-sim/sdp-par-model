@@ -10,7 +10,7 @@ themselves. Instead, it specifies how values are substituted, optimized, and sum
 """
 
 from parameter_definitions import ParameterContainer
-from parameter_definitions import Telescopes, ImagingModes, Bands
+from parameter_definitions import Telescopes, Pipelines, Bands
 from parameter_definitions import ParameterDefinitions as p
 from parameter_definitions import Constants as c
 from equations import Equations as f
@@ -27,14 +27,14 @@ class PipelineConfig:
     """
 
 
-    def __init__(self, telescope=None, mode=None, band=None, hpso=None,
+    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
                  max_baseline="default", Nf_max="default", bldta=True,
                  on_the_fly=False, scale_predict_by_facet=True):
         """
         @param telescope: Telescope to use (can be omitted if HPSO specified)
-        @param mode: Pipeline mode (can be omitted if HPSO specified)
+        @param pipeline: Pipeline mode (can be omitted if HPSO specified)
         @param band: Frequency band (can be omitted if HPSO specified)
-        @param hpso: High Priority Science Objective ID (can be omitted if telescope, mode and band specified)
+        @param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
         @param max_baseline: Maximum baseline length
         @param Nf_max: Number of frequency channels
         @param bldta: Baseline dependent time averaging
@@ -44,32 +44,30 @@ class PipelineConfig:
 
         # Load HPSO parameters
         if hpso is not None:
-            if not (telescope is None and band is None and mode is None):
-                raise Exception("Either telescope/band/mode or an HPSO needs to be set, not both!")
+            if not (telescope is None and band is None and pipeline is None):
+                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set, not both!")
             tp_default = ParameterContainer()
             p.apply_hpso_parameters(tp_default, hpso)
             telescope = tp_default.telescope
-            mode = tp_default.mode
+            pipeline = tp_default.pipeline
         else:
-            if telescope is None or band is None or mode is None:
-                raise Exception("Either telescope/band/mode or an HPSO needs to be set!")
+            if telescope is None or band is None or pipeline is None:
+                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set!")
 
         # Save parameters
         self.telescope = telescope
         self.hpso = hpso
         self.band = band
-        self.mode = mode
+        self.pipeline = pipeline
         self.bldta = bldta
         self.on_the_fly = on_the_fly
         self.scale_predict_by_facet = scale_predict_by_facet
 
-        # Determine relevant modes
-        if mode == ImagingModes.All:
-            self.relevant_modes = ImagingModes.pure_modes
-        elif mode == ImagingModes.ContAndSpectral:
-            self.relevant_modes = (ImagingModes.Continuum, ImagingModes.Spectral)
+        # Determine relevant pipelines
+        if isinstance(pipeline, list):
+            self.relevant_pipelines = pipeline
         else:
-            self.relevant_modes = (mode,)  # A list with one element
+            self.relevant_pipelines = [pipeline]
 
         # Load telescope parameters from apply_telescope_parameters.
         tp_default = ParameterContainer()
@@ -111,7 +109,7 @@ class PipelineConfig:
 
         return is_compatible
 
-    def check(self, pure_modes=True):
+    def check(self, pure_pipelines=True):
         """Checks integrity of the pipeline configuration.
 
         @return: (okay?, list of errors/warnings)
@@ -125,11 +123,11 @@ class PipelineConfig:
                             'allowed baseline of %g m for telescope \'%s\'.' \
                 % (self.max_baseline, self.max_allowed_baseline, self.telescope))
 
-        # Only pure modes supported?
-        if pure_modes:
-            for mode in self.relevant_modes:
-                if mode not in ImagingModes.pure_modes:
-                    messages.append("ERROR: The '%s' imaging mode is currently not supported" % str(mode))
+        # Only pure pipelines supported?
+        if pure_pipelines:
+            for pipeline in self.relevant_pipelines:
+                if pipeline not in Pipelines.pure_pipelines:
+                    messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(pipeline))
                     okay = False
 
         # Band compatibility. Can skip for HPSOs, as they override the
@@ -226,12 +224,12 @@ class Implementation:
 
     @staticmethod
     def calc_tel_params(pipelineConfig, verbose=False, adjusts={}):
-
         """
-        This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
+        This is a very important method - Calculates telescope parameters for a supplied band, pipeline or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
         @param pipelineConfig: Valid pipeline configuration
         @param verbose:
+        @param adjusts: Dictionary of telescope parameters to adjust
         """
 
         cfg = pipelineConfig
@@ -246,14 +244,14 @@ class Implementation:
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
         p.apply_telescope_parameters(telescope_params, cfg.telescope)
-        # Then define imaging mode and frequency-band
+        # Then define pipeline and frequency-band
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
         if (cfg.hpso is None) and (cfg.band is not None):
             p.apply_band_parameters(telescope_params, cfg.band)
-            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
         elif (cfg.hpso is not None) and (cfg.band is None):
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
-            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
             p.apply_hpso_parameters(telescope_params, cfg.hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
@@ -294,7 +292,7 @@ class Implementation:
         binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
 
         # Apply imaging equations
-        f.apply_imaging_equations(telescope_params, cfg.mode,
+        f.apply_imaging_equations(telescope_params, cfg.pipeline,
                                   cfg.bldta, bins, binfracs,
                                   cfg.on_the_fly, cfg.scale_predict_by_facet,
                                   verbose)
@@ -318,6 +316,10 @@ class Implementation:
         """
         assert isinstance(telescope_parameters, ParameterContainer)
         assert hasattr(telescope_parameters, expr_to_minimize)
+
+        if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
+            print telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet"
+            return (telescope_parameters.Tobs, 1)
 
         result_per_nfacet = {}
         result_array = []
@@ -377,6 +379,7 @@ class Implementation:
 
     @staticmethod
     def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
+        assert telescope_parameters.pipeline in Pipelines.imaging
 
         # Compute lower & upper bounds
         tp = telescope_parameters

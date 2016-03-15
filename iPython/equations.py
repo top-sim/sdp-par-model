@@ -9,7 +9,7 @@ in PDR05 (version 1.85).
 from sympy import log, Min, Max, sqrt, floor, sign, Symbol, Lambda, Add
 from numpy import pi, round
 import math
-from parameter_definitions import ImagingModes
+from parameter_definitions import Pipelines, Products
 from parameter_definitions import ParameterContainer
 
 class Equations:
@@ -17,7 +17,7 @@ class Equations:
         pass
 
     @staticmethod
-    def apply_imaging_equations(telescope_parameters, imaging_mode,
+    def apply_imaging_equations(telescope_parameters, pipeline,
                                 bl_dep_time_av, bins, binfracs,
                                 on_the_fly=False, scale_predict_by_facet=False,
                                 verbose=False):
@@ -36,18 +36,21 @@ class Equations:
             containing the telescope parameters.  This
             ParameterContainer object is modified in-place by
             appending / overwriting the relevant fields
-        @param imaging_mode: The telecope's imaging mode
+        @param pipeline: The pipeline
         @param bl_dep_time_av: True iff baseline dependent time
             averaging should be used.
         @param on_the_fly: True iff using on-the-fly kernels
+        @param scale_predict_by_facet: True iif the predict phase
+            scale as the facet FOV (as for backward)
         @param verbose: displays verbose command-line output
+
         """
         o = telescope_parameters  # Used for shorthand in the equations below
         assert isinstance(o, ParameterContainer)
         assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
 
         # Store parameters
-        o.imaging_mode = imaging_mode
+        o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
         o.bl_dep_time_av = bl_dep_time_av
         o.Bmax_bins = list(bins)
         o.frac_bins = list(binfracs)
@@ -55,7 +58,7 @@ class Equations:
         o.scale_predict_by_facet = scale_predict_by_facet
 
         # Check parameters
-        if o.Tobs < 10.0:
+        if hasattr(o, 'Tobs') and (o.Tobs < 10.0):
             o.Tsnap_min = o.Tobs
             if verbose:
                 print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
@@ -177,15 +180,13 @@ class Equations:
             Min(Max(o.Nf_out, o.Nf_no_smear_predict(b)),o.Nf_max))
 
         # Number of frequency channels depends on imaging mode
-        if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.FastImg):
-            # make only enough FFT grids to extract necessary spectral
-            # info and retain distributability.
-            o.Nf_FFT_backward = o.minimum_channels
-        elif o.imaging_mode == ImagingModes.Spectral:
+        if o.pipeline == Pipelines.Fast_Img:
             o.Nf_out = o.Nf_max
             o.Nf_FFT_backward = o.Nf_max
         else:
-            raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
+            # make only enough FFT grids to extract necessary spectral
+            # info and retain distributability.
+            o.Nf_FFT_backward = o.minimum_channels
         o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
 
     @staticmethod
@@ -331,12 +332,10 @@ class Equations:
 
         # Re-Projection:
         # -------------
-        if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
-            o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
-        elif o.imaging_mode == ImagingModes.FastImg:
+        if o.pipeline == Pipelines.Fast_Img:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
-            raise Exception("Unknown Imaging Mode : %s" % o.imaging_mode)
+            o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
         o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * o.Nmajor * o.Nf_FFT_backward
         #TODO check: no reprojection for Predict step, only on backward.

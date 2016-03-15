@@ -1,5 +1,5 @@
 """
-This Python file contains several classes that enumerates and defines the parameters of the telescopes, bands, modes,
+This Python file contains several classes that enumerates and defines the parameters of the telescopes, bands, pipelines,
 etc. Several methods are supplied by which values can be found by lookup as well
 (e.g. finding the telescope that is associated with a given mode)
 """
@@ -95,16 +95,56 @@ class Bands:
     mid_bands_ska2 = {SKA2Mid}
 
 
-class ImagingModes:
+class Products:
     """
-    Enumerate the possible imaging modes (used in the ParameterDefinitions class)
+    Enumerate the SDP Products used in pipelines
     """
-    Continuum = 'Continuum'
-    Spectral = 'Spectral'  # Spectral only. Spectral mode will usually follow Continuum mode. See ContAntSpectral.
-    FastImg = 'Fast Imaging'
-    ContAndSpectral = 'Sequential (Cont+Spec)'  # Continuum and Spectral modes run sequentially, as in some HPSOs
-    All = 'All, Summed (Cont+Spec+FastImg)'
-    pure_modes = (Continuum, Spectral, FastImg)
+    Alert = 'Alert'
+    Average = 'Average'
+    Calibration_Source_Finding = 'Calibration Source Finding'
+    Correct = 'Correct'
+    Degrid = 'Degrid'
+    FFT = 'DFT'
+    Demix = 'Demix'
+    FFT = 'FFT'
+    Flag = 'Flag'
+    Grid = 'Grid'
+    Gridding_Kernel_Update = 'Gridding Kernel Update'
+    Identify_Component = 'Identify Component'
+    IFFT = 'IFFT'
+    Image_Spectral_Averaging = 'Image Spectral Averaging'
+    Image_Spectral_Fitting = 'Image Spectral Fitting'
+    Extract_LSM = 'Extract_LSM'
+    PhaseRotation = 'Phase Rotation'
+    QA = 'QA'
+    Receive = 'Receive'
+    Reprojection = 'Reprojection'
+    Select = 'Select'
+    Solve = 'Solve'
+    Source_Find = 'Source Find'
+    Subtract_Visibility = 'Subtract Visibility'
+    Subtract_Image_Component = 'Subtract Image Component'
+    Notify_GSM = 'Update GSM'
+    Update_LSM = 'Update LSM'
+
+class Pipelines:
+    """
+    Enumerate the SDP pipelines. These must map onto the Products. The HPSOs invoke these.
+    """
+    Ingest = 'Ingest' # Ingest pipeline
+    ICAL = 'ICAL'     # ICAL (the big one):produce calibration solutions
+    DPrepA = 'DPrepA' # Produce continuum taylor term images in Stokes I
+    DPrepB = 'DPrepB' # Produce coarse continuum image cubes in I,Q,U,V (with Nf_out channels)
+    DPrepC = 'DPrepC' # Produce fine spectral resolution image cubes un I,Q,U,V (with Nf_out channels)
+    DPrepD = 'DPrepD' # Produce calibrated, averaged (In time and freq) visibility data
+    Fast_Img = 'Fast_Img' # Produce continuum subtracted residual image every 1s or so
+
+    minimum = [Ingest, ICAL, DPrepA, Fast_Img]
+    preparation = [Ingest, ICAL]
+    imaging = [DPrepA, DPrepB, DPrepC, Fast_Img]
+    pure_pipelines = [Ingest, ICAL, DPrepA, DPrepB, DPrepC, DPrepD, Fast_Img]
+    all = [Ingest, ICAL, DPrepA, DPrepB, DPrepC, DPrepD, Fast_Img]
+
 
 class HPSOs:
     """
@@ -167,8 +207,11 @@ class ParameterDefinitions:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
-        o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
-        o.Nfacet = symbols("N_facet", integer=True, positive=True)  # Number of facets
+        o.Tsnap = symbols("Tsnap", positive=True)  # Snapshot timescale implemented
+        o.Nfacet = symbols("Nfacet", integer=True, positive=True)  # Number of facets
+
+        # We might want these to be called out as symbolic
+        o.Nmajor = symbols("Nmajor", integer=True, positive=True)
 
         return o
 
@@ -189,12 +232,17 @@ class ParameterDefinitions:
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
         o.Nw = 2  # Bytes per value
+        o.Ndemix = 1000 # Number of time-frequency samples used in demixing
+        o.NA = 10 # Number of A-team sources used in demixing
         # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
         o.Qfcv = 1.0  #changed to 1 to disable but retain ability to see affect in parameter sweep.
         o.Qgcf = 8.0
         o.Qkernel = 10.0  #  epsilon_f/ o.Qkernel is the fraction of a uv cell we allow frequence smearing at edge of convoluion kernel to - i.e error on u,v, position one kernel-radius from gridding point.
         #o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
+        o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
+        o.Qfov=1.0 # Define this in case not defined below
+        o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
         o.minimum_channels = 500  #minimum number of channels to still enable distributed computing, and to reconstruct Taylor terms
@@ -316,7 +364,7 @@ class ParameterDefinitions:
 
         else:
             raise Exception('Unknown Telescope!')
-            
+
         o.telescope = telescope
         return o
 
@@ -417,17 +465,44 @@ class ParameterDefinitions:
         return o
 
     @staticmethod
-    def apply_imaging_mode_parameters(o, mode):
+    def define_pipeline_products(o, pipeline, named_pipeline_products=['']):
+        o.pipeline = pipeline
+        o.products = {}
+        for product in named_pipeline_products:
+            o.products[product] = {'Rflop':0, 'Rio':0.0, 'Rinteract':0.0, 'MW_cache':0}
+        return o
+
+    @staticmethod
+    def apply_pipeline_parameters(o, pipeline):
         """
-        Applies the parameters that apply to the imaging mode to the parameter container object o
+        Applies the parameters that apply to the pipeline to the parameter container object o
         @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-        @param mode:
+        @param pipeline: Type of pipeline
         @raise Exception:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
+        ParameterDefinitions.define_pipeline_products(o, pipeline)
 
-        if mode == ImagingModes.Continuum:
+        if pipeline == Pipelines.Ingest:
+            o.Nf_out = o.Nf_max
+            o.Npp = 4 # We get everything
+            o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
+
+        elif pipeline == Pipelines.ICAL:
+            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Npp = 4 # We only want Stokes I, V
+            o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
+
+        elif pipeline == Pipelines.DPrepA:
             o.Qfov = 1.8  # Field of view factor
             o.Nmajor = 10  # Number of major CLEAN cycles to be done
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
@@ -438,8 +513,20 @@ class ParameterDefinitions:
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.034
 
+        elif pipeline == Pipelines.DPrepB:
+            o.Qfov = 1.8  # Field of view factor
+            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
+            o.Npp = 4 # We want Stokes I, Q, U, V
+            o.Nf_out = min(500, o.Nf_max)
+            o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
 
-        elif mode == ImagingModes.Spectral:
+
+        elif pipeline == Pipelines.DPrepC:
             o.Qfov = 1.0  # Field of view factor
             o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
@@ -450,11 +537,23 @@ class ParameterDefinitions:
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.01
 
-        elif mode == ImagingModes.FastImg:
+        elif pipeline == Pipelines.DPrepD:
+            o.Qfov = 1.0  # Field of view factor
+            o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
+            o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
+            o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+            o.Tobs = 6 * 3600
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.02
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.01
+
+        elif pipeline == Pipelines.Fast_Img:
             o.Qfov = 0.9  # Field of view factor
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
+            o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
             o.Tsnap_min = o.Tobs
             if o.telescope == Telescopes.SKA1_Low:
@@ -462,27 +561,27 @@ class ParameterDefinitions:
             elif o.telescope == Telescopes.SKA1_Mid:
                 o.amp_f_max = 1.02
 
-        elif mode == ImagingModes.ContAndSpectral:
-            raise Exception("'apply_imaging_mode_parameters' needs to compute Continuum and Spectral modes separately")
-
         else:
-            raise Exception('Unknown mode: %s!' % str(mode))
+            raise Exception('Unknown pipeline: %s' % str(pipeline))
 
         return o
+
 
     @staticmethod
     def apply_hpso_parameters(o, hpso):
         """
-        Applies the parameters that apply to the supplied HPSO to the parameter container object o
+        Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
+        serves only one specialised pipeline and one hpso
         @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
         @param hpso:
         @rtype : ParameterContainer
         """
         assert isinstance(o, ParameterContainer)
         o.band = 'HPSO ' + str(hpso)
+        o.hpso = hpso
         if  hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 50e6
             o.freq_max = 350e6
             o.Nbeam = 1  # only 1 beam here
@@ -494,7 +593,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif  hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.freq_min = 50e6
             o.freq_max = 350e6
             o.Nbeam = 1  # only 1 beam here
@@ -506,7 +605,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif hpso == HPSOs.hpso_max_Mid_c:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 350e6
             o.freq_max = 1.05e9
             o.Nbeam = 1
@@ -518,7 +617,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif hpso == HPSOs.hpso_max_Mid_s:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.freq_min = 350e6
             o.freq_max = 1.05e9
             o.Nbeam = 1
@@ -530,7 +629,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif hpso == HPSOs.hpso_max_band5_Mid_c:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 8.5e9
             o.freq_max = 13.5e9
             o.Nbeam = 1
@@ -542,7 +641,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif hpso == HPSOs.hpso_max_band5_Mid_s:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.freq_min = 8.5e9
             o.freq_max = 13.5e9
             o.Nbeam = 1
@@ -554,7 +653,7 @@ class ParameterDefinitions:
             o.Tpoint = 6 * 3600  # sec
         elif hpso == HPSOs.hpso01c:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -566,7 +665,7 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso01s:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -578,7 +677,7 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso02A:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -590,7 +689,7 @@ class ParameterDefinitions:
             o.Tpoint = 100 * 3600  # sec
         elif hpso == HPSOs.hpso02B:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -602,7 +701,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso13c:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
             o.freq_max = 950e6
@@ -614,7 +713,7 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso13s:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
             o.freq_max = 950e6
@@ -626,7 +725,7 @@ class ParameterDefinitions:
             o.Tpoint = 1000 * 3600  # sec
         elif hpso == HPSOs.hpso14c:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.comment = 'HI'
             o.freq_min = 1.2e9
             o.freq_max = 1.5e9 #Increase freq range to give >1.2 ratio for continuum
@@ -638,7 +737,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso14s:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.comment = 'HI'
             o.freq_min = 1.3e9
             o.freq_max = 1.4e9
@@ -649,7 +748,7 @@ class ParameterDefinitions:
             o.Tpoint = 10 * 3600  # sec
         elif hpso == HPSOs.hpso15c:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
             o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
@@ -662,7 +761,7 @@ class ParameterDefinitions:
             o.Nmajor=10
         elif hpso == HPSOs.hpso15s:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.mode = ImagingModes.Spectral
+            o.pipeline = Pipelines.DPrepC
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.415e9
             o.freq_max = 1.425e9
@@ -673,7 +772,7 @@ class ParameterDefinitions:
             o.Tpoint = 4.4 * 3600  # sec
         elif hpso == HPSOs.hpso22:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.comment = 'Cradle of life'
             o.freq_min = 10e9
             o.freq_max = 12e9
@@ -685,7 +784,7 @@ class ParameterDefinitions:
             o.Tpoint = 600 * 3600  # sec
         elif hpso == HPSOs.hpso27:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9
             o.Tobs = 0.123 * 3600  # sec
@@ -696,7 +795,7 @@ class ParameterDefinitions:
             o.Tpoint = 0.123 * 3600  # sec
         elif hpso == HPSOs.hpso33:
             o.set_param('telescope', Telescopes.SKA1_Mid) #WAS SURVEY: UPDATED
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9
             o.Tobs = 0.123 * 3600  # sec
@@ -707,7 +806,7 @@ class ParameterDefinitions:
             o.Tpoint = 0.123 * 3600  # sec
         elif hpso == HPSOs.hpso37a:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 1e9
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600  # sec
@@ -718,7 +817,7 @@ class ParameterDefinitions:
             o.Tpoint = 95 * 3600  # sec
         elif hpso == HPSOs.hpso37b:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 1e9
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600  # sec
@@ -729,7 +828,7 @@ class ParameterDefinitions:
             o.Tpoint = 2000 * 3600  # sec
         elif hpso == HPSOs.hpso37c:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 1e9
             o.freq_max = 1.5e9
             o.Tobs = 6 * 3600  # sec
@@ -740,7 +839,7 @@ class ParameterDefinitions:
             o.Tpoint = 95 * 3600  # sec
         elif hpso == HPSOs.hpso38a:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600  # sec
@@ -751,7 +850,7 @@ class ParameterDefinitions:
             o.Tpoint = 16.4 * 3600  # sec
         elif hpso == HPSOs.hpso38b:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.mode = ImagingModes.Continuum
+            o.pipeline = Pipelines.DPrepA
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600  # sec
