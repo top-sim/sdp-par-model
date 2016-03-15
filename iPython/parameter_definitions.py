@@ -28,7 +28,8 @@ class ParameterContainer:
         try:
             if prevent_overwrite and hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
-                    print 'Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name
+#                    print 'Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name
+                    pass
                 else:
                     assert eval('self.%s == None' % param_name)
         except AssertionError:
@@ -860,6 +861,6 @@ class ParameterDefinitions:
             o.Texp = 1000 * 3600  # sec
             o.Tpoint = 1000 * 3600  # sec
         else:
-            raise Exception('Unknown HPSO!')
+            raise Exception('Unknown HPSO %s!' % hpso)
 
         return o

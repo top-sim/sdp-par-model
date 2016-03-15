@@ -209,7 +209,7 @@ class Implementation:
 
         # Lower bound cannot be higher than the uppper bound.
         if bound_upper <= bound_lower:
-            print 'Unable to optimize free variable as upper bound is lower that the lower bound'
+            # print 'Unable to optimize free variable as upper bound is lower that the lower bound'
             return bound_lower
         else:
             result = opt.minimize_scalar(lam,
