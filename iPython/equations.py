@@ -329,8 +329,9 @@ class Equations:
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
 
         o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
-        o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
-        o.set_product(Products.Degrid, Rflop=o.Rgrid_predict)
+        if o.pipeline in Pipelines.imaging:
+            o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
+            o.set_product(Products.Degrid, Rflop=o.Rgrid_predict)
 
         # FFT:
         # ---
@@ -470,7 +471,8 @@ class Equations:
                o.Nmm / o.Tkernel_predict(b))
 
         o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
-        o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
+        if o.pipeline in Pipelines.usesimages:
+            o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
 
     @staticmethod
     def _apply_phrot_equations(o):
@@ -492,7 +494,8 @@ class Equations:
             o.Rflop_phrot += \
                 sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
                 Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
-        o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
+        if o.pipeline in Pipelines.usesimages:
+            o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
 
     @staticmethod
     def _apply_flop_equations(o):
