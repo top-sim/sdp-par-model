@@ -38,6 +38,11 @@ class SkaPythonAPI:
            isinstance(expression, str) or isinstance(expression, list):
             return expression
 
+        # Dictionary? Recurse
+        if isinstance(expression, dict):
+            return { k: SkaPythonAPI.evaluate_expression(e, tp, tsnap, nfacet)
+                     for k, e in expression.iteritems() }
+
         # Otherwise try to evaluate using sympy
         try:
 
@@ -80,6 +85,29 @@ class SkaPythonAPI:
             result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         return result
+
+    @staticmethod
+    def eval_expression_default_products(pipelineConfig, expression='Rflop', verbose=False):
+        """
+        Evaluating a parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        values={}
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = imp.calc_tel_params(pipelineConfig, verbose)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+
+            # Loop through defined products, add to result
+            for name, product in tp.products.iteritems():
+                if product.has_key(expression):
+                    values[name] = values.get(name, 0) + \
+                        SkaPythonAPI.evaluate_expression(product[expression], tp, tsnap, nfacet)
+
+        return values
 
     @staticmethod
     def eval_param_sweep_1d(pipelineConfig, expression='Rflop',

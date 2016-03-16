@@ -37,6 +37,18 @@ class ParameterContainer:
 
         exec('self.%s = value' % param_name)  # Write the value
 
+    def set_product(self, product, **args):
+        if not self.products.has_key(product):
+            self.products[product] = {}
+        self.products[product].update(args)
+
+    def get_products(self, expression='Rflop', scale=1):
+        results = {}
+        for product, exprs in self.products.iteritems():
+            if exprs.has_key(expression):
+                results[product] = exprs[expression] / scale
+        return results
+
 class Constants:
     """
     A new class that takes over the roles of sympy.physics.units and astropy.const, because it is simpler this way
@@ -467,7 +479,7 @@ class ParameterDefinitions:
         return o
 
     @staticmethod
-    def define_pipeline_products(o, pipeline, named_pipeline_products=['']):
+    def define_pipeline_products(o, pipeline, named_pipeline_products=[]):
         o.pipeline = pipeline
         o.products = {}
         for product in named_pipeline_products:
@@ -499,7 +511,7 @@ class ParameterDefinitions:
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms
             o.Nf_FFT_predict = o.number_taylor_terms
-            o.Npp = 4 # We only want Stokes I, V
+            o.Npp = 4 # We get everything?
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08

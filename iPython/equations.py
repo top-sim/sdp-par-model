@@ -77,7 +77,8 @@ class Equations:
         Equations._apply_coalesce_equations(o)
         Equations._apply_geometry_equations(o)
 
-        # Apply function equations
+        # Apply product equations
+        Equations._apply_ingest_equations(o)
         Equations._apply_grid_fft_equations(o)
         Equations._apply_reprojection_equations(o)
         Equations._apply_kernel_equations(o)
@@ -86,6 +87,10 @@ class Equations:
         # Apply summary equations
         Equations._apply_flop_equations(o)
         Equations._apply_io_equations(o)
+
+        # Dump products
+        if verbose:
+            print o.products
 
         return o
 
@@ -251,6 +256,20 @@ class Equations:
             sqrt(o.Nkernel2_predict(b))*o.Qgcf)
 
     @staticmethod
+    def _apply_ingest_equations(o):
+        """ Ingest equations """
+
+        if o.pipeline == Pipelines.Ingest:
+
+            # Need autocorrelations as well
+            o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
+            receiveflop = 4 * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
+            o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
+            o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
+            o.set_product(Products.Demix, Rflop=o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
+            o.set_product(Products.Average, Rflop=o.Nvis_receive)
+
+    @staticmethod
     def _apply_grid_fft_equations(o):
 
         # ===============================================================================================
@@ -307,6 +326,8 @@ class Equations:
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
 
         o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
+        o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
+        o.set_product(Products.Degrid, Rflop=o.Rgrid_predict)
 
         # FFT:
         # ---
@@ -324,6 +345,8 @@ class Equations:
         o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
         o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
         o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
+        o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
+        o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
 
     @staticmethod
     def _apply_reprojection_equations(o):
@@ -335,11 +358,13 @@ class Equations:
         else:
             o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
         o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nmajor * o.Nf_FFT_backward
+        o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
 
         # Spectral Fitting
         o.Rflop_fitting = 0.0
         if o.pipeline == Pipelines.DPrepA_Image:
             o.Rflop_fitting = o.Nbeam * o.Npp * o.number_taylor_terms * (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Nmajor * o.Npix_linear_total_fov ** 2
+            o.set_product(Products.Image_Spectral_Fitting, Rflop=o.Rflop_fitting)
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -397,6 +422,7 @@ class Equations:
                o.Nmm / o.Tkernel_predict(b))
 
         o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
+        o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
 
     @staticmethod
     def _apply_phrot_equations(o):
@@ -418,6 +444,7 @@ class Equations:
             o.Rflop_phrot += \
                 sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
                 Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
+        o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
 
     @staticmethod
     def _apply_flop_equations(o):
