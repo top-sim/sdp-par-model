@@ -451,8 +451,7 @@ class Equations:
         """Calculate overall flop rate"""
 
         # revised Eq. 30
-        o.Rflop = o.Rflop_grid + o.Rflop_fft + o.Rflop_proj + o.Rflop_fitting + \
-                  o.Rflop_conv + o.Rflop_phrot
+        o.Rflop = sum(o.get_products('Rflop').values())
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
         o.Rinterfacet = (2 * o.Nmajor + 1) * min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
