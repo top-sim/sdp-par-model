@@ -400,8 +400,8 @@ class Equations:
         o.Rflop_dft = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
         o.Rflop_subtractvis = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
         if o.pipeline in Pipelines.imaging:
-            o.products[Products.DFT] = o.Rflop_dft
-            o.products[Products.Subtract_Visibility] = o.Rflop_subtractvis
+            o.set_product(Products.DFT, Rflop=o.Rflop_dft)
+            o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
         # Solve
         # -----
