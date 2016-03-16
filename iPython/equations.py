@@ -84,6 +84,7 @@ class Equations:
         Equations._apply_reprojection_equations(o)
         Equations._apply_kernel_equations(o)
         Equations._apply_phrot_equations(o)
+        Equations._apply_deconvolution_equations(o)
 
         # Apply summary equations
         Equations._apply_flop_equations(o)
@@ -387,9 +388,11 @@ class Equations:
         o.Nf_deconv = o.Nf_FFT_backward
         if o.pipeline == Pipelines.DPrepA_Image:
             o.Nf_deconv = o.number_taylor_terms
-        o.Rflop_subtract_image_component = Rflop_deconv_common * o.Npatch**2 * o.Nf_deconv
-        o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 * o.Nf_deconv
-        if pipeline in Pipelines.imaging and pipeline != Pipeline.Fast_Img:
+        o.Rflop_subtract_image_component = \
+            o.rma * o.Nbeam * o.Nminor * o.Nmajor * o.Nscales * o.Npatch**2 * o.Nf_deconv / o.Tobs
+        o.Rflop_identify_component = \
+            o.rma * o.Nbeam * o.Nminor * o.Nmajor * o.Nscales * (o.Npix_linear * o.Nfacet)**2 * o.Nf_deconv  / o.Tobs
+        if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
             o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
             o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
 
