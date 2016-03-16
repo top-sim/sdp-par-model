@@ -117,17 +117,18 @@ class Products:
     Calibration_Source_Finding = 'Calibration Source Finding'
     Correct = 'Correct'
     Degrid = 'Degrid'
-    FFT = 'DFT'
+    DFT = 'DFT'
     Demix = 'Demix'
     FFT = 'FFT'
     Flag = 'Flag'
     Grid = 'Grid'
     Gridding_Kernel_Update = 'Gridding Kernel Update'
     Identify_Component = 'Identify Component'
+    Extract_LSM = 'Extract_LSM'
     IFFT = 'IFFT'
     Image_Spectral_Averaging = 'Image Spectral Averaging'
     Image_Spectral_Fitting = 'Image Spectral Fitting'
-    Extract_LSM = 'Extract_LSM'
+    Notify_GSM = 'Update GSM'
     PhaseRotation = 'Phase Rotation'
     QA = 'QA'
     Receive = 'Receive'
@@ -137,8 +138,8 @@ class Products:
     Source_Find = 'Source Find'
     Subtract_Visibility = 'Subtract Visibility'
     Subtract_Image_Component = 'Subtract Image Component'
-    Notify_GSM = 'Update GSM'
     Update_LSM = 'Update LSM'
+    Visibility_Weighting = 'Visibility_Weighting'
 
 class Pipelines:
     """
@@ -156,6 +157,7 @@ class Pipelines:
     minimum = [Ingest, ICAL, DPrepA, Fast_Img]
     preparation = [Ingest, ICAL]
     imaging = [DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
+    usesimages = [ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     pure_pipelines = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
     all = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
 
@@ -224,9 +226,6 @@ class ParameterDefinitions:
         o.Tsnap = symbols("Tsnap", positive=True)  # Snapshot timescale implemented
         o.Nfacet = symbols("Nfacet", integer=True, positive=True)  # Number of facets
 
-        # We might want these to be called out as symbolic
-        o.Nmajor = symbols("Nmajor", integer=True, positive=True)
-
         return o
 
     @staticmethod
@@ -264,6 +263,20 @@ class ParameterDefinitions:
         o.number_taylor_terms = 5 # Number of Taylor terms to compute
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
+        o.Nsource = 1000 # Number of point sources modelled TODO: Should be set per HPSO
+        o.Nminor = 1000 # Average number of minor cycles per major cycle
+        o.Nsolve = 10 # Number of Stefcal iterations
+        o.Nscales = 5 # Number of scales in MS-MFS
+        o.Npatch = 513 # Number of pixels in clean patch
+        o.Tsolution_neutral = 300 # Solution interval for neutral atmosphere
+        o.Tsolution_iono = 10.0 # Solution interval for ionosphere
+
+        # To be overridden by the pipelines
+        o.Nf_FFT_backward = 0
+        o.Nf_FFT_predict = 0
+        o.Nmajor = 1
+        o.NAProducts = 1 # Number of A^A terms to be modelled
+
         return o
 
     @staticmethod
@@ -290,6 +303,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -303,6 +317,7 @@ class ParameterDefinitions:
             o.nr_baselines = 10192608
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
 
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
@@ -318,6 +333,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
+            o.NAProducts = 1 # Each antenna can be modelled as the same.
 
 
         elif telescope == Telescopes.SKA1_Mid_old:
@@ -333,6 +349,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = 1 # Each antenna can be modelled as the same.
 
         elif telescope == Telescopes.SKA1_Sur_old:
             o.Bmax = 50000  # Actually constructed max baseline, in *m*
@@ -346,6 +363,7 @@ class ParameterDefinitions:
             o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = 1 # Each antenna can be modelled as the same.
 
         elif telescope == Telescopes.SKA2_Low:
             o.Bmax = 180000  # Actually constructed max baseline, in *m*
@@ -361,6 +379,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = 1 # Each antenna can be modelled as the same.
 
         elif telescope == Telescopes.SKA2_Mid:
             o.Bmax = 1800000  # Actually constructed max baseline, in *m*
@@ -375,6 +394,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = 1 # Each antenna can be modelled as the same.
 
         else:
             raise Exception('Unknown Telescope!')
@@ -509,10 +529,11 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.ICAL:
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms
+            o.Nf_FFT_backward = 0
             o.Nf_FFT_predict = o.number_taylor_terms
             o.Npp = 4 # We get everything?
             o.Tobs = 6 * 3600  # in seconds
+            o.Nmajor = 1
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:

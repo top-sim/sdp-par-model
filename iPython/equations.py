@@ -79,6 +79,7 @@ class Equations:
 
         # Apply product equations
         Equations._apply_ingest_equations(o)
+        Equations._apply_calibration_equations(o)
         Equations._apply_grid_fft_equations(o)
         Equations._apply_reprojection_equations(o)
         Equations._apply_kernel_equations(o)
@@ -87,10 +88,6 @@ class Equations:
         # Apply summary equations
         Equations._apply_flop_equations(o)
         Equations._apply_io_equations(o)
-
-        # Dump products
-        if verbose:
-            print o.products
 
         return o
 
@@ -187,6 +184,9 @@ class Equations:
 
     @staticmethod
     def _apply_coalesce_equations(o):
+        """
+        Determines amount of coalescing of visibilities in time.
+        """
 
         # correlator output averaging time scaled for max baseline.
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
@@ -213,6 +213,22 @@ class Equations:
         else:
             o.Tcoal_predict = Lambda(b, o.Tdump_scaled)
             o.Tcoal_backward = Lambda(b, o.Tdump_scaled)
+
+        # Eq. 31 Visibility rate for backward step, allow coalescing
+        # in time and freq prior to gridding
+        bcount = Symbol('bcount')
+        o.Nvis_backward = Lambda((bcount, b),
+            bcount * o.Nf_vis_backward(b) / o.Tcoal_backward(b))
+        # Eq. 31 Visibility rate for predict step
+        o.Nvis_predict = Lambda((bcount, b),
+            bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
+        o.Nvis_predict_no_averaging = \
+            o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict(o.Bmax) / o.Tdump_scaled
+
+        # The line above uses Tdump_scaled independent of whether
+        # BLDTA is used.  This is because BLDTA is only done for
+        # gridding, and doesn't affect the amount of data to be
+        # buffered
 
     @staticmethod
     def _apply_geometry_equations(o):
@@ -259,10 +275,11 @@ class Equations:
     def _apply_ingest_equations(o):
         """ Ingest equations """
 
+        o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
+
         if o.pipeline == Pipelines.Ingest:
 
             # Need autocorrelations as well
-            o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
             receiveflop = 4 * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
             o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
             o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
@@ -271,26 +288,12 @@ class Equations:
 
     @staticmethod
     def _apply_grid_fft_equations(o):
+        b = Symbol("b")
+        bcount = Symbol("bcount")
 
         # ===============================================================================================
         # PDR05 Sec 12.8
         # ===============================================================================================
-
-        # Eq. 31 Visibility rate for backward step, allow coalescing
-        # in time and freq prior to gridding
-        b = Symbol('b')
-        bcount = Symbol('bcount')
-        o.Nvis_backward = Lambda((bcount, b),
-            bcount * o.Nf_vis_backward(b) / o.Tcoal_backward(b))
-        # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict = Lambda((bcount, b),
-            bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
-        o.Nvis_predict_no_averaging = \
-            o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict(o.Bmax) / o.Tdump_scaled
-        # The line above uses Tdump_scaled independent of whether
-        # BLDTA is used.  This is because BLDTA is only done for
-        # gridding, and doesn't affect the amount of data to be
-        # buffered
 
         # For the ASKAP MSMFS, we grid all data for each taylor term
         # with polynominal of delta freq/freq
@@ -342,29 +345,74 @@ class Equations:
         else:
             # Predict step is at full FoV, once per Tsnap
             o.Rfft_predict = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap
-        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
-        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
-        o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
-        o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
-        o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
+
+        if o.Nf_FFT_backward > 0:
+            o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
+            o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
+        if o.Nf_FFT_predict > 0:
+            o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
+            o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
 
     @staticmethod
     def _apply_reprojection_equations(o):
 
         # Re-Projection:
         # -------------
-        if o.pipeline == Pipelines.Fast_Img:
-            o.Rrp = 0  # (Consistent with PDR05 280115)
-        else:
-            o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
-        o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nmajor * o.Nf_FFT_backward
-        o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
+        o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+
+        o.Nf_proj = o.Nf_FFT_backward
+        if o.pipeline == Pipelines.DPrepA_Image:
+            o.Nf_proj = o.number_taylor_terms
+
+        o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nmajor * o.Nf_proj
+
+        if o.pipeline != Pipelines.Fast_Img: # (Consistent with PDR05 280115)
+            o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
 
         # Spectral Fitting
-        o.Rflop_fitting = 0.0
+        # -------------
+        o.Rflop_fitting = o.Nmajor * o.Nbeam * o.Npp * o.number_taylor_terms * \
+                          (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Npix_linear_total_fov ** 2 \
+                          / o.Tobs
         if o.pipeline == Pipelines.DPrepA_Image:
-            o.Rflop_fitting = o.Nbeam * o.Npp * o.number_taylor_terms * (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Nmajor * o.Npix_linear_total_fov ** 2
             o.set_product(Products.Image_Spectral_Fitting, Rflop=o.Rflop_fitting)
+
+    @staticmethod
+    def _apply_deconvolution_equations(o):
+
+        #
+        # Deconvolution
+        # -------------
+        o.Nf_deconv = o.Nf_FFT_backward
+        if o.pipeline == Pipelines.DPrepA_Image:
+            o.Nf_deconv = o.number_taylor_terms
+        o.Rflop_subtract_image_component = Rflop_deconv_common * o.Npatch**2 * o.Nf_deconv
+        o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 * o.Nf_deconv
+        if pipeline in Pipelines.imaging and pipeline != Pipeline.Fast_Img:
+            o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
+            o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
+
+    @staticmethod
+    def _apply_calibration_equations(o):
+
+        # DFT = This assumes that the calculation of phase terms is done once per correlator dump
+        # ---
+        o.Rflop_dft = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
+        o.Rflop_subtractvis = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
+        if o.pipeline in Pipelines.imaging:
+            o.products[Products.DFT] = o.Rflop_dft
+            o.products[Products.Subtract_Visibility] = o.Rflop_subtractvis
+
+        # Solve
+        # -----
+        o.Rflop_dft_cal = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * \
+                          (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) \
+                          / o.nbaselines / o.Tsolution_neutral
+        o.Rflop_solve = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve \
+                        / o.nbaselines / o.Tsolution_neutral
+        if o.pipeline == Pipelines.ICAL:
+            o.set_product(Products.DFT, Rflop=o.Rflop_dft_cal)
+            o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
     @staticmethod
     def _apply_kernel_equations(o):
