@@ -71,6 +71,8 @@ class Equations:
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
         o.wl = 0.5 * (o.wl_max + o.wl_min)  # Representative Wavelength
 
+        # This set of methods must be executed in the defined sequence since
+        # some values in sequence. This is ugly and we should fix it one day.
         # Apply general imaging equations
         Equations._apply_image_equations(o)
         Equations._apply_channel_equations(o)
@@ -80,11 +82,14 @@ class Equations:
         # Apply product equations
         Equations._apply_ingest_equations(o)
         Equations._apply_calibration_equations(o)
-        Equations._apply_grid_fft_equations(o)
+        Equations._apply_major_cycle_equations(o)
+        Equations._apply_grid_equations(o)
+        Equations._apply_fft_equations(o)
         Equations._apply_reprojection_equations(o)
+        Equations._apply_spectral_fitting_equations(o)
         Equations._apply_kernel_equations(o)
         Equations._apply_phrot_equations(o)
-        Equations._apply_deconvolution_equations(o)
+        Equations._apply_minor_cycle_equations(o)
 
         # Apply summary equations
         Equations._apply_flop_equations(o)
@@ -288,217 +293,231 @@ class Equations:
             o.set_product(Products.Average, Rflop=o.cma * o.Nvis_receive)
 
     @staticmethod
-    def _apply_grid_fft_equations(o):
-        b = Symbol("b")
-        bcount = Symbol("bcount")
-
-        # ===============================================================================================
-        # PDR05 Sec 12.8
-        # ===============================================================================================
-
-        # For the ASKAP MSMFS, we grid all data for each taylor term
-        # with polynominal of delta freq/freq
-        o.Ntaylor_backward = 1
-        o.Ntaylor_predict = 1
-        if o.pipeline == Pipelines.DPrepA:
-            o.Ntaylor_backward = o.number_taylor_terms
-            o.Ntaylor_predict = o.number_taylor_terms
-
-        # Gridding:
-        # --------
-        o.Rgrid_backward_task = Lambda((bcount, b),
-            o.cma * o.Nmm * bcount * o.Nkernel2_backward(b) *
-            o.Tsnap / o.Tcoal_backward(b))
-        o.Rgrid_backward = \
-            o.cma * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
-            Equations._sum_bl_bins(o, bcount, b,
-                o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
-            # Eq 32; FLOPS
-
-        # De-gridding in Predict step
-        if o.scale_predict_by_facet:
-            o.Rgrid_predict_task = o.Rgrid_backward_task
-            o.Rgrid_predict = o.Rgrid_backward
-        else:
-            o.Rgrid_predict_task = Lambda((bcount, b),
-                o.cma * o.Nmm * bcount * o.Nkernel2_predict(b) *
-                o.Tsnap / o.Tcoal_predict(b))
-            o.Rgrid_predict = \
-                o.cma * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
-                Equations._sum_bl_bins(o, bcount, b,
-                    o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
-            # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
-
-        o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
+    def _apply_grid_equations(o):
+        """ Grid """
         if o.pipeline in Pipelines.imaging:
-            o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
-            o.set_product(Products.Degrid, Rflop=o.Rgrid_predict)
+            """ For the ASKAP MSMFS, we grid all data for each taylor term
+            with polynominal of delta freq/freq
+            """
+            b = Symbol('b')
+            bcount = Symbol('bcount')
+            o.Ntaylor_backward = 1
+            o.Ntaylor_predict = 1
+            if o.pipeline == Pipelines.DPrepA:
+                o.Ntaylor_backward = o.number_taylor_terms
+                o.Ntaylor_predict = o.number_taylor_terms
+            o.Rgrid_backward_task = Lambda((bcount, b),
+                o.cma * o.Nmm * (o.Nmajor * (o.Nselfcal + 1) + 1) * bcount * o.Nkernel2_backward(b) *
+                o.Tsnap / o.Tcoal_backward(b))
+            o.Rgrid_backward = \
+                o.cma * o.Nmm * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
+                Equations._sum_bl_bins(o, bcount, b,
+                    o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
+ #               Eq 32; FLOPS
 
-        # FFT:
-        # ---
+#            De-gridding in Predict step
+            if o.scale_predict_by_facet:
+                o.Rgrid_predict_task = o.Rgrid_backward_task
+                o.Rgrid_predict = o.Rgrid_backward
+            else:
+                o.Rgrid_predict_task = Lambda((bcount, b),
+                    o.cma * o.Nmm  * (o.Nmajor * (o.Nselfcal + 1) + 1) * bcount * o.Nkernel2_predict(b) *
+                    o.Tsnap / o.Tcoal_predict(b))
+                o.Rgrid_predict = \
+                    o.cma * o.Nmm * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
+                    Equations._sum_bl_bins(o, bcount, b,
+                        o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
+#                    Eq 32; FLOPS
 
-        # Eq. 33, per output grid (i.e. frequency)
-        # TODO: please check correctness of 2 eqns below.
-        # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
-        o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
-        # Eq. 33 per predicted grid (i.e. frequency)
-        if o.scale_predict_by_facet:
-            o.Rfft_predict = o.Rfft_backward
-        else:
-            # Predict step is at full FoV, once per Tsnap
-            o.Rfft_predict = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap
+#                De-gridding in Predict step
+                if o.scale_predict_by_facet:
+                    o.Rgrid_predict_task = o.Rgrid_backward_task
+                    o.Rgrid_predict = o.Rgrid_backward
+                else:
+                    o.Rgrid_predict_task = Lambda((bcount, b),
+                        o.cma * o.Nmm  * (o.Nmajor * (o.Nselfcal + 1) + 1) * bcount * o.Nkernel2_predict(b) *
+                        o.Tsnap / o.Tcoal_predict(b))
+                    o.Rgrid_predict = \
+                        o.cma * o.Nmm * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * o.Ntaylor_predict * \
+                        Equations._sum_bl_bins(o, bcount, b,
+                            o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
+#                    Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
 
-        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
-        if o.Nf_FFT_backward > 0:
-            o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
-        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
-        if o.Nf_FFT_predict > 0:
-            o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
+                o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
+                o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
+                o.set_product(Products.Degrid, Rflop=o.Rgrid_predict)
+
+    @staticmethod
+    def _apply_fft_equations(o):
+        """ FFT """
+        if o.pipeline in Pipelines.imaging:
+            # FFT:
+            # ---
+
+            # Eq. 33, per output grid (i.e. frequency)
+            # TODO: please check correctness of 2 eqns below.
+            # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
+            o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
+            # Eq. 33 per predicted grid (i.e. frequency)
+            if o.scale_predict_by_facet:
+                o.Rfft_predict = o.Rfft_backward
+            else:
+                # Predict step is at full FoV, once per Tsnap
+                o.Rfft_predict = 5.  *  o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap
+
+            if o.Nf_FFT_backward > 0:
+                o.Rflop_fft_bw = o.Npp * o.Nbeam * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Nf_FFT_backward * o.Rfft_backward
+                o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
+            if o.Nf_FFT_predict > 0:
+                o.Rflop_fft_predict = o.Npp * o.Nbeam * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Nf_FFT_predict * o.Rfft_predict
+                o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
 
     @staticmethod
     def _apply_reprojection_equations(o):
 
         # Re-Projection:
         # -------------
-        o.Rrp = o.rma * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+        if o.pipeline in Pipelines.imaging:
+            o.Rrp = o.rma * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
-        o.Nf_proj = o.Nf_FFT_backward
-        if o.pipeline == Pipelines.DPrepA_Image:
-            o.Nf_proj = o.number_taylor_terms
+            o.Nf_proj = o.Nf_FFT_backward
+            if o.pipeline == Pipelines.DPrepA_Image:
+                o.Nf_proj = o.number_taylor_terms
 
-        o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nmajor * o.Nf_proj
+            o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Nf_proj
 
-        if o.pipeline != Pipelines.Fast_Img: # (Consistent with PDR05 280115)
-            o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
-
-        # Spectral Fitting
-        # -------------
-        o.Rflop_fitting = o.rma * o.Nmajor * o.Nbeam * o.Npp * o.number_taylor_terms * \
-                          (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Npix_linear_total_fov ** 2 \
-                          / o.Tobs
-        if o.pipeline == Pipelines.DPrepA_Image:
-            o.set_product(Products.Image_Spectral_Fitting, Rflop=o.Rflop_fitting)
+            if o.pipeline != Pipelines.Fast_Img: # (Consistent with PDR05 280115)
+                o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
 
     @staticmethod
-    def _apply_deconvolution_equations(o):
+    def _apply_spectral_fitting_equations(o):
 
-        #
-        # Deconvolution
-        # -------------
-        o.Nf_deconv = o.Nf_FFT_backward
-        if o.pipeline == Pipelines.DPrepA_Image:
-            o.Nf_deconv = o.number_taylor_terms
-        o.Rflop_subtract_image_component = \
-            o.rma * o.Nbeam * o.Nminor * o.Nmajor * o.Nscales * o.Npatch**2 * o.Nf_deconv / o.Tobs
-        o.Rflop_identify_component = \
-            o.rma * o.Nbeam * o.Nminor * o.Nmajor * o.Nscales * (o.Npix_linear * o.Nfacet)**2 * o.Nf_deconv  / o.Tobs
-        if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
-            o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
-            o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
+        if o.pipeline in Pipelines.imaging:
+            # Spectral Fitting
+            # -------------
+            o.Rflop_fitting = o.rma * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Nbeam * o.Npp * o.number_taylor_terms * \
+                              (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Npix_linear_total_fov ** 2 \
+                              / o.Tobs
+            if o.pipeline == Pipelines.DPrepA_Image:
+                o.set_product(Products.Image_Spectral_Fitting, Rflop=o.Rflop_fitting)
+
+    @staticmethod
+    def _apply_minor_cycle_equations(o):
+
+         if o.pipeline in Pipelines.imaging:
+            #
+            # Deconvolution
+            # -------------
+            o.Nf_deconv = o.Nf_FFT_backward
+            if o.pipeline == Pipelines.DPrepA_Image:
+                o.Nf_deconv = o.number_taylor_terms
+            Rflop_deconv_common = o.rma * (o.Nmajor * (1 + o.Nselfcal) + 1) * o.Nbeam * o.Npp * o.Nminor * o.Nscales * o.Nf_deconv
+            o.Rflop_subtract_image_component =  Rflop_deconv_common * o.Npatch**2 
+            o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
+            if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
+                o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
+                o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
 
     @staticmethod
     def _apply_calibration_equations(o):
 
-        # DFT = This assumes that the calculation of phase terms is done once per correlator dump
-        # ---
-        o.Rflop_dft = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
-        o.Rflop_subtractvis = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
-        if o.pipeline in Pipelines.imaging:
-            o.set_product(Products.DFT, Rflop=o.Rflop_dft)
-            o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
-
-        # Solve
-        # -----
-        o.Rflop_dft_cal = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * \
-                          (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) \
-                          / o.nbaselines / o.Tsolution_neutral
-        o.Rflop_solve = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve \
-                        / o.nbaselines / o.Tsolution_neutral
         if o.pipeline == Pipelines.ICAL:
-            o.set_product(Products.DFT, Rflop=o.Rflop_dft_cal)
+            o.Rflop_solve = (o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines / o.Tsolution_neutral
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
+        if o.pipeline in Pipelines.imaging:
+            o.Rflop_dft = (1 + o.Nselfcal) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
+            o.set_product(Products.DFT, Rflop=o.Rflop_dft)
+
+    @staticmethod
+    def _apply_major_cycle_equations(o):
+
+        # Note that we assume this is done at the beginning of each selfcal loop
+        # ---
+        if o.pipeline in Pipelines.imaging:
+            o.Rflop_subtractvis = (o.Nmajor * (1 + o.Nselfcal) + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
+            o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
     @staticmethod
     def _apply_kernel_equations(o):
         """
         Generate Convolution kernels
         """
+        if o.pipeline in Pipelines.imaging:
 
-        b = Symbol('b')
-        o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
-        o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
+            b = Symbol('b')
+            o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
+            o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
 
-        # allow uv positional errors up to o.epsilon_f_approx *
-        # 1/Qkernel of a cell from frequency smearing.(But not more
-        # than Nf_max channels...)
-        o.Nf_gcf_backward_nosmear = Lambda(b,
-            Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-        o.Nf_gcf_predict_nosmear  = Lambda(b,
-            Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+            # allow uv positional errors up to o.epsilon_f_approx *
+            # 1/Qkernel of a cell from frequency smearing.(But not more
+            # than Nf_max channels...)
+            o.Nf_gcf_backward_nosmear = Lambda(b,
+                Min(log(o.wl_max / o.wl_min) /
+                    log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+            o.Nf_gcf_predict_nosmear  = Lambda(b,
+                Min(log(o.wl_max / o.wl_min) /
+                    log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
 
-        if o.on_the_fly:
-            o.Nf_gcf_backward = o.Nf_vis_backward
-            o.Nf_gcf_predict  = o.Nf_vis_predict
-            o.Tkernel_backward = o.Tcoal_backward
-            o.Tkernel_predict  = o.Tcoal_predict
-        else:
-            # For both of the following, maintain distributability;
-            # need at least minimum_channels (500) kernels.
-            o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
-            o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
-            # TODO: some baseline dependent re-use limits along the
-            # same lines as the frequency re-use? PIP.IMG check
-            # please.
-            o.Tkernel_backward = Lambda(b, o.Tion)
-            o.Tkernel_predict  = Lambda(b, o.Tion)
+            if o.on_the_fly:
+                o.Nf_gcf_backward = o.Nf_vis_backward
+                o.Nf_gcf_predict  = o.Nf_vis_predict
+                o.Tkernel_backward = o.Tcoal_backward
+                o.Tkernel_predict  = o.Tcoal_predict
+            else:
+                # For both of the following, maintain distributability;
+                # need at least minimum_channels (500) kernels.
+                o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
+                o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
+                # TODO: some baseline dependent re-use limits along the
+                # same lines as the frequency re-use? PIP.IMG check
+                # please.
+                o.Tkernel_backward = Lambda(b, o.Tion)
+                o.Tkernel_predict  = Lambda(b, o.Tion)
 
-        # The following two equations correspond to Eq. 35
-        bcount = Symbol('bcount')
-        o.Rccf_backward_task = Lambda(b,
-            5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2))
-        o.Rccf_backward = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-           bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
-           o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
-           o.Nmm / o.Tkernel_backward(b))
-        if o.scale_predict_by_facet:
-            o.Rccf_predict_task = o.Rccf_backward_task
-            o.Rccf_predict = o.Rccf_backward
-        else:
-            o.Rccf_predict_task = Lambda(b,
-                5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
-            o.Rccf_predict  = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-               bcount * 5. * o.Nf_gcf_predict(b) *
-               o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
-               o.Nmm / o.Tkernel_predict(b))
+            # The following two equations correspond to Eq. 35
+            bcount = Symbol('bcount')
+            o.Rccf_backward_task = Lambda(b,
+                5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2))
+            o.Rccf_backward = (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
+               bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
+               o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
+               o.Nmm / o.Tkernel_backward(b))
+            if o.scale_predict_by_facet:
+                o.Rccf_predict_task = o.Rccf_backward_task
+                o.Rccf_predict = o.Rccf_backward
+            else:
+                o.Rccf_predict_task = Lambda(b,
+                    5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
+                o.Rccf_predict  = (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
+                   bcount * 5. * o.Nf_gcf_predict(b) *
+                   o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
+                   o.Nmm / o.Tkernel_predict(b))
 
-        o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
-        if o.pipeline in Pipelines.usesimages:
+            o.Rflop_conv = (o.Nmajor * (1 + o.Nselfcal) + 1) * (o.Rccf_backward + o.Rccf_predict)
             o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
 
     @staticmethod
     def _apply_phrot_equations(o):
         """Phase rotation (for the faceting)"""
 
-        # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
-        # 25 FLOPS per visiblity. Only do it if we need to facet.
-        # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
-        bcount = Symbol('bcount')
-        b = Symbol('b')
-        o.Rflop_phrot_predict_task = Lambda((bcount,b), \
-            sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict(b))
-        o.Rflop_phrot_backward_task = Lambda((bcount, b), \
-            sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
-        o.Rflop_phrot = \
-            sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet ** 2 * \
-            Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
-        if o.scale_predict_by_facet:
-            o.Rflop_phrot += \
-                sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
-                Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
-        if o.pipeline in Pipelines.usesimages:
-            o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
+        if o.pipeline in Pipelines.imaging:
+            # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
+            # 25 FLOPS per visiblity. Only do it if we need to facet.
+            # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
+            bcount = Symbol('bcount')
+            b = Symbol('b')
+            o.Rflop_phrot_predict_task = Lambda((bcount,b), \
+                sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict(b))
+            o.Rflop_phrot_backward_task = Lambda((bcount, b), \
+                sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
+            o.Rflop_phrot = \
+                sign(o.Nfacet - 1) * 25 * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet ** 2 * \
+                Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
+            if o.scale_predict_by_facet:
+                o.Rflop_phrot += \
+                    sign(o.Nfacet - 1) * 25 * (o.Nmajor * (o.Nselfcal + 1) + 1) * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
+                    Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
+            o.set_product(Products.PhaseRotation, Rflop=(o.Nmajor * (1 + o.Nselfcal) + 1) * o.Rflop_phrot)
 
     @staticmethod
     def _apply_flop_equations(o):
@@ -508,7 +527,7 @@ class Equations:
         o.Rflop = sum(o.get_products('Rflop').values())
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
-        o.Rinterfacet = (2 * o.Nmajor + 1) * min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
+        o.Rinterfacet = 2 * (o.Nmajor * (o.Nselfcal + 1) + 1) * min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
 
 
     @staticmethod
@@ -536,4 +555,4 @@ class Equations:
         # TODO: PDR05 lacking in this regard and must be updated.
         # This is correct if we have only got facets for the backward step and use Nfacet=1 for predict step: TJC see TCC-SDP-151123-1-1
         # It probably can go much smaller, though: see SDPPROJECT-133
-        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajor) * o.Nvis_predict_no_averaging * o.Mvis * o.Nfacet ** 2  # Eq 50
+        o.Rio = o.Nbeam * o.Npp * (1 + (o.Nmajor * (o.Nselfcal + 1) + 1)) * o.Nvis_predict_no_averaging * o.Mvis * o.Nfacet ** 2  # Eq 50
