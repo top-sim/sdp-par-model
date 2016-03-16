@@ -275,16 +275,16 @@ class Equations:
     def _apply_ingest_equations(o):
         """ Ingest equations """
 
+        # Need autocorrelations as well
         o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
 
         if o.pipeline == Pipelines.Ingest:
 
-            # Need autocorrelations as well
-            receiveflop = 4 * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
+            receiveflop = 2 * o.rma * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
             o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
             o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
-            o.set_product(Products.Demix, Rflop=o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
-            o.set_product(Products.Average, Rflop=o.Nvis_receive)
+            o.set_product(Products.Demix, Rflop=o.cma * o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
+            o.set_product(Products.Average, Rflop=o.cma * o.Nvis_receive)
 
     @staticmethod
     def _apply_grid_fft_equations(o):
@@ -306,10 +306,10 @@ class Equations:
         # Gridding:
         # --------
         o.Rgrid_backward_task = Lambda((bcount, b),
-            8. * o.Nmm * bcount * o.Nkernel2_backward(b) *
+            o.cma * o.Nmm * bcount * o.Nkernel2_backward(b) *
             o.Tsnap / o.Tcoal_backward(b))
         o.Rgrid_backward = \
-            8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
+            o.cma * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
             Equations._sum_bl_bins(o, bcount, b,
                 o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
             # Eq 32; FLOPS
@@ -320,10 +320,10 @@ class Equations:
             o.Rgrid_predict = o.Rgrid_backward
         else:
             o.Rgrid_predict_task = Lambda((bcount, b),
-                8. * o.Nmm * bcount * o.Nkernel2_predict(b) *
+                o.cma * o.Nmm * bcount * o.Nkernel2_predict(b) *
                 o.Tsnap / o.Tcoal_predict(b))
             o.Rgrid_predict = \
-                8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
+                o.cma * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
                 Equations._sum_bl_bins(o, bcount, b,
                     o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
@@ -347,11 +347,11 @@ class Equations:
             # Predict step is at full FoV, once per Tsnap
             o.Rfft_predict = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap
 
+        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
         if o.Nf_FFT_backward > 0:
-            o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
             o.set_product(Products.FFT, Rflop=o.Rflop_fft_bw)
+        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
         if o.Nf_FFT_predict > 0:
-            o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
             o.set_product(Products.IFFT, Rflop=o.Rflop_fft_predict)
 
     @staticmethod
@@ -359,7 +359,7 @@ class Equations:
 
         # Re-Projection:
         # -------------
-        o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+        o.Rrp = o.rma * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
         o.Nf_proj = o.Nf_FFT_backward
         if o.pipeline == Pipelines.DPrepA_Image:
@@ -372,7 +372,7 @@ class Equations:
 
         # Spectral Fitting
         # -------------
-        o.Rflop_fitting = o.Nmajor * o.Nbeam * o.Npp * o.number_taylor_terms * \
+        o.Rflop_fitting = o.rma * o.Nmajor * o.Nbeam * o.Npp * o.number_taylor_terms * \
                           (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Npix_linear_total_fov ** 2 \
                           / o.Tobs
         if o.pipeline == Pipelines.DPrepA_Image:
@@ -398,18 +398,18 @@ class Equations:
 
         # DFT = This assumes that the calculation of phase terms is done once per correlator dump
         # ---
-        o.Rflop_dft = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
-        o.Rflop_subtractvis = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
+        o.Rflop_dft = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
+        o.Rflop_subtractvis = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
         if o.pipeline in Pipelines.imaging:
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
             o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
         # Solve
         # -----
-        o.Rflop_dft_cal = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * \
+        o.Rflop_dft_cal = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * \
                           (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) \
                           / o.nbaselines / o.Tsolution_neutral
-        o.Rflop_solve = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve \
+        o.Rflop_solve = o.cma * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve \
                         / o.nbaselines / o.Tsolution_neutral
         if o.pipeline == Pipelines.ICAL:
             o.set_product(Products.DFT, Rflop=o.Rflop_dft_cal)
@@ -519,7 +519,7 @@ class Equations:
         bcount = Symbol('bcount')
         b = Symbol('b')
         o.Mw_cache = \
-            o.Nbeam * 8.0 * (o.Qgcf ** 3) * \
+            o.Ncbytes * o.Nbeam * (o.Qgcf ** 3) * \
             Equations._sum_bl_bins(o, bcount, b,
                 o.Nf_vis_predict(b) * o.Ngw_predict(b) ** 3)
             # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
