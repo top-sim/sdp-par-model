@@ -244,7 +244,7 @@ class ParameterDefinitions:
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
         o.rma = 2 # Flops per multiply add (i.e. no fmult unit assumed)
-        o.cma = 6 # Flops per complex multiply add (i.e. no fmult unit assumed)
+        o.cma = 8 # Flops per complex multiply add (i.e. no fmult unit assumed)
         o.Nw = 2  # Bytes per value
         o.Ncbytes = 8 # Number of bytes per complex
         o.Nrbytes = 4 # Number of bytes per real
