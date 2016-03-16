@@ -112,7 +112,12 @@ class SkaIPythonAPI(api):
         return map(lambda row: row[3], resultMap)
     @staticmethod
     def get_result_expressions(resultMap,tp):
-        return map(lambda row: row[4](tp), resultMap)
+        def expr(row):
+            try:
+                return row[4](tp)
+            except AttributeError:
+                return "(undefined)"
+        return map(expr, resultMap)
 
     # Rows needed for graphs
     GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-9:])
