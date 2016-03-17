@@ -273,12 +273,14 @@ class ParameterDefinitions:
         o.Npatch = 4097 # Number of pixels in clean patch
         o.Tsolution_neutral = 300 # Solution interval for neutral atmosphere
         o.Tsolution_iono = 10.0 # Solution interval for ionosphere
+        o.Tsolution_bpass = 3600 # Solution interval for bandpass
 
         # To be overridden by the pipelines
         o.Nf_FFT_backward = 0
         o.Nf_FFT_predict = 0
         o.Nmajor = 2
-        o.Nselfcal = 5
+        o.Nselfcal = 3
+        o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
         o.NAProducts = 1 # Number of A^A terms to be modelled
 
         return o
@@ -526,6 +528,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max
             o.Nselfcal = 0
             o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -535,7 +538,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.ICAL:
             o.Qfov = 1.8  # Field of view factor
-            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Nselfcal = 3
+            o.Nmajor = 2
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms
@@ -551,7 +556,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepA:
             o.Qfov = 1.8  # Field of view factor
-            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Nselfcal = 3
+            o.Nmajor = 2
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms
@@ -567,7 +574,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepA_Image:
             o.Qfov = 1.8  # Field of view factor
-            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Nselfcal = 3
+            o.Nmajor = 2
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
@@ -584,7 +593,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepB:
             o.Qfov = 1.8  # Field of view factor
-            o.Nmajor = 10  # Number of major CLEAN cycles to be done
+            o.Nselfcal = 3
+            o.Nmajor = 2
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
@@ -601,7 +612,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepC:
             o.Qfov = 1.0  # Field of view factor
-            o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
+            o.Nselfcal = 3
+            o.Nmajor = 2
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
@@ -616,7 +629,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepD:
             o.Qfov = 1.0  # Field of view factor
-            o.Nmajor = 1.5  # Number of major CLEAN cycles to be done: updated to 1.5 as post-PDR fix.
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
@@ -631,7 +646,9 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.Fast_Img:
             o.Qfov = 0.9  # Field of view factor
-            o.Nmajor = 1  # Number of major CLEAN cycles to be done
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
             o.Nf_FFT_backward = o.Nf_out
