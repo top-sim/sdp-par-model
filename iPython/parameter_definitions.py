@@ -147,6 +147,7 @@ class Pipelines:
     """
     Ingest = 'Ingest' # Ingest pipeline
     ICAL = 'ICAL'     # ICAL (the big one):produce calibration solutions
+    RCAL = 'RCAL'     # Produce calibration solutions in real time
     DPrepA = 'DPrepA' # Produce continuum taylor term images in Stokes I
     DPrepA_Image = 'DPrepA_Image' # Produce continuum taylor term images in Stokes I as CASA does in images
     DPrepB = 'DPrepB' # Produce coarse continuum image cubes in I,Q,U,V (with Nf_out channels)
@@ -157,8 +158,8 @@ class Pipelines:
     input = [Ingest]
     imaging = [ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     output = [DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
-    all = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
-    pure_pipelines = [Ingest, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
+    all = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
+    pure_pipelines = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
 
 
 class HPSOs:
@@ -273,7 +274,7 @@ class ParameterDefinitions:
         o.Npatch = 4097 # Number of pixels in clean patch
         o.Tsolution_neutral = 300 # Solution interval for neutral atmosphere
         o.Tsolution_iono = 10.0 # Solution interval for ionosphere
-        o.Tsolution_bpass = 3600 # Solution interval for bandpass
+        o.Tsolution_bandpass = 3600 # Solution interval for bandpass
 
         # To be overridden by the pipelines
         o.Nf_FFT_backward = 0
@@ -528,7 +529,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max
             o.Nselfcal = 0
             o.Nmajor = 0
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Ntotalmajor = 0
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -540,13 +541,27 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 3
             o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms
             o.Nf_FFT_predict = o.number_taylor_terms
-            o.Nselfcal = 5
-            o.Nmajor = 2
+            o.Npp = 4 # We get everything
+            o.Tobs = 6 * 3600  # in seconds
+            if o.telescope == Telescopes.SKA1_Low:
+                o.amp_f_max = 1.08
+            elif o.telescope == Telescopes.SKA1_Mid:
+                o.amp_f_max = 1.034
+
+        elif pipeline == Pipelines.RCAL:
+            o.Qfov = 1.8  # Field of view factor
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
+            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_FFT_backward = o.number_taylor_terms
+            o.Nf_FFT_predict = o.number_taylor_terms
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -556,17 +571,15 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepA:
             o.Qfov = 1.8  # Field of view factor
-            o.Nselfcal = 3
-            o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms
             o.Nf_FFT_predict = o.number_taylor_terms
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600  # in seconds
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -574,17 +587,15 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepA_Image:
             o.Qfov = 1.8  # Field of view factor
-            o.Nselfcal = 3
-            o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600  # in seconds
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -593,17 +604,15 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepB:
             o.Qfov = 1.8  # Field of view factor
-            o.Nselfcal = 3
-            o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600  # in seconds
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -612,16 +621,14 @@ class ParameterDefinitions:
 
         elif pipeline == Pipelines.DPrepC:
             o.Qfov = 1.0  # Field of view factor
-            o.Nselfcal = 3
-            o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Nselfcal = 0
+            o.Nmajor = 0
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -631,14 +638,12 @@ class ParameterDefinitions:
             o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 0
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -648,7 +653,7 @@ class ParameterDefinitions:
             o.Qfov = 0.9  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 0
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
             o.Nf_FFT_backward = o.Nf_out
@@ -656,8 +661,6 @@ class ParameterDefinitions:
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
             o.Tsnap_min = o.Tobs
-            o.Nselfcal = 0
-            o.Nmajor = 0
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:

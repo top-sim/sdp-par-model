@@ -257,7 +257,7 @@ class Implementation:
             p.apply_hpso_parameters(telescope_params, cfg.hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
-
+            
         # Artificially limit max_baseline or nr_frequency_channels,
         # deviating from the default for this Band or HPSO
         if cfg.max_baseline is not None:

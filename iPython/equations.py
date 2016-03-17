@@ -73,15 +73,17 @@ class Equations:
 
         # This set of methods must be executed in the defined sequence since
         # some values in sequence. This is ugly and we should fix it one day.
-        # Apply general imaging equations
+        # Apply general imaging equations. These next 4 methods just set up
+        # parameters.
         Equations._apply_image_equations(o)
         Equations._apply_channel_equations(o)
         Equations._apply_coalesce_equations(o)
         Equations._apply_geometry_equations(o)
 
-        # Apply product equations
+        # Apply product equations to fill in the Rflop estimates (and others when they arrive).
         Equations._apply_ingest_equations(o)
         Equations._apply_dft_equations(o)
+        Equations._apply_flag_equations(o)
         Equations._apply_calibration_equations(o)
         Equations._apply_major_cycle_equations(o)
         Equations._apply_grid_equations(o)
@@ -286,12 +288,18 @@ class Equations:
         o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
 
         if o.pipeline == Pipelines.Ingest:
-
             receiveflop = 2 * o.rma * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
             o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
             o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
             o.set_product(Products.Demix, Rflop=o.cma * o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
             o.set_product(Products.Average, Rflop=o.cma * o.Nvis_receive)
+
+    @staticmethod
+    def _apply_flag_equations(o):
+        """ Flagging equations for non-ingest pipelines"""
+
+        if not (o.pipeline == Pipelines.Ingest):
+            o.set_product(Products.Flag, Rflop=279 * o.Nvis_predict_no_averaging)
 
     @staticmethod
     def _apply_grid_equations(o):
@@ -388,7 +396,9 @@ class Equations:
             #
             # Minor cycles
             # -------------
-            o.Nf_deconv = o.Nf_FFT_backward
+            o.Nf_deconv = o.Nf_out
+            if o.pipeline == Pipelines.DPrepA:
+                o.Nf_deconv = o.number_taylor_terms
             if o.pipeline == Pipelines.DPrepA_Image:
                 o.Nf_deconv = o.number_taylor_terms
             Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor *  o.Nf_deconv
@@ -401,11 +411,17 @@ class Equations:
 
     @staticmethod
     def _apply_calibration_equations(o):
+    
+        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines)
 
         if o.pipeline == Pipelines.ICAL:
-            o.Rflop_solve = (o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines / o.Tsolution_neutral
+            o.Rflop_solve =  Rflop_solve_common * (1.0 / o.Tsolution_neutral + o.Nf_FFT_backward / o.Tsolution_bandpass)                
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
+        if o.pipeline == Pipelines.RCAL:
+            o.Rflop_solve =  Rflop_solve_common * (1.0 / o.Tsolution_neutral + o.Nf_FFT_backward / o.Tsolution_bandpass)                
+            o.set_product(Products.Solve, Rflop=o.Rflop_solve)
+ 
     @staticmethod
     def _apply_dft_equations(o):
         if o.pipeline in Pipelines.imaging:
