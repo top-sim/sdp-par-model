@@ -71,7 +71,9 @@ class PipelineConfig:
 
         # Load telescope parameters from apply_telescope_parameters.
         tp_default = ParameterContainer()
+        p.apply_global_parameters(tp_default)
         p.apply_telescope_parameters(tp_default, telescope)
+        p.apply_pipeline_parameters(tp_default, pipeline)
 
         # Store max allowed baseline length, load default parameters
         self.max_allowed_baseline = tp_default.baseline_bins[-1]
