@@ -20,6 +20,7 @@ from implementation import Implementation as imp  # methods for performing compu
 from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
 
+import csv
 
 class SkaIPythonAPI(api):
     """
@@ -693,6 +694,54 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
+    def write_csv_pipelines(filename, telescopes, bands, pipelines,
+                            bldta=True, on_the_fly=False, scale_predict_by_facet=False):
+        """
+        Evaluates all valid configurations of this telescope and dumps the
+        result as a CSV file.
+        """
+
+        # Make configuration list
+        configs = []
+        for telescope in telescopes:
+            for band in bands:
+                for pipeline in pipelines:
+                    cfg = PipelineConfig(telescope=telescope, band=band,
+                                         pipeline=pipeline, bldta=bldta,
+                                         on_the_fly=on_the_fly,
+                                         scale_predict_by_facet=scale_predict_by_facet)
+                    configs.append(cfg)
+
+        # Calculate
+        rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
+        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+
+        # Write CSV
+        SkaIPythonAPI._write_csv(filename, results, rows)
+
+    @staticmethod
+    def write_csv_hpsos(filename, hpsos,
+                        bldta=True, on_the_fly=False, scale_predict_by_facet=False):
+        """
+        Evaluates all valid configurations of this telescope and dumps the
+        result as a CSV file.
+        """
+
+        # Make configuration list
+        configs = []
+        for hpso in hpsos:
+            cfg = PipelineConfig(hpso=hpso, bldta=bldta, on_the_fly=on_the_fly,
+                                 scale_predict_by_facet=scale_predict_by_facet)
+            configs.append(cfg)
+
+        # Calculate
+        rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
+        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+
+        # Write CSV
+        SkaIPythonAPI._write_csv(filename, results, rows)
+
+    @staticmethod
     def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
         """A private method for computing a set of results.
 
@@ -741,3 +790,76 @@ class SkaIPythonAPI(api):
             else:
                 result_values.append(list(row_values))
         return result_values
+
+    @staticmethod
+    def _batch_compute_results(configs, verbose, result_map):
+        """Calculate a whole bunch of pipeline configurations. """
+
+        display(HTML('<font color="blue">Calculating pipelines -- this may take quite a while.</font>'))
+        results = []
+        for cfg in configs:
+
+            # Check that the configuration is valid, skip if it isn't
+            (okay, msgs) = cfg.check()
+            if not okay:
+                # display(HTML('<p>Skipping %s (%s)</p>' % (cfg.describe(), ", ".join(msgs))))
+                continue
+
+            # Compute, add to results
+            display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
+            results.append((cfg, SkaIPythonAPI._compute_results(cfg, verbose, result_map)))
+        return results
+
+    @staticmethod
+    def _write_csv(filename, results, rows):
+        """
+        Writes pipeline calculation results as a CSV file
+        """
+
+        with open(filename, 'wb') as csvfile:
+            w = csv.writer(csvfile)
+
+            # Output row with configurations
+            w.writerow([''] + map(lambda r: r[0].describe(), results))
+
+            # Output actual results
+            for i, row in enumerate(rows):
+
+                rowTitle = row[0]
+                rowUnit = row[1]
+                if rowUnit != '': rowUnit = ' [' + rowUnit + ']'
+
+                # Convert lists to dictionaries
+                resultRow = map(lambda r: r[1][i], results)
+                resultRow = map(lambda r: dict(enumerate(r)) if isinstance(r,list) else r,
+                                resultRow)
+
+                # Dictionary? Expand
+                dicts = filter(lambda r: isinstance(r, dict), resultRow)
+                if len(dicts) > 0:
+
+                    # Collect labels
+                    labels = set()
+                    for d in dicts:
+                        labels = labels.union(d.iterkeys())
+
+                    # Show all of them, properly sorted. Non-dicts
+                    # (errors) are simply shoved into the first row.
+                    first = True
+                    for label in labels:
+                        def printRow(r):
+                            if isinstance(r, dict):
+                                return r.get(label, '')
+                            elif first:
+                                return r
+                            return ''
+                        w.writerow([rowTitle + str(label) + rowUnit] + map(printRow, resultRow))
+                        first = False
+
+                else:
+
+                    # Simple write out as-is
+                    w.writerow([rowTitle + rowUnit] + resultRow)
+
+
+        display(HTML('<font color="blue">Results written to %s.</font>' % filename))
