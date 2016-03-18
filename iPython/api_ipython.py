@@ -536,8 +536,7 @@ class SkaIPythonAPI(api):
         bldta_text = {True: ' (BLDTA)', False: ' (no BLDTA)'}
         otf_text = {True: ' (otf kernels)', False: ''}
 
-        telescope_labels = ('%s\n%s\n%s' % (telescope_1, bldta_text[tel1_bldta], otf_text[tel1_otf]),
-                            '%s\n%s\n%s' % (telescope_2, bldta_text[tel2_bldta], otf_text[tel2_otf]))
+        telescope_labels = (cfg_1.describe(), cfg_2.describe())
 
         values = {
             label: (products_1.get(label,0),products_2.get(label,0))

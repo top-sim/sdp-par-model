@@ -71,9 +71,9 @@ class PipelineConfig:
 
         # Load telescope parameters from apply_telescope_parameters.
         tp_default = ParameterContainer()
-        p.apply_global_parameters(tp_default)
         p.apply_telescope_parameters(tp_default, telescope)
-        p.apply_pipeline_parameters(tp_default, pipeline)
+        if not hpso is None:
+            p.apply_hpso_parameters(tp_default, hpso)
 
         # Store max allowed baseline length, load default parameters
         self.max_allowed_baseline = tp_default.baseline_bins[-1]
@@ -81,10 +81,34 @@ class PipelineConfig:
             self.max_baseline = tp_default.Bmax
         else:
             self.max_baseline = max_baseline
+        self.default_frequencies = tp_default.Nf_max
         if Nf_max == 'default':
             self.Nf_max = tp_default.Nf_max
         else:
             self.Nf_max = Nf_max
+
+    def describe(self):
+        """ Returns a name that identifies this configuration. """
+
+        # Identify by either HPSO or telescope+band+pipeline name
+        if self.hpso is not None:
+            name = self.hpso
+        else:
+            name = self.pipeline + ' (' + self.band + ')'
+
+        # Add modifiers
+        if self.Nf_max != self.default_frequencies:
+            name += ' [Nfmax=%d]' % self.Nf_max
+        if self.max_baseline != self.max_allowed_baseline:
+            name += ' [Bmax=%d]' % self.max_baseline
+        if self.bldta:
+            name += ' [bldta]'
+        if self.on_the_fly:
+            name += ' [otf]'
+        if self.scale_predict_by_facet:
+            name += ' [spbf]'
+
+        return name
 
     def telescope_and_band_are_compatible(self):
         """
