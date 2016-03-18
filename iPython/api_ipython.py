@@ -21,6 +21,7 @@ from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
 
 import csv
+from string import find
 
 class SkaIPythonAPI(api):
     """
@@ -830,3 +831,122 @@ class SkaIPythonAPI(api):
 
 
         display(HTML('<font color="blue">Results written to %s.</font>' % filename))
+
+    @staticmethod
+    def _read_csv(filename):
+        """
+        Reads pipeline calculation results from a CSV file as written by _write_csv.
+        """
+
+        display(HTML('<font color="blue">Reading %s...</font>' % filename))
+        with open(filename, 'rb') as csvfile:
+            r = csv.reader(csvfile)
+            it = iter(r)
+
+            # First row must be headings (i.e. the configurations)
+            headings = next(it)
+            results = []
+
+            # Data in the rest of them
+            for row in it:
+                resultRow = []
+                for h, v in zip(headings[1:], row[1:]):
+                    resultRow.append((h, v))
+                results.append((row[0], resultRow))
+
+            return results
+
+    @staticmethod
+    def compare_csv(result_file, ref_file, ignore_modifiers=True):
+        """
+        Read and compare two CSV files with telescope parameters
+
+        @param result_file: CVS file with telescope parameters
+        @param ref_file: CVS file with reference parameters
+        @param ignore_modifiers: Ignore modifiers when matching columns (say, [bldta])
+        """
+
+        # Read results and reference. Make lookup dictionary for the latter.
+        results = SkaIPythonAPI._read_csv(result_file)
+        ref = dict(SkaIPythonAPI._read_csv(ref_file))
+
+        def strip_modifiers(head):
+            if ignore_modifiers:
+                p = find(head, ' [')
+                if p != -1: return head[:p]
+            return head
+
+        s = '<h3>Comparison:</h3><table>\n'
+
+        # Headings
+        s += '<tr><td></td>'
+        for head, _ in results[0][1]:
+            s += '<th>%s</th>' % head
+        s += '</tr>\n'
+
+        for name, row in results:
+            s += '<tr><td>%s</td>' % name
+
+            # Locate reference results
+            refRow = ref.get(name, [])
+            refRow = map(lambda (h, v): (strip_modifiers(h), v), refRow)
+            refRow = dict(refRow)
+
+            # Loop through values
+            for head, val in row:
+                head = strip_modifiers(head)
+
+                # Number?
+                try:
+
+                    # Non-null value
+                    num = float(val)
+                    if num == 0: raise ValueError
+
+                    # Try to get reference as number, too
+                    ref_num = None
+                    if refRow.has_key(head):
+                        try: ref_num = float(refRow[head])
+                        except ValueError: ref_num = None
+
+                    # Determine difference
+                    diff = None
+                    if not (ref_num is None or ref_num == 0):
+                        diff = 100*(num-ref_num)/ref_num
+                        # Relative difference - use number as
+                        # reference for negative changes, as -50% is
+                        # about as bad as +200%.
+                        diff_rel = max(diff, 100*(ref_num-num)/num)
+
+                    # Output
+                    if not diff is None:
+                        s += '<td bgcolor="#%2x%2x00">%s (%+d%%)</td>' % (
+                            min(diff_rel/50*255, 255),
+                            255-min(max(0, diff_rel-50)/50*255, 255),
+                            SkaIPythonAPI.format_result(num),
+                            diff)
+                    else:
+                        s += '<td>%s</td>' % SkaIPythonAPI.format_result(num)
+
+                except ValueError:
+
+                    # Get reference as string
+                    ref_str = refRow.get(head)
+
+                    # No number, output as is
+                    if not ref_str is None:
+                        if val == ref_str:
+                            if val == '':
+                                s += '<td></td>'
+                            else:
+                                s += '<td bgcolor="#00ff00">%s (same)</td>' % val
+                        else:
+                            s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
+                    else:
+                        s += '<td>%s</td>' % val
+
+            s += '</tr>\n'
+        s += '</table>'
+
+        display(HTML(s))
+        display(HTML('<font color="blue">Done.</font>'))
