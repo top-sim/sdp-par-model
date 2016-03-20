@@ -279,10 +279,10 @@ class Implementation:
         if cfg.Nf_max is not None:
             telescope_params.Nf_max = min(telescope_params.Nf_max, cfg.Nf_max)
 
-        # Apply parameter adjustments. Needs to be done before bin
-        # calculation in case Bmax gets changed.
+        # Apply parameter adjustments. Needs to be done before bin calculation in case Bmax gets changed.
+        # Note that an overwrite is required, i.e. the parameter must exist.
         for par, value in adjusts.iteritems():
-            exec('telescope_params.%s = %s' % (par, value))
+            telescope_params.set_param(par, value, prevent_overwrite=False, require_overwrite=True)
 
         # Limit bins to those shorter than Bmax
         bins = telescope_params.baseline_bins

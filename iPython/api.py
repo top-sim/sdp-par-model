@@ -109,7 +109,7 @@ class SkaPythonAPI:
         results = []
         for i in range(len(param_values)):
             # Calculate telescope parameter with adjusted parameter
-            adjusts = {parameter_string: str(param_values[i])}
+            adjusts = {parameter_string: param_values[i]}
             tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
             percentage_done = i * 100.0 / len(param_values)
@@ -178,8 +178,8 @@ class SkaPythonAPI:
 
                 # Overwrite the corresponding fields of tp with the to-be-evaluated values
                 adjusts = {
-                    parameters[0]: str(param_x_value),
-                    parameters[1]: str(param_y_value),
+                    parameters[0]: param_x_value,
+                    parameters[1]: param_y_value,
                 }
                 tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
