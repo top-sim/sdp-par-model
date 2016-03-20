@@ -10,7 +10,7 @@ from IPython.display import clear_output, display, HTML
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
-# from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import warnings
 

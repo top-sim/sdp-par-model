@@ -135,8 +135,7 @@ class SkaPythonAPI:
         return (param_values, results)
 
     @staticmethod
-    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop',
-                            parameters=None, params_ranges=None,
+    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop', parameters=None, params_ranges=None,
                             number_steps=2, verbose=False):
         """
         Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
