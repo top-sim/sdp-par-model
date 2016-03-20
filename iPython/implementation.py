@@ -217,19 +217,25 @@ class Implementation:
     def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
         # Lower bound cannot be higher than the uppper bound.
-        if bound_upper <= bound_lower:
-            print 'Unable to optimize free variable as upper bound is lower that the lower bound'
-            return bound_lower
-        else:
+        if bound_lower < bound_upper:
             result = opt.minimize_scalar(lam,
                                          bounds=(bound_lower, bound_upper),
                                          method='bounded')
             if not result.success:
                 warnings.warn('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
-            else:
-                # print ('Optimized free variable = %f' % result.x)
-                pass
+            # else:
+            #     print ('Optimized free variable = %f' % result.x)
+            #     pass
             return result.x
+        elif bound_lower > bound_upper:
+            warnings.warn('Unable to optimize free variable as upper bound %g is lower than lower bound %g.'
+                          'Adhering to lower bound.' % (bound_upper, bound_lower))
+
+            return bound_lower
+        elif bound_lower == bound_upper:
+            return bound_lower
+        else:
+            raise Exception("Computer says no.")  # This should be impossible
 
     @staticmethod
     def calc_tel_params(pipelineConfig, verbose=False, adjusts={}):
@@ -332,8 +338,7 @@ class Implementation:
         warned = False
         expression_original = None
 
-        # Construct lambda from our two parameters (facet number and
-        # snapshot time) to the expression to minimise
+        # Expression to minimise is constructed as lambda from our two parameters (# of facets, snapshot time)
         exec('expression_original = telescope_parameters.%s' % expr_to_minimize_string)
         expression_lam = Implementation.cheap_lambdify_curry((telescope_parameters.Nfacet,
                                                               telescope_parameters.Tsnap),
@@ -342,7 +347,7 @@ class Implementation:
         for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
-                warnings.warn('Searching for minimum value by incrementing Nfacet; value of 20 exceeded... this is a bit odd '
+                warnings.warn('Searching minimum value by incrementing Nfacet; value of 20 exceeded... this is odd '
                               '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
                 warned = True
 
@@ -350,22 +355,21 @@ class Implementation:
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
-            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets),
-                                                                 telescope_parameters,
+            # Find optimal Tsnap for this number of facets, obtaining result in "result"
+            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets), telescope_parameters,
                                                                  verbose=verbose)
-
             result_array.append(float(result['value']))
             optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
             result_per_nfacet[nfacets] = result_array[i]
-            if nfacets >= 3: #
+            if nfacets >= 3: # Continue to at least Nfacet==3 as there can be a local increase between nfacet=1 and 2
                 if result_array[i] >= result_array[i-1]:
                     if verbose:
                         print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
                               % nfacets)
-                    break #don't stop search after just doing Nfacet=2, do at least Nfacet=3 first, bacause there can be a local increase between nfacet=1 and 2
+                    break
 
         index = np.argmin(np.array(result_array))
-        nfacets = index + 1
+        nfacets = index + 1  # Because we use zero-based indexing, starting with 1 facet
         if verbose:
             print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
                    % (nfacets, optimal_Tsnap_array[index], expr_to_minimize_string, result_array[index]))
@@ -374,11 +378,16 @@ class Implementation:
 
     @staticmethod
     def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
-
+        """
+        The supplied lambda expression (a function of Tnsap) is minimized.
+        @param lam: The lambda expression (a function of Tsnap)
+        @param telescope_parameters: The telescope parameters
+        @param verbose:
+        @return: The optimal Tsnap value, along with the optimal value (as a dict)
+        """
         # Compute lower & upper bounds
-        tp = telescope_parameters
-        bound_lower = tp.Tsnap_min
-        bound_upper = 0.5 * tp.Tobs
+        bound_lower = telescope_parameters.Tsnap_min
+        bound_upper = max(bound_lower, 0.5 * telescope_parameters.Tobs)
 
         # Do optimisation
         Tsnap_optimal = Implementation.optimize_lambdified_expr(lam, bound_lower, bound_upper)
@@ -386,4 +395,4 @@ class Implementation:
         if verbose:
             print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
                   (Tsnap_optimal, value_optimal / c.peta))
-        return {tp.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with its optimal value
+        return {telescope_parameters.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with optimal value

@@ -516,7 +516,7 @@ class ParameterDefinitions:
             o.Nmajor = 1  # Number of major CLEAN cycles to be done
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(500, o.Nf_max)  # Initially this value was computed, but now capped to 500.
-            o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie this became 1.2 sec, then 1.0 sec.
             o.Tsnap_min = o.Tobs
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
