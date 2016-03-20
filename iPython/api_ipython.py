@@ -106,9 +106,21 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def get_result_sum(resultMap):
+        """
+        Returns the corresponding entries of whether expressions should be summed or concatenated in a list.
+        @param resultMap:
+        @return:
+        """
         return map(lambda row: row[3], resultMap)
+
     @staticmethod
     def get_result_expressions(resultMap,tp):
+        """
+        Returns the expression that needs to be evaluated
+        @param resultMap:
+        @param tp:
+        @return:
+        """
         return map(lambda row: row[4](tp), resultMap)
 
     # Row names, for selection in GUI
@@ -444,13 +456,13 @@ class SkaIPythonAPI(api):
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
-    def check_pipeline_config(cfg, pure_modes):
+    def pipeline_is_valid(cfg, pure_modes=True):
         """
         Check pipeline configuration, displaying a message in the Notebook
         for every problem found. Returns whether the configuration is
         usable at all.
         """
-        (okay, messages) = cfg.check(pure_modes=pure_modes)
+        (okay, messages) = cfg.is_valid(pure_modes=pure_modes)
         for msg in messages:
             display(HTML('<p><font color="red"><b>{0}</b></font></p>'.format(msg)))
         if not okay:
@@ -488,41 +500,41 @@ class SkaIPythonAPI(api):
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
                                mode=mode_2, blcoal=tel2_blcoal,
                                on_the_fly=tel2_otf)
-        if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_modes=True) or \
-           not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_modes=True):
-            return
+        if not (SkaIPythonAPI.pipeline_is_valid(cfg_1, pure_modes=True) and
+                SkaIPythonAPI.pipeline_is_valid(cfg_2, pure_modes=True)):
+            warnings.warn("Invalid pipeline supplied")
+        else:
+            # Determine which rows to show
+            (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
 
-        # Determine which rows to show
-        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
+            # Loop through telescope configurations, collect results
+            display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
+            tels_result_values = [
+                SkaIPythonAPI._compute_results(cfg_1, verbose, result_map),
+                SkaIPythonAPI._compute_results(cfg_2, verbose, result_map),
+            ]
+            display(HTML('<font color="blue">Done computing.</font>'))
 
-        # Loop through telescope configurations, collect results
-        display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
-        tels_result_values = [
-            SkaIPythonAPI._compute_results(cfg_1, verbose, result_map),
-            SkaIPythonAPI._compute_results(cfg_2, verbose, result_map),
-        ]
-        display(HTML('<font color="blue">Done computing.</font>'))
+            # Show comparison table
+            SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
+                                              tels_result_values[1], result_units)
 
-        # Show comparison table
-        SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
-                                          tels_result_values[1], result_units)
+            # Show comparison stacked bars
+            labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+            colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
+            blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
+            otf_text = {True: ' (otf kernels)', False: ''}
 
-        # Show comparison stacked bars
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
-        otf_text = {True: ' (otf kernels)', False: ''}
+            telescope_labels = ('%s\n%s\n%s' % (telescope_1, blcoal_text[tel1_blcoal], otf_text[tel1_otf]),
+                                '%s\n%s\n%s' % (telescope_2, blcoal_text[tel2_blcoal], otf_text[tel2_otf]))
+            values = {}
+            i = -1
+            for label in labels:
+                i += 1
+                values[label] = (tels_result_values[0][-len(labels)+i],
+                                 tels_result_values[1][-len(labels)+i])
 
-        telescope_labels = ('%s\n%s\n%s' % (telescope_1, blcoal_text[tel1_blcoal], otf_text[tel1_otf]),
-                            '%s\n%s\n%s' % (telescope_2, blcoal_text[tel2_blcoal], otf_text[tel2_otf]))
-        values = {}
-        i = -1
-        for label in labels:
-            i += 1
-            values[label] = (tels_result_values[0][-len(labels)+i],
-                             tels_result_values[1][-len(labels)+i])
-
-        SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
+            SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_manual(telescope, band, mode,
@@ -557,7 +569,7 @@ class SkaIPythonAPI(api):
                              max_baseline=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly)
 
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True):
+        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True):
             return
 
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
@@ -613,7 +625,7 @@ class SkaIPythonAPI(api):
 
         # Make and check pipeline configuration
         cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
 
         # Determine which rows to calculate & show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
@@ -653,7 +665,7 @@ class SkaIPythonAPI(api):
                              band=band, max_baseline=max_baseline,
                              Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly)
-        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_modes=True): return
+        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
 
         # Determine rows to show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)

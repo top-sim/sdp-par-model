@@ -28,7 +28,7 @@ class ParameterContainer:
             s += "\n%s\t\t= %s" % (key_string, value_string)
         return s
 
-    def set_param(self, param_name, value, prevent_overwrite=True):
+    def set_param(self, param_name, value, prevent_overwrite=True, require_overwrite=False):
         """
         Provides a method for setting a parameter. By default first checks that the value has not already been defined.
         Useful for preventing situations where values may inadvertently be overwritten.
@@ -38,14 +38,21 @@ class ParameterContainer:
         @return: Nothing
         """
         assert isinstance(param_name, str)
-        try:
-            if prevent_overwrite and hasattr(self, param_name):
+        if prevent_overwrite:
+            if require_overwrite:
+                raise AssertionError("Cannot simultaneously require and prevent overwrite of parameter '%s'" % param_name)
+
+            if hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
                     warnings.warn('Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name)
                 else:
-                    assert eval('self.%s == None' % param_name)
-        except AssertionError:
-            raise AssertionError("The parameter %s has already been defined and may not be overwritten." % param_name)
+                    try:
+                        assert eval('self.%s == None' % param_name)
+                    except AssertionError:
+                        raise AssertionError("The parameter %s has already been defined and may not be overwritten." % param_name)
+
+        elif require_overwrite and (not hasattr(self, param_name)):
+            raise AssertionError("Parameter '%s' is undefined and therefore cannot be assigned" % param_name)
 
         exec('self.%s = value' % param_name)  # Write the value
 

@@ -109,7 +109,7 @@ class PipelineConfig:
 
         return is_compatible
 
-    def check(self, pure_modes=True):
+    def is_valid(self, pure_modes=True):
         """Checks integrity of the pipeline configuration.
 
         @return: (okay?, list of errors/warnings)
