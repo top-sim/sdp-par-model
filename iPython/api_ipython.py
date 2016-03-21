@@ -134,24 +134,21 @@ class SkaIPythonAPI(api):
         """
         return map(lambda row: row[4](tp), resultMap)
 
-    # Row names, for selection in GUI
-    ALL_ROWS = map(lambda row: row[0], RESULT_MAP)
-    DEFAULT_ROWS = map(lambda row: row[0], filter(lambda e: e[2], RESULT_MAP))
-
     # Rows needed for graphs
     GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-8:])
 
     @staticmethod
-    def mk_result_map_rows(rows = None):
+    def mk_result_map_rows(verbosity = 'Overview'):
         '''Collects result map information for a given row set
         @rows: Row set to show. If None, we will use default rows.
         @return: A tuple of the result map, the sorted list of the row
         names and a list of the row units.
         '''
 
-        result_map = SkaIPythonAPI.RESULT_MAP
-        if rows is not None:
-            result_map = filter(lambda row: row[0] in rows, result_map)
+        if verbosity == 'Overview':
+            result_map = filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP)
+        else:
+            result_map = SkaIPythonAPI.RESULT_MAP
 
         return (result_map,
                 map(lambda row: row[0], result_map),
@@ -481,11 +478,11 @@ class SkaIPythonAPI(api):
         return okay
 
     @staticmethod
-    def compare_telescopes_default(telescope_1, telescope_2, band_1,
-                                   band_2, mode_1, mode_2,
+    def compare_telescopes_default(telescope_1, band_1, mode_1,
+                                   telescope_2, band_2, mode_2,
                                    tel1_blcoal=True, tel2_blcoal=True,
                                    tel1_otf=False, tel2_otf=False,
-                                   verbose=False, rows=None):
+                                   verbosity='Overview'):
         """
         Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
         A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
@@ -500,7 +497,7 @@ class SkaIPythonAPI(api):
         @param tel2_otf: On the fly kernels for telescope 2
         @param tel1_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope1
         @param tel2_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope2
-        @param verbose: print verbose output during execution
+        @param verbosity: amount of output to generate
         @return:
         """
 
@@ -516,13 +513,13 @@ class SkaIPythonAPI(api):
             warnings.warn("Invalid pipeline supplied")
         else:
             # Determine which rows to show
-            (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
             # Loop through telescope configurations, collect results
             display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
             tels_result_values = [
-                SkaIPythonAPI._compute_results(cfg_1, verbose, result_map),
-                SkaIPythonAPI._compute_results(cfg_2, verbose, result_map),
+            SkaIPythonAPI._compute_results(cfg_1, verbosity=='Debug', result_map),
+            SkaIPythonAPI._compute_results(cfg_2, verbosity=='Debug', result_map),
             ]
             display(HTML('<font color="blue">Done computing.</font>'))
 
@@ -532,7 +529,6 @@ class SkaIPythonAPI(api):
 
             # Show comparison stacked bars
             labels = SkaIPythonAPI.GRAPH_ROWS
-            if list(rows[-len(labels):]) != labels: return
             colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
             blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
             otf_text = {True: ' (otf kernels)', False: ''}
@@ -554,8 +550,7 @@ class SkaIPythonAPI(api):
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
                                   Tsnap=-1, blcoal=True,
-                                  on_the_fly=False, verbose=False,
-                                  rows=None):
+                                  on_the_fly=False, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters.
         These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
@@ -569,7 +564,7 @@ class SkaIPythonAPI(api):
         @param Tsnap:
         @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
-        @param verbose:
+        @param verbosity:
         @param rows:
         @return:
         """
@@ -589,10 +584,10 @@ class SkaIPythonAPI(api):
                      '</font>'))
 
         # Determine which rows to calculate & show
-        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
         # Loop through modes
-        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map,
+        result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map,
                                                        Tsnap=Tsnap, Nfacet=Nfacet)
 
         # Show table of results
@@ -601,19 +596,18 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, blcoal=True, on_the_fly=False, verbose=False, rows=None):
+    def evaluate_hpso_optimized(hpso_key, blcoal=True, on_the_fly=False, verbosity='Overview'):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
         @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
-        @param verbose:
+        @param verbosity:
         @return:
         """
 
@@ -642,10 +636,10 @@ class SkaIPythonAPI(api):
         if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
 
         # Determine which rows to calculate & show
-        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
         # Compute
-        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map)
+        result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map)
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
         # Show table of results
@@ -653,14 +647,13 @@ class SkaIPythonAPI(api):
 
         # Show pie graph of FLOP counts
         labels = SkaIPythonAPI.GRAPH_ROWS
-        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
-                                     blcoal=True, on_the_fly=False, verbose=False, rows=None):
+                                     blcoal=True, on_the_fly=False, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -671,7 +664,7 @@ class SkaIPythonAPI(api):
         @param Nf_max:
         @param blcoal: Baseline dependent coalescing (before gridding)
         @param on_the_fly:
-        @param verbose:
+        @param verbosity:
         @return:
         """
 
@@ -683,12 +676,12 @@ class SkaIPythonAPI(api):
         if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
 
         # Determine rows to show
-        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(rows)
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
         # Compute
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
-        result_values = SkaIPythonAPI._compute_results(cfg, verbose, result_map)
+        result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map)
         display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
         # Make table
@@ -696,7 +689,6 @@ class SkaIPythonAPI(api):
 
         # Make pie plot
         labels = SkaIPythonAPI.GRAPH_ROWS
-        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
         values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)

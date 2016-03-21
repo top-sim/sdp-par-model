@@ -282,7 +282,7 @@ class Implementation:
         # Apply parameter adjustments. Needs to be done before bin calculation in case Bmax gets changed.
         # Note that an overwrite is required, i.e. the parameter must exist.
         for par, value in adjusts.iteritems():
-            telescope_params.set_param(par, value, prevent_overwrite=False, require_overwrite=True)
+            telescope_params.__dict__[par] = value
 
         # Limit bins to those shorter than Bmax
         bins = telescope_params.baseline_bins
