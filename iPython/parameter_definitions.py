@@ -213,9 +213,6 @@ class ParameterDefinitions:
         o.Tsnap = symbols("T_snap", positive=True)  # Snapshot timescale implemented
         o.Nfacet = symbols("N_facet", integer=True, positive=True)  # Number of facets
 
-        # The following two parameters are used for baseline-dependent calculations
-        o.Bmax_bin = symbols("Bmax\,bin", positive=True)  # The maximum baseline corresponding to a given bin
-        o.binfrac = symbols("f_bin", positive=True)  # Fraction of total baselines in a given bin - value in (0,1)
         return o
 
     @staticmethod
@@ -247,6 +244,7 @@ class ParameterDefinitions:
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
         o.Mvis = 10  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again). Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
+        o.N_taylor_terms = 5 #This is the number of Taylor terms assumed in the TT expansion of the sky model in each subband. % is probably very generous.
         """
         From CSP we are ingesting 10 bytes per visibility (single polarization) built up as follows:
         1 byte for time centroid + 8 bytes for complex visibility + 1 byte for flagging fraction, as per CSP ICD v.1.0.

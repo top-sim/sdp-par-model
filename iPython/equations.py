@@ -85,7 +85,7 @@ class Equations:
         return o
 
     @staticmethod
-    def _sum_bl_bins(o, bcount, bmax, expr):
+    def _sum_bl_bins(o, bcount, b, expr):
         """Helper for dealing with baseline dependence. For a term
         depending on the given symbols, "sum_bl_bins" will build a
         sum term over all baseline bins."""
@@ -94,7 +94,7 @@ class Equations:
         # length. Using Lambda here is a solid 25% faster than
         # subs(). Unfortunately very slow nonetheless...
         results = []
-        lam = Lambda((bcount,bmax), expr)
+        lam = Lambda((bcount,b), expr)
         for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
             results.append(lam(frac_val*o.nbaselines, bmax_val))
         return Add(*results, evaluate=False)
@@ -133,6 +133,7 @@ class Equations:
 
         # Eq 8 - Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
+        o.Npix_linear_total_fov = (o.Total_fov / o.Theta_pix)
         # expansion of sine solves eps = arcsinc(1/amp_f_max).
         o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
@@ -147,7 +148,7 @@ class Equations:
         References: PDR05 Sec 9.1
         """
 
-        bmax = Symbol('bmax')
+        b = Symbol('b')
         log_wl_ratio = log(o.wl_max / o.wl_min)
 
         # The two equations below => combination of Eq 4 and Eq 5 for
@@ -158,13 +159,16 @@ class Equations:
         # This is fine - substituting in the equation for theta_fov shows it is indeed correct.
         o.Nf_no_smear_predict = \
             log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
-        o.Nf_no_smear_backward = Lambda(bmax,
-            log_wl_ratio / log(1 + (3 * o.wl / (2. * bmax * o.Theta_fov * o.Qbw))))
+        #Use full FoV for de-grid (predict) for high accuracy
+        
+        o.Nf_no_smear_backward = Lambda(b,
+            log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
+        
 
         # Actual frequency channels for backward & predict
         # steps. Bound by minimum parallism and input channel count.
-        o.Nf_vis_backward = Lambda(bmax,
-            Min(Max(o.Nf_out, o.Nf_no_smear_backward(bmax)),o.Nf_max))
+        o.Nf_vis_backward = Lambda(b,
+            Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
         o.Nf_vis_predict = \
             Min(Max(o.Nf_out, o.Nf_no_smear_predict),o.Nf_max)
 
@@ -178,34 +182,34 @@ class Equations:
             o.Nf_FFT_backward = o.Nf_max
         else:
             raise Exception("Unknown Imaging Mode defined : %s" % imaging_mode)
-        o.Nf_FFT_predict = o.Nf_vis_predict
+        o.Nf_FFT_predict = max(o.N_taylor_terms * o.Number_imaging_subbands, o.minimum_channels) #This is an important and substantial change - we made FFT grids corresponding to the sky model and from these then interpolate and de-grid. We do not make an FFT sky at each predict frequency. But have at least minimum_channels to retain distributability
 
     @staticmethod
     def _apply_coalesce_equations(o):
 
         # correlator output averaging time scaled for max baseline.
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
-        bmax = Symbol('bmax')
-        o.combine_time_samples = Lambda(bmax,
+        b = Symbol('b')
+        o.combine_time_samples = Lambda(b,
             Max(floor(o.epsilon_f_approx * o.wl /
-                      (o.Total_fov * o.Omega_E * bmax * o.Tdump_scaled)), 1.))
+                      (o.Total_fov * o.Omega_E * b * o.Tdump_scaled)), 1.))
         # coalesce visibilities in time.
-        o.Tcoal_skipper = Lambda(bmax,
-            o.Tdump_scaled * o.combine_time_samples(bmax))
+        o.Tcoal_skipper = Lambda(b,
+            o.Tdump_scaled * o.combine_time_samples(b))
 
         if o.blcoal:
             # Don't let any bl-dependent coalescing be done for longer than either 1.2s or Tion. ?Why 1.2s?
-            o.Tcoal_predict = Lambda(bmax,
-                Min(o.Tcoal_skipper(bmax), 1.2, o.Tion))
+            o.Tcoal_predict = Lambda(b,
+                Min(o.Tcoal_skipper(b), 1.2, o.Tion))
             # For backward step at gridding only, allow coalescance of visibility points at Facet FoV smearing limit
             # only for blcoal case.
-            o.Tcoal_backward = Lambda(bmax,
-                Min(o.Tcoal_skipper(bmax) * o.Nfacet/(1+o.using_facet_overlap_frac), o.Tion))
+            o.Tcoal_backward = Lambda(b,
+                Min(o.Tcoal_skipper(b) * o.Nfacet/(1+o.using_facet_overlap_frac), o.Tion))
             # scale Skipper time to smaller field of view of facet,
             # rather than full FoV.
         else:
-            o.Tcoal_predict = Lambda(bmax, o.Tdump_scaled)
-            o.Tcoal_backward = Lambda(bmax, o.Tdump_scaled)
+            o.Tcoal_predict = Lambda(b, o.Tdump_scaled)
+            o.Tcoal_backward = Lambda(b, o.Tdump_scaled)
 
     @staticmethod
     def _apply_geometry_equations(o):
@@ -214,34 +218,36 @@ class Equations:
         # PDR05 Sec 12.2 - 12.5
         # ===============================================================================================
 
-        bmax = Symbol('bmax')
-        o.DeltaW_Earth = Lambda(bmax, bmax ** 2 / (8. * o.R_Earth * o.wl))  # Eq. 19
+        b = Symbol('b')
+        o.DeltaW_Earth = Lambda(b, b ** 2 / (8. * o.R_Earth * o.wl))  # Eq. 19
         # TODO: in the two lines below, PDR05 uses lambda_min, not mean.
         # Eq. 26 : W-deviation for snapshot.
-        o.DeltaW_SShot = Lambda(bmax, bmax * o.Omega_E * o.Tsnap / (2. * o.wl))
-        o.DeltaW_max = Lambda(bmax, o.Qw * Max(o.DeltaW_SShot(bmax), o.DeltaW_Earth(bmax)))
+        o.DeltaW_SShot = Lambda(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
+        o.DeltaW_max = Lambda(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
 
         # Eq. 25, w-kernel support size **Note difference in cellsize assumption**
         def Ngw(deltaw, fov):
             return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                                   (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
-        o.Ngw_backward = Lambda(bmax, Ngw(o.DeltaW_max(bmax), o.Theta_fov))
-        o.Ngw_predict = Lambda(bmax, Ngw(o.DeltaW_max(bmax), o.Total_fov))
+        o.Ngw_backward = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
+        o.Ngw_predict = Lambda(b, Ngw(o.DeltaW_max(b), o.Total_fov))
 
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_backward = Lambda(bmax, o.Ngw_backward(bmax) ** 2 + o.Naa ** 2)
+        o.Nkernel2_backward = Lambda(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_backward = Lambda(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_predict = Lambda(bmax, o.Ngw_predict(bmax) ** 2 + o.Naa ** 2)
+        o.Nkernel2_predict = Lambda(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_predict = Lambda(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
         if o.on_the_fly:
             o.Qgcf = 1.0
 
         # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_backward = Lambda(bmax,
-            sqrt(o.Nkernel2_backward(bmax))*o.Qgcf)
+        o.Ncvff_backward = Lambda(b,
+            sqrt(o.Nkernel2_backward(b))*o.Qgcf)
         # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_predict = Lambda(bmax,
-            sqrt(o.Nkernel2_predict(bmax))*o.Qgcf)
+        o.Ncvff_predict = Lambda(b,
+            sqrt(o.Nkernel2_predict(b))*o.Qgcf)
 
     @staticmethod
     def _apply_grid_fft_equations(o):
@@ -252,13 +258,13 @@ class Equations:
 
         # Eq. 31 Visibility rate for backward step, allow coalescing
         # in time and freq prior to gridding
-        bmax = Symbol('bmax')
+        b = Symbol('b')
         bcount = Symbol('bcount')
-        o.Nvis_backward = Lambda((bcount, bmax),
-            bcount * o.Nf_vis_backward(bmax) / o.Tcoal_backward(bmax))
+        o.Nvis_backward = Lambda((bcount, b),
+            bcount * o.Nf_vis_backward(b) / o.Tcoal_backward(b))
         # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict = Lambda((bcount, bmax),
-            bcount * o.Nf_vis_predict / o.Tcoal_predict(bmax))
+        o.Nvis_predict = Lambda((bcount, b),
+            bcount * o.Nf_vis_predict / o.Tcoal_predict(b))
         o.Nvis_predict_no_averaging = o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict / o.Tdump_scaled
         # The line above uses Tdump_scaled independent of whether
         # Baseline dependent coalescing (previously called BLDTA) is used. This is because coalescing is only done for
@@ -266,59 +272,55 @@ class Equations:
 
         # Gridding:
         # --------
+        o.Rgrid_backward_task = Lambda((bcount, b),
+            8. * o.Nmm * bcount * o.Nkernel2_backward(b) *
+            o.Tsnap / o.Tcoal_backward(b))
         o.Rgrid_backward = \
             8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet**2 * \
-            Equations._sum_bl_bins(o, bcount, bmax,
-                o.Nvis_backward(bcount, bmax) * o.Nkernel2_backward(bmax))
+            Equations._sum_bl_bins(o, bcount, b,
+                o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
             # Eq 32; FLOPS
+            
+        # De-gridding in Predict step
+        o.Rgrid_predict_task = Lambda((bcount, b),
+            8. * o.Nmm * bcount * o.Nkernel2_predict(b) *
+            o.Tsnap / o.Tcoal_predict(b))
         o.Rgrid_predict = \
             8. * o.Nmm * o.Nmajor * o.Npp * o.Nbeam * \
-            Equations._sum_bl_bins(o, bcount, bmax,
-                o.Nvis_predict(bcount, bmax) * o.Nkernel2_predict(bmax))
+            Equations._sum_bl_bins(o, bcount, b,
+                o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
             # Eq 32; FLOPS, per half cycle, per polarisation, per beam, per facet - only one facet for predict
+
         o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
 
         # FFT:
         # ---
-        if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.FastImg):
-            # make only enough FFT grids to extract necessary spectral info and retain distributability.
-            o.Nf_FFT_backward = o.minimum_channels
-        elif o.imaging_mode == ImagingModes.Spectral:
-            o.Nf_out = o.Nf_max
-            o.Nf_FFT_backward = o.Nf_max
-        else:
-            raise Exception("Unknown Imaging Mode defined : %s" % o.imaging_mode)
 
         o.Nfacet_x_Npix = o.Nfacet * o.Npix_linear #This is mathematically correct below but potentially misleading (lines 201,203) as the Nln(N,2) is familiar to many users.
 
         # Eq. 33, per output grid (i.e. frequency)
         # TODO: please check correctness of 2 eqns below.
         # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
-        o.Rfft_backward = 5. * o.Nfacet_x_Npix ** 2 * log(o.Npix_linear, 2) / o.Tsnap
+        o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
         # Eq. 33 per predicted grid (i.e. frequency)
-        o.Rfft_predict  = 5. * o.Nfacet_x_Npix ** 2 * log(o.Nfacet_x_Npix, 2) / o.Tsnap #Predict step is at full FoV (NfacetXNpix) TODO: PIP.IMG check this
-        o.Rfft_intermediate_cycles = (o.Nf_FFT_backward * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
-        # final major cycle, create final data products (at Nf_out channels)
-        o.Rfft_final_cycle = (o.Nf_out * o.Rfft_backward) + (o.Nf_FFT_predict * o.Rfft_predict)
-
-        # do Nmajor-1 cycles before doing the final major cycle.
-        o.Rflop_fft = o.Npp * o.Nbeam* (((o.Nmajor - 1) * o.Rfft_intermediate_cycles) + o.Rfft_final_cycle)
-
+        o.Rfft_predict  = 5. * o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap #Predict step is at full FoV, once per Tsnap
+        o.Rflop_fft_bw = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_backward * o.Rfft_backward
+        o.Rflop_fft_predict = o.Npp * o.Nbeam* o.Nmajor * o.Nf_FFT_predict * o.Rfft_predict
+        o.Rflop_fft = o.Rflop_fft_bw + o.Rflop_fft_predict
     @staticmethod
     def _apply_reprojection_equations(o):
 
         # Re-Projection:
         # -------------
         if o.imaging_mode in (ImagingModes.Continuum, ImagingModes.Spectral):
-            o.Rrp = 50. * o.Nfacet_x_Npix ** 2 / o.Tsnap  # Eq. 34
+            o.Rrp = 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
         elif o.imaging_mode == ImagingModes.FastImg:
             o.Rrp = 0  # (Consistent with PDR05 280115)
         else:
             raise Exception("Unknown Imaging Mode : %s" % o.imaging_mode)
 
-        # Reproj intermediate major cycle FFTs (Nmaj -1) times,
-        # then do the final ones for the last cycle at the full output spectral resolution.
-        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * ((o.Nmajor - 1) * o.Nf_FFT_backward + o.Nf_out) #TODO: does this account for backward and predict steps correctly? PIP.IMG check please.
+        o.Rflop_proj = o.Rrp * (o.Nbeam * o.Npp) * o.Nmajor * o.Nf_FFT_backward
+        #TODO check: no reprojection for Predict step, only on backward.
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -326,65 +328,70 @@ class Equations:
         Generate Convolution kernels
         """
 
-        bmax = Symbol('bmax')
-        o.dfonF_backward = Lambda(bmax, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(bmax))))
-        o.dfonF_predict = Lambda(bmax, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(bmax))))
+        b = Symbol('b')
+        o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
+        o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
 
         # allow uv positional errors up to o.epsilon_f_approx *
         # 1/Qkernel of a cell from frequency smearing.(But not more
         # than Nf_max channels...)
-        o.Nf_gcf_backward_nosmear = Lambda(bmax,
+        o.Nf_gcf_backward_nosmear = Lambda(b,
             Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_backward(bmax) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-        o.Nf_gcf_predict_nosmear  = Lambda(bmax,
+                log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+        o.Nf_gcf_predict_nosmear  = Lambda(b,
             Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_predict(bmax) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+                log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
 
         if o.on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
-            o.Nf_gcf_predict  = Lambda(bmax, o.Nf_vis_predict)
+            o.Nf_gcf_predict  = Lambda(b, o.Nf_vis_predict)
             o.Tkernel_backward = o.Tcoal_backward
             o.Tkernel_predict  = o.Tcoal_predict
         else:
             # For both of the following, maintain distributability;
             # need at least minimum_channels (500) kernels.
-            o.Nf_gcf_backward = Lambda(bmax, Max(o.Nf_gcf_backward_nosmear(bmax), o.minimum_channels))
-            o.Nf_gcf_predict  = Lambda(bmax, Max(o.Nf_gcf_predict_nosmear(bmax),  o.minimum_channels))
+            o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
+            o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
             # TODO: some baseline dependent re-use limits along the
             # same lines as the frequency re-use? PIP.IMG check
             # please.
-            o.Tkernel_backward = Lambda(bmax, o.Tion)
-            o.Tkernel_predict  = Lambda(bmax, o.Tion)
+            o.Tkernel_backward = Lambda(b, o.Tion)
+            o.Tkernel_predict  = Lambda(b, o.Tion)
 
         # The following two equations correspond to Eq. 35
         bcount = Symbol('bcount')
-        o.Rccf_backward = Equations._sum_bl_bins(o, bcount, bmax,
-            bcount * 5. * o.Nf_gcf_backward(bmax) * o.Nfacet**2 *
-            o.Ncvff_backward(bmax)**2 * log(o.Ncvff_backward(bmax), 2) *
-            o.Nmm / o.Tkernel_backward(bmax))
-        o.Rccf_predict  = Equations._sum_bl_bins(o, bcount, bmax,
-            bcount * 5. * o.Nf_gcf_predict(bmax) *
-            o.Ncvff_predict(bmax)**2 * log(o.Ncvff_predict(bmax), 2) *
-            o.Nmm / o.Tkernel_predict(bmax))
-        # TODO we assume Nfacet=1 for predict step, so do we need
-        # Nfacet^2 multiplier in here? PIP.IMG check please
+        o.Rccf_backward_task = Lambda(b,
+            5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2))
+        o.Rccf_backward = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
+           bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
+           o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
+           o.Nmm / o.Tkernel_backward(b))
+        o.Rccf_predict_task = Lambda(b,
+            5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
+        o.Rccf_predict  = o.Nmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
+           bcount * 5. * o.Nf_gcf_predict(b) *
+           o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
+           o.Nmm / o.Tkernel_predict(b))
+        # TODO check how this step could be altered to include faceting.
 
-        o.Rccf = o.Rccf_backward + o.Rccf_predict
-        o.Rflop_conv = o.Nmajor * o.Npp * o.Nbeam * o.Rccf
+        o.Rflop_conv = o.Rccf_backward + o.Rccf_predict
 
     @staticmethod
     def _apply_phrot_equations(o):
-        """Phase rotation (for the facetting)"""
+        """Phase rotation (for the faceting)"""
 
         # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
         # 25 FLOPS per visiblity. Only do it if we need to facet.
-        # TODO: check line below - is it correct if we don't facet in the predict step? PIP.IMG check please
+        # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
         bcount = Symbol('bcount')
-        bmax = Symbol('bmax')
+        b = Symbol('b')
+        o.Rflop_phrot_predict_task = Lambda((bcount,b), \
+            sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict)
+        o.Rflop_phrot_backward_task = Lambda((bcount, b), \
+            sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
         o.Rflop_phrot = \
             sign(o.Nfacet - 1) * 25 * o.Nmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-            Equations._sum_bl_bins(o, bcount, bmax,
-                o.Nvis_predict(bcount, bmax) + o.Nvis_backward(bcount, bmax))
+            Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b)) # this line was: o.Nvis_predict(bcount, b) + o.Nvis_backward(bcount, b)
 
     @staticmethod
     def _apply_flop_equations(o):
@@ -402,11 +409,11 @@ class Equations:
         """
 
         bcount = Symbol('bcount')
-        bmax = Symbol('bmax')
+        b = Symbol('b')
         o.Mw_cache = \
             o.Nbeam * o.Nf_vis_predict * 8.0 * (o.Qgcf ** 3) * \
-            Equations._sum_bl_bins(o, bcount, bmax,
-                o.Ngw_predict(bmax) ** 3)
+            Equations._sum_bl_bins(o, bcount, b,
+                o.Ngw_predict(b) ** 3)
             # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
         # (allowing storage of a full observation while simultaneously capturing the next)
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.

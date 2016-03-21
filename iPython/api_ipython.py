@@ -52,10 +52,11 @@ class SkaIPythonAPI(api):
 
         ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
         ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),
+        ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Total_fov/c.degree,),
         ('PSF size',                   'arcs',       False,   False, lambda tp: tp.Theta_beam/c.arcsecond,),
         ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
         ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
-        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Nfacet_x_Npix,     ),
+        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_total_fov,     ),
         ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
         ('Qbw',                        '',           False,   False, lambda tp: tp.Qbw,               ),
         ('Max subband ratio',          '',           False,   False, lambda tp: tp.max_subband_freq_ratio,),
@@ -67,14 +68,14 @@ class SkaIPythonAPI(api):
         ('Coalesce time pred',         's',          False,   False, lambda tp: tp.Tcoal_predict,     ),
         ('Coalesce time bw',           's',          False,   False, lambda tp: tp.Tcoal_backward,    ),
         ('Combined Samples',           '',           False,   False, lambda tp: tp.combine_time_samples,),
-        ('Channels predict (no-smear)','',           False,   False, lambda tp: tp.Nf_no_smear_predict,),
-        ('Channels backward (no-smear)','',          False,   False, lambda tp: tp.Nf_no_smear_backward,),
-        ('Channels predict fft',       '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
-        ('Channels predict gcf',       '',           False,   False, lambda tp: tp.Nf_gcf_predict,    ),
-        ('Channels predict',           '',           False,   False, lambda tp: tp.Nf_vis_predict,    ),
-        ('Channels backward gcf',      '',           False,   False, lambda tp: tp.Nf_gcf_backward,   ),
-        ('Channels backward',          '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
-        ('Channels backward fft',      '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
+        ('Channels predict, no-smear', '',           False,   False, lambda tp: tp.Nf_no_smear_predict,),
+        ('Channels backward, no-smear','',           False,   False, lambda tp: tp.Nf_no_smear_backward,),
+        ('No. of freqs predict ifft',  '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
+        ('No. of freqs predict conv kernels',   '',  False,   False, lambda tp: tp.Nf_gcf_predict,    ),
+        ('Channels to de-grid (predict)',       '',  False,   False, lambda tp: tp.Nf_vis_predict,    ),
+        ('No. of freqs for b-ward conv kernels', '', False,   False, lambda tp: tp.Nf_gcf_backward,   ),
+        ('Channels to grid (backward)',          '', False,   False, lambda tp: tp.Nf_vis_backward,   ),
+        ('No. of frequencies backward fft',      '', False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
         ('Visibilities pred',          '',           False,   False, lambda tp: tp.Nvis_predict,      ),
         ('Visibilities bw',            '',           False,   False, lambda tp: tp.Nvis_backward,     ),
@@ -85,9 +86,11 @@ class SkaIPythonAPI(api):
         ('Delta W max',                'lambda',     False,   False, lambda tp: tp.DeltaW_max,        ),
 
         ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
-        ('W kernel support pred',      'pixels',     False,   False, lambda tp: tp.Ngw_predict,       ),
+        ('W kernel support pred',      'uv-pixels',  False,   False, lambda tp: tp.Ngw_predict,       ),
+        ('AW kernel support pred',     'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_predict,),
         ('W kernel support pred, ff',  'pixels',     False,   False, lambda tp: tp.Ncvff_predict,     ),
-        ('W kernel support bw',        'pixels',     False,   False, lambda tp: tp.Ngw_backward,      ),
+        ('W kernel support bw',        'uv-pixels',  False,   False, lambda tp: tp.Ngw_backward,      ),
+        ('AW kernel support bw',       'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_backward,),
         ('W kernel support bw, ff',    'pixels',     False,   False, lambda tp: tp.Ncvff_backward,    ),
 
         ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
@@ -97,11 +100,19 @@ class SkaIPythonAPI(api):
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
         ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
-        ('-> Gridding',                'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_grid/c.peta, ),
-        ('-> FFT',                     'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft/c.peta,  ),
+        ('-> Gridding total',          'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_grid/c.peta, ),
+        ('-> FFT total',               'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_fft/c.peta,  ),
+        ('-> Phase Rotation',          'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_phrot/c.peta,),
+        ('-> Projection',              'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_proj/c.peta, ),
+        ('-> Conv Kernel Calc Total',  'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_conv/c.peta, ),
+        ('-> Gridding Backward',       'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_backward/c.peta, ),
+        ('-> Gridding Predict',        'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_predict/c.peta, ),
+        ('-> FFT Backward',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_bw/c.peta,  ),
+        ('-> iFFT Predict',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_predict/c.peta,  ),
         ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
-        ('-> Projection',              'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
-        ('-> Convolution',             'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_conv/c.peta, )
+        ('-> ReProjection',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
+        ('-> Conv Kernel Calc B-ward', 'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_backward/c.peta, ),
+        ('-> Conv Kernel Calc Predict','PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta, )
     ]
 
     @staticmethod
@@ -128,7 +139,7 @@ class SkaIPythonAPI(api):
     DEFAULT_ROWS = map(lambda row: row[0], filter(lambda e: e[2], RESULT_MAP))
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-5:])
+    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-8:])
 
     @staticmethod
     def mk_result_map_rows(rows = None):
@@ -152,7 +163,7 @@ class SkaIPythonAPI(api):
         Defines a default colour order used in plotting Rflop components
         @return:
         """
-        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral')
+        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral', 'red', 'lavender', 'chartreuse')
 
     @staticmethod
     def format_result(value):
@@ -418,7 +429,7 @@ class SkaIPythonAPI(api):
         plt.savefig(filename, format='svg', dpi=1200)
 
     @staticmethod
-    def plot_stacked_bars(title, labels, dictionary_of_value_arrays, colours=None):
+    def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays, colours=None):
         """
         Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
         @param title:
@@ -441,7 +452,7 @@ class SkaIPythonAPI(api):
         bottoms = np.zeros(nr_bars)   # The height of each bar, i.e. the bottom of the next stacked block
 
         index = 0
-        for key in dictionary_of_value_arrays:
+        for key in value_labels:
             values = np.array(dictionary_of_value_arrays[key])
             if colours is not None:
                 plt.bar(indices, values, width, color=colours[index], bottom=bottoms)
@@ -452,7 +463,7 @@ class SkaIPythonAPI(api):
 
         plt.xticks(indices+width/2., labels)
         plt.title(title)
-        plt.legend(dictionary_of_value_arrays.keys(), bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
 
     @staticmethod
@@ -520,21 +531,23 @@ class SkaIPythonAPI(api):
                                               tels_result_values[1], result_units)
 
             # Show comparison stacked bars
-            labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+            labels = SkaIPythonAPI.GRAPH_ROWS
+            if list(rows[-len(labels):]) != labels: return
             colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
             blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
             otf_text = {True: ' (otf kernels)', False: ''}
 
             telescope_labels = ('%s\n%s\n%s' % (telescope_1, blcoal_text[tel1_blcoal], otf_text[tel1_otf]),
                                 '%s\n%s\n%s' % (telescope_2, blcoal_text[tel2_blcoal], otf_text[tel2_otf]))
-            values = {}
-            i = -1
-            for label in labels:
-                i += 1
-                values[label] = (tels_result_values[0][-len(labels)+i],
-                                 tels_result_values[1][-len(labels)+i])
 
-            SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, values, colours)
+            values = {
+                label: (tels_result_values[0][-len(labels)+i],
+                        tels_result_values[1][-len(labels)+i])
+                for i, label in enumerate(labels)
+            }
+
+            SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
+                                            colours)
 
     @staticmethod
     def evaluate_telescope_manual(telescope, band, mode,
@@ -587,9 +600,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = SkaIPythonAPI.GRAPH_ROWS
+        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
@@ -638,9 +652,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = SkaIPythonAPI.GRAPH_ROWS
+        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod
@@ -680,9 +695,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Make pie plot
-        labels = ('Gridding', 'FFT', 'Phase rot.', 'Projection', 'Convolution')
+        labels = SkaIPythonAPI.GRAPH_ROWS
+        if list(rows[-len(labels):]) != labels: return
         colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-5:]  # the last five values
+        values = result_values[-8:]  # the last 8 values
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
 
     @staticmethod

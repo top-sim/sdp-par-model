@@ -27,7 +27,7 @@ class PipelineConfig:
     to parameterise a pipeline.
     """
 
-    def __init__(self, hpso=None, telescope=None, band=None, mode=None,
+    def __init__(self, telescope=None, mode=None, band=None, hpso=None,
                  max_baseline="default", Nf_max="default", blcoal=True,
                  on_the_fly=False):
         """
