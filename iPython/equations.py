@@ -150,6 +150,15 @@ class Equations:
         # Eq 8 - Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
         o.Npix_linear_total_fov = (o.Total_fov / o.Theta_pix)
+        # Predict fov and number of pixels depends on whether we facet
+        if o.scale_predict_by_facet:
+            o.Theta_fov_predict = o.Theta_fov
+            o.Nfacet_predict = o.Nfacet
+            o.Npix_linear_predict = o.Npix_linear
+        else:
+            o.Theta_fov_predict = o.Total_fov
+            o.Nfacet_predict = 1
+            o.Npix_linear_predict = o.Npix_linear_total_fov
         # expansion of sine solves eps = arcsinc(1/amp_f_max).
         o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
@@ -177,11 +186,8 @@ class Equations:
 
         o.Nf_no_smear_backward = Lambda(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
-        if o.scale_predict_by_facet:
-            o.Nf_no_smear_predict = o.Nf_no_smear_backward
-        else:
-            o.Nf_no_smear_predict = Lambda(b,
-                log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Total_fov * o.Qbw))))
+        o.Nf_no_smear_predict = Lambda(b,
+            log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov_predict * o.Qbw))))
 
         # The number of visibility channels used in each direction
         # (includes effects of averaging). Bound by minimum parallism
@@ -189,7 +195,8 @@ class Equations:
         o.Nf_vis_backward = Lambda(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
         o.Nf_vis_predict = Lambda(b,
-            Min(Max(o.Nf_out, o.Nf_no_smear_predict(b)),o.Nf_max))
+            Min(Max(o.Nf_out, o.Nf_no_smear_predict(b if o.scale_predict_by_facet else o.Bmax)),
+                o.Nf_max))
 
     @staticmethod
     def _apply_coalesce_equations(o):
@@ -258,10 +265,7 @@ class Equations:
             return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                                   (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
         o.Ngw_backward = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
-        if o.scale_predict_by_facet:
-            o.Ngw_predict = o.Ngw_backward
-        else:
-            o.Ngw_predict = Lambda(b, Ngw(o.DeltaW_max(b), o.Total_fov))
+        o.Ngw_predict = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
 
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
@@ -322,17 +326,13 @@ class Equations:
                 o.cma * o.Nmm * o.Ntotalmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
                 Equations._sum_bl_bins(o, bcount, b,
                     o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
-            if o.scale_predict_by_facet:
-                o.Rgrid_predict_task = o.Rgrid_backward_task
-                o.Rgrid_predict = o.Rgrid_backward
-            else:
-                o.Rgrid_predict_task = Lambda((bcount, b),
-                    o.cma * o.Nmm  * o.Ntotalmajor * bcount * o.Nkernel2_predict(b) *
-                    o.Tsnap / o.Tcoal_predict(b))
-                o.Rgrid_predict = \
-                    o.cma * o.Nmm * o.Ntotalmajor * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
-                    Equations._sum_bl_bins(o, bcount, b,
-                        o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
+            o.Rgrid_predict_task = Lambda((bcount, b),
+                o.cma * o.Nmm * bcount * o.Nkernel2_predict(b) *
+                o.Tsnap / o.Tcoal_predict(b))
+            o.Rgrid_predict = \
+                o.cma * o.Nmm * o.Ntotalmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet_predict**2 * \
+                Equations._sum_bl_bins(o, bcount, b,
+                    o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
 
             o.Rflop_grid = o.Rgrid_backward + o.Rgrid_predict
             o.set_product(Products.Grid, Rflop=o.Rgrid_backward)
@@ -350,11 +350,8 @@ class Equations:
             # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
             o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
             # Eq. 33 per predicted grid (i.e. frequency)
-            if o.scale_predict_by_facet:
-                o.Rfft_predict = o.Rfft_backward
-            else:
-                # Predict step is at full FoV, once per Tsnap
-                o.Rfft_predict = 5.  *  o.Npix_linear_total_fov** 2 * log(o.Npix_linear_total_fov, 2) / o.Tsnap
+            o.Rfft_predict = 5. * o.Nfacet_predict**2 * o.Npix_linear_predict**2 * \
+                             log(o.Npix_linear_predict, 2) / o.Tsnap
 
             if o.Nf_FFT_backward > 0:
                 o.Rflop_fft_bw = o.Npp * o.Nbeam * o.Ntotalmajor * o.Nf_FFT_backward * o.Rfft_backward
@@ -482,16 +479,12 @@ class Equations:
                bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
                o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
                o.Nmm / o.Tkernel_backward(b))
-            if o.scale_predict_by_facet:
-                o.Rccf_predict_task = o.Rccf_backward_task
-                o.Rccf_predict = o.Rccf_backward
-            else:
-                o.Rccf_predict_task = Lambda(b,
-                    5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
-                o.Rccf_predict  = o.Ntotalmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-                   bcount * 5. * o.Nf_gcf_predict(b) *
-                   o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
-                   o.Nmm / o.Tkernel_predict(b))
+            o.Rccf_predict_task = Lambda(b,
+                5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
+            o.Rccf_predict  = o.Ntotalmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
+                bcount * 5. * o.Nf_gcf_predict(b) * o.Nfacet_predict**2 *
+                o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
+                o.Nmm / o.Tkernel_predict(b))
 
             o.Rflop_conv = o.Ntotalmajor * (o.Rccf_backward + o.Rccf_predict)
             o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
