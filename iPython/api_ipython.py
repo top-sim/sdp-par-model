@@ -482,7 +482,7 @@ class SkaIPythonAPI(api):
                                    telescope_2, band_2, pipeline_2,
                                    tel1_bldta=True, tel2_bldta=True,
                                    tel1_otf=False, tel2_otf=False,
-                                   scale_predict_by_facet=False,
+                                   scale_predict_by_facet=True,
                                    verbosity='Overview'):
         """
         Evaluates two telescopes, both operating in a given band and pipeline, using their default parameters.
@@ -552,7 +552,7 @@ class SkaIPythonAPI(api):
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
                                   Tsnap=-1, bldta=True,
-                                  on_the_fly=False, scale_predict_by_facet=False,
+                                  on_the_fly=False, scale_predict_by_facet=True,
                                   verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters.
@@ -603,7 +603,7 @@ class SkaIPythonAPI(api):
     @staticmethod
     def evaluate_hpso_optimized(hpso_key, bldta=True,
                                 on_the_fly=False,
-                                scale_predict_by_facet=False,
+                                scale_predict_by_facet=True,
                                 verbosity='Overview'):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
@@ -654,7 +654,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
-                                     bldta=True, on_the_fly=False, scale_predict_by_facet=False, verbosity='Overview'):
+                                     bldta=True, on_the_fly=False, scale_predict_by_facet=True, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
@@ -696,7 +696,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def write_csv_pipelines(filename, telescopes, bands, pipelines,
-                            bldta=True, on_the_fly=False, scale_predict_by_facet=False):
+                            bldta=True, on_the_fly=False, scale_predict_by_facet=True):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.
@@ -722,7 +722,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def write_csv_hpsos(filename, hpsos,
-                        bldta=True, on_the_fly=False, scale_predict_by_facet=False):
+                        bldta=True, on_the_fly=False, scale_predict_by_facet=True):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.

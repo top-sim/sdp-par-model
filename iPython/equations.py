@@ -19,7 +19,7 @@ class Equations:
     @staticmethod
     def apply_imaging_equations(telescope_parameters, pipeline,
                                 bl_dep_time_av, bins, binfracs,
-                                on_the_fly=False, scale_predict_by_facet=False,
+                                on_the_fly=False, scale_predict_by_facet=True,
                                 verbose=False):
         """
         (Symbolically) computes a set of derived parameters using imaging
@@ -90,6 +90,7 @@ class Equations:
         Equations._apply_fft_equations(o)
         Equations._apply_reprojection_equations(o)
         Equations._apply_spectral_fitting_equations(o)
+        Equations._apply_source_find_equations(o)
         Equations._apply_kernel_equations(o)
         Equations._apply_phrot_equations(o)
         Equations._apply_minor_cycle_equations(o)
@@ -330,7 +331,7 @@ class Equations:
                     o.cma * o.Nmm  * o.Ntotalmajor * bcount * o.Nkernel2_predict(b) *
                     o.Tsnap / o.Tcoal_predict(b))
                 o.Rgrid_predict = \
-                    o.cma * o.Nmm * o.Ntotalmajor * o.Nmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * \
+                    o.cma * o.Nmm * o.Ntotalmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet**2 * \
                     Equations._sum_bl_bins(o, bcount, b,
                         o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
 
@@ -369,13 +370,15 @@ class Equations:
         # Re-Projection:
         # -------------
         if o.pipeline in Pipelines.imaging:
-            o.Rrp = o.rma * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+        
+            # We do Ntotalmajor*(Tobs/Tsnap) entire image reprojections
+            o.Rrp = 2.0  * o.rma * o.Ntotalmajor * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
             o.Nf_proj = o.Nf_FFT_backward
             if o.pipeline == Pipelines.DPrepA_Image:
                 o.Nf_proj = o.number_taylor_terms
 
-            o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Ntotalmajor * o.Nf_proj
+            o.Rflop_proj = o.Rrp * o.Nbeam * o.Npp * o.Nf_proj
 
             if o.pipeline != Pipelines.Fast_Img: # (Consistent with PDR05 280115)
                 o.set_product(Products.Reprojection, Rflop=o.Rflop_proj)
@@ -401,9 +404,8 @@ class Equations:
                 o.Nf_deconv = o.number_taylor_terms
             if o.pipeline == Pipelines.DPrepA_Image:
                 o.Nf_deconv = o.number_taylor_terms
-            Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor *  o.Nf_deconv
-#             print "Rflop_deconv_common = %d" % Rflop_deconv_common
-            o.Rflop_subtract_image_component =  o.Nscales * Rflop_deconv_common * o.Npatch**2 
+            Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor *  o.Nf_deconv / o.Tobs
+            o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
             o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
             if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
                 o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
@@ -413,19 +415,18 @@ class Equations:
     def _apply_calibration_equations(o):
     
         Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines)
-
         if o.pipeline == Pipelines.ICAL:
-            o.Rflop_solve =  Rflop_solve_common * (1.0 / o.Tsolution_neutral + o.Nf_FFT_backward / o.Tsolution_bandpass)                
+            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.Tsolution_neutral + o.Nf_FFT_backward * o.Tobs / o.Tsolution_bandpass)                
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
         if o.pipeline == Pipelines.RCAL:
-            o.Rflop_solve =  Rflop_solve_common * (1.0 / o.Tsolution_neutral + o.Nf_FFT_backward / o.Tsolution_bandpass)                
+            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.Tsolution_neutral + o.Nf_FFT_backward * o.Tobs / o.Tsolution_bandpass)                
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
  
     @staticmethod
     def _apply_dft_equations(o):
         if o.pipeline in Pipelines.imaging:
-            o.Rflop_dft = (1 + o.Nselfcal) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines / o.Tobs
+            o.Rflop_dft = (1 + o.Nselfcal) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
 
     @staticmethod
@@ -511,13 +512,20 @@ class Equations:
             o.Rflop_phrot_backward_task = Lambda((bcount, b), \
                 sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
             o.Rflop_phrot = \
-                sign(o.Nfacet - 1) * 25 * o.Ntotalmajor * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet ** 2 * \
+                sign(o.Nfacet - 1) * 25 * o.Ntotalmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
                 Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
             if o.scale_predict_by_facet:
                 o.Rflop_phrot += \
-                    sign(o.Nfacet - 1) * 25 * o.Ntotalmajor * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet ** 2 * \
+                    sign(o.Nfacet - 1) * 25 * o.Ntotalmajor * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
                     Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
-            o.set_product(Products.PhaseRotation, Rflop=o.Ntotalmajor * o.Rflop_phrot)
+            o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
+
+    @staticmethod
+    def _apply_source_find_equations(o):
+        """Rough estimate of source finding flops"""
+        if o.pipeline == Pipelines.ICAL:
+            o.Rflop_source_find=600*o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
+            o.set_product(Products.Source_Find, Rflop=o.Rflop_source_find)
 
     @staticmethod
     def _apply_flop_equations(o):
