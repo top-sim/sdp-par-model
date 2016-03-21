@@ -513,7 +513,7 @@ class SkaIPythonAPI(api):
             warnings.warn("Invalid pipeline supplied")
         else:
             # Determine which rows to show
-        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+            (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
             # Loop through telescope configurations, collect results
             display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
