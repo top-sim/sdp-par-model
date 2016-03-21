@@ -562,8 +562,8 @@ class ParameterDefinitions:
             o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms
-            o.Nf_FFT_predict = o.number_taylor_terms
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -578,8 +578,8 @@ class ParameterDefinitions:
             o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms
-            o.Nf_FFT_predict = o.number_taylor_terms
+            o.Nf_FFT_backward = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -595,7 +595,7 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.Nf_out
+            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -629,8 +629,8 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.Nf_out
-            o.Tobs = 6 * 3600.0
+            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -644,8 +644,8 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.Nf_out
-            o.Tobs = 6 * 3600.0
+            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
