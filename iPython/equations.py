@@ -397,9 +397,7 @@ class Equations:
             # Minor cycles
             # -------------
             o.Nf_deconv = o.Nf_out
-            if o.pipeline == Pipelines.DPrepA:
-                o.Nf_deconv = o.number_taylor_terms
-            if o.pipeline == Pipelines.DPrepA_Image:
+            if o.pipeline in (Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepA_Image):
                 o.Nf_deconv = o.number_taylor_terms
             Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor *  o.Nf_deconv / o.Tobs
             o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 

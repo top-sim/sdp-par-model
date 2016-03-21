@@ -546,8 +546,8 @@ class ParameterDefinitions:
             o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms
-            o.Nf_FFT_predict = o.number_taylor_terms
+            o.Nf_FFT_backward = o.Nf_out
+            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
