@@ -347,7 +347,7 @@ class PipelineTests(unittest.TestCase):
                              mode=mode,
                              max_baseline=60000,
                              Nf_max='default',
-                             bldta=True,
+                             blcoal=True,
                              on_the_fly=True)
         adjusts = {
             'Nfacet': 8,
