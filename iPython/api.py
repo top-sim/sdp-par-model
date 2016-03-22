@@ -21,7 +21,7 @@ class SkaPythonAPI:
 
     @staticmethod
     def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
-        # TODO check all calls ans see whether "key" can be added
+        # TODO check all calls ans see whether "key" can be added, or whether it should be removed altogether
         """Evaluate an expression by substituting the telescopec parameters
         into them. Depending on the type of expression, the result
         might be a value, a list of values (in case it is baseline-dependent) or a string (if evaluation failed).
@@ -75,7 +75,7 @@ class SkaPythonAPI:
             pipelineConfig.mode = submode
             tp = imp.calc_tel_params(pipelineConfig, verbose)
 
-            result_expression = tp.__dict__[expression]
+            result_expression = tp.__dict__[expression_string]
             (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
@@ -120,7 +120,7 @@ class SkaPythonAPI:
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
-            parameter_final_value = tp.__dict__[parameter]
+            parameter_final_value = tp.__dict__[parameter_string]
             eta = 1e-10
             if abs((parameter_final_value - param_values[i])/param_values[i]) > eta:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
@@ -128,7 +128,7 @@ class SkaPythonAPI:
                                      'Cannot peform parameter sweep.'
                                      % (parameter_string, param_values[i], parameter_final_value))
 
-            result_expression = tp.__dict__[expression]
+            result_expression = tp.__dict__[expression_string]
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
@@ -206,7 +206,7 @@ class SkaPythonAPI:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                result_expression = tp.__dict__[expression]
+                result_expression = tp.__dict__[expression_string]
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
