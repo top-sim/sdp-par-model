@@ -317,9 +317,13 @@ class Implementation:
             # Scale last bin
             bins[nbins_used-1] = telescope_params.Bmax
             binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
+            if verbose:
+                print "BDA on"
         else:
             if verbose:
                 print "BDA off"
+            telescope_params.baseline_bins = np.array((telescope_params.Bmax,))  # m
+            telescope_params.baseline_bin_distribution = np.array((1.0,))
             bins = [telescope_params.Bmax]
             binfracs=[1.0]
 
