@@ -295,27 +295,33 @@ class Implementation:
         for par, value in adjusts.iteritems():
             telescope_params.__dict__[par] = value
 
-        # Limit bins to those shorter than Bmax
-        bins = telescope_params.baseline_bins
-        nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
-        bins = bins[:nbins_used]
+        if cfg.bldta:
+            # Limit bins to those shorter than Bmax
+            bins = telescope_params.baseline_bins
+            nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
+            bins = bins[:nbins_used]
 
-        # Same for baseline sizes. Note that we normalise /before/
-        # reducing the list.
-        binfracs = telescope_params.baseline_bin_distribution
-        binfracs /= sum(binfracs)
-        binfracs = binfracs[:nbins_used]
+            # Same for baseline sizes. Note that we normalise /before/
+            # reducing the list.
+            binfracs = telescope_params.baseline_bin_distribution
+            binfracs /= sum(binfracs)
+            binfracs = binfracs[:nbins_used]
 
-        # Calculate old and new bin sizes
-        binsize = bins[nbins_used-1]
-        binsizeNew = telescope_params.Bmax
-        if nbins_used > 1:
-            binsize -= bins[nbins_used-2]
-            binsizeNew -= bins[nbins_used-2]
+            # Calculate old and new bin sizes
+            binsize = bins[nbins_used-1]
+            binsizeNew = telescope_params.Bmax
+            if nbins_used > 1:
+                binsize -= bins[nbins_used-2]
+                binsizeNew -= bins[nbins_used-2]
 
-        # Scale last bin
-        bins[nbins_used-1] = telescope_params.Bmax
-        binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
+            # Scale last bin
+            bins[nbins_used-1] = telescope_params.Bmax
+            binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
+        else:
+            if verbose:
+                print "BDA off"
+            bins = [telescope_params.Bmax]
+            binfracs=[1.0]
 
         # Apply imaging equations
         f.apply_imaging_equations(telescope_params, cfg.pipeline,
