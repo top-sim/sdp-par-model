@@ -5,6 +5,7 @@ etc. Several methods are supplied by which values can be found by lookup as well
 """
 
 import numpy as np
+from math import sqrt
 from sympy import symbols
 
 class ParameterContainer:
@@ -274,9 +275,6 @@ class ParameterDefinitions:
         o.Nsolve = 10 # Number of Stefcal iterations
         o.Nscales = 5 # Number of scales in MS-MFS
         o.Npatch = 4097 # Number of pixels in clean patch
-        o.Tsolution_neutral = 300.0 # Solution interval for neutral atmosphere
-        o.Tsolution_iono = 10.0 # Solution interval for ionosphere
-        o.Tsolution_bandpass = 3600.0 # Solution interval for bandpass
 
         # To be overridden by the pipelines
         o.Nf_FFT_backward = 0
@@ -285,6 +283,11 @@ class ParameterDefinitions:
         o.Nselfcal = 3
         o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
         o.NAProducts = 1 # Number of A^A terms to be modelled
+        o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
+        o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.NIpatches = 0 # Number of ionospheric patches to solve
 
         return o
 
@@ -313,6 +316,11 @@ class ParameterDefinitions:
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 100 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -327,6 +335,11 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 100 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
@@ -343,6 +356,11 @@ class ParameterDefinitions:
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
             o.NAProducts = 1 # Each antenna can be modelled as the same.
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 0 # Number of ionospheric patches to solve
 
 
         elif telescope == Telescopes.SKA1_Mid_old:
@@ -359,6 +377,11 @@ class ParameterDefinitions:
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 0 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Sur_old:
             o.Bmax = 50000  # Actually constructed max baseline, in *m*
@@ -373,6 +396,11 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 0 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA2_Low:
             o.Bmax = 180000  # Actually constructed max baseline, in *m*
@@ -388,6 +416,11 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 0 # Number of ionospheric patches to solve
             o.NAProducts = 1 # Each antenna can be modelled as the same.
 
         elif telescope == Telescopes.SKA2_Mid:
@@ -404,6 +437,11 @@ class ParameterDefinitions:
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
+            o.tRCAL_G = 180.0
+            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_I = 1.0 # Solution interval for Ionosphere
+            o.NIpatches = 0 # Number of ionospheric patches to solve
 
         else:
             raise Exception('Unknown Telescope!')

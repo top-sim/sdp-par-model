@@ -410,12 +410,14 @@ class Equations:
     def _apply_calibration_equations(o):
     
         Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines)
+        # ICAL solves for all terms
         if o.pipeline == Pipelines.ICAL:
-            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.Tsolution_neutral + o.Nf_FFT_backward * o.Tobs / o.Tsolution_bandpass)                
+            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.tICAL_G + o.Nf_FFT_backward * o.Tobs / o.tICAL_B + o.NIpatches * o.Na * o.Tobs / o.tICAL_I)
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
+        # RCAL solves for G only
         if o.pipeline == Pipelines.RCAL:
-            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.Tsolution_neutral + o.Nf_FFT_backward * o.Tobs / o.Tsolution_bandpass)                
+            o.Rflop_solve = Rflop_solve_common * o.Tobs / o.tRCAL_G               
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
  
     @staticmethod
@@ -475,13 +477,13 @@ class Equations:
             o.Rccf_backward_task = Lambda(b,
                 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2))
             o.Rccf_backward = o.Ntotalmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-               bcount * 5. * o.Nf_gcf_backward(b) * o.Nfacet**2 *
+               bcount * 5. * o.Nf_gcf_backward(b) * # o.Nfacet**2 *
                o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) *
                o.Nmm / o.Tkernel_backward(b))
             o.Rccf_predict_task = Lambda(b,
                 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2))
             o.Rccf_predict  = o.Ntotalmajor * o.Npp * o.Nbeam * Equations._sum_bl_bins(o, bcount, b,
-                bcount * 5. * o.Nf_gcf_predict(b) * o.Nfacet_predict**2 *
+                bcount * 5. * o.Nf_gcf_predict(b) * # o.Nfacet_predict**2 *
                 o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
                 o.Nmm / o.Tkernel_predict(b))
 
