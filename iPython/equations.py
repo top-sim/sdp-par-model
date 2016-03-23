@@ -347,12 +347,12 @@ class Equations:
             # ---
 
             # Eq. 33, per output grid (i.e. frequency)
-            # TODO: please check correctness of 2 eqns below.
+            # These are real-to-complex for which the prefactor in the FFT is 2.5
             # TODO: Note the Nf_out factor is only in the backward step of the final cycle.
-            o.Rfft_backward = 5. * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear, 2) / o.Tsnap
+            o.Rfft_backward = 2.5 * o.Nfacet**2 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap
             # Eq. 33 per predicted grid (i.e. frequency)
-            o.Rfft_predict = 5. * o.Nfacet_predict**2 * o.Npix_linear_predict**2 * \
-                             log(o.Npix_linear_predict, 2) / o.Tsnap
+            o.Rfft_predict = 2.5 * o.Nfacet_predict**2 * o.Npix_linear_predict**2 * \
+                             log(o.Npix_linear_predict**2, 2) / o.Tsnap
 
             if o.Nf_FFT_backward > 0:
                 o.Rflop_fft_bw = o.Npp * o.Nbeam * o.Ntotalmajor * o.Nf_FFT_backward * o.Rfft_backward
@@ -368,7 +368,7 @@ class Equations:
         # -------------
         if o.pipeline in Pipelines.imaging:
         
-            # We do Ntotalmajor*(Tobs/Tsnap) entire image reprojections
+            # We do 2*Ntotalmajor*(Tobs/Tsnap) entire image reprojections (i.e. both directions)
             o.Rrp = 2.0  * o.rma * o.Ntotalmajor * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
             o.Nf_proj = o.Nf_FFT_backward
@@ -396,15 +396,20 @@ class Equations:
             #
             # Minor cycles
             # -------------
-            o.Nf_deconv = o.Nf_out
             if o.pipeline in (Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepA_Image):
-                o.Nf_deconv = o.number_taylor_terms
-            Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor *  o.Nf_deconv / o.Tobs
-            o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
-            o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
-            if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
-                o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
-                o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
+                Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor / o.Tobs
+                # Search only on I_0
+                o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
+                # Subtract on all scales and 
+                o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
+            elif o.pipeline in (Pipelines.DPrepB, Pipelines.DPrepC):
+                Rflop_deconv_common = o.rma * o.Ntotalmajor * o.Nbeam * o.Npp * o.Nminor / o.Tobs
+                # Always search in all frequency space
+                o.Rflop_identify_component = o.Nf_out * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
+                # Subtract on all scales and only one frequency
+                o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
+            o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
+            o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
 
     @staticmethod
     def _apply_calibration_equations(o):
