@@ -429,7 +429,8 @@ class Equations:
     @staticmethod
     def _apply_dft_equations(o):
         if o.pipeline in Pipelines.imaging:
-            o.Rflop_dft = (1 + o.Nselfcal) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
+            # If the selfcal loop is embedded, we only need to do this once.
+            o.Rflop_dft = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
 
     @staticmethod
