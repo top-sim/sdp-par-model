@@ -281,7 +281,7 @@ class ParameterDefinitions:
         o.Nf_FFT_predict = 0
         o.Nmajor = 2
         o.Nselfcal = 3
-        o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) 
+        o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
         o.NAProducts = 1 # Number of A^A terms to be modelled
         o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
         o.tICAL_G = 1.0 # Solution interval for Antenna gains
@@ -569,7 +569,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max
             o.Nselfcal = 0
             o.Nmajor = 0
-            o.Ntotalmajor = 0
+            o.Nmajortotal = 0
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -581,7 +581,7 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 3
             o.Nmajor = 2
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
@@ -597,7 +597,7 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 0
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
@@ -613,7 +613,7 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.number_taylor_terms * o.Nf_out
@@ -629,7 +629,7 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
@@ -646,7 +646,7 @@ class ParameterDefinitions:
             o.Qfov = 1.8  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
@@ -663,7 +663,7 @@ class ParameterDefinitions:
             o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
@@ -678,7 +678,7 @@ class ParameterDefinitions:
             o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
@@ -693,7 +693,7 @@ class ParameterDefinitions:
             o.Qfov = 0.9  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
-            o.Ntotalmajor = o.Nmajor * (o.Nselfcal + 1) + 1 
+            o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
             o.Nf_FFT_backward = o.Nf_out

@@ -429,17 +429,29 @@ class Equations:
     @staticmethod
     def _apply_dft_equations(o):
         if o.pipeline in Pipelines.imaging:
-            # If the selfcal loop is embedded, we only need to do this once.
-            o.Rflop_dft = o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
+            # If the selfcal loop is embedded, we only need to do this once but since we do 
+            # an update of the model every selfcal, we need to do it every selfcal.
+            # We assume that these operations counts are correct for FMULT-less
+            o.Rflop_dft = (o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
 
     @staticmethod
+    def _apply_source_find_equations(o):
+        """Rough estimate of source finding flops"""
+        if o.pipeline == Pipelines.ICAL:
+            # We need to fit 6 degrees of freedom to 100 points so we have 600 FMults . Ignore for the moment Theta_beam
+            # the solution of these normal equations. This really is a stopgap. We need an estimate for 
+            # a non-linear solver.
+            o.Rflop_source_find=o.rma * 6 * 100 *o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
+            o.set_product(Products.Source_Find, Rflop=o.Rflop_source_find)
+
+     @staticmethod
     def _apply_major_cycle_equations(o):
 
-        # Note that we assume this is done at the beginning of each selfcal loop
+        # Note that we assume this is done for every Selfcal and Major Cycle
         # ---
         if o.pipeline in Pipelines.imaging:
-            o.Rflop_subtractvis = (1 + o.Nselfcal) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
+            o.Rflop_subtractvis = o.cma *  o.Nmajortotal * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * o.
             o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
     @staticmethod
@@ -520,14 +532,7 @@ class Equations:
                     Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
             o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
 
-    @staticmethod
-    def _apply_source_find_equations(o):
-        """Rough estimate of source finding flops"""
-        if o.pipeline == Pipelines.ICAL:
-            o.Rflop_source_find=600*o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
-            o.set_product(Products.Source_Find, Rflop=o.Rflop_source_find)
-
-    @staticmethod
+   @staticmethod
     def _apply_flop_equations(o):
         """Calculate overall flop rate"""
 
