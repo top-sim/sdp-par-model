@@ -508,7 +508,7 @@ class Equations:
                 o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) *
                 o.Nmm / o.Tkernel_predict(b))
 
-            o.Rflop_conv = o.Nmajortotal * (o.Rccf_backward + o.Rccf_predict)
+            o.Rflop_conv = (o.Rccf_backward + o.Rccf_predict)
             o.set_product(Products.Gridding_Kernel_Update, Rflop=o.Rflop_conv)
 
     @staticmethod
