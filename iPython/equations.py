@@ -402,14 +402,16 @@ class Equations:
                 o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and 
                 o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
+                o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
+                o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
             elif o.pipeline in (Pipelines.DPrepB, Pipelines.DPrepC):
                 Rflop_deconv_common = o.rma * o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
                 # Always search in all frequency space
                 o.Rflop_identify_component = o.Nf_out * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and only one frequency
                 o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
-            o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
-            o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
+                o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
+                o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
 
     @staticmethod
     def _apply_calibration_equations(o):
