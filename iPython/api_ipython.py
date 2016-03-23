@@ -445,17 +445,21 @@ class SkaIPythonAPI(api):
         width = 0.35
         nr_bars = len(labels)
         indices = np.arange(nr_bars)  # The indices of the bars
-        bottoms = np.zeros(nr_bars)   # The height of each bar, i.e. the bottom of the next stacked block
+        bottoms = {} # The height of each bar, by key
 
-        index = 0
-        for key in value_labels:
+        # Collect bars to generate. We want the first bar to end up at
+        # the top, therefore we determine their position starting from
+        # the back.
+        valueSum = np.zeros(nr_bars)
+        for key in reversed(list(value_labels)):
+            bottoms[key] = valueSum
+            valueSum = valueSum + np.array(dictionary_of_value_arrays[key])
+        for index, key in enumerate(value_labels):
             values = np.array(dictionary_of_value_arrays[key])
             if colours is not None:
-                plt.bar(indices, values, width, color=colours[index], bottom=bottoms)
+                plt.bar(indices, values, width, color=colours[index], bottom=bottoms[key])
             else:
-                plt.bar(indices, values, width, bottom=bottoms)
-            bottoms += values
-            index += 1
+                plt.bar(indices, values, width, bottom=bottom[key])
 
         plt.xticks(indices+width/2., labels)
         plt.title(title)
