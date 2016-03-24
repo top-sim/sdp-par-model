@@ -423,15 +423,19 @@ class Equations:
     def _apply_calibration_equations(o):
         # We do one calibration to start with (using the original LSM from the GSM and then we do
         # Nselfcal more.
-        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve / o.nbaselines /o.Nf_max)
+        Rflop_solution = (o.Nselfcal + 1) *  48 * o.Na * o.Na * o.Nsolve 
         # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
         if o.pipeline == Pipelines.ICAL:
-            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.tICAL_G + o.Nf_out * o.Tobs / o.tICAL_B + o.NIpatches * o.Na * o.Tobs / o.tICAL_I)
+            N_Gslots = o.Nbeam * o.Tobs / o.tICAL_G
+            N_Bslots = o.Nbeam * o.Tobs / o.tICAL_B
+            N_Islots = o.Nbeam * o.Tobs / o.tICAL_I
+            o.Rflop_solve = Rflop_solution * (N_Gslots + o.Nf_out * N_Bslots + o.NIpatches * N_Islots) / o.Tobs
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
         # RCAL solves for G only
         if o.pipeline == Pipelines.RCAL:
-            o.Rflop_solve = Rflop_solve_common * o.Tobs / o.tRCAL_G               
+            N_Gslots = o.Nbeam * o.Tobs / o.tRCAL_G
+            o.Rflop_solve = Rflop_solution * N_Gslots / o.Tobs
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
  
     @staticmethod

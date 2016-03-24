@@ -245,8 +245,6 @@ class ParameterDefinitions:
         o.Naa = 10  # Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
         o.Npp = 4  # Number of polarization products
-        o.rma = 2 # Flops per multiply add (i.e. no fmult unit assumed)
-        o.cma = 8 # Flops per complex multiply add (i.e. no fmult unit assumed)
         o.Nw = 2  # Bytes per value
         o.Ncbytes = 8 # Number of bytes per complex
         o.Nrbytes = 4 # Number of bytes per real
@@ -284,7 +282,7 @@ class ParameterDefinitions:
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
         o.NAProducts = 1 # Number of A^A terms to be modelled
         o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
-        o.tICAL_G = 1.0 # Solution interval for Antenna gains
+        o.tICAL_G = 10.0 # Solution interval for Antenna gains
         o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
         o.tICAL_I = 1.0 # Solution interval for Ionosphere
         o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -357,7 +355,7 @@ class ParameterDefinitions:
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -378,7 +376,7 @@ class ParameterDefinitions:
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -397,7 +395,7 @@ class ParameterDefinitions:
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -417,7 +415,7 @@ class ParameterDefinitions:
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -438,7 +436,7 @@ class ParameterDefinitions:
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 0 # Number of ionospheric patches to solve
@@ -578,9 +576,10 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.ICAL:
-            o.Qfov = 1.8  # Field of view factor
+            o.Qfov = 2.7  # Field of view factor
             o.Nselfcal = 3
             o.Nmajor = 2
+            o.Nminor = 10000
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.minimum_channels, o.Nf_max)
