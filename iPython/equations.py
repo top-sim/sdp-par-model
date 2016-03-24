@@ -521,17 +521,31 @@ class Equations:
             # dPDR TODO: check line below - is it correct if we don't facet in the predict step? Refer to diagram
             bcount = Symbol('bcount')
             b = Symbol('b')
+#             o.Rflop_phrot_predict_task = Lambda((bcount,b), \
+#                 sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict(b))
+#             o.Rflop_phrot_backward_task = Lambda((bcount, b), \
+#                 sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
+#             o.Rflop_phrot = \
+#                 sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
+#                 Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
+#             if o.scale_predict_by_facet:
+#                 o.Rflop_phrot += \
+#                     sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
+#                     Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
+
+# These equations need to be modified to match the non-task versions
             o.Rflop_phrot_predict_task = Lambda((bcount,b), \
                 sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict(b))
             o.Rflop_phrot_backward_task = Lambda((bcount, b), \
                 sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
+# Non-task
             o.Rflop_phrot = \
                 sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-                Equations._sum_bl_bins(o, bcount, b, o.Nvis_backward(bcount, b))
+                o.Nvis_predict_no_averaging
             if o.scale_predict_by_facet:
                 o.Rflop_phrot += \
                     sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-                    Equations._sum_bl_bins(o, bcount, b, o.Nvis_predict(bcount, b))
+                    o.Nvis_predict_no_averaging
             o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
 
     @staticmethod
