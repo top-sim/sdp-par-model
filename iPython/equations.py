@@ -417,7 +417,7 @@ class Equations:
     def _apply_calibration_equations(o):
         # We do one calibration to start with (using the original LSM from the GSM and then we do
         # Nselfcal more.
-        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve/ o.nbaselines)
+        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve / o.nbaselines /o.Nf_max)
         # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
         if o.pipeline == Pipelines.ICAL:
             o.Rflop_solve = o.Tobs* (1.0 / o.tICAL_G + o.Nf_out / o.tICAL_B + o.NIpatches * o.Na / o.tICAL_I)
