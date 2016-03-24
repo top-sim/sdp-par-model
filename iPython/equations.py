@@ -299,11 +299,11 @@ class Equations:
         o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
 
         if o.pipeline == Pipelines.Ingest:
-            receiveflop = 2 * o.rma * o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
+            receiveflop = 2 *  o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
             o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
             o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
-            o.set_product(Products.Demix, Rflop=o.cma * o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
-            o.set_product(Products.Average, Rflop=o.cma * o.Nvis_receive)
+            o.set_product(Products.Demix, Rflop=8 * o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
+            o.set_product(Products.Average, Rflop=8 * o.Nvis_receive)
 
     @staticmethod
     def _apply_flag_equations(o):
@@ -327,17 +327,17 @@ class Equations:
                 o.Ntaylor_backward = o.number_taylor_terms
                 o.Ntaylor_predict = o.number_taylor_terms
             o.Rgrid_backward_task = Lambda((bcount, b),
-                o.cma * o.Nmm * o.Nmajortotal * bcount * o.Nkernel2_backward(b) *
+                8 * o.Nmm * o.Nmajortotal * bcount * o.Nkernel2_backward(b) *
                 o.Tsnap / o.Tcoal_backward(b))
             o.Rgrid_backward = \
-                o.cma * o.Nmm * o.Nmajortotal * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
+                8 * o.Nmm * o.Nmajortotal * o.Npp * o.Nbeam * o.Ntaylor_backward * o.Nfacet**2 * \
                 Equations._sum_bl_bins(o, bcount, b,
                     o.Nvis_backward(bcount, b) * o.Nkernel2_backward(b))
             o.Rgrid_predict_task = Lambda((bcount, b),
-                o.cma * o.Nmm * bcount * o.Nkernel2_predict(b) *
+                8 * o.Nmm * bcount * o.Nkernel2_predict(b) *
                 o.Tsnap / o.Tcoal_predict(b))
             o.Rgrid_predict = \
-                o.cma * o.Nmm * o.Nmajortotal * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet_predict**2 * \
+                8 * o.Nmm * o.Nmajortotal * o.Npp * o.Nbeam * o.Ntaylor_predict * o.Nfacet_predict**2 * \
                 Equations._sum_bl_bins(o, bcount, b,
                     o.Nvis_predict(bcount, b) * o.Nkernel2_predict(b))
 
@@ -375,7 +375,7 @@ class Equations:
         if o.pipeline in Pipelines.imaging:
         
             # We do 2*o.Nmajortotal*(Tobs/Tsnap) entire image reprojections (i.e. both directions)
-            o.Rrp = 2.0  * o.rma * o.Nmajortotal * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
+            o.Rrp = 2.0  *  o.Nmajortotal * 50. * o.Nfacet**2 * o.Npix_linear ** 2 / o.Tsnap  # Eq. 34
 
             o.Nf_proj = o.Nf_FFT_backward
             if o.pipeline == Pipelines.DPrepA_Image:
@@ -390,7 +390,7 @@ class Equations:
     def _apply_spectral_fitting_equations(o):
 
         if o.pipeline == Pipelines.DPrepA_Image:
-            o.Rflop_fitting = o.rma * o.Nmajortotal * o.Nbeam * o.Npp * o.number_taylor_terms * \
+            o.Rflop_fitting =  2 * o.Nmajortotal * o.Nbeam * o.Npp * o.number_taylor_terms * \
                               (o.Nf_FFT_backward + o.Nf_FFT_predict) * o.Npix_linear_total_fov ** 2 \
                               / o.Tobs
             o.set_product(Products.Image_Spectral_Fitting, Rflop=o.Rflop_fitting)
@@ -403,19 +403,19 @@ class Equations:
             # Minor cycles
             # -------------
             if o.pipeline in (Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepA_Image):
-                Rflop_deconv_common = o.rma * o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
+                Rflop_deconv_common =  o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
                 # Search only on I_0
-                o.Rflop_identify_component = Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
+                o.Rflop_identify_component = 2 * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and 
-                o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
+                o.Rflop_subtract_image_component = 2 * o.Nscales * Rflop_deconv_common * o.Npatch**2 
                 o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
                 o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
             elif o.pipeline in (Pipelines.DPrepB, Pipelines.DPrepC):
-                Rflop_deconv_common = o.rma * o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
+                Rflop_deconv_common =  o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
                 # Always search in all frequency space
-                o.Rflop_identify_component = o.Nf_out * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
+                o.Rflop_identify_component = 2 * o.Nf_out * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and only one frequency
-                o.Rflop_subtract_image_component = o.Nscales * Rflop_deconv_common * o.Npatch**2 
+                o.Rflop_subtract_image_component = 2 * o.Nscales * Rflop_deconv_common * o.Npatch**2 
                 o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
                 o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
 
@@ -426,8 +426,8 @@ class Equations:
         Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve / o.nbaselines /o.Nf_max)
         # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
         if o.pipeline == Pipelines.ICAL:
-            o.Rflop_solve = o.Tobs* (1.0 / o.tICAL_G + o.Nf_out / o.tICAL_B + o.NIpatches * o.Na / o.tICAL_I)
-            o.set_product(Products.Solve, Rflop=Rflop_solve_common * o.Rflop_solve)
+            o.Rflop_solve = Rflop_solve_common * (o.Tobs / o.tICAL_G + o.Nf_out * o.Tobs / o.tICAL_B + o.NIpatches * o.Na * o.Tobs / o.tICAL_I)
+            o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
         # RCAL solves for G only
         if o.pipeline == Pipelines.RCAL:
@@ -440,7 +440,7 @@ class Equations:
             # If the selfcal loop is embedded, we only need to do this once but since we do 
             # an update of the model every selfcal, we need to do it every selfcal.
             # We assume that these operations counts are correct for FMULT-less
-            o.Rflop_dft = (o.Nselfcal + 1) * o.Nvis * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
+            o.Rflop_dft = o.Nvis * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
 
     @staticmethod
@@ -450,7 +450,8 @@ class Equations:
             # We need to fit 6 degrees of freedom to 100 points so we have 600 FMults . Ignore for the moment Theta_beam
             # the solution of these normal equations. This really is a stopgap. We need an estimate for 
             # a non-linear solver.
-            o.Rflop_source_find=o.rma * 6 * 100 *o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
+#            o.Rflop_source_find= 6 * 100 *o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
+            o.Rflop_source_find= 6 * 100 * o.Nselfcal * o.Nsource_find_iterations * o.Nsource / o.Tobs
             o.set_product(Products.Source_Find, Rflop=o.Rflop_source_find)
 
     @staticmethod
@@ -459,7 +460,7 @@ class Equations:
         # Note that we assume this is done for every Selfcal and Major Cycle
         # ---
         if o.pipeline in Pipelines.imaging:
-            o.Rflop_subtractvis = o.cma *  o.Nmajortotal * o.Nvis * o.Npp * o.Nbeam
+            o.Rflop_subtractvis = 8 *  o.Nmajortotal * o.Nvis * o.Npp * o.Nbeam
             o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
     @staticmethod
