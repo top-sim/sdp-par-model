@@ -187,6 +187,8 @@ class Equations:
         # This is fine - substituting in the equation for theta_fov shows it is indeed correct.
         #Use full FoV for de-grid (predict) for high accuracy
 
+        o.Nf_no_smear = \
+            log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
         o.Nf_no_smear_backward = Lambda(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
         o.Nf_no_smear_predict = Lambda(b,
@@ -195,6 +197,8 @@ class Equations:
         # The number of visibility channels used in each direction
         # (includes effects of averaging). Bound by minimum parallism
         # and input channel count.
+        o.Nf_vis = \
+            Min(Max(o.Nf_out, o.Nf_no_smear),o.Nf_max)
         o.Nf_vis_backward = Lambda(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
         o.Nf_vis_predict = Lambda(b,
@@ -241,8 +245,8 @@ class Equations:
         # Eq. 31 Visibility rate for predict step
         o.Nvis_predict = Lambda((bcount, b),
             bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
-        o.Nvis_predict_no_averaging = \
-            o.nbaselines * o.Nf_vis_predict(o.Bmax) / o.Tdump_scaled
+        # Total input visibility rate
+        o.Nvis = o.nbaselines * o.Nf_vis / o.Tdump_scaled
 
         # The line above uses Tdump_scaled independent of whether
         # BLDTA is used.  This is because BLDTA is only done for
@@ -306,7 +310,7 @@ class Equations:
         """ Flagging equations for non-ingest pipelines"""
 
         if not (o.pipeline == Pipelines.Ingest):
-            o.set_product(Products.Flag, Rflop=279 * o.Nvis_predict_no_averaging)
+            o.set_product(Products.Flag, Rflop=279 * o.Nvis)
 
     @staticmethod
     def _apply_grid_equations(o):
@@ -419,7 +423,7 @@ class Equations:
     def _apply_calibration_equations(o):
         # We do one calibration to start with (using the original LSM from the GSM and then we do
         # Nselfcal more.
-        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve / o.nbaselines /o.Nf_max)
+        Rflop_solve_common = ((o.Nselfcal + 1) * o.Nvis * o.Nbeam * 48 * o.Na * o.Na * o.Nsolve / o.nbaselines /o.Nf_max)
         # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
         if o.pipeline == Pipelines.ICAL:
             o.Rflop_solve = o.Tobs* (1.0 / o.tICAL_G + o.Nf_out / o.tICAL_B + o.NIpatches * o.Na / o.tICAL_I)
@@ -436,7 +440,7 @@ class Equations:
             # If the selfcal loop is embedded, we only need to do this once but since we do 
             # an update of the model every selfcal, we need to do it every selfcal.
             # We assume that these operations counts are correct for FMULT-less
-            o.Rflop_dft = (o.Nselfcal + 1) * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
+            o.Rflop_dft = (o.Nselfcal + 1) * o.Nvis * o.Npp * o.Nbeam * (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na) / o.nbaselines
             o.set_product(Products.DFT, Rflop=o.Rflop_dft)
 
     @staticmethod
@@ -455,7 +459,7 @@ class Equations:
         # Note that we assume this is done for every Selfcal and Major Cycle
         # ---
         if o.pipeline in Pipelines.imaging:
-            o.Rflop_subtractvis = o.cma *  o.Nmajortotal * o.Nvis_predict_no_averaging * o.Npp * o.Nbeam
+            o.Rflop_subtractvis = o.cma *  o.Nmajortotal * o.Nvis * o.Npp * o.Nbeam
             o.set_product(Products.Subtract_Visibility, Rflop=o.Rflop_subtractvis)
 
     @staticmethod
@@ -537,17 +541,17 @@ class Equations:
 
 # These equations need to be modified to match the non-task versions
             o.Rflop_phrot_predict_task = Lambda((bcount,b), \
-                sign(o.Nfacet - 1) * 25 * o.Nvis_predict(bcount, b) * o.Tsnap / o.Nf_vis_predict(b))
+                sign(o.Nfacet - 1) * 25 * o.Nvis * o.Tsnap / o.Nf_vis_predict(b))
             o.Rflop_phrot_backward_task = Lambda((bcount, b), \
-                sign(o.Nfacet - 1) * 25 * o.Nvis_backward(bcount, b) * o.Tsnap / o.Nf_vis_backward(b))
+                sign(o.Nfacet - 1) * 25 * o.Nvis * o.Tsnap / o.Nf_vis_backward(b))
 # Non-task
             o.Rflop_phrot = \
                 sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-                o.Nvis_predict_no_averaging
+                o.Nvis
             if o.scale_predict_by_facet:
                 o.Rflop_phrot += \
                     sign(o.Nfacet - 1) * 25 * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet ** 2 * \
-                    o.Nvis_predict_no_averaging
+                    o.Nvis
             o.set_product(Products.PhaseRotation, Rflop=o.Rflop_phrot)
 
     @staticmethod
@@ -579,11 +583,11 @@ class Equations:
         # Note the factor 2 in the line below -- we have a double buffer
         # (allowing storage of a full observation while simultaneously capturing the next)
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-        o.Mbuf_vis = 2 * o.Npp * o.Nvis_predict_no_averaging * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
+        o.Mbuf_vis = 2 * o.Npp * o.Nvis * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
 
         # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
         # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors.
         # TODO: PDR05 lacking in this regard and must be updated.
         # This is correct if we have only got facets for the backward step and use Nfacet=1 for predict step: TJC see TCC-SDP-151123-1-1
         # It probably can go much smaller, though: see SDPPROJECT-133
-        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis_predict_no_averaging * o.Mvis * o.Nfacet ** 2  # Eq 50
+        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50

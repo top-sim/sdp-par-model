@@ -70,6 +70,7 @@ class SkaIPythonAPI(api):
         ('Coalesce time pred',         's',          False,   False, lambda tp: tp.Tcoal_predict,     ),
         ('Coalesce time bw',           's',          False,   False, lambda tp: tp.Tcoal_backward,    ),
         ('Combined Samples',           '',           False,   False, lambda tp: tp.combine_time_samples,),
+        ('Channels total, no-smear',   '',           False,   False, lambda tp: tp.Nf_no_smear        ),
         ('Channels predict, no-smear', '',           False,   False, lambda tp: tp.Nf_no_smear_predict,),
         ('Channels backward, no-smear','',           False,   False, lambda tp: tp.Nf_no_smear_backward,),
         ('Frequencies predict ifft',   '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
@@ -79,6 +80,7 @@ class SkaIPythonAPI(api):
         ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
         ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
+        ('Visibilities total',         '',           False,   False, lambda tp: tp.Nvis,              ),
         ('Visibilities pred',          '',           False,   False, lambda tp: tp.Nvis_predict,      ),
         ('Visibilities bw',            '',           False,   False, lambda tp: tp.Nvis_backward,     ),
 
