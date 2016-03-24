@@ -63,9 +63,10 @@ class Equations:
             if verbose:
                 print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
 
-        # Derive simple parameters
+        # Derive simple parameters. Note that we ignore some baselines
+        # when Bmax is lower than the telescope's maximum.
         #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
-        o.nbaselines = o.Na * (o.Na - 1) / 2.0
+        o.nbaselines = sum(o.frac_bins) * o.Na * (o.Na - 1) / 2.0
 
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
@@ -112,8 +113,9 @@ class Equations:
         # subs(). Unfortunately very slow nonetheless...
         results = []
         lam = Lambda((bcount,b), expr)
+        nbaselines_full = o.Na * (o.Na - 1) / 2.0
         for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
-            results.append(lam(frac_val*o.nbaselines, bmax_val))
+            results.append(lam(frac_val*nbaselines_full, bmax_val))
         return Add(*results, evaluate=False)
 
     @staticmethod
@@ -240,7 +242,7 @@ class Equations:
         o.Nvis_predict = Lambda((bcount, b),
             bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
         o.Nvis_predict_no_averaging = \
-            o.nbaselines * sum(o.frac_bins) * o.Nf_vis_predict(o.Bmax) / o.Tdump_scaled
+            o.nbaselines * o.Nf_vis_predict(o.Bmax) / o.Tdump_scaled
 
         # The line above uses Tdump_scaled independent of whether
         # BLDTA is used.  This is because BLDTA is only done for
