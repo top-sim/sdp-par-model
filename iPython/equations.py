@@ -12,6 +12,11 @@ import math
 from parameter_definitions import Pipelines, Products
 from parameter_definitions import ParameterContainer
 
+# Check sympy compatibility
+import sympy
+if sympy.__version__ == "1.0":
+    raise Exception("SymPy version 1.0 is broken. Please either upgrade or downgrade your version!")
+
 class Equations:
     def __init__(self):
         pass
