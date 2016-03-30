@@ -90,6 +90,7 @@ class Equations:
         Equations._apply_ingest_equations(o)
         Equations._apply_dft_equations(o)
         Equations._apply_flag_equations(o)
+        Equations._apply_correct_equations(o)
         Equations._apply_calibration_equations(o)
         Equations._apply_major_cycle_equations(o)
         Equations._apply_grid_equations(o)
@@ -318,6 +319,11 @@ class Equations:
             o.set_product(Products.Flag, Rflop=279 * o.Nvis)
 
     @staticmethod
+    def _apply_correct_equations(o):
+        """ Correction of gains"""
+        o.set_product(Products.Correct, Rflop= 8 * o.Npp * o.Nmm * o.Nbeam * o.Nvis * o.NIpatches)
+
+    @staticmethod
     def _apply_grid_equations(o):
         """ Grid """
         if o.pipeline in Pipelines.imaging:
@@ -407,8 +413,8 @@ class Equations:
             #
             # Minor cycles
             # -------------
+            Rflop_deconv_common =  o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
             if o.pipeline in (Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepA_Image):
-                Rflop_deconv_common =  o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
                 # Search only on I_0
                 o.Rflop_identify_component = 2 * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and 
@@ -416,7 +422,6 @@ class Equations:
                 o.set_product(Products.Subtract_Image_Component, Rflop=o.Rflop_subtract_image_component)
                 o.set_product(Products.Identify_Component, Rflop=o.Rflop_identify_component)
             elif o.pipeline in (Pipelines.DPrepB, Pipelines.DPrepC):
-                Rflop_deconv_common =  o.Nmajortotal * o.Nbeam * o.Npp * o.Nminor / o.Tobs
                 # Always search in all frequency space
                 o.Rflop_identify_component = 2 * o.Nf_out * Rflop_deconv_common * (o.Npix_linear * o.Nfacet)**2 
                 # Subtract on all scales and only one frequency
@@ -426,21 +431,35 @@ class Equations:
 
     @staticmethod
     def _apply_calibration_equations(o):
-        # We do one calibration to start with (using the original LSM from the GSM and then we do
-        # Nselfcal more.
-        Rflop_solution = (o.Nselfcal + 1) *  48 * o.Na * o.Na * o.Nsolve 
+        
+        # Number of flops needed per solution interval
+        Flop_solver = 12 * o.Npp * o.Nsolve * o.Na**2
+        # Number of flops required for averaging one vis. The steps are evaluate the complex phasor for 
+        # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
+        Flop_averager = 40 * o.Npp
+        
         # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
         if o.pipeline == Pipelines.ICAL:
-            N_Gslots = o.Nbeam * o.Tobs / o.tICAL_G
-            N_Bslots = o.Nbeam * o.Tobs / o.tICAL_B
-            N_Islots = o.Nbeam * o.Tobs / o.tICAL_I
-            o.Rflop_solve = Rflop_solution * (N_Gslots + o.Nf_out * N_Bslots + o.NIpatches * N_Islots) / o.Tobs
+            # We do one calibration to start with (using the original LSM from the GSM and then we do
+            # Nselfcal more.
+            Number_repeats = (o.Nselfcal + 1) * o.Nbeam  
+            N_Gslots = o.Tobs / o.tICAL_G
+            N_Bslots = o.Tobs / o.tICAL_B
+            N_Islots = o.Tobs / o.tICAL_I
+            Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
+            Flop_solving   = Flop_solver * (N_Gslots + o.Nf_out * N_Bslots + o.NIpatches * N_Islots)
+            o.Rflop_solve = Number_repeats * (Flop_solving + Flop_averaging) / o.Tobs 
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
         # RCAL solves for G only
         if o.pipeline == Pipelines.RCAL:
-            N_Gslots = o.Nbeam * o.Tobs / o.tRCAL_G
-            o.Rflop_solve = Rflop_solution * N_Gslots / o.Tobs
+            # We need to complete one entire calculation within real time tCal_G
+            Number_repeats = o.Nbeam  
+            N_Gslots = o.Tobs / o.tRCAL_G
+            # Need to remember to average over all frequencies because a BP may have been applied.
+            Flop_averaging = Flop_averager * o.Nvis * o.Nf_max * o.tRCAL_G
+            Flop_solving   = Flop_solver * N_Gslots
+            o.Rflop_solve = Number_repeats * (Flop_solving + Flop_averaging) / o.Tobs 
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
  
     @staticmethod

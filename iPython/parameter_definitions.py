@@ -157,7 +157,7 @@ class Pipelines:
     Fast_Img = 'Fast_Img' # Produce continuum subtracted residual image every 1s or so
 
     input = [Ingest]
-    imaging = [ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
+    imaging = [RCAL, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     output = [DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     all = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
     pure_pipelines = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
@@ -266,7 +266,6 @@ class ParameterDefinitions:
         o.number_taylor_terms = 5 # Number of Taylor terms to compute
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
-        o.rho_gsm = 10000 # Density of GSM discrete sources (number per sterradian)
         o.Nsource_find_iterations=10 # Number of iterations in source finding
         o.Nsource = 1000 # Number of point sources modelled TODO: Should be set per HPSO
         o.Nminor = 1000 # Average number of minor cycles per major cycle
@@ -280,12 +279,12 @@ class ParameterDefinitions:
         o.Nmajor = 2
         o.Nselfcal = 3
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
-        o.NAProducts = 1 # Number of A^A terms to be modelled
+        o.NAProducts = 1  # Number of A^A terms to be modelled
         o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
-        o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
+        o.tICAL_B = 3600.0  # Solution interval for Bandpass
         o.tICAL_I = 1.0 # Solution interval for Ionosphere
-        o.NIpatches = 0 # Number of ionospheric patches to solve
+        o.NIpatches = 1 # Number of ionospheric patches to solve
 
         return o
 
@@ -315,10 +314,10 @@ class ParameterDefinitions:
         #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 100 # Number of ionospheric patches to solve
+            o.NIpatches = 30 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Low_old:
             o.Bmax = 100000  # Actually constructed max baseline in *m*
@@ -334,10 +333,10 @@ class ParameterDefinitions:
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
-            o.tICAL_G = 1.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_G = 10.0 # Solution interval for Antenna gains
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 100 # Number of ionospheric patches to solve
+            o.NIpatches = 30 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Mid:
             o.Bmax = 150000  # Actually constructed max baseline in *m*
@@ -356,9 +355,9 @@ class ParameterDefinitions:
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 0 # Number of ionospheric patches to solve
+            o.NIpatches = 1 # Number of ionospheric patches to solve
 
 
         elif telescope == Telescopes.SKA1_Mid_old:
@@ -377,9 +376,9 @@ class ParameterDefinitions:
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 0 # Number of ionospheric patches to solve
+            o.NIpatches = 1 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA1_Sur_old:
             o.Bmax = 50000  # Actually constructed max baseline, in *m*
@@ -396,9 +395,9 @@ class ParameterDefinitions:
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 0 # Number of ionospheric patches to solve
+            o.NIpatches = 1 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA2_Low:
             o.Bmax = 180000  # Actually constructed max baseline, in *m*
@@ -416,10 +415,9 @@ class ParameterDefinitions:
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 0 # Number of ionospheric patches to solve
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            o.NIpatches = 1 # Number of ionospheric patches to solve
 
         elif telescope == Telescopes.SKA2_Mid:
             o.Bmax = 1800000  # Actually constructed max baseline, in *m*
@@ -437,9 +435,9 @@ class ParameterDefinitions:
             o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
-            o.tICAL_B = sqrt(65536)*o.tICAL_G # Solution interval for Bandpass
+            o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
-            o.NIpatches = 0 # Number of ionospheric patches to solve
+            o.NIpatches = 1 # Number of ionospheric patches to solve
 
         else:
             raise Exception('Unknown Telescope!')
@@ -593,7 +591,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.RCAL:
-            o.Qfov = 1.8  # Field of view factor
+            o.Qfov = 2.7  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 0
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -609,7 +607,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.DPrepA:
-            o.Qfov = 1.8  # Field of view factor
+            o.Qfov = 2.7  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -625,7 +623,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.DPrepA_Image:
-            o.Qfov = 1.8  # Field of view factor
+            o.Qfov = 2.7  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -642,7 +640,7 @@ class ParameterDefinitions:
 
 
         elif pipeline == Pipelines.DPrepB:
-            o.Qfov = 1.8  # Field of view factor
+            o.Qfov = 2.7  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
