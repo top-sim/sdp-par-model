@@ -264,6 +264,7 @@ class ParameterDefinitions:
         o.minimum_channels = 100  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
         o.Fast_Img_channels = 100  #minimum number of channels to still enable distributed computing, and to calculate spectral images
         o.number_taylor_terms = 5 # Number of Taylor terms to compute
+        o.NB_parameters = 500 # Number of terms in B parametrization
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.Nsource_find_iterations=10 # Number of iterations in source finding

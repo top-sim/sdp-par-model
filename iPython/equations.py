@@ -447,7 +447,7 @@ class Equations:
             N_Bslots = o.Tobs / o.tICAL_B
             N_Islots = o.Tobs / o.tICAL_I
             Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
-            Flop_solving   = Flop_solver * (N_Gslots + o.Nf_out * N_Bslots + o.NIpatches * N_Islots)
+            Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
             o.Rflop_solve = Number_repeats * (Flop_solving + Flop_averaging) / o.Tobs 
             o.set_product(Products.Solve, Rflop=o.Rflop_solve)
 
