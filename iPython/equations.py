@@ -619,4 +619,5 @@ class Equations:
         # TODO: PDR05 lacking in this regard and must be updated.
         # This is correct if we have only got facets for the backward step and use Nfacet=1 for predict step: TJC see TCC-SDP-151123-1-1
         # It probably can go much smaller, though: see SDPPROJECT-133
-        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50
+#        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50
+        o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis  # Eq 50
