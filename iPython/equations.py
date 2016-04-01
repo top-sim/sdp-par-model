@@ -302,14 +302,14 @@ class Equations:
         """ Ingest equations """
 
         # Need autocorrelations as well
-        o.Nvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp) / o.Tdump_ref
 
         if o.pipeline == Pipelines.Ingest:
-            receiveflop = 2 *  o.Nf_max * o.Npp * o.Nbeam + 1000 * o.Na * o.minimum_channels * o.Nbeam
-            o.set_product(Products.Receive, Rflop=o.Nvis_receive * receiveflop)
-            o.set_product(Products.Flag, Rflop=279 * o.Nvis_receive)
-            o.set_product(Products.Demix, Rflop=8 * o.Nvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / 2.0))
-            o.set_product(Products.Average, Rflop=8 * o.Nvis_receive)
+            o.Rvis_receive = ((o.nbaselines + o.Na) * o.Nbeam * o.Npp * o.Nf_max) / o.Tdump_ref
+            o.set_product(Products.Receive, Rflop= 2 *  o.Npp * o.Rvis_receive)
+            o.set_product(Products.Flag, Rflop=279 * o.Rvis_receive)
+            # Ndemix is the number of time-frequency products used (typically 1000) so we have to divide out the number of input channels
+            o.set_product(Products.Demix, Rflop=8 * o.Rvis_receive * o.Ndemix * (o.NA * (o.NA + 1) / (2.0 * o.Nf_max)))
+            o.set_product(Products.Average, Rflop=8 * o.Rvis_receive)
 
     @staticmethod
     def _apply_flag_equations(o):
