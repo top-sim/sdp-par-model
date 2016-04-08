@@ -39,7 +39,7 @@ class PipelineConfig:
         @param Nf_max: Number of frequency channels
         @param bldta: Baseline dependent time averaging
         @param otfk: On the fly kernels (True or False)
-        @param scale_predict_by_facet:
+        @param scale_predict_by_facet: Assume faceting in predict?
         """
 
         # Load HPSO parameters
