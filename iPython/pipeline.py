@@ -325,7 +325,7 @@ class Pipeline:
         (fftBack, gcfBack, grid) = self.create_backward(rotate, uvws)
         project = self.create_project(fftBack, self.eachLoop, self.fftBackFreqs)
         clean = self.create_clean(project, self.eachLoop)
-        lsm.depend(clean)
+        lsm.depend(clean, 0)
 
         return clean.recursiveDeps()
 

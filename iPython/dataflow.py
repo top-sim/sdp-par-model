@@ -387,11 +387,11 @@ class Flow:
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
-        self.deps = list(deps)
+        self.deps = map(lambda d: (d,1), deps)
         self.cluster = cluster
 
-    def depend(self, flow):
-        self.deps.append(flow)
+    def depend(self, flow, weight=1):
+        self.deps.append((flow, weight))
 
     def output(self, name, costs, attrs={}):
         """Make a new Flow for an output of this Flow. Useful when a Flow has
@@ -427,7 +427,7 @@ class Flow:
 
         while len(active) > 0:
             node = active.pop()
-            for dep in node.deps:
+            for dep, _ in node.deps:
                 if not dep in recDeps:
                     active.append(dep)
                     recDeps.append(dep)
@@ -480,12 +480,17 @@ def flowsToDot(flows, t, computeSpeed=None,
             count = flow.count()
             if count != 1:
                 text += "\nTasks: %d 1/s" % (count/t)
-            compute = flow.cost('compute')
+            try:
+                compute = flow.cost('compute')
+                transfer = flow.cost('transfer')
+            except:
+                print
+                print "Exception raised while determining cost for '" + flow.name + "':"
+                raise
             if compute > 0 and computeSpeed is not None:
                 text += "\nTime: %.2g s/task" % (compute/count/computeSpeed)
             if compute > 0:
-                text += "\nFLOPs: %.2f POP/s" % (compute/t/Constants.peta)
-            transfer = flow.cost('transfer')
+                text += "\nFLOPs: %.2f TOP/s" % (compute/t/Constants.tera)
             if transfer > 0:
                 text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
 
@@ -493,7 +498,7 @@ def flowsToDot(flows, t, computeSpeed=None,
             graph.node(flowIds[flow], text, attrs)
 
             # Add dependencies
-            for dep in flow.deps:
+            for dep, weight in flow.deps:
                 if flowIds.has_key(dep):
 
                     # Calculate number of edges, and use node counts
@@ -515,7 +520,7 @@ def flowsToDot(flows, t, computeSpeed=None,
                     else:
                         label = 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
 
-                    dot.edge(flowIds[dep], flowIds[flow], label)
+                    dot.edge(flowIds[dep], flowIds[flow], label, weight=str(weight))
 
         if cluster != '':
             dot.subgraph(graph)
