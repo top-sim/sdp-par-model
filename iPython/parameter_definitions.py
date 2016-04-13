@@ -6,9 +6,9 @@ etc. Several methods are supplied by which values can be found by lookup as well
 
 import numpy as np
 from math import sqrt
-from sympy import symbols
+from sympy import symbols, Symbol, Expr
 import warnings
-
+import string
 
 class ParameterContainer:
     """
@@ -74,6 +74,51 @@ class ParameterContainer:
             warnings.warn("Parameter %s hasn't been defined (returning 'None')." % param_name)
 
         return return_value
+
+    def _make_symbol_name(self, name):
+        """Make names used in our code into something more suitable to be used
+        as a Latex symbol. This is a quick-n-dirty heuristic based on
+        what the names used in equations.py tend to look like.
+        """
+
+        if name == 'nbaselines':
+            return 'N_{bl}'
+        if name == 'minimum_channels':
+            return 'N_{f,min}'
+        if name == 'using_facet_overlap_frac':
+            return 'Q_{ov}'
+        if name == 'subband_frequency_ratio':
+            return 'Q_{sb}'
+        if name.startswith("wl"):
+            return 'lambda' + name[2:]
+        if name.startswith("freq_"):
+            return 'f_' + name[5:]
+        if name.startswith("Omega_"):
+            return name
+        if name[0].isupper():
+            i0 = 2 if name[1] == '_' else 1
+            return name[0] + "_" + string.replace(name[i0:], '_', ',')
+        return name
+
+    def symbolify(self):
+
+        # Replace all values and expressions with symbols
+        for name, v in self.__dict__.iteritems():
+            if isinstance(v, int) or isinstance(v, float) or self.is_expr(v):
+                self.__dict__[name] = Symbol(self._make_symbol_name(name))
+
+        # For products too
+        for product, rates in self.products:
+            for rname in rates:
+                rates[rname] = Symbol(self._make_symbol_name(rname + "_" + product))
+
+    def is_value(self, v):
+        if isinstance(v, int) or isinstance(v, float) or \
+           isinstance(v, str) or isinstance(v, list):
+            return True
+
+    def is_expr(self, e):
+        return isinstance(e, Expr)
 
     def set_product(self, product, **args):
         if not self.products.has_key(product):

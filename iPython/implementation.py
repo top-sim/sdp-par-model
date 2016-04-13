@@ -265,7 +265,7 @@ class Implementation:
             raise Exception("Computer says no.")  # This should be impossible
 
     @staticmethod
-    def calc_tel_params(pipelineConfig, verbose=False, adjusts={}):
+    def calc_tel_params(pipelineConfig, verbose=False, adjusts={}, symbolify=''):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, pipeline or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
@@ -347,7 +347,7 @@ class Implementation:
         f.apply_imaging_equations(telescope_params, cfg.pipeline,
                                   cfg.blcoal, bins, binfracs,
                                   cfg.on_the_fly, cfg.scale_predict_by_facet,
-                                  verbose)
+                                  verbose, symbolify)
         return telescope_params
 
     @staticmethod

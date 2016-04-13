@@ -6,7 +6,7 @@ This class contains a method for (symbolically) computing derived parameters usi
 in PDR05 (version 1.85).
 """
 
-from sympy import log, Min, Max, sqrt, floor, sign, Symbol, Lambda, Add
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, Lambda, Add, Sum, Mul
 from numpy import pi, round
 import math
 from parameter_definitions import Pipelines, Products
@@ -26,7 +26,7 @@ class Equations:
     def apply_imaging_equations(telescope_parameters, pipeline,
                                 blcoal, bins, binfracs,
                                 on_the_fly=False, scale_predict_by_facet=True,
-                                verbose=False):
+                                verbose=False, symbolify=''):
         """
         (Symbolically) computes a set of derived parameters using imaging
         equations described in PDR05 (version 1.85).
@@ -55,7 +55,7 @@ class Equations:
         assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
 
         # Store parameters
-        o.pipeline = pipeline  # e.g. ICAL, DPprepA
+        o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
         o.blcoal = blcoal
         o.Bmax_bins = list(bins)
         o.frac_bins = list(binfracs)
@@ -68,15 +68,14 @@ class Equations:
             if verbose:
                 print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
 
-        # Derive simple parameters. Note that we ignore some baselines
-        # when Bmax is lower than the telescope's maximum.
-        #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
-        o.nbaselines_full = o.Na * (o.Na - 1) / 2.0
-        o.nbaselines = sum(o.frac_bins) * o.nbaselines_full
+        # Load common equations.
+        Equations._apply_common_equations(o)
 
-        o.wl_max = o.c / o.freq_min  # Maximum Wavelength
-        o.wl_min = o.c / o.freq_max  # Minimum Wavelength
-        o.wl = 0.5 * (o.wl_max + o.wl_min)  # Representative Wavelength
+        # If requested, we replace all parameters so far with symbols,
+        # so product equations are purely symbolic.
+        if symbolify == 'all':
+            o.symbolify()
+            o.Bmax_bins = Symbol("B_max")
 
         # This set of methods must be executed in the defined sequence since
         # some values in sequence. This is ugly and we should fix it one day.
@@ -86,6 +85,12 @@ class Equations:
         Equations._apply_channel_equations(o)
         Equations._apply_coalesce_equations(o)
         Equations._apply_geometry_equations(o)
+
+        # If requested, we replace all parameters so far with symbols,
+        # so product equations are purely symbolic.
+        if symbolify == 'product':
+            o.symbolify()
+            o.Bmax_bins = Symbol("B_max")
 
         # Apply product equations to fill in the Rflop estimates (and others when they arrive).
         Equations._apply_ingest_equations(o)
@@ -110,68 +115,30 @@ class Equations:
         return o
 
     @staticmethod
-    def _set_product(o, product, T=None, N=1, **args):
-        """Sets product properties using a task abstraction.
-
-        @param product: Product to set.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           to yield rate for all tasks.
+    def _apply_common_equations(o):
+        """
+        Calculate simple derived values that are going to get used fairly often.
         """
 
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": N, "T": T }
-        for k, expr in args.iteritems():
-            props[k] = N * expr
+        # Derive simple parameters. Note that we ignore some baselines
+        # when Bmax is lower than the telescope's maximum.
+        #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
+        o.nbaselines_full = o.Na * (o.Na - 1) / 2.0
+        o.nbaselines = sum(o.frac_bins) * o.nbaselines_full
+        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
 
-        # Set product
-        o.set_product(product, **props)
+        # Facet overlap is only needed if Nfacet > 1
+        o.using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
 
-    @staticmethod
-    def _sum_bl_bins(o, bcount, b, expr):
-        """Helper for dealing with baseline dependence. For a term
-        depending on the given symbols, "sum_bl_bins" will build a
-        sum term over all baseline bins."""
+        # Wavelengths
+        o.wl_max = o.c / o.freq_min  # Maximum Wavelength
+        o.wl_min = o.c / o.freq_max  # Minimum Wavelength
+        o.wl = 0.5 * (o.wl_max + o.wl_min)  # Representative Wavelength
 
-        # Replace in concrete values for baseline fractions and
-        # length. Using Lambda here is a solid 25% faster than
-        # subs(). Unfortunately very slow nonetheless...
-        results = []
-        lam = Lambda((bcount,b), expr)
-        for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
-            results.append(lam(frac_val*o.nbaselines_full, bmax_val))
-        return Add(*results, evaluate=False)
-
-    @staticmethod
-    def _set_product_blsum(o, product, b, T=None, N=1, **args):
-        """Sets product properties using a task abstraction. Each property is
-        expressed as a sum over baselines.
-
-        @param product: Product to set.
-        @param b: SymPy symbol for baseline length. Can be used in T
-           and N and all properties.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           and summed over baselines to yield the rate for all tasks.
-        """
-
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": Lambda(b, N), "T": Lambda(b, T) }
-        for k, expr in args.iteritems():
-            bcount = Symbol('bcount')
-            props[k] = Equations._sum_bl_bins(o, bcount, b, bcount * N * expr)
-            props[k+"_task"] = Lambda(b, expr)
-
-        # Set product
-        o.set_product(product, **props)
+        # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also
+        # uses 7.6 instead of 7.66. Is this correct?
+        o.Number_imaging_subbands = ceiling(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
+        o.subband_frequency_ratio = (o.wl_max/o.wl_min)**(1./o.Number_imaging_subbands)
 
     @staticmethod
     def _apply_image_equations(o):
@@ -181,18 +148,10 @@ class Equations:
         References: PDR05 (version 1.85) Sec 9.2
         """
 
-        # Facet overlap is only needed if Nfacet > 1
-        o.using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
-
-        # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also
-        # uses 7.6 instead of 7.66. Is this correct?
-        o.Number_imaging_subbands = math.ceil(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
-        subband_frequency_ratio = (o.wl_max/o.wl_min)**(1./o.Number_imaging_subbands)
-
         # max subband wavelength to set image FoV
-        o.wl_sb_max = o.wl *sqrt(subband_frequency_ratio)
+        o.wl_sb_max = o.wl *sqrt(o.subband_frequency_ratio)
         # min subband wavelength to set pixel size
-        o.wl_sb_min = o.wl_sb_max / subband_frequency_ratio
+        o.wl_sb_min = o.wl_sb_max / o.subband_frequency_ratio
 
         # Eq 6 - Facet Field-of-view (linear) at max sub-band wavelength
         o.Theta_fov = 7.66 * o.wl_sb_max * o.Qfov * (1+o.using_facet_overlap_frac) \
@@ -217,10 +176,6 @@ class Equations:
             o.Theta_fov_predict = o.Total_fov
             o.Nfacet_predict = 1
             o.Npix_linear_predict = o.Npix_linear_total_fov
-        # expansion of sine solves eps = arcsinc(1/amp_f_max).
-        o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
-        # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
-        o.Qbw = 1.47 / o.epsilon_f_approx
 
     @staticmethod
     def _apply_channel_equations(o):
@@ -233,6 +188,11 @@ class Equations:
 
         b = Symbol('b')
         log_wl_ratio = log(o.wl_max / o.wl_min)
+
+        # expansion of sine solves eps = arcsinc(1/amp_f_max).
+        o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
+        # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
+        o.Qbw = 1.47 / o.epsilon_f_approx
 
         # The two equations below => combination of Eq 4 and Eq 5 for
         # full and facet FOV at max baseline respectively.  These
@@ -267,11 +227,11 @@ class Equations:
         """
 
         # correlator output averaging time scaled for max baseline.
-        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
         b = Symbol('b')
         o.combine_time_samples = Lambda(b,
             Max(floor(o.epsilon_f_approx * o.wl /
                       (o.Total_fov * o.Omega_E * b * o.Tdump_scaled)), 1.))
+
         # coalesce visibilities in time.
         o.Tcoal_skipper = Lambda(b,
             o.Tdump_scaled * o.combine_time_samples(b))
@@ -432,21 +392,21 @@ class Equations:
         if not o.pipeline in Pipelines.imaging: return
 
         b = Symbol("b")
-        if o.Nf_FFT_backward > 0:
-            # Eq. 33, per output grid (i.e. frequency)
-            # These are real-to-complex for which the prefactor in the FFT is 2.5
-            Equations._set_product(
-                o, Products.FFT, T = o.Tsnap,
-                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
-                Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
-                Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
-        if o.Nf_FFT_predict > 0:
-            # Eq. 33 per predicted grid (i.e. frequency)
-            Equations._set_product(
-                o, Products.IFFT, T = o.Tsnap,
-                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
-                Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
-                Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
+
+        # Eq. 33, per output grid (i.e. frequency)
+        # These are real-to-complex for which the prefactor in the FFT is 2.5
+        Equations._set_product(
+            o, Products.FFT, T = o.Tsnap,
+            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
+            Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
+            Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
+
+        # Eq. 33 per predicted grid (i.e. frequency)
+        Equations._set_product(
+            o, Products.IFFT, T = o.Tsnap,
+            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
+            Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
+            Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
 
     @staticmethod
     def _apply_reprojection_equations(o):
@@ -675,7 +635,7 @@ class Equations:
         o.Rflop = sum(o.get_products('Rflop').values())
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
-        o.Rinterfacet = 2 * o.Nmajortotal * min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
+        o.Rinterfacet = 2 * o.Nmajortotal * Min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
 
 
     @staticmethod
@@ -709,3 +669,88 @@ class Equations:
         # It probably can go much smaller, though: see SDPPROJECT-133
 #        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50
         o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis  # Eq 50
+
+    @staticmethod
+    def _set_product(o, product, T=None, N=1, **args):
+        """Sets product properties using a task abstraction.
+
+        @param product: Product to set.
+        @param T: Observation time covered by this task. Default is the
+          entire observation (Tobs).
+        @param N: Task parallelism / rate multiplier. The number of
+           tasks that work on the data in parallel.
+        @param args: Task properties as rates. Will be multiplied by N
+           to yield rate for all tasks.
+        """
+
+        # Collect properties
+        if T is None: T = o.Tobs
+        props = { "N": N, "T": T }
+        for k, expr in args.iteritems():
+            props[k] = N * expr
+
+        # Set product
+        o.set_product(product, **props)
+
+    @staticmethod
+    def _sum_bl_bins(o, bcount, b, expr):
+        """Helper for dealing with baseline dependence. For a term
+        depending on the given symbols, "sum_bl_bins" will build a
+        sum term over all baseline bins."""
+
+        # Small bit of ad-hoc formula optimisation: Exploit
+        # independent factors. Makes for smaller terms, which is good
+        # both for Sympy as well as for output.
+        if not b in expr.free_symbols:
+            return o.nbaselines * expr.subs(bcount, 1)
+        if isinstance(expr, Mul):
+            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
+            indepFactors = filter(indep, expr.as_ordered_factors())
+            if len(indepFactors) > 0:
+                def not_indep(e): return not indep(e)
+                restFactors = filter(not_indep, expr.as_ordered_factors())
+                return Mul(*indepFactors) * Equations._sum_bl_bins(o, bcount, b, Mul(*restFactors))
+
+        # Replace in concrete values for baseline fractions and
+        # length. Using Lambda here is a solid 25% faster than
+        # subs(). Unfortunately very slow nonetheless...
+        results = []
+        lam = Lambda((bcount,b), expr)
+
+        # Symbolic? Generate actual symbolic sum expression
+        if isinstance(o.Bmax_bins, Symbol):
+            return Sum(lam(1, o.Bmax_bins(b)), (b, 1, o.nbaselines))
+
+        # Otherwise generate sum term manually that approximates the
+        # full sum using baseline bins
+        for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
+            results.append(lam(frac_val*o.nbaselines_full, bmax_val))
+        return Add(*results, evaluate=False)
+
+    @staticmethod
+    def _set_product_blsum(o, product, b, T=None, N=1, **args):
+        """Sets product properties using a task abstraction. Each property is
+        expressed as a sum over baselines.
+
+        @param product: Product to set.
+        @param b: SymPy symbol for baseline length. Can be used in T
+           and N and all properties.
+        @param T: Observation time covered by this task. Default is the
+          entire observation (Tobs).
+        @param N: Task parallelism / rate multiplier. The number of
+           tasks that work on the data in parallel.
+        @param args: Task properties as rates. Will be multiplied by N
+           and summed over baselines to yield the rate for all tasks.
+        """
+
+        # Collect properties
+        if T is None: T = o.Tobs
+        props = { "N": Lambda(b, N), "T": Lambda(b, T) }
+        for k, expr in args.iteritems():
+            bcount = Symbol('bcount')
+            props[k] = Equations._sum_bl_bins(o, bcount, b, bcount * N * expr)
+            props[k+"_task"] = Lambda(b, expr)
+
+        # Set product
+        o.set_product(product, **props)
+
