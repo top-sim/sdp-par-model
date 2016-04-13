@@ -173,7 +173,7 @@ class Pipeline:
             'Ingest Flagging',
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolars, self.allBaselines],
-            deps = [average],
+            deps = [ingest],
             cluster='ingest',
             costs = self._costs_from_product(Products.Flag))
 
@@ -509,7 +509,7 @@ class PipelineTests(unittest.TestCase):
         self.assertAlmostEqual(
             float(flow.cost('compute')/self.df.tp.Tobs),
             float(self.df.tp.products[product]['Rflop']),
-            delta = 1)
+            delta = 20)
         self.assertAlmostEqual(
             float(flow.cost('transfer')/self.df.tp.Tobs),
             float(self.df.tp.products[product]['Rout']),
