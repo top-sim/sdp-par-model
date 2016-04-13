@@ -83,7 +83,8 @@ class SkaIPythonAPI(api):
         ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
         ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
-        ('Visibilities total',         '1/s',        False,   False, lambda tp: tp.Nvis,              ),
+        ('Visibilities ingest',        '1/s',        False,   False, lambda tp: tp.Nvis_ingest,       ),
+        ('Visibilities averaged',      '1/s',        False,   False, lambda tp: tp.Nvis,              ),
         ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Nvis_predict,      ),
         ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Nvis_backward,     ),
 
