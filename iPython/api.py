@@ -87,6 +87,26 @@ class SkaPythonAPI:
         return result
 
     @staticmethod
+    def eval_product_default(pipelineConfig, product, expression='Rflop', verbose=False):
+        """
+        Evaluating a product parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        result = 0
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = imp.calc_tel_params(pipelineConfig, verbose)
+
+            result_expression = tp.products.get(product, {}).get(expression, 0)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        return result
+
+    @staticmethod
     def eval_expression_default_products(pipelineConfig, expression='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
