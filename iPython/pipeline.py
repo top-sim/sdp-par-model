@@ -49,7 +49,8 @@ class Pipeline:
         self.eachFreq = self.allFreqs.split(tp.Nf_max)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
         self.islandFreqs = self.allFreqs.split(self.Nisland)
-        self.predFreqs = self.allFreqs.split(tp.Nf_vis_predict)
+        self.predFreqs = self.allFreqs.split(
+            lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')))
         self.backFreqs = self.allFreqs.split(
             lambda rbox: tp.Nf_vis_backward(rbox(self.baseline,'bmax')))
         self.gcfPredFreqs = self.allFreqs.split(
@@ -150,7 +151,7 @@ class Pipeline:
              self.snapTime, self.fftPredFreqs],
             costs = {
                 'compute': self.tp.Rfft_predict * self.tp.Tsnap,
-                'transfer': self.Mcpx * self.tp.Nfacet_x_Npix * (self.tp.Nfacet_x_Npix / 2 + 1)
+                'transfer': self.Mcpx * self.tp.Npix_linear_total_fov * (self.tp.Npix_linear_total_fov / 2 + 1)
             },
             deps = [model], cluster='predict',
         )
@@ -217,7 +218,7 @@ class Pipeline:
              self.snapTime, freqs],
             costs = {
                 'compute': self.tp.Rrp * self.tp.Tsnap,
-                'transfer': self.Mdbl * self.tp.Nfacet_x_Npix**2
+                'transfer': self.Mdbl * self.tp.Npix_linear_total_fov**2
             },
             deps = [facets],
             cluster = 'backend'
