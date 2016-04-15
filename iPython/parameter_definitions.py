@@ -45,7 +45,8 @@ class ParameterContainer:
 
             if hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
-                    warnings.warn('Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name)
+                    # warnings.warn('Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name)
+                    pass
                 else:
                     try:
                         assert eval('self.%s == None' % param_name)
