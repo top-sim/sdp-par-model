@@ -1,5 +1,5 @@
 """
-This file contains methods for interacting with the SKA SDP Parametric Model using Python from the IPython Notebook
+This file contains methods for interacting with the SKA SDP Parametric model using Python from the IPython Notebook
 (Jupyter) environment. It extends the methods defined in API.py
 The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
 notebooks easier.
@@ -27,7 +27,7 @@ from string import find
 class SkaIPythonAPI(api):
     """
     This class (IPython API) is a subclass of its parent, SKA-API. It offers a set of methods for interacting with the
-    SKA SDP Parametric Model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
+    SKA SDP Parametric model in the IPython Notebook (Jupyter) environment. The reason the code is implemented here is
     to keep the notebook itself free from clutter, and to make coding easier.
     """
     def __init__(self):
@@ -40,9 +40,12 @@ class SkaIPythonAPI(api):
         ('-- Parameters --',           '',           True,    False, lambda tp: ''                    ),
         ('Telescope',                  '',           True,    False, lambda tp: tp.telescope          ),
         ('Band',                       '',           True,    False, lambda tp: str(tp.band) if tp.band is not None else ''),
-        ('Mode',                       '',           True,    False, lambda tp: str(tp.imaging_mode)  ),
+        ('Frequency Min',              'GHz',        False,   False, lambda tp: tp.freq_min/c.giga    ),
+        ('Frequency Max',              'GHz',        False,   False, lambda tp: tp.freq_max/c.giga    ),
+        ('Pipeline',                   '',           True,    False, lambda tp: str(tp.pipeline)      ),
         ('Baseline coalescing',        '',           True,    False, lambda tp: tp.blcoal             ),
         ('On-the-fly kernels',         '',           True,    False, lambda tp: tp.on_the_fly         ),
+        ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
         ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
         ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
         ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
@@ -70,17 +73,19 @@ class SkaIPythonAPI(api):
         ('Coalesce time pred',         's',          False,   False, lambda tp: tp.Tcoal_predict,     ),
         ('Coalesce time bw',           's',          False,   False, lambda tp: tp.Tcoal_backward,    ),
         ('Combined Samples',           '',           False,   False, lambda tp: tp.combine_time_samples,),
+        ('Channels total, no-smear',   '',           False,   False, lambda tp: tp.Nf_no_smear        ),
         ('Channels predict, no-smear', '',           False,   False, lambda tp: tp.Nf_no_smear_predict,),
         ('Channels backward, no-smear','',           False,   False, lambda tp: tp.Nf_no_smear_backward,),
-        ('No. of freqs predict ifft',  '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
-        ('No. of freqs predict conv kernels',   '',  False,   False, lambda tp: tp.Nf_gcf_predict,    ),
-        ('Channels to de-grid (predict)',       '',  False,   False, lambda tp: tp.Nf_vis_predict,    ),
-        ('No. of freqs for b-ward conv kernels', '', False,   False, lambda tp: tp.Nf_gcf_backward,   ),
-        ('Channels to grid (backward)',          '', False,   False, lambda tp: tp.Nf_vis_backward,   ),
-        ('No. of frequencies backward fft',      '', False,   False, lambda tp: tp.Nf_FFT_backward,   ),
+        ('Frequencies predict ifft',   '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
+        ('Frequencies predict kernels','',           False,   False, lambda tp: tp.Nf_gcf_predict,    ),
+        ('Frequencies predict de-grid','',           False,   False, lambda tp: tp.Nf_vis_predict,    ),
+        ('Frequencies backward kernels','',          False,   False, lambda tp: tp.Nf_gcf_backward,   ),
+        ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
+        ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
-        ('Visibilities pred',          '',           False,   False, lambda tp: tp.Nvis_predict,      ),
-        ('Visibilities bw',            '',           False,   False, lambda tp: tp.Nvis_backward,     ),
+        ('Visibilities total',         '1/s',        False,   False, lambda tp: tp.Nvis,              ),
+        ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Nvis_predict,      ),
+        ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Nvis_backward,     ),
 
         ('-- Geometry --',             '',           False,   False, lambda tp: ''                    ),
         ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
@@ -98,23 +103,15 @@ class SkaIPythonAPI(api):
         ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
         ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
         ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
-        ('I/O Rate',                   'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
+        ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera), ),
+        ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
+        ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rio', scale=c.tera), ),
+        ('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
+        ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
         ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
-        ('-> Gridding total',          'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_grid/c.peta, ),
-        ('-> FFT total',               'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_fft/c.peta,  ),
-        ('-> Phase Rotation',          'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_phrot/c.peta,),
-        ('-> Projection',              'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_proj/c.peta, ),
-        ('-> Conv Kernel Calc Total',  'PetaFLOPS',  False,   True,  lambda tp: tp.Rflop_conv/c.peta, ),
-        ('-> Gridding Backward',       'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_backward/c.peta, ),
-        ('-> Gridding Predict',        'PetaFLOPS',  True,    True,  lambda tp: tp.Rgrid_predict/c.peta, ),
-        ('-> FFT Backward',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_bw/c.peta,  ),
-        ('-> iFFT Predict',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_fft_predict/c.peta,  ),
-        ('-> Phase Rotation',          'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_phrot/c.peta,),
-        ('-> ReProjection',            'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop_proj/c.peta, ),
-        ('-> Conv Kernel Calc B-ward', 'PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_backward/c.peta, ),
-        ('-> Conv Kernel Calc Predict','PetaFLOPS',  True,    True,  lambda tp: tp.Rccf_predict/c.peta, )
+        ('-> ',                        'PetaFLOPS',  True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta), ),
     ]
 
     @staticmethod
@@ -134,10 +131,15 @@ class SkaIPythonAPI(api):
         @param tp:
         @return:
         """
-        return map(lambda row: row[4](tp), resultMap)
+        def expr(row):
+            try:
+                return row[4](tp)
+            except AttributeError:
+                return "(undefined)"
+        return map(expr, resultMap)
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-8:])
+    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-9:])
 
     @staticmethod
     def mk_result_map_rows(verbosity = 'Overview'):
@@ -157,12 +159,18 @@ class SkaIPythonAPI(api):
                 map(lambda row: row[1], result_map))
 
     @staticmethod
-    def defualt_rflop_plotting_colours():
+    def default_rflop_plotting_colours(rows):
         """
         Defines a default colour order used in plotting Rflop components
         @return:
         """
-        return ('green', 'gold', 'yellowgreen', 'lightskyblue', 'lightcoral', 'red', 'lavender', 'chartreuse')
+
+        # Stolen from D3's category20
+        cat20 = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
+                 '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
+                 '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
+                 '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5']
+        return cat20[:len(rows)]
 
     @staticmethod
     def format_result(value):
@@ -202,8 +210,14 @@ class SkaIPythonAPI(api):
             if labels[i].startswith('--'):
                 s += '<tr><th colspan="2">{0}</th></tr>'.format(labels[i])
                 continue
-            s += '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(
-                labels[i], SkaIPythonAPI.format_result(values[i]), units[i])
+            def row(label, val):
+                return '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(
+                         label, SkaIPythonAPI.format_result(val), units[i])
+            if not isinstance(values[i], dict):
+                s += row(labels[i], values[i])
+            else:
+                for name in sorted(values[i].iterkeys()):
+                    s += row(labels[i] + name, values[i][name])
         s += '</table>'
         display(HTML(s))
 
@@ -226,11 +240,19 @@ class SkaIPythonAPI(api):
             if labels[i].startswith('--'):
                 s += '<tr><th colspan="4">{0}</th></tr>'.format(labels[i])
                 continue
-            s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
-                 '</td><td>{3}</td></tr>\n'.format(labels[i],
-                                                   SkaIPythonAPI.format_result(values_1[i]),
-                                                   SkaIPythonAPI.format_result(values_2[i]),
-                                                   units[i])
+            def row(label, val1, val2):
+                return '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
+                       '</td><td>{3}</td></tr>\n'.format(
+                         label,
+                         SkaIPythonAPI.format_result(val1),
+                         SkaIPythonAPI.format_result(val2),
+                         units[i])
+            if not isinstance(values_1[i], dict) and not isinstance(values_2[i], dict):
+                s += row(labels[i], values_1[i], values_2[i])
+            else:
+                for name in set(values_1[i]).union(values_2[i]):
+                    s += row(labels[i] + name, values_1[i].get(name, 0), values_2[i].get(name, 0))
+
         s += '</table>'
         display(HTML(s))
 
@@ -283,7 +305,7 @@ class SkaIPythonAPI(api):
         plt.show()
 
     @staticmethod
-    def plot_2D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None):
+    def plot_2D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None, nlevels=15):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title: The plot's title
@@ -300,16 +322,16 @@ class SkaIPythonAPI(api):
         contour_colour = [(1., 0., 0., 1.)]  # red
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-        assert len(x_values) == len(y_values)
+#        assert len(x_values) == len(y_values)
 
         sizex = len(x_values)
         sizey = len(y_values)
-        assert np.shape(z_values)[0] == sizex
-        assert np.shape(z_values)[1] == sizey
+        assert np.shape(z_values)[0] == sizey
+        assert np.shape(z_values)[1] == sizex
         xx = np.tile(x_values, (sizey, 1))
         yy = np.transpose(np.tile(y_values, (sizex, 1)))
 
-        C = pylab.contourf(xx, yy, z_values, 15, alpha=.75, cmap=colourmap)
+        C = pylab.contourf(xx, yy, z_values, nlevels, alpha=.75, cmap=colourmap)
         pylab.colorbar(shrink=.92)
         if contours is not None:
             C = pylab.contour(xx, yy, z_values, levels = contours, colors=contour_colour,
@@ -322,7 +344,8 @@ class SkaIPythonAPI(api):
         pylab.show()
 
     @staticmethod
-    def plot_3D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None):
+    def plot_3D_surface(title, x_values, y_values, z_values,
+                        contours=None, xlabel=None, ylabel=None, zlabel=None, nlevels=15):
         """
         Plots a series of (x,y) values using a line and data-point visualization.
         @param title: The plot's title
@@ -339,18 +362,18 @@ class SkaIPythonAPI(api):
         contour_colour = [(1., 0., 0., 1.)]  # red
 
         pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-        assert len(x_values) == len(y_values)
+#        assert len(x_values) == len(y_values)
 
         sizex = len(x_values)
         sizey = len(y_values)
-        assert np.shape(z_values)[0] == sizex
-        assert np.shape(z_values)[1] == sizey
+        assert np.shape(z_values)[0] == sizey
+        assert np.shape(z_values)[1] == sizex
         xx = np.tile(x_values, (sizey, 1))
         yy = np.transpose(np.tile(y_values, (sizex, 1)))
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+        surf = ax.plot_surface(xx, yy, z_values, nlevels, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
                                antialiased=True, shade=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
@@ -448,31 +471,36 @@ class SkaIPythonAPI(api):
         width = 0.35
         nr_bars = len(labels)
         indices = np.arange(nr_bars)  # The indices of the bars
-        bottoms = np.zeros(nr_bars)   # The height of each bar, i.e. the bottom of the next stacked block
+        bottoms = {} # The height of each bar, by key
 
-        index = 0
-        for key in value_labels:
+        # Collect bars to generate. We want the first bar to end up at
+        # the top, therefore we determine their position starting from
+        # the back.
+        valueSum = np.zeros(nr_bars)
+        for key in reversed(list(value_labels)):
+            bottoms[key] = valueSum
+            valueSum = valueSum + np.array(dictionary_of_value_arrays[key])
+        for index, key in enumerate(value_labels):
             values = np.array(dictionary_of_value_arrays[key])
             if colours is not None:
-                plt.bar(indices, values, width, color=colours[index], bottom=bottoms)
+                plt.bar(indices, values, width, color=colours[index], bottom=bottoms[key])
             else:
-                plt.bar(indices, values, width, bottom=bottoms)
-            bottoms += values
-            index += 1
+                plt.bar(indices, values, width, bottom=bottom[key])
 
         plt.xticks(indices+width/2., labels)
         plt.title(title)
         plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
+        pylab.show()
 
     @staticmethod
-    def pipeline_is_valid(cfg, pure_modes=True):
+    def check_pipeline_config(cfg, pure_pipelines):
         """
         Check pipeline configuration, displaying a message in the Notebook
         for every problem found. Returns whether the configuration is
         usable at all.
         """
-        (okay, messages) = cfg.is_valid(pure_modes=pure_modes)
+        (okay, messages) = cfg.is_valid(pure_pipelines=pure_pipelines)
         for msg in messages:
             display(HTML('<p><font color="red"><b>{0}</b></font></p>'.format(msg)))
         if not okay:
@@ -480,21 +508,22 @@ class SkaIPythonAPI(api):
         return okay
 
     @staticmethod
-    def compare_telescopes_default(telescope_1, band_1, mode_1,
-                                   telescope_2, band_2, mode_2,
+    def compare_telescopes_default(telescope_1, band_1, pipeline_1,
+                                   telescope_2, band_2, pipeline_2,
                                    tel1_blcoal=True, tel2_blcoal=True,
                                    tel1_otf=False, tel2_otf=False,
+                                   scale_predict_by_facet=True,
                                    verbosity='Overview'):
         """
-        Evaluates two telescopes, both operating in a given band and mode, using their default parameters.
+        Evaluates two telescopes, both operating in a given band and pipeline, using their default parameters.
         A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
         pretty interactive results. Plots the results side by side.
         @param telescope_1:
         @param telescope_2:
         @param band_1:
         @param band_2:
-        @param mode_1:
-        @param mode_2:
+        @param pipeline_1:
+        @param pipeline_2:
         @param tel1_otf: On the fly kernels for telescope 1
         @param tel2_otf: On the fly kernels for telescope 2
         @param tel1_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope1
@@ -505,60 +534,66 @@ class SkaIPythonAPI(api):
 
         # Make configurations and check
         cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
-                               mode=mode_1, blcoal=tel1_blcoal,
-                               on_the_fly=tel1_otf)
+                               pipeline=pipeline_1, blcoal=tel1_blcoal,
+                               on_the_fly=tel1_otf,
+                               scale_predict_by_facet=scale_predict_by_facet)
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
-                               mode=mode_2, blcoal=tel2_blcoal,
-                               on_the_fly=tel2_otf)
-        if not (SkaIPythonAPI.pipeline_is_valid(cfg_1, pure_modes=True) and
-                SkaIPythonAPI.pipeline_is_valid(cfg_2, pure_modes=True)):
-            warnings.warn("Invalid pipeline supplied")
-        else:
-            # Determine which rows to show
-            (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+                               pipeline=pipeline_2, blcoal=tel2_blcoal,
+                               on_the_fly=tel2_otf,
+                               scale_predict_by_facet=scale_predict_by_facet)
+        if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_pipelines=True) or \
+           not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_pipelines=True):
+            return
 
-            # Loop through telescope configurations, collect results
-            display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
-            tels_result_values = [
+        # Determine which rows to show
+        (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+
+        # Loop through telescope configurations, collect results
+        display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
+        tels_result_values = [
             SkaIPythonAPI._compute_results(cfg_1, verbosity=='Debug', result_map),
             SkaIPythonAPI._compute_results(cfg_2, verbosity=='Debug', result_map),
-            ]
-            display(HTML('<font color="blue">Done computing.</font>'))
+        ]
+        display(HTML('<font color="blue">Done computing.</font>'))
 
-            # Show comparison table
-            SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
-                                              tels_result_values[1], result_units)
+        # Show comparison table
+        SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
+                                         tels_result_values[1], result_units)
 
-            # Show comparison stacked bars
-            labels = SkaIPythonAPI.GRAPH_ROWS
-            colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-            blcoal_text = {True: ' (BL Coal.)', False: ' (no BL Coal.)'}
-            otf_text = {True: ' (otf kernels)', False: ''}
+        # Show comparison stacked bars
+        products_1 = tels_result_values[0][-1]
+        products_2 = tels_result_values[1][-1]
+        labels = set(products_1).union(products_2)
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
+        blcoal_text = {True: ' (BLCOAL)', False: ' (no BLCOAL)'}
+        otf_text = {True: ' (otf kernels)', False: ''}
 
-            telescope_labels = (cfg_1.describe(), cfg_2.describe())
+        telescope_labels = (cfg_1.describe(), cfg_2.describe())
 
-            values = {
-                label: (tels_result_values[0][-len(labels)+i],
-                        tels_result_values[1][-len(labels)+i])
-                for i, label in enumerate(labels)
-            }
+        values = {
+            label: (products_1.get(label,0),products_2.get(label,0))
+            for label in labels
+        }
 
-            SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
-                                            colours)
+        SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
+                                        colours)
 
     @staticmethod
-    def evaluate_telescope_manual(telescope, band, mode,
+    def evaluate_telescope_manual(telescope, band, pipeline,
                                   max_baseline="default",
                                   Nf_max="default", Nfacet=-1,
                                   Tsnap=-1, blcoal=True,
-                                  on_the_fly=False, verbosity='Overview'):
+                                  on_the_fly=False, scale_predict_by_facet=True,
+                                  verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters.
         These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
         optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
         @param telescope:
         @param band:
-        @param mode:
+        @param pipeline:
+        @param Nfacet:
+        @param Tsnap:
         @param max_baseline:
         @param Nf_max:
         @param Nfacet:
@@ -574,12 +609,11 @@ class SkaIPythonAPI(api):
         assert Tsnap > 0
 
         # Make configuration
-        cfg = PipelineConfig(telescope=telescope, mode=mode, band=band,
+        cfg = PipelineConfig(telescope=telescope, pipeline=pipeline, band=band,
                              max_baseline=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
-                             on_the_fly=on_the_fly)
-
-        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True):
-            return
+                             on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
 
         display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                      '</font>'))
@@ -587,7 +621,7 @@ class SkaIPythonAPI(api):
         # Determine which rows to calculate & show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
 
-        # Loop through modes
+        # Loop through pipelines
         result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map,
                                                        Tsnap=Tsnap, Nfacet=Nfacet)
 
@@ -596,13 +630,15 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-8:]  # the last 8 values
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
+        values = result_values[-1]  # the last value
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
-    def evaluate_hpso_optimized(hpso_key, blcoal=True, on_the_fly=False, verbosity='Overview'):
+    def evaluate_hpso_optimized(hpso_key, blcoal=True,
+                                on_the_fly=False,
+                                scale_predict_by_facet=True,
+                                verbosity='Overview'):
         """
         Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
         @param hpso:
@@ -616,10 +652,10 @@ class SkaIPythonAPI(api):
         ParameterDefinitions.apply_global_parameters(tp_default)
         ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
         telescope = tp_default.telescope
-        hpso_mode = tp_default.mode
+        hpso_pipeline = tp_default.pipeline
 
         # First we plot a table with all the provided parameters
-        param_titles = ('HPSO Number', 'Telescope', 'Mode', 'Max Baseline', 'Max # of channels', 'Observation time',
+        param_titles = ('HPSO Number', 'Telescope', 'Pipeline', 'Max Baseline', 'Max # of channels', 'Observation time',
                         'Texp (not used in calc)', 'Tpoint (not used in calc)')
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tobs)
         Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
@@ -627,14 +663,15 @@ class SkaIPythonAPI(api):
         Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
         (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tpoint)
         Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-        param_values = (hpso_key, telescope, hpso_mode, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
+        param_values = (hpso_key, telescope, hpso_pipeline, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
                         Tpoint_string)
         param_units = ('', '', '', 'm', '', '', '', '')
         SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
 
         # Make and check pipeline configuration
-        cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly)
-        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
+        cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
+        if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
 
         # Determine which rows to calculate & show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
@@ -647,20 +684,19 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Show pie graph of FLOP counts
-        labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-8:]  # the last 8 values
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
+        values = result_values[-1]  # the last value
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
-    def evaluate_telescope_optimized(telescope, band, mode, max_baseline="default", Nf_max="default",
-                                     blcoal=True, on_the_fly=False, verbosity='Overview'):
+    def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
+                                     blcoal=True, on_the_fly=False, scale_predict_by_facet=True, verbosity='Overview'):
         """
         Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
         to minimize the total FLOP rate for the supplied parameters
         @param telescope:
         @param band:
-        @param mode:
+        @param pipeline:
         @param max_baseline:
         @param Nf_max:
         @param blcoal: Baseline dependent coalescing (before gridding)
@@ -670,11 +706,12 @@ class SkaIPythonAPI(api):
         """
 
         # Make configuration
-        cfg = PipelineConfig(telescope=telescope, mode=mode,
+        cfg = PipelineConfig(telescope=telescope, pipeline=pipeline,
                              band=band, max_baseline=max_baseline,
                              Nf_max=Nf_max, blcoal=blcoal,
-                             on_the_fly=on_the_fly)
-        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_modes=True): return
+                             on_the_fly=on_the_fly,
+                             scale_predict_by_facet=scale_predict_by_facet)
+        if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_pipelines=True): return
 
         # Determine rows to show
         (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
@@ -689,14 +726,13 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
 
         # Make pie plot
-        labels = SkaIPythonAPI.GRAPH_ROWS
-        colours = SkaIPythonAPI.defualt_rflop_plotting_colours()
-        values = result_values[-8:]  # the last 8 values
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, labels, values, colours)
+        values = result_values[-1]  # the last value
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
     def write_csv_pipelines(filename, telescopes, bands, pipelines,
-                            blcoal=True, on_the_fly=False):
+                            blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.
@@ -709,7 +745,8 @@ class SkaIPythonAPI(api):
                 for pipeline in pipelines:
                     cfg = PipelineConfig(telescope=telescope, band=band,
                                          pipeline=pipeline, blcoal=blcoal,
-                                         on_the_fly=on_the_fly)
+                                         on_the_fly=on_the_fly,
+                                         scale_predict_by_facet=scale_predict_by_facet)
                     configs.append(cfg)
 
         # Calculate
@@ -721,7 +758,7 @@ class SkaIPythonAPI(api):
 
     @staticmethod
     def write_csv_hpsos(filename, hpsos,
-                        blcoal=True, on_the_fly=False):
+                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.
@@ -730,7 +767,8 @@ class SkaIPythonAPI(api):
         # Make configuration list
         configs = []
         for hpso in hpsos:
-            cfg = PipelineConfig(hpso=hpso, blcoal=blcoal, on_the_fly=on_the_fly)
+            cfg = PipelineConfig(hpso=hpso, blcoal=blcoal, on_the_fly=on_the_fly,
+                                 scale_predict_by_facet=scale_predict_by_facet)
             configs.append(cfg)
 
         # Calculate
@@ -752,12 +790,12 @@ class SkaIPythonAPI(api):
         @return: result value array
         """
 
-        # Loop through modes to collect result values
+        # Loop through pipeliness to collect result values
         result_value_array = []
-        for submode in pipelineConfig.relevant_modes:
+        for pipeline in pipelineConfig.relevant_pipelines:
 
             # Calculate the telescope parameters
-            pipelineConfig.mode = submode
+            pipelineConfig.pipeline = pipeline
             tp = imp.calc_tel_params(pipelineConfig, verbose=verbose)
 
             # Optimise Tsnap & Nfacet
@@ -770,17 +808,21 @@ class SkaIPythonAPI(api):
 
             # Evaluate expressions from map
             result_expressions = SkaIPythonAPI.get_result_expressions(result_map, tp)
-            results_for_submode = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
-            result_value_array.append(results_for_submode)
+            results_for_pipeline = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+            result_value_array.append(results_for_pipeline)
 
-        # Now transpose, then sum up results from submodes per row
+        # Now transpose, then sum up results from pipelines per row
         result_values = []
         transposed_results = zip(*result_value_array)
         sum_results = SkaIPythonAPI.get_result_sum(result_map)
         for (row_values, sum_it) in zip(transposed_results, sum_results):
             if sum_it:
-                result_values.append(sum(row_values))
-            elif len(row_values) == 1:
+                try:
+                    result_values.append(sum(row_values))
+                    continue
+                except TypeError:
+                    pass
+            if len(row_values) == 1:
                 result_values.append(row_values[0])
             else:
                 result_values.append(list(row_values))
@@ -795,7 +837,7 @@ class SkaIPythonAPI(api):
         for cfg in configs:
 
             # Check that the configuration is valid, skip if it isn't
-            (okay, msgs) = cfg.check()
+            (okay, msgs) = cfg.is_valid()
             if not okay:
                 # display(HTML('<p>Skipping %s (%s)</p>' % (cfg.describe(), ", ".join(msgs))))
                 continue

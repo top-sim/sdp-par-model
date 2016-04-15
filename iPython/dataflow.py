@@ -8,6 +8,7 @@ from math import floor
 import unittest
 
 INDEX_PROP = 'index'
+OFFSET_PROP = 'offset'
 COUNT_PROP = 'count'
 SIZE_PROP = 'size'
 
@@ -50,7 +51,7 @@ class Regions:
                        lambda rb: self.count(rb) * mk_lambda(split)(rb),
                        props)
 
-    def getProps(self, rb, i = None):
+    def getProps(self, rb, i = None, off = None):
         """Get properties of enumerated region of the region set"""
 
         # Only copy over detailed properties if our domain is
@@ -62,6 +63,7 @@ class Regions:
                 for k, v in self.props.iteritems()
             }
             reg[INDEX_PROP] = i
+            reg[OFFSET_PROP] = off
         else:
             reg = {}
 
@@ -132,6 +134,11 @@ class RegionBox:
         if not self.domainProps[domain].has_key(prop) and \
            not domain in self.regionBoxes.enumDomains:
             raise NeedRegionEnumerationException(self.regionBoxes, domain)
+
+        # Not there?
+        if not self.domainProps[domain].has_key(prop):
+            raise Exception('Property %s is undefined for this region set of domain %s!'
+                             % (prop, domain.name))
 
         # Look it up
         return self.domainProps[domain][prop]
@@ -232,8 +239,10 @@ class RegionBoxes:
                 # and getProps. Both of these could raise an
                 # NeedRegionEnumerationException.
                 rbox = RegionBox(self, regProps)
+                off = 0 # TODO: regions start offset?
                 for i in range(regs.count(rbox)):
-                    props = regs.getProps(rbox, i)
+                    props = regs.getProps(rbox, i, off)
+                    off += props[SIZE_PROP]
                     regProps = dict(regProps)
                     regProps[edom] = props
                     rboxPropsNew.append(regProps)
@@ -299,9 +308,9 @@ class RegionBoxes:
                 s = Max(s, box.the(prop))
         return s
 
-    def zipSum(self, rboxes, f):
-        return self._withEnums(lambda: rboxes._withEnums(
-            lambda: self._zipSum(rboxes, f)))
+    def zipSum(left, right, f):
+        return left._withEnums(lambda: right._withEnums(
+            lambda: left._zipSum(right, f)))
     def _zipSum(left, right, f):
 
         # Classify domains
@@ -325,33 +334,42 @@ class RegionBoxes:
             mult = 1
             for dom in commonDoms:
 
-                lcount = lbox(dom, COUNT_PROP)
-                rcount = rbox(dom, COUNT_PROP)
-
                 # Enumerated on both sides? Check match
                 if dom in left.enumDomains and dom in right.enumDomains:
                     # Must match so we don't zip both sides
                     # all-to-all. If we find that the two boxes don't
                     # match, we conclude that this box combination is
                     # invalid and bail out completely.
-                    lidx = lbox(dom, INDEX_PROP)
-                    ridx = rbox(dom, INDEX_PROP)
-                    # Which side has more regions?
-                    if lcount < rcount:
-                        if lidx != floor(ridx * lcount / rcount):
+                    loff = lbox(dom, OFFSET_PROP)
+                    roff = rbox(dom, OFFSET_PROP)
+                    if loff < roff:
+                        if roff >= loff + lbox(dom, SIZE_PROP):
                             return 0
                     else:
-                        if ridx != floor(lidx * rcount / lcount):
+                        if loff >= roff + rbox(dom, SIZE_PROP):
                             return 0
-                # Enumerated on just one side? Higher multiplier only
-                # if other side has higher split granularity.
+                # Enumerated on just one side? Assuming equal spacing
+                # on the other side, calculate how many region starts
+                # on the other side fall into the current region.
                 elif dom in left.enumDomains:
-                    mult *= Max(1, rcount / lcount)
+                    loff = lbox(dom, OFFSET_PROP)
+                    lsize = lbox(dom, SIZE_PROP)
+                    rsize = rbox(dom, SIZE_PROP)
+                    rcount = rbox(dom, COUNT_PROP)
+                    def bound(x): return min(rcount, max(0, floor(x)))
+                    mult *= Max(1, bound((loff + lsize) / rsize) - bound(loff / rsize))
                 elif dom in right.enumDomains:
-                    mult *= Max(1, lcount / rcount)
+                    lsize = lbox(dom, SIZE_PROP)
+                    lcount = lbox(dom, COUNT_PROP)
+                    roff = rbox(dom, OFFSET_PROP)
+                    rsize = rbox(dom, SIZE_PROP)
+                    def bound(x): return min(lcount, max(0, floor(x)))
+                    mult *= Max(1, bound((roff + rsize) / lsize) - bound(roff / lsize))
                 # Otherwise, the higher granularity gives the number
                 # of edges.
                 else:
+                    lcount = lbox(dom, COUNT_PROP)
+                    rcount = rbox(dom, COUNT_PROP)
                     mult *= Max(lcount, rcount)
 
             # Domains on only one side: Simply multiply out (where
@@ -387,11 +405,11 @@ class Flow:
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
-        self.deps = list(deps)
+        self.deps = map(lambda d: (d,1), deps)
         self.cluster = cluster
 
-    def depend(self, flow):
-        self.deps.append(flow)
+    def depend(self, flow, weight=1):
+        self.deps.append((flow, weight))
 
     def output(self, name, costs, attrs={}):
         """Make a new Flow for an output of this Flow. Useful when a Flow has
@@ -427,7 +445,7 @@ class Flow:
 
         while len(active) > 0:
             node = active.pop()
-            for dep in node.deps:
+            for dep, _ in node.deps:
                 if not dep in recDeps:
                     active.append(dep)
                     recDeps.append(dep)
@@ -480,12 +498,17 @@ def flowsToDot(flows, t, computeSpeed=None,
             count = flow.count()
             if count != 1:
                 text += "\nTasks: %d 1/s" % (count/t)
-            compute = flow.cost('compute')
+            try:
+                compute = flow.cost('compute')
+                transfer = flow.cost('transfer')
+            except:
+                print
+                print "Exception raised while determining cost for '" + flow.name + "':"
+                raise
             if compute > 0 and computeSpeed is not None:
                 text += "\nTime: %.2g s/task" % (compute/count/computeSpeed)
             if compute > 0:
-                text += "\nFLOPs: %.2f POP/s" % (compute/t/Constants.peta)
-            transfer = flow.cost('transfer')
+                text += "\nFLOPs: %.2f TOP/s" % (compute/t/Constants.tera)
             if transfer > 0:
                 text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
 
@@ -493,7 +516,7 @@ def flowsToDot(flows, t, computeSpeed=None,
             graph.node(flowIds[flow], text, attrs)
 
             # Add dependencies
-            for dep in flow.deps:
+            for dep, weight in flow.deps:
                 if flowIds.has_key(dep):
 
                     # Calculate number of edges, and use node counts
@@ -515,7 +538,7 @@ def flowsToDot(flows, t, computeSpeed=None,
                     else:
                         label = 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
 
-                    dot.edge(flowIds[dep], flowIds[flow], label)
+                    dot.edge(flowIds[dep], flowIds[flow], label, weight=str(weight))
 
         if cluster != '':
             dot.subgraph(graph)

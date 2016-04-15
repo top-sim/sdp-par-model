@@ -10,11 +10,11 @@ themselves. Instead, it specifies how values are substituted, optimized, and sum
 """
 
 from parameter_definitions import ParameterContainer
-from parameter_definitions import Telescopes, ImagingModes, Bands
+from parameter_definitions import Telescopes, Pipelines, Bands
 from parameter_definitions import ParameterDefinitions as p
 from parameter_definitions import Constants as c
 from equations import Equations as f
-from sympy import simplify, lambdify, Max
+from sympy import simplify, lambdify, Max, Symbol
 from scipy import optimize as opt
 import numpy as np
 import math
@@ -27,47 +27,48 @@ class PipelineConfig:
     to parameterise a pipeline.
     """
 
-    def __init__(self, telescope=None, mode=None, band=None, hpso=None,
+
+    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
                  max_baseline="default", Nf_max="default", blcoal=True,
-                 on_the_fly=False):
+                 on_the_fly=False, scale_predict_by_facet=True):
         """
         @param telescope: Telescope to use (can be omitted if HPSO specified)
-        @param mode: Pipeline mode (can be omitted if HPSO specified)
+        @param pipeline: Pipeline mode (can be omitted if HPSO specified)
         @param band: Frequency band (can be omitted if HPSO specified)
-        @param hpso: High Priority Science Objective ID (can be omitted if telescope, mode and band specified)
+        @param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
         @param max_baseline: Maximum baseline length
         @param Nf_max: Number of frequency channels
         @param blcoal: Baseline dependent time averaging
         @param otfk: On the fly kernels (True or False)
+        @param scale_predict_by_facet: Assume faceting in predict?
         """
 
         # Load HPSO parameters
         if hpso is not None:
-            if not (telescope is None and band is None and mode is None):
-                raise Exception("Either telescope/band/mode or an HPSO needs to be set, not both!")
+            if not (telescope is None and band is None and pipeline is None):
+                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set, not both!")
             tp_default = ParameterContainer()
             p.apply_hpso_parameters(tp_default, hpso)
             telescope = tp_default.telescope
-            mode = tp_default.mode
+            pipeline = tp_default.pipeline
         else:
-            if telescope is None or band is None or mode is None:
-                raise Exception("Either telescope/band/mode or an HPSO needs to be set!")
+            if telescope is None or band is None or pipeline is None:
+                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set!")
 
         # Save parameters
         self.telescope = telescope
         self.hpso = hpso
         self.band = band
-        self.mode = mode
+        self.pipeline = pipeline
         self.blcoal = blcoal
         self.on_the_fly = on_the_fly
+        self.scale_predict_by_facet = scale_predict_by_facet
 
-        # Determine relevant modes
-        if mode == ImagingModes.All:
-            self.relevant_modes = ImagingModes.pure_modes
-        elif mode == ImagingModes.ContAndSpectral:
-            self.relevant_modes = (ImagingModes.Continuum, ImagingModes.Spectral)
+        # Determine relevant pipelines
+        if isinstance(pipeline, list):
+            self.relevant_pipelines = pipeline
         else:
-            self.relevant_modes = (mode,)  # A list with one element
+            self.relevant_pipelines = [pipeline]
 
         # Load telescope parameters from apply_telescope_parameters.
         tp_default = ParameterContainer()
@@ -94,7 +95,7 @@ class PipelineConfig:
         if self.hpso is not None:
             name = self.hpso
         else:
-            name = self.mode + ' (' + self.band + ')'
+            name = self.pipeline + ' (' + self.band + ')'
 
         # Add modifiers
         if self.Nf_max != self.default_frequencies:
@@ -105,6 +106,8 @@ class PipelineConfig:
             name += ' [blcoal]'
         if self.on_the_fly:
             name += ' [otf]'
+        if self.scale_predict_by_facet:
+            name += ' [spbf]'
 
         return name
 
@@ -133,7 +136,7 @@ class PipelineConfig:
 
         return is_compatible
 
-    def is_valid(self, pure_modes=True):
+    def is_valid(self, pure_pipelines=True):
         """Checks integrity of the pipeline configuration.
 
         @return: (okay?, list of errors/warnings)
@@ -147,11 +150,11 @@ class PipelineConfig:
                             'allowed baseline of %g m for telescope \'%s\'.' \
                 % (self.max_baseline, self.max_allowed_baseline, self.telescope))
 
-        # Only pure modes supported?
-        if pure_modes:
-            for mode in self.relevant_modes:
-                if mode not in ImagingModes.pure_modes:
-                    messages.append("ERROR: The '%s' imaging mode is currently not supported" % str(mode))
+        # Only pure pipelines supported?
+        if pure_pipelines:
+            for pipeline in self.relevant_pipelines:
+                if pipeline not in Pipelines.pure_pipelines:
+                    messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(pipeline))
                     okay = False
 
         # Band compatibility. Can skip for HPSOs, as they override the
@@ -263,12 +266,12 @@ class Implementation:
 
     @staticmethod
     def calc_tel_params(pipelineConfig, verbose=False, adjusts={}):
-
         """
-        This is a very important method - Calculates telescope parameters for a supplied band, mode or HPSO.
+        This is a very important method - Calculates telescope parameters for a supplied band, pipeline or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
         @param pipelineConfig: Valid pipeline configuration
         @param verbose:
+        @param adjusts: Dictionary of telescope parameters to adjust
         """
 
         cfg = pipelineConfig
@@ -283,18 +286,18 @@ class Implementation:
 
         # First: The telescope's parameters (Primarily the number of dishes, bands, beams and baselines)
         p.apply_telescope_parameters(telescope_params, cfg.telescope)
-        # Then define imaging mode and frequency-band
+        # Then define pipeline and frequency-band
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
         if (cfg.hpso is None) and (cfg.band is not None):
             p.apply_band_parameters(telescope_params, cfg.band)
-            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
         elif (cfg.hpso is not None) and (cfg.band is None):
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
-            p.apply_imaging_mode_parameters(telescope_params, cfg.mode)
+            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
             p.apply_hpso_parameters(telescope_params, cfg.hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
-
+            
         # Artificially limit max_baseline or nr_frequency_channels,
         # deviating from the default for this Band or HPSO
         if cfg.max_baseline is not None:
@@ -308,33 +311,43 @@ class Implementation:
         for par, value in adjusts.iteritems():
             telescope_params.__dict__[par] = value
 
-        # Limit bins to those shorter than Bmax
-        bins = telescope_params.baseline_bins
-        nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
-        bins = bins[:nbins_used]
+        if cfg.blcoal:
+            # Limit bins to those shorter than Bmax
+            bins = telescope_params.baseline_bins
+            nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
+            bins = bins[:nbins_used]
 
-        # Same for baseline sizes. Note that we normalise /before/
-        # reducing the list.
-        binfracs = telescope_params.baseline_bin_distribution
-        binfracs /= sum(binfracs)
-        binfracs = binfracs[:nbins_used]
+            # Same for baseline sizes. Note that we normalise /before/
+            # reducing the list.
+            binfracs = telescope_params.baseline_bin_distribution
+            binfracs /= sum(binfracs)
+            binfracs = binfracs[:nbins_used]
 
-        # Calculate old and new bin sizes
-        binsize = bins[nbins_used-1]
-        binsizeNew = telescope_params.Bmax
-        if nbins_used > 1:
-            binsize -= bins[nbins_used-2]
-            binsizeNew -= bins[nbins_used-2]
+            # Calculate old and new bin sizes
+            binsize = bins[nbins_used-1]
+            binsizeNew = telescope_params.Bmax
+            if nbins_used > 1:
+                binsize -= bins[nbins_used-2]
+                binsizeNew -= bins[nbins_used-2]
 
-        # Scale last bin
-        bins[nbins_used-1] = telescope_params.Bmax
-        binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
+            # Scale last bin
+            bins[nbins_used-1] = telescope_params.Bmax
+            binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
+            if verbose:
+                print "Baseline coalescing on"
+        else:
+            if verbose:
+                print "Baseline coalescing off"
+            telescope_params.baseline_bins = np.array((telescope_params.Bmax,))  # m
+            telescope_params.baseline_bin_distribution = np.array((1.0,))
+            bins = [telescope_params.Bmax]
+            binfracs=[1.0]
 
         # Apply imaging equations
-        f.apply_imaging_equations(telescope_params, cfg.mode,
+        f.apply_imaging_equations(telescope_params, cfg.pipeline,
                                   cfg.blcoal, bins, binfracs,
-                                  cfg.on_the_fly, verbose)
-
+                                  cfg.on_the_fly, cfg.scale_predict_by_facet,
+                                  verbose)
         return telescope_params
 
     @staticmethod
@@ -356,19 +369,30 @@ class Implementation:
         assert isinstance(telescope_parameters, ParameterContainer)
         assert hasattr(telescope_parameters, expr_to_minimize_string)
 
+        if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
+            print telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet"
+            return (telescope_parameters.Tobs, 1)
+
         result_per_nfacet = {}
         result_array = []
         optimal_Tsnap_array = []
         warned = False
         expression_original = None
 
-        # Expression to minimise is constructed as lambda from our two parameters (# of facets, snapshot time)
+        # Construct lambda from our two parameters (facet number and
+        # snapshot time) to the expression to minimise
         exec('expression_original = telescope_parameters.%s' % expr_to_minimize_string)
-        expression_lam = Implementation.cheap_lambdify_curry((telescope_parameters.Nfacet,
-                                                              telescope_parameters.Tsnap),
-                                                             expression_original)
 
-        for nfacets in range(1, max_number_nfacets+1):  # Loop over the different integer values of NFacet
+        if isinstance(telescope_parameters.Nfacet, Symbol):
+            params = (telescope_parameters.Nfacet, telescope_parameters.Tsnap)
+            nfacet_range = range(1, max_number_nfacets+1)
+        else:
+            params = (telescope_parameters.Tsnap,)
+            nfacet_range = [1] # Note we will always return Nfacet = 1 as optimal now. Bit of a hack.
+        expression_lam = Implementation.cheap_lambdify_curry(params, expression_original)
+
+        # Loop over the different integer values of NFacet
+        for nfacets in nfacet_range:
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
                 warnings.warn('Searching minimum value by incrementing Nfacet; value of 20 exceeded... this is odd '
@@ -380,7 +404,12 @@ class Implementation:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
             # Find optimal Tsnap for this number of facets, obtaining result in "result"
-            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam(nfacets), telescope_parameters,
+            if isinstance(telescope_parameters.Nfacet, Symbol):
+                expression_lam2 = expression_lam(nfacets)
+            else:
+                expression_lam2 = expression_lam
+            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam2,
+                                                                 telescope_parameters,
                                                                  verbose=verbose)
             result_array.append(float(result['value']))
             optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
@@ -409,6 +438,8 @@ class Implementation:
         @param verbose:
         @return: The optimal Tsnap value, along with the optimal value (as a dict)
         """
+        assert telescope_parameters.pipeline in Pipelines.imaging
+
         # Compute lower & upper bounds
         bound_lower = telescope_parameters.Tsnap_min
         bound_upper = max(bound_lower, 0.5 * telescope_parameters.Tobs)

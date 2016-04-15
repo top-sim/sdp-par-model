@@ -3,7 +3,7 @@ This file contains methods for programmatically interacting with the SKA SDP Par
 """
 import copy
 
-from parameter_definitions import Telescopes, ImagingModes, Bands, ParameterDefinitions
+from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinitions
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
@@ -34,31 +34,38 @@ class SkaPythonAPI:
         @return:
 
         """
-        result = expression
-        if not imp.is_literal(expression):  # Only evaluate symbolically when required
-            try:
-                # Substitute parameters
-                expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
 
-                # If the expression is Lambda? it probably depends on baseline lengths and needs further evaluation
-                if isinstance(expression_subst, Lambda):
-                    result = []
-                    counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
-                    for (bcount, bmax) in zip(counts, tp.baseline_bins):
-                        if expression_subst.nargs == FiniteSet(1):
-                            result.append(float(expression_subst(bmax)))
-                        else:
-                            result.append(float(expression_subst(bcount, bmax)))
-                else:
-                    # Otherwise evaluate directly at float
-                    result = float(expression_subst)
+        # Already a plain value?
+        if imp.is_literal(expression):  # Only evaluate symbolically when required
+            return expression
 
-            except Exception as e:
-                if key is None:
-                    msg = "Failed to evaluate %s; message = %s" % (str(expression), str(e))
-                else:
-                    msg = "Failed to evaluate %s; message = %s" % (key, str(e))
-                warnings.warn(msg)
+        # Dictionary? Recurse
+        if isinstance(expression, dict):
+            return { k: SkaPythonAPI.evaluate_expression(e, tp, tsnap, nfacet)
+                     for k, e in expression.iteritems() }
+
+        # Otherwise try to evaluate using sympy
+        try:
+
+            # First substitute parameters
+            expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
+
+            # Lambda? Assume it depends on baseline lengths
+            if isinstance(expression_subst, Lambda):
+                result = []
+                counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
+                for (bcount, bmax) in zip(counts, tp.baseline_bins):
+                    if expression_subst.nargs == FiniteSet(1):
+                        result.append(float(expression_subst(bmax)))
+                    else:
+                        result.append(float(expression_subst(bcount, bmax)))
+            else:
+                # Otherwise just evaluate directly
+                result = float(expression_subst)
+
+        except Exception as e:
+            result = "Failed to evaluate: " + str(expression)
+
         return result
 
     @staticmethod
@@ -71,8 +78,8 @@ class SkaPythonAPI:
         """
 
         result = 0
-        for submode in pipelineConfig.relevant_modes:
-            pipelineConfig.mode = submode
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
             tp = imp.calc_tel_params(pipelineConfig, verbose)
 
             result_expression = tp.__dict__[expression_string]
@@ -80,6 +87,49 @@ class SkaPythonAPI:
             result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
         return result
+
+    @staticmethod
+    def eval_product_default(pipelineConfig, product, expression='Rflop', verbose=False):
+        """
+        Evaluating a product parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        result = 0
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = imp.calc_tel_params(pipelineConfig, verbose)
+
+            result_expression = tp.products.get(product, {}).get(expression, 0)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        return result
+
+    @staticmethod
+    def eval_expression_default_products(pipelineConfig, expression='Rflop', verbose=False):
+        """
+        Evaluating a parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        values={}
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = imp.calc_tel_params(pipelineConfig, verbose)
+            (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+
+            # Loop through defined products, add to result
+            for name, product in tp.products.iteritems():
+                if product.has_key(expression):
+                    values[name] = values.get(name, 0) + \
+                        SkaPythonAPI.evaluate_expression(product[expression], tp, tsnap, nfacet)
+
+        return values
 
     @staticmethod
     def eval_param_sweep_1d(pipelineConfig, expression_string='Rflop',
@@ -212,6 +262,50 @@ class SkaPythonAPI:
 
         print 'done with parameter sweep!'
         return (param_x_values, param_y_values, results)
+
+    @staticmethod
+    def eval_param_sweep_2d_noopt(pipelineConfig, expression='Rflop',
+                                  tsnaps=[100.0], nfacets=[1], verbose=False):
+        """Evaluates an expression for a 2D grid of different values for
+        snapshot time and facet number, by varying each parameter
+        linearly in a specified range in a number of steps.
+
+        """
+        n_param_y_values = len(tsnaps)
+        n_param_x_values = len(nfacets)
+        nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
+
+        print "Evaluating expression %s while\nsweeping parameters tsnap and nfacet over 2D domain %s x %s " % \
+              (expression, str(tsnaps), str(nfacets))
+
+        # Generate telescope parameters, lambdify target expression
+        telescope_params = imp.calc_tel_params(pipelineConfig, verbose=verbose)
+        result_expression = telescope_params.__dict__[expression]
+        expression_lam = imp.cheap_lambdify_curry((telescope_params.Nfacet,
+                                                   telescope_params.Tsnap),
+                                                  result_expression)
+
+        # Create an empty numpy matrix to hold results
+        results = np.zeros((n_param_y_values, n_param_x_values))
+
+
+        # Nested 2D loop over all values for param1 and
+        # param2. Indexes iterate over y (inner loop), then x (outer
+        # loop)
+        for iy in range(len(tsnaps)):
+            tsnap = tsnaps[iy]
+            for ix in range(len(nfacets)):
+                nfacet = nfacets[ix]
+
+                if verbose:
+                    percentage_done = (ix + iy * n_param_x_values) * 100.0 / nr_evaluations
+                    print "> %.1f%% done: Evaluating %s for (tsnap, nfacet) = (%s, %s)" % (percentage_done, expression,
+                                                                                 str(tsnap), str(nfacet))
+
+                results[iy, ix] = expression_lam(nfacet)(tsnap)
+
+        print 'Done with parameter sweep!'
+        return (tsnaps, nfacets, results)
 
     @staticmethod
     def evaluate_expressions(expressions, tp, tsnap, nfacet):
