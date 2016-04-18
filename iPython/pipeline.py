@@ -27,15 +27,22 @@ class Pipeline:
         # Make baseline domain
         self.baseline = Domain('Baseline')
         usedBls = tp.nbaselines
-        self.allBaselines = self.baseline.region(usedBls)
-        self.binBaselines = self.allBaselines.split(len(tp.Bmax_bins), props={
-            'bmax': lambda i: tp.Bmax_bins[i],
-            'size': lambda i: tp.nbaselines_full * tp.frac_bins[i]
-        })
+        self.allBaselines = self.baseline.regions(usedBls)
+        if isinstance(tp.Bmax_bins, Symbol):
+            b = Symbol("b")
+            self.binBaselines = self.allBaselines.split(tp.nbaselines, sym_props={
+                'bmax': Lambda(b, Symbol("B_max")(b)),
+                'size': 1
+            })
+        else:
+            self.binBaselines = self.allBaselines.split(len(tp.Bmax_bins), props={
+                'bmax': lambda i: tp.Bmax_bins[i],
+                'size': lambda i: tp.nbaselines_full * tp.frac_bins[i]
+            })
 
         # Make time domain
         self.time = Domain('Time', 's')
-        self.obsTime = self.time.region(tp.Tobs)
+        self.obsTime = self.time.regions(tp.Tobs)
         self.dumpTime = self.obsTime.split(tp.Tobs / tp.Tdump_ref)
         self.snapTime = self.obsTime.split(tp.Tobs / tp.Tsnap)
         self.kernelPredTime = self.obsTime.split(
@@ -45,7 +52,7 @@ class Pipeline:
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch')
-        self.allFreqs = self.frequency.region(tp.Nf_max)
+        self.allFreqs = self.frequency.regions(tp.Nf_max)
         self.eachFreq = self.allFreqs.split(tp.Nf_max)
         self.visFreq = self.allFreqs.split(tp.Nf_vis)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
@@ -63,25 +70,25 @@ class Pipeline:
 
         # Make beam domain
         self.beam = Domain('Beam')
-        self.allBeams = self.beam.region(tp.Nbeam)
+        self.allBeams = self.beam.regions(tp.Nbeam)
         self.eachBeam = self.allBeams.split(tp.Nbeam)
 
         # Make polarisation domain
         self.polar = Domain('Polarisation')
-        self.iquvPolars = self.polar.region(tp.Npp)
+        self.iquvPolars = self.polar.regions(tp.Npp)
         self.iquvPolar = self.iquvPolars.split(tp.Npp)
-        self.xyPolars = self.polar.region(tp.Npp)
+        self.xyPolars = self.polar.regions(tp.Npp)
         self.xyPolar = self.xyPolars.split(tp.Npp)
 
         # Make (major) loop domain
         self.loop = Domain('Major Loop')
-        self.allLoops = self.loop.region(tp.Nmajortotal)
+        self.allLoops = self.loop.regions(tp.Nmajortotal)
         self.eachSelfCal = self.allLoops.split(tp.Nselfcal + 1)
         self.eachLoop = self.allLoops.split(tp.Nmajortotal)
 
         # Make facet domain
         self.facet = Domain('Facet')
-        self.allFacets = self.facet.region(tp.Nfacet**2)
+        self.allFacets = self.facet.regions(tp.Nfacet**2)
         self.eachFacet = self.allFacets.split(tp.Nfacet**2)
 
     def _transfer_cost_vis(self, Tdump):
