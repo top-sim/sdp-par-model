@@ -366,8 +366,6 @@ class Equations:
     def _apply_grid_equations(o):
         """ Grid """
 
-        if not o.pipeline in Pipelines.imaging: return
-
         # For the ASKAP MSMFS, we grid all data for each taylor term
         # with polynominal of delta freq/freq
         b = Symbol('b')
@@ -376,6 +374,8 @@ class Equations:
         if o.pipeline == Pipelines.DPrepA:
             o.Ntaylor_backward = o.number_taylor_terms
             o.Ntaylor_predict = o.number_taylor_terms
+
+        if not o.pipeline in Pipelines.imaging: return
         Equations._set_product_blsum(
             o, Products.Grid, b=b, T=o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_backward * o.Nfacet**2 * o.Nf_vis_backward(b),
@@ -414,13 +414,12 @@ class Equations:
     def _apply_reprojection_equations(o):
         """ Re-Projection """
 
-        if not o.pipeline in Pipelines.imaging: return
-
         o.Nf_proj = o.Nf_FFT_backward
         if o.pipeline == Pipelines.DPrepA_Image:
             o.Nf_proj = o.number_taylor_terms
 
-        if o.pipeline != Pipelines.Fast_Img: # (Consistent with PDR05 280115)
+         # (Consistent with PDR05 280115)
+        if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
             # We do 2*o.Nmajortotal*(Tobs/Tsnap) entire image reprojections (i.e. both directions)
             Equations._set_product(
                 o, Products.Reprojection,
@@ -510,7 +509,7 @@ class Equations:
 
     @staticmethod
     def _apply_dft_equations(o):
-        if o.pipeline in Pipelines.imaging:
+        if o.pipeline in [Pipelines.ICAL, Pipelines.RCAL]:
             # If the selfcal loop is embedded, we only need to do this
             # once but since we do an update of the model every
             # selfcal, we need to do it every selfcal.
@@ -555,37 +554,38 @@ class Equations:
         """
         Generate Convolution kernels
         """
+
+        b = Symbol('b')
+        o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
+        o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
+
+        # allow uv positional errors up to o.epsilon_f_approx *
+        # 1/Qkernel of a cell from frequency smearing.(But not more
+        # than Nf_max channels...)
+        o.Nf_gcf_backward_nosmear = Lambda(b,
+            Min(log(o.wl_max / o.wl_min) /
+                log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+        o.Nf_gcf_predict_nosmear  = Lambda(b,
+            Min(log(o.wl_max / o.wl_min) /
+                log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+
+        if o.on_the_fly:
+            o.Nf_gcf_backward = o.Nf_vis_backward
+            o.Nf_gcf_predict  = o.Nf_vis_predict
+            o.Tkernel_backward = o.Tcoal_backward
+            o.Tkernel_predict  = o.Tcoal_predict
+        else:
+            # For both of the following, maintain distributability;
+            # need at least minimum_channels (500) kernels.
+            o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
+            o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
+            # TODO: some baseline dependent re-use limits along the
+            # same lines as the frequency re-use? PIP.IMG check
+            # please.
+            o.Tkernel_backward = Lambda(b, o.Tion)
+            o.Tkernel_predict  = Lambda(b, o.Tion)
+
         if o.pipeline in Pipelines.imaging:
-
-            b = Symbol('b')
-            o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
-            o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
-
-            # allow uv positional errors up to o.epsilon_f_approx *
-            # 1/Qkernel of a cell from frequency smearing.(But not more
-            # than Nf_max channels...)
-            o.Nf_gcf_backward_nosmear = Lambda(b,
-                Min(log(o.wl_max / o.wl_min) /
-                    log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-            o.Nf_gcf_predict_nosmear  = Lambda(b,
-                Min(log(o.wl_max / o.wl_min) /
-                    log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-
-            if o.on_the_fly:
-                o.Nf_gcf_backward = o.Nf_vis_backward
-                o.Nf_gcf_predict  = o.Nf_vis_predict
-                o.Tkernel_backward = o.Tcoal_backward
-                o.Tkernel_predict  = o.Tcoal_predict
-            else:
-                # For both of the following, maintain distributability;
-                # need at least minimum_channels (500) kernels.
-                o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
-                o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
-                # TODO: some baseline dependent re-use limits along the
-                # same lines as the frequency re-use? PIP.IMG check
-                # please.
-                o.Tkernel_backward = Lambda(b, o.Tion)
-                o.Tkernel_predict  = Lambda(b, o.Tion)
 
             # The following two equations correspond to Eq. 35
             Equations._set_product_blsum(o, Products.Gridding_Kernel_Update, b=b,
