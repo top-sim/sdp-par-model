@@ -1,7 +1,7 @@
 
 from parameter_definitions import Constants
 
-from sympy import Max, Expr
+from sympy import Max, Expr, Lambda, Symbol, Sum
 from graphviz import Digraph
 from math import floor
 
@@ -32,14 +32,14 @@ class Domain:
     def __str__(self):
         return '<Domain %s>' % self.name
 
-    def region(self, size, props = {}):
+    def regions(self, size, props = {}):
         """Make a new unsplit region set for the domain."""
         return Regions(self, size, 1, props)
 
 class Regions:
     """A set of regions of a domain."""
 
-    def __init__(self, domain, size, count, props):
+    def __init__(self, domain, size, count, props={}):
         """Makes a new named domain that has given total size and is split up
         into the given number of equal-sized pieces."""
 
@@ -56,18 +56,29 @@ class Regions:
     def region(self, rb, i = None, off = None):
         """Get properties of a region of this region set"""
 
-        # Only copy over detailed properties if our domain is
-        # enumerated - they are allowed to depend on the concrete
-        # region.
-        if not i is None:
+        # Enumerated?
+        if i is None:
+
+            # Properties that do not depend on the region, or only
+            # need to know it symbolically (sympy Lambda) can be
+            # worked with even if the region stays anonymous.
+            reg = {
+                k: v
+                for k, v in self.props.iteritems()
+                if not callable(v) or isinstance(v, Lambda)
+            }
+
+        else:
+
+            # Only copy over detailed properties if our domain is
+            # enumerated - they are allowed to depend on the concrete
+            # region..
             reg = {
                 k: mk_lambda(v)(i)
                 for k, v in self.props.iteritems()
             }
             reg[INDEX_PROP] = i
             reg[OFFSET_PROP] = off
-        else:
-            reg = {}
 
         # The split degree is one of the few things we know about
         # regions no matter what.
@@ -104,7 +115,19 @@ class Regions:
         # See above
         return RegionBoxes([self]).max(prop)
 
+class DomainPrecendenceException:
+    """Thrown when the properties of a region are accessed 'before' they
+    are defined. This should only happen while RegionBoxes._getBoxes()
+    builds up all region boxes, because that is when region boxes
+    might not be fully populated yet. This exception means that we
+    need to re-order domains in order to be able to determine their
+    properties."""
+    def __init__(self, rboxes, domain):
+        self.regionBoxes = rboxes
+        self.domain = domain
+
 class NeedRegionEnumerationException:
+
     """Thrown when we detect that we need concrete region information
     about a given domain. This exception gets thrown by RegionBox
     when that information is requested, and when caught should
@@ -120,25 +143,15 @@ class RegionBox:
     def __init__(self, regionBoxes, domainProps):
         self.regionBoxes = regionBoxes
         self.domainProps = domainProps
+        self.symbols = {}
 
     def __call__(self, domain, prop):
 
-        # Not enumerated yet?
+        # No properties known yet? This should only happen while we're
+        # inside RegionBoxes._getBoxes(). Then it means that this
+        # domain needs to be defined before whatever we're doing here.
         if not self.domainProps.has_key(domain):
-
-            # Some properties we can calculate without enumeration
-            if prop == COUNT_PROP:
-                return self.regionBoxes.regions[domain].count(self)
-
-            # Region boxes have it marked as to enumerate, but we
-            # don't have properties for it? That means there's a
-            # cyclic dependency...
-            if domain in self.regionBoxes.enumDomains:
-                raise Exception('Cyclic dependency involving domain %s!' % domain.name)
-
-            # Otherwise we need to request this region to get
-            # enumerated...
-            raise NeedRegionEnumerationException(self.regionBoxes, domain)
+            raise DomainPrecendenceException(self.regionBoxes, domain)
 
         # If we don't have the property, this might also point towards
         # the need for enumeration.
@@ -152,7 +165,14 @@ class RegionBox:
                              % (prop, domain.name))
 
         # Look it up
-        return self.domainProps[domain][prop]
+        val = self.domainProps[domain][prop]
+
+        # Symbolised? Pass region index as symbol. Otherwise just return as-is.
+        if isinstance(val, Lambda):
+            if not self.symbols.has_key(domain):
+                self.symbols[domain] = Symbol("i_" + domain.name)
+            return val(self.symbols[domain])
+        return val
 
     def count(self):
         count = 1
@@ -168,7 +188,32 @@ class RegionBox:
 
     def sum(self, prop):
         """Return the sum of the given property for this region box"""
-        return self.count() * mk_lambda(prop)(self)
+
+        # Apply property to this region box, collect symbols
+        self.symbols = {}
+        expr = prop(self)
+
+        # Now multiply out regions where we don't care about the
+        # index, but generate a sympy Sum term for when we are
+        # referring to the index symbolically.
+        #
+        # Note that this is a rough solution - there are probably
+        # situations with multiple indices where this goes
+        # wrong. Especially concerning the order in which we do all
+        # this - the "count" property can depend on other domains, so
+        # there's no guarantee that we don't end up using undefined
+        # symbols here...
+        for dom in self.regionBoxes.regions.iterkeys():
+            if not dom in self.symbols and not dom in self.regionBoxes.enumDomains:
+                expr = self(dom, COUNT_PROP) * expr
+        sums = []
+        for dom in self.regionBoxes.regions.iterkeys():
+            if dom in self.symbols:
+                sums.append((self.symbols[dom],
+                             0, self(dom, COUNT_PROP) - 1))
+        if len(sums) > 0:
+            expr = Sum(expr, *sums).doit()
+        return expr
 
     def domains(self):
         return self.domainProps.keys()
@@ -233,8 +278,6 @@ class RegionBox:
             return lcount * ((rcount + lcount - 1) / lcount)
         else:
             return rcount * ((lcount + rcount - 1) / rcount)
-#        return Max(lcount, rcount)
-
 
     def _zipSum(lbox, rbox, commonDoms, leftDoms, rightDoms, f):
         """Return sum of function, applied to all pairs of edges between
@@ -246,9 +289,6 @@ class RegionBox:
         mult = 1
         for dom in commonDoms:
             m = lbox._edgeMult(rbox, dom)
-            #m2 = lbox._edgeCrossMult(rbox, rbox, dom)
-            #m3 = lbox._edgeCrossMult(rbox, lbox, dom)
-            #print "=>", m, m2, m3
             mult *= m
             if mult == 0: return 0
 
@@ -472,6 +512,7 @@ class RegionBoxes:
         # Try to construct a list with all region boxes we need to
         # enumerate. This will add enumDomains as a side-effect
         self.enumDomains = []
+        self.priorityDomains = []
         self._genBoxes()
 
     def _genBoxes(self):
@@ -486,6 +527,20 @@ class RegionBoxes:
         # be enumerated.
         try:
             return code()
+
+        except DomainPrecendenceException as e:
+
+            # Rethrow if this is for a different region boxes
+            if e.regionBoxes != self:
+                raise e
+
+            # Sanity-check
+            if e.domain in self.priorityDomains:
+                raise Exception('Domain %s already prioritised - domain dependency cycle?' % e.domain.name)
+
+            # Add domain to be prioritised
+            self.priorityDomains.insert(0,e.domain)
+            return self._withEnums(code)
 
         except NeedRegionEnumerationException as e:
 
@@ -525,7 +580,7 @@ class RegionBoxes:
             for regProps in rboxProps:
 
                 # Make incomplete region box for evaluation count and
-                # region() to determine region properties. Both of
+                # regions() to determine region properties. Both of
                 # these could raise an NeedRegionEnumerationException.
                 rbox = RegionBox(self, regProps)
                 for props in regs.regions(rbox):
@@ -543,9 +598,11 @@ class RegionBoxes:
         for props in rboxProps:
             # Make yet another temporary region box
             rbox = RegionBox(self, props)
-            for regs in self.regionsBox:
-                if not regs.domain in self.enumDomains:
-                    props[regs.domain] = regs.region(rbox)
+            for prio in [True, False]:
+                for regs in self.regionsBox:
+                    if not regs.domain in self.enumDomains and \
+                       (prio == (regs.domain in self.priorityDomains)):
+                        props[regs.domain] = regs.region(rbox)
             # Props have changed, construct the (finally)
             # completed region box
             rboxes.append(RegionBox(self, props))
@@ -826,12 +883,13 @@ class DataFlowTests(unittest.TestCase):
         # into 4 regions and split into 3 regions.
         self.size1 = 12
         self.dom1 = Domain("Domain 1")
-        self.reg1 = self.dom1.region(self.size1, props={'dummy': 0})
-        self.split1 = self.reg1.split(self.size1, props={'dummy': 0})
+        props = {'dummy': lambda rb: 0 }
+        self.reg1 = self.dom1.regions(self.size1, props=props)
+        self.split1 = self.reg1.split(self.size1, props=props)
         self.size1a = 4
-        self.split1a = self.reg1.split(self.size1a, props={'dummy': 0})
+        self.split1a = self.reg1.split(self.size1a, props=props)
         self.size1b = 3
-        self.split1b = self.reg1.split(self.size1b, props={'dummy': 0})
+        self.split1b = self.reg1.split(self.size1b, props=props)
 
         # Assumed by tests
         assert self.size1a > self.size1b and self.size1a < 2*self.size1b
@@ -839,8 +897,8 @@ class DataFlowTests(unittest.TestCase):
         # Second domain, with splits "all" and "each".
         self.size2 = 7
         self.dom2 = Domain("Domain 2")
-        self.reg2 = self.dom2.region(self.size2, props={'dummy': 0})
-        self.split2 = self.reg2.split(self.size2, props={'dummy': 0})
+        self.reg2 = self.dom2.regions(self.size2, props=props)
+        self.split2 = self.reg2.split(self.size2, props=props)
 
     def test_size(self):
 
@@ -1123,23 +1181,43 @@ class DataFlowTests(unittest.TestCase):
             return itertools.product(doms, [False, True])
         for (domA, enumA), (domB, enumB), (domC, enumC) in \
                 itertools.product(enums(regsA), enums(regsB), enums(regsC)):
-            try:
-                rboxesA = RegionBoxes(regsA)
-                if enumA: rboxesA.sum(oneProp(domA))
-                rboxesB = RegionBoxes(regsB)
-                if enumB: rboxesB.sum(oneProp(domB))
-                rboxesC = RegionBoxes(regsC)
-                if enumC: rboxesC.sum(oneProp(domC))
-                # Summing one per edge should give us the number of
-                # edges, no matter whether we ask for the dummy
-                # property or not.
-                self.assertEqual(rboxesA.zipCrossSum(rboxesB, rboxesC, onePropEdge),
-                                 edges)
-                self.assertEqual(rboxesB.zipCrossSum(rboxesA, rboxesC, onePropEdge),
-                                 edges)
-            except:
-                print "Testing enumeration", enumA, enumB, enumC
-                raise
+            rboxesA = RegionBoxes(regsA)
+            if enumA: rboxesA.sum(oneProp(domA))
+            rboxesB = RegionBoxes(regsB)
+            if enumB: rboxesB.sum(oneProp(domB))
+            rboxesC = RegionBoxes(regsC)
+            if enumC: rboxesC.sum(oneProp(domC))
+            # Summing one per edge should give us the number of
+            # edges, no matter whether we ask for the dummy
+            # property or not.
+            msg = "cross sum mismatch for regions %s vs %s, enumerating [%s %s %s]" % \
+                (regsA, regsB,
+                 domA.name if enumA else '',
+                 domB.name if enumB else '',
+                 domC.name if enumC else '')
+            self.assertEqual(rboxesA.zipCrossSum(rboxesB, rboxesC, onePropEdge),edges,msg=msg)
+            self.assertEqual(rboxesB.zipCrossSum(rboxesA, rboxesC, onePropEdge),edges,msg='reversed ' + msg)
+
+class DataFlowTestsSymbol(unittest.TestCase):
+
+    def test_symbols(self):
+
+        # Make a region with entirely symbolised properties
+        dom = Domain('Symbolized')
+        size = Symbol('size')
+        regs = dom.regions(size)
+        i = Symbol("i")
+        split = regs.split(size, props = {
+            'p1': 1,
+            'p2': Lambda(i, 1),
+            'p3': Lambda(i, i) })
+
+        # Check size
+        rbox = RegionBoxes([split])
+        self.assertEqual(rbox.count(), size)
+        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p1')), size)
+        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p2')), size)
+        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p3')), size**2/2-size/2)
 
 if __name__ == '__main__':
     unittest.main()
