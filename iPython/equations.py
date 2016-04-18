@@ -354,11 +354,13 @@ class Equations:
     @staticmethod
     def _apply_correct_equations(o):
         """ Correction of gains"""
-        Equations._set_product(
-            o, Products.Correct,
-            T = o.Tsnap, N = o.Nbeam*o.Npp * o.minimum_channels,
-            Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels,
-            Rout = o.Mvis * o.Nvis / o.minimum_channels)
+
+        if not o.pipeline == Pipelines.Ingest:
+            Equations._set_product(
+                o, Products.Correct,
+                T = o.Tsnap, N = o.Nbeam*o.Npp * o.minimum_channels,
+                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels,
+                Rout = o.Mvis * o.Nvis / o.minimum_channels)
 
     @staticmethod
     def _apply_grid_equations(o):
