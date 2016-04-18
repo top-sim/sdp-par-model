@@ -3,7 +3,7 @@ from parameter_definitions import *
 from implementation import Implementation as imp, PipelineConfig
 
 from dataflow import *
-from sympy import Lambda
+from sympy import Lambda, Symbol
 
 import unittest
 
@@ -67,6 +67,7 @@ class Pipeline:
             lambda rbox: tp.Nf_gcf_backward(rbox(self.baseline,'bmax')))
         self.fftPredFreqs = self.allFreqs.split(tp.Nf_FFT_predict)
         self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward)
+        self.projFreqs = self.allFreqs.split(tp.Nf_proj)
 
         # Make beam domain
         self.beam = Domain('Beam')
@@ -90,6 +91,13 @@ class Pipeline:
         self.facet = Domain('Facet')
         self.allFacets = self.facet.regions(tp.Nfacet**2)
         self.eachFacet = self.allFacets.split(tp.Nfacet**2)
+
+        # Make taylor term domain
+        self.taylor = Domain('Taylor')
+        self.allTaylor = self.taylor.regions(tp.number_taylor_terms)
+        self.eachTaylor = self.allTaylor.split(tp.number_taylor_terms)
+        self.predTaylor = self.allTaylor.split(tp.Ntaylor_predict)
+        self.backTaylor = self.allTaylor.split(tp.Ntaylor_backward)
 
     def _transfer_cost_vis(self, Tdump):
         """Utility transfer cost function for visibility data. Multiplies out
@@ -169,40 +177,40 @@ class Pipeline:
     def create_ingest(self):
 
         ingest = Flow(
-            'Ingest',
-            [self.eachBeam, self.dumpTime,
-             self.islandFreqs, self.xyPolars, self.allBaselines],
+            'Receive',
+            [self.eachBeam, self.snapTime,
+             self.islandFreqs, self.xyPolar, self.allBaselines],
             deps = [self.tm, self.corr],
             cluster='ingest',
             costs = self._costs_from_product(Products.Receive))
 
-        rfi = Flow(
-            'Ingest Flagging',
-            [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars, self.allBaselines],
-            deps = [ingest],
-            cluster='ingest',
-            costs = self._costs_from_product(Products.Flag))
-
         demix = Flow(
             'Demix',
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars],
-            deps = [rfi],
+             self.xyPolar],
+            deps = [ingest],
             cluster='ingest',
             costs = self._costs_from_product(Products.Demix))
 
         average = Flow(
             'Average',
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars, self.binBaselines],
+             self.xyPolar, self.allBaselines],
             deps = [demix],
             cluster='ingest',
             costs = self._costs_from_product(Products.Average))
 
-        buf = Flow('Buffer', [self.islandFreqs], deps=[average])
+        rfi = Flow(
+            'Flagging',
+            [self.eachBeam, self.snapTime, self.islandFreqs,
+             self.xyPolar, self.allBaselines],
+            deps = [average],
+            cluster='ingest',
+            costs = self._costs_from_product(Products.Flag))
 
-        return (ingest, rfi, demix, average, buf)
+        buf = Flow('Buffer', [self.islandFreqs], deps=[rfi])
+
+        return (ingest, demix, average, rfi, buf)
 
     def create_flagging(self,vis):
 
@@ -215,42 +223,62 @@ class Pipeline:
 
     def create_calibrate(self,vis,model):
 
-        # Source finding
-        source_find = Flow(
-            'Source Finding',
-            [self.eachSelfCal],
-            costs = self._costs_from_product(Products.Source_Find),
-            deps = [model], cluster='calibrate',
-        )
+        # No calibration?
+        if Products.Solve in self.tp.products:
 
-        # DFT Predict
-        dft = Flow(
-            'DFT',
-            [self.eachBeam, self.eachSelfCal, self.xyPolar, self.snapTime, self.visFreq],
-            costs = self._costs_from_product(Products.DFT),
-            deps = [source_find], cluster='calibrate',
-        )
+            # Source finding
+            if self.tp.pipeline == Pipelines.ICAL:
+                source_find = Flow(
+                    'Source Finding',
+                    [self.eachSelfCal],
+                    costs = self._costs_from_product(Products.Source_Find),
+                    deps = [model], cluster='calibrate',
+                )
+                sources = [source_find]
+            else:
+                sources = []
+                source_find = None
 
-        # Solve
-        solve = Flow(
-            'Calibration',
-            [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
-            costs = self._costs_from_product(Products.Solve),
-            deps = [dft, vis], cluster='calibrate',
-        )
+            # DFT Predict
+            dft = Flow(
+                'DFT',
+                [self.eachBeam, self.eachSelfCal, self.xyPolar, self.snapTime, self.visFreq],
+                costs = self._costs_from_product(Products.DFT),
+                deps = sources, cluster='calibrate',
+            )
 
-        return (source_find, dft, solve)
+            # Solve
+            solve = Flow(
+                'Calibration',
+                [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
+                costs = self._costs_from_product(Products.Solve),
+                deps = [dft, vis], cluster='calibrate',
+            )
+            calibration = solve
 
-    def create_apply(self,vis,calibration):
+        else:
 
-        # "Subtract"?
+            source_find = None
+            dft = None
+            solve = None
+
+            # Load calibration
+            calibration = Flow(
+                'Calibration Buffer',
+                [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
+                cluster='calibrate',
+            )
+
+        # Apply the calibration
         app = Flow(
-            'Apply Calibration',
-            [self.eachBeam, self.eachLoop, self.xyPolar],
-            deps = [vis, calibration], cluster='calibrate'
+            'Correct',
+            [self.snapTime, self.islandFreqs, self.eachBeam,
+             self.allLoops, self.xyPolar],
+            deps = [vis, calibration], cluster='calibrate',
+            costs = self._costs_from_product(Products.Correct)
         )
 
-        return app
+        return (source_find, dft, solve, app)
 
     def create_predict(self,vis,model):
         """ Predicts visibilities from a model """
@@ -262,7 +290,7 @@ class Pipeline:
 
         # Predict
         fft = Flow(
-            'FFT',
+            'IFFT',
             # FIXME: eachLoop and xyPolar might be wrong
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
              self.snapTime, self.fftPredFreqs],
@@ -281,7 +309,8 @@ class Pipeline:
         degrid = Flow(
             "Degrid",
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
-             self.snapTime, self.predFreqs, self.binBaselines],
+             self.snapTime, self.predFreqs, self.binBaselines,
+             self.predTaylor],
             costs = self._costs_from_product(Products.Degrid),
             deps = [fft, gcf], cluster='predict'
         )
@@ -312,13 +341,17 @@ class Pipeline:
 
         return rotate
 
-    def create_project(self,facets, regLoop, freqs):
+    def create_project(self, facets, regLoop):
         """ Reprojects facets so they can be seen as part of the same image plane """
+
+        # No reprojection?
+        if not Products.Reprojection in self.tp.products:
+            return facets
 
         return Flow(
             'Project',
             [self.eachBeam, regLoop, self.xyPolar,
-             self.snapTime, freqs, self.eachFacet],
+             self.snapTime, self.projFreqs, self.eachFacet],
             costs = self._costs_from_product(Products.Reprojection),
             deps = [facets],
             cluster = 'backend'
@@ -353,13 +386,14 @@ class Pipeline:
         grid = Flow(
             'Grid',
             [self.eachBeam, regLoop, self.eachFacet, self.xyPolar,
-             self.snapTime, self.backFreqs, self.binBaselines],
+             self.snapTime, self.backFreqs, self.binBaselines,
+             self.backTaylor],
             costs = self._costs_from_product(Products.Grid),
             deps = [vis, gcf], cluster = 'backward',
         )
 
         fft = Flow(
-            'IFFT',
+            'FFT',
             # FIXME: eachLoop and xyPolar might be wrong?
             [self.eachBeam, self.eachLoop, self.eachFacet,
              self.xyPolar, self.snapTime, self.fftBackFreqs],
@@ -371,14 +405,18 @@ class Pipeline:
 
     def create_clean(self, dirty):
 
+        # Skip for fast imaging
+        if not Products.Subtract_Image_Component in self.tp.products:
+            return (None, None, dirty)
+
         if self.tp.pipeline != Pipelines.DPrepA_Image:
             spectral_fit = dirty
         else:
             spectral_fit = Flow(
                 'Spectral Fitting',
-                [self.eachBeam, self.eachLoop, self.eachFacet,
-                 self.xyPolar, self.snapTime, self.fftBackFreqs],
-                costs = self._costs_from_product(Products.FFT),
+                [self.eachBeam, self.eachLoop,
+                 self.xyPolar, self.obsTime, self.eachTaylor],
+                costs = self._costs_from_product(Products.Image_Spectral_Fitting),
                 deps = [dirty], cluster = 'backend',
             )
 
@@ -392,7 +430,7 @@ class Pipeline:
         )
 
         subtract =  Flow(
-            'Subtract',
+            'Subtract Component',
             [self.eachBeam, self.eachLoop,
              self.obsTime, self.allFreqs],
             costs = self._costs_from_product(Products.Subtract_Image_Component),
@@ -410,11 +448,12 @@ class Pipeline:
             deps = [lsm],
         )
 
-    def create_continuum(self):
+    def create_imaging(self):
 
         # LSM might get updated per major loop
         lsm = self.lsm
-        if self.tp.Nmajor > 1:
+        has_clean = Products.Subtract_Image_Component in self.tp.products
+        if has_clean:
             lsm = self.create_update(lsm)
 
         # UVWs are supposed to come from TM
@@ -423,8 +462,7 @@ class Pipeline:
         vis = self.create_flagging(self.buf)
 
         # Calibrate
-        calibration = self.create_calibrate(vis, lsm)[-1]
-        visc = self.create_apply(vis, calibration)
+        vis_calibrated = self.create_calibrate(vis, lsm)[-1]
 
         # Predict
         degrid = self.create_predict(uvws, lsm)[-1]
@@ -434,29 +472,33 @@ class Pipeline:
             predVis = degrid
 
         # Subtract
-        subtract = self.create_subtract(visc, predVis)
+        subtract = self.create_subtract(vis_calibrated, predVis)
 
         # Phase rotate
         rotate = self.create_rotate(subtract, True)
 
         # Intermediate loops
         fftBack = self.create_backward(rotate, uvws)[0]
-        project = self.create_project(fftBack, self.eachLoop, self.fftBackFreqs)
-        (_, _, clean) = self.create_clean(project)
-        lsm.depend(clean, 0)
+        project = self.create_project(fftBack, self.eachLoop)
+        if has_clean:
+            (_, _, clean) = self.create_clean(project)
+            lsm.depend(clean, 0)
+            out = clean
+        else:
+            out = project
 
-        return clean.recursiveDeps()
+        return out.recursiveDeps()
 
-class PipelineTests(unittest.TestCase):
-    """Tests the data flows constructed from the parametric model for
-    consistency. This means we both sanity-check the construction as
-    well as whether our predictions match the ones on the parametric
-    model where there's overlap. This should allow us to ensure that
-    we inferred the right architecture.
-    """
+    def create_pipeline(self):
 
-    def setUp(self):
-        self._loadTelParams(Pipelines.ICAL)
+        if self.tp.pipeline in Pipelines.imaging:
+            return self.create_imaging()
+
+        if self.tp.pipeline == Pipelines.Ingest:
+            return self.create_ingest()
+
+class PipelineTestsBase(unittest.TestCase):
+    """ Common helpers for pipeline test cases """
 
     def _loadTelParams(self, pipeline):
 
@@ -466,7 +508,7 @@ class PipelineTests(unittest.TestCase):
                              max_baseline=150000,
                              Nf_max='default',
                              blcoal=True,
-                             on_the_fly=True
+                             on_the_fly=True,
                              scale_predict_by_facet=True)
         adjusts = {
             'Nfacet': 8,
@@ -475,6 +517,74 @@ class PipelineTests(unittest.TestCase):
 
         tp = imp.calc_tel_params(cfg, adjusts=adjusts)
         self.df = Pipeline(tp)
+
+    def _assertEqualProduct(self, flow, product):
+        """Checks whether the given flow has the same compute and transfer
+        rate as the product in our telescope parameters. If the
+        product is undefined, the flow should be None.
+        """
+
+        if product not in self.df.tp.products:
+            # Product not defined? Make sure there's no node for it either
+            fname = "" if flow is None else flow.name # ...
+            self.assertIsNone(flow, msg="Product %s does not exist, but Flow %s does!" % (product, fname))
+        else:
+            self.assertIsNotNone(flow, msg="Product %s exists, but no associated Flow defined!" % product)
+            # Otherwise match compute & transfer cost
+            self.assertAlmostEqual(
+                float(flow.cost('compute')/self.df.tp.Tobs),
+                float(self.df.tp.products[product]['Rflop']),
+                delta = self.df.tp.products[product]['Rflop'] / 1e10)
+            self.assertAlmostEqual(
+                float(flow.cost('transfer')/self.df.tp.Tobs),
+                float(self.df.tp.products[product]['Rout']),
+                delta = self.df.tp.products[product]['Rout'] / 1e10)
+
+    def _assertPipelineComplete(self, flows):
+        """Checks whether the given flow has the same compute and transfer
+        rate as the product in our telescope parameters. If the
+        product is undefined, the flow should be None.
+        """
+
+        # Sort costs, match descending
+        def flowCost(f): return -f.cost('compute')
+        flowsSorted = sorted(flows, key=flowCost)
+        def productsCost((n,c)): return -c['Rflop']
+        productsSorted = sorted(self.df.tp.products.items(), key=productsCost)
+
+        # Zip, match and sum
+        costSum = 0
+        for flow, (pname, pcosts) in zip(flowsSorted, productsSorted):
+            fcost = float(flow.cost('compute')/self.df.tp.Tobs)
+            pcost = float(pcosts['Rflop'])
+            costSum += pcost
+            self.assertAlmostEqual(
+                fcost, pcost, delta=pcost/1e10,
+                msg="Flow %s cost does not match product %s (%f != %f, factor %f)!\n\n"
+                    "This often means that some products don't "
+                    "have a matching flow (or vice-versa)\n"
+                    "Flow list: %s\nProduct list: %s" % (
+                        flow.name, pname, fcost, pcost, pcost/max(fcost, 0.001),
+                        map(lambda f: f.name, flowsSorted),
+                        map(lambda (n,c): n, productsSorted))
+            )
+
+        # Finally check sum
+        self.assertAlmostEqual(
+            float(costSum),
+            float(self.df.tp.Rflop),
+            delta = self.df.tp.Rflop/1e10)
+
+class PipelineTestsImaging(PipelineTestsBase):
+    """Tests the data flows constructed from the parametric model for
+    consistency. This means we both sanity-check the construction as
+    well as whether our predictions match the ones on the parametric
+    model where there's overlap. This should allow us to ensure that
+    we inferred the right architecture.
+    """
+
+    def setUp(self):
+        self._loadTelParams(Pipelines.ICAL)
 
     def test_baseline_domain(self):
 
@@ -512,16 +622,6 @@ class PipelineTests(unittest.TestCase):
         self.assertAlmostEqual(-rboxes.max(ntimeSize),
                                tp.Tkernel_backward(tp.Bmax_bins[-1]))
 
-    def _assertEqualProduct(self, flow, product):
-        self.assertAlmostEqual(
-            float(flow.cost('compute')/self.df.tp.Tobs),
-            float(self.df.tp.products[product]['Rflop']),
-            delta = 20)
-        self.assertAlmostEqual(
-            float(flow.cost('transfer')/self.df.tp.Tobs),
-            float(self.df.tp.products[product]['Rout']),
-            delta = 10000)
-
     def test_ingest(self):
         if self.df.tp.pipeline != Pipelines.Ingest: return
         (ingest, rfi, demix, average, _) = self.df.create_ingest()
@@ -552,11 +652,12 @@ class PipelineTests(unittest.TestCase):
         self._assertEqualProduct(rotPred, Products.PhaseRotationPredict)
 
     def test_project(self):
-        proj = self.df.create_project(None, self.df.eachLoop, self.df.fftBackFreqs)
-        self._assertEqualProduct(proj, Products.Reprojection)
+        if Products.Reprojection in self.df.tp.products:
+            proj = self.df.create_project(None, self.df.eachLoop)
+            self._assertEqualProduct(proj, Products.Reprojection)
 
     def test_calibrate(self):
-        (source_find, dft, solve) = self.df.create_calibrate(None,None)
+        (source_find, dft, solve, app) = self.df.create_calibrate(None,None)
         self._assertEqualProduct(source_find, Products.Source_Find)
         self._assertEqualProduct(dft, Products.DFT)
         self._assertEqualProduct(solve, Products.Solve)
@@ -567,32 +668,45 @@ class PipelineTests(unittest.TestCase):
 
     def test_clean(self):
         (spectral_fit, identify, subtract) = self.df.create_clean(None)
-        if self.df.tp.pipeline == Pipelines.DPrepA_Image:
-            self._assertEqualProduct(spectral_fit, Products.Spectral_Fitting)
+        self._assertEqualProduct(spectral_fit, Products.Image_Spectral_Fitting)
         self._assertEqualProduct(identify, Products.Identify_Component)
         self._assertEqualProduct(subtract, Products.Subtract_Image_Component)
 
-    def test_continuum(self):
+    def test_imaging(self):
 
-        # Create whole pipeline
-        contFlows = self.df.create_continuum()
+        # Check whole pipeline
+        self.assertIn(self.df.tp.pipeline, Pipelines.imaging)
+        self._assertPipelineComplete(self.df.create_imaging())
 
-        # Sum up all costs, make sure it matches expected cost sum
-        costSum = 0
-        for flow in contFlows:
-            costSum += float(flow.cost('compute'))
-        self.assertAlmostEqual(
-            float(costSum/self.df.tp.Tobs),
-            float(self.df.tp.Rflop),
-            delta = 1)
+class PipelineTestsRCAL(PipelineTestsImaging):
+    def setUp(self):
+        self._loadTelParams(Pipelines.RCAL)
 
-class PipelineTestsFastImg(PipelineTests):
+class PipelineTestsFastImg(PipelineTestsImaging):
     def setUp(self):
         self._loadTelParams(Pipelines.Fast_Img)
 
-class PipelineTestsDPrepC(PipelineTests):
+class PipelineTestsDPrepA(PipelineTestsImaging):
+    def setUp(self):
+        self._loadTelParams(Pipelines.DPrepA)
+
+class PipelineTestsDPrepA_Image(PipelineTestsImaging):
+    def setUp(self):
+        self._loadTelParams(Pipelines.DPrepA_Image)
+
+class PipelineTestsDPrepC(PipelineTestsImaging):
     def setUp(self):
         self._loadTelParams(Pipelines.DPrepC)
+
+class PipelineTestsIngest(PipelineTestsBase):
+    def setUp(self):
+        self._loadTelParams(Pipelines.Ingest)
+
+    def test_ingest(self):
+
+        # Check ingest pipeline
+        self.assertEqual(self.df.tp.pipeline, Pipelines.Ingest)
+        self._assertPipelineComplete(self.df.create_ingest())
 
 if __name__ == '__main__':
     unittest.main()
