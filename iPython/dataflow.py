@@ -881,7 +881,7 @@ class Flow:
 
 def flowsToDot(root, t, computeSpeed=None,
                graph_attr={}, node_attr={'shape':'box'}, edge_attr={},
-               crossRegs=None):
+               cross_regs=None):
 
     # Get root flow dependencies
     flows = root.recursiveDeps()
@@ -901,8 +901,8 @@ def flowsToDot(root, t, computeSpeed=None,
 
     # Make boxes for cross regions
     crossBoxes = None
-    if not crossRegs is None:
-        crossBoxes = RegionBoxes(crossRegs)
+    if not cross_regs is None:
+        crossBoxes = RegionBoxes(cross_regs)
 
     # Make nodes per cluster
     for cluster, cflows in clusters.iteritems():
@@ -919,7 +919,8 @@ def flowsToDot(root, t, computeSpeed=None,
             text = flow.name
 
             # Add relevant regions
-            for region in flow.regions():
+            def regName(r): return r.domain.name
+            for region in sorted(flow.regions(), key=regName):
                 count = flow.max(lambda rb: rb(region.domain, 'count'))
                 size = flow.max(lambda rb: rb(region.domain, 'size'))
                 if count == 1 and size == 1:
@@ -933,7 +934,10 @@ def flowsToDot(root, t, computeSpeed=None,
             # Add compute count
             count = flow.count()
             if count != 1:
-                text += "\nTasks: %d 1/s" % (count/t)
+                if count < t:
+                    text += "\nTasks: %d" % (count)
+                else:
+                    text += "\nTask Rate: %d 1/s" % (count/t)
             try:
                 compute = flow.cost('compute')
                 transfer = flow.cost('transfer')
@@ -968,17 +972,22 @@ def flowsToDot(root, t, computeSpeed=None,
                         if n < 10**9: return '%.1f MB' % (n/10**6)
                         return '%.1f GB' % (n/10**9)
                     if dep.costs.has_key('transfer') and transfer > 0:
-                        label = 'out: %d (%s)\nin: %d (%s)' % \
-                                (edges/depcount, format_bytes(transfer/depcount),
+                        label = 'packet: %s\nout: %d (%s)\nin: %d (%s)' % \
+                                (format_bytes(transfer/edges),
+                                 edges/depcount, format_bytes(transfer/depcount),
                                  edges/flowcount, format_bytes(transfer/flowcount))
                     else:
                         label = 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
 
-                    dot.edge(flowIds[dep], flowIds[flow], label, weight=str(weight))
+                    if crossBoxes:
+                        cross = dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
+                        label += '\ncrossing: %.1f%%' % (100 * cross / edges)
+                        if dep.costs.has_key('transfer') and transfer > 0:
+                            crossTransfer = dep.boxes.zipCrossSum(flow.boxes, crossBoxes,
+                                lambda l, r: mk_lambda(dep.costs['transfer'])(l))
+                            label += ' (%.2f TB/s)' % (transfer * cross / edges / t / Constants.tera)
 
-                    #if crossBoxes:
-                    #    print flow.name, dep.name
-                    #    print dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
+                    dot.edge(flowIds[dep], flowIds[flow], label, weight=str(weight))
 
 
         if cluster != '':
