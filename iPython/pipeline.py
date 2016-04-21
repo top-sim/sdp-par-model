@@ -340,7 +340,7 @@ class Pipeline:
         if self.tp.scale_predict_by_facet:
             return Flow(
                 Products.PhaseRotationPredict,
-                [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
+                [self.eachBeam, self.eachLoop, self.allFacets, self.xyPolar,
                  self.snapTime, self.islandFreqs, self.binBaselines],
                 costs = self._costs_from_product(Products.PhaseRotationPredict),
                 deps = [degrid], cluster = 'predict'
