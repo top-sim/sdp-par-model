@@ -509,14 +509,14 @@ class Equations:
 
     @staticmethod
     def _apply_dft_equations(o):
-        if o.pipeline in [Pipelines.ICAL, Pipelines.RCAL]:
+        if o.pipeline in Pipelines.imaging:
             # If the selfcal loop is embedded, we only need to do this
             # once but since we do an update of the model every
             # selfcal, we need to do it every selfcal.
             b = Symbol("b")
             Equations._set_product(o, Products.DFT,
                 T = o.Tsnap,
-                N = o.Npp * o.Nbeam * (o.Nselfcal + 1) * o.Nf_vis,
+                N = o.Nbeam * (o.Nselfcal + 1) * o.Nf_vis,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
                         / o.Tdump_scaled,
                 Rout = o.Mvis * o.Nvis / o.Nf_vis)
