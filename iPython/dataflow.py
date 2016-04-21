@@ -113,7 +113,7 @@ class Regions:
         """Get all regions of this region set."""
 
         off = 0 # TODO: regions start offset?
-        for i in range(self.count(rbox)):
+        for i in range(int(round(self.count(rbox)))):
             props = self.region(rbox, i, off)
             off += props[SIZE_PROP]
             yield props
@@ -124,7 +124,7 @@ class Regions:
         # Constant spacing?
         if self.constantSpacing():
             size = float(self.props.get(SIZE_PROP, self.size / self.count(rbox)))
-            for i in range(self.count(rbox)):
+            for i in range(int(round(self.count(rbox)))):
                 yield (i * size, size)
         # Otherwise fall back to enumerating
         else:
