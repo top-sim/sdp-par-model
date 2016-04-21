@@ -145,7 +145,7 @@ class Pipeline:
         # TODO - buffer contains averaged visibilities...
         self.buf = Flow(
             'Visibility Buffer',
-            [self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolars],
+            [self.eachBeam, self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolars],
             cluster = 'interface',
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)}
         )
@@ -207,7 +207,7 @@ class Pipeline:
             cluster='ingest',
             costs = self._costs_from_product(Products.Flag))
 
-        buf = Flow('Buffer', [self.islandFreqs], deps=[rfi])
+        buf = Flow('Buffer', [self.eachBeam, self.islandFreqs], deps=[rfi])
 
         return buf
 
@@ -279,7 +279,7 @@ class Pipeline:
         add = Flow(
             "Sum visibilities",
             [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.predFreqs, self.binBaselines,
+             self.snapTime, self.islandFreqs, self.binBaselines,
              self.predTaylor],
             deps = [dft, degrid], cluster='predict',
             costs = {
@@ -372,7 +372,7 @@ class Pipeline:
             [self.eachBeam, self.eachLoop, self.xyPolar,
              self.snapTime, self.islandFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.Subtract_Visibility),
-            deps = [vis, model_vis],
+            deps = [vis, model_vis], cluster='calibrate'
         )
 
     def create_backward(self, vis, uvw):
@@ -453,7 +453,7 @@ class Pipeline:
         if Products.Source_Find in self.tp.products:
             return Flow(
                 Products.Source_Find,
-                [self.eachLoop],
+                [self.eachBeam, self.eachLoop],
                 costs = self._costs_from_product(Products.Source_Find),
                 deps = [identify], cluster='deconvolve',
             )
@@ -465,7 +465,7 @@ class Pipeline:
 
         return Flow(
             'Update LSM',
-            [self.eachLoop],
+            [self.eachBeam, self.eachLoop],
             deps = [lsm],
         )
 
@@ -477,22 +477,18 @@ class Pipeline:
         if has_clean:
             lsm = self.create_update(lsm)
 
-        # UVWs are supposed to come from TM
-        uvws = self.uvw
-        # Visibilities from buffer, flagged
-        vis = self.create_flagging(self.buf)
-
         # Predict
-        predict = self.create_predict(uvws, lsm)
+        predict = self.create_predict(self.uvw, lsm)
 
-        # Calibrate
-        calibrated = self.create_calibrate(vis, predict)
+        # Calibrate visibilities from buffer
+        calibrated = self.create_calibrate(self.buf, predict)
 
-        # Subtract
+        # Subtract & flag
         subtract = self.create_subtract(calibrated, predict)
+        flagged = self.create_flagging(subtract)
 
         # Image
-        dirty = self.create_backward(subtract, uvws)
+        dirty = self.create_backward(flagged, self.uvw)
 
         # Reproject
         project = self.create_project(dirty, self.eachLoop)
