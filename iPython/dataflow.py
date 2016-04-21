@@ -53,6 +53,22 @@ class Regions:
                        lambda rb: self.count(rb) * mk_lambda(split)(rb),
                        props)
 
+    def constantSpacing(self):
+        """Returns whether the regions have constant spacing. This allows us
+        to reason about these regions cheaper."""
+
+        # No size property? Then we assume constant spacing
+        if not self.props.has_key(SIZE_PROP):
+            return True
+
+        # Otherwise, our size property must convert to a plain number
+        # of some sort.
+        try:
+            float(self.props[SIZE_PROP])
+            return True
+        except ValueError:
+            return False
+
     def region(self, rb, i = None, off = None):
         """Get properties of a region of this region set"""
 
@@ -101,6 +117,32 @@ class Regions:
             props = self.region(rbox, i, off)
             off += props[SIZE_PROP]
             yield props
+
+    def _cheapRegionBounds(self, rbox):
+        """Cheaper version of regions that only returns the region bounds."""
+
+        # Constant spacing?
+        if self.constantSpacing():
+            size = float(self.props.get(SIZE_PROP, self.size / self.count(rbox)))
+            for i in range(self.count(rbox)):
+                yield (i * size, size)
+        # Otherwise fall back to enumerating
+        else:
+            print "non-constant spacing..."
+            for reg in self.regions(rbox):
+                yield (reg[OFFSET_PROP], reg[SIZE_PROP])
+
+    def regionsEqual(self, rbox, regs2, rbox2):
+        """Checks whether all regions are equal to another set of regions."""
+
+        # Custom size? Need to compare in detail then...
+        if not self.constantSpacing() or not regs2.constantSpacing():
+            return list(self.regions(rbox)) == list(regs2.regions(rbox2))
+
+        # Otherwise (try to) compare count + size
+        reg = self.region(rbox)
+        reg2 = regs2.region(rbox2)
+        return reg[COUNT_PROP] == reg2[COUNT_PROP] and reg[SIZE_PROP] == reg2[SIZE_PROP]
 
     def the(self, prop):
         # Defer to RegionBoxes, which will care about enumerating the
@@ -177,7 +219,7 @@ class RegionBox:
     def count(self):
         count = 1
         # Multiply out all non-enumerated (!) regions
-        for dom in self.regionBoxes.regions.iterkeys():
+        for dom in self.regionBoxes.regionsMap.iterkeys():
             if not dom in self.regionBoxes.enumDomains:
                 count *= self(dom, COUNT_PROP)
         return count
@@ -203,11 +245,11 @@ class RegionBox:
         # this - the "count" property can depend on other domains, so
         # there's no guarantee that we don't end up using undefined
         # symbols here...
-        for dom in self.regionBoxes.regions.iterkeys():
+        for dom in self.regionBoxes.regionsMap.iterkeys():
             if not dom in self.symbols and not dom in self.regionBoxes.enumDomains:
                 expr = self(dom, COUNT_PROP) * expr
         sums = []
-        for dom in self.regionBoxes.regions.iterkeys():
+        for dom in self.regionBoxes.regionsMap.iterkeys():
             if dom in self.symbols:
                 sums.append((self.symbols[dom],
                              0, self(dom, COUNT_PROP) - 1))
@@ -223,10 +265,31 @@ class RegionBox:
         are contained in this region box."""
         assert dom in self.domainProps
         if dom in self.regionBoxes.enumDomains:
-            yield self.domainProps[dom]
+            return iter([self.domainProps[dom]])
         else:
-            for reg in self.regionBoxes.regions[dom].regions(self):
-                yield reg
+            return self.regionBoxes.regionsMap[dom].regions(self)
+
+    def _cheapRegionBounds(self, dom):
+        if dom in self.regionBoxes.enumDomains:
+            return iter([(self.domainProps[dom][OFFSET_PROP],
+                          self.domainProps[dom][SIZE_PROP])])
+        else:
+            return self.regionBoxes.regionsMap[dom]._cheapRegionBounds(self)
+
+    def regionsEqual(self, rbox, dom):
+        """Check whether we have the same regions for the given domain. This
+        is a cheap heuristic: We might return False even though the
+        regions are actually equal.
+        """
+        assert dom in self.domainProps and dom in rbox.domainProps
+        if dom in self.regionBoxes.enumDomains:
+            # Only one to compare - fall back to direct comparison
+            return False
+            return [self.domainProps[dom]] == list(rbox.regions(dom))
+        else:
+            return self.regionBoxes.regionsMap[dom].regionsEqual(
+                self, rbox.regionBoxes.regionsMap[dom], rbox)
+
     def _edgeMult(lbox, rbox, dom):
         """Returns the edge multiplier between two region boxes concerning a
         domain. This is basically answering the question - if we have
@@ -313,33 +376,45 @@ class RegionBox:
         counts for our purposes.
         """
 
+        # Left and right regions the same?
+        if lbox.regionsEqual(rbox, dom):
+
+            # This always means 0 crosses, because all edges are
+            # horizontal.
+            if not a:
+                return 0
+
+            # If cross domain is not enumerated, this is simply the
+            # edge count
+            if not dom in cbox.regionBoxes.enumDomains:
+                return lbox._edgeMult(rbox, dom)
         # In contrast to _edgeMult, we must go through all individual
         # regions separately. Slightly less efficient and more work,
         # but on the other hand this means that we do not need to care
         # about enumeration in the first place.
 
         # Set up region iterators
-        lregs = lbox.regions(dom)
-        rregs = rbox.regions(dom)
-        cregs = cbox.regions(dom)
+        lregs = lbox._cheapRegionBounds(dom)
+        rregs = rbox._cheapRegionBounds(dom)
+        cregs = cbox._cheapRegionBounds(dom)
         try:
-            lreg = lregs.next()
-            rreg = rregs.next()
-            creg = cregs.next()
+            (loff, lsize) = lregs.next()
+            (roff, rsize) = rregs.next()
+            (coff, csize) = cregs.next()
         except StopIteration:
             return 0
 
         count = 0
-        loff = lreg[OFFSET_PROP]; lsize = lreg[SIZE_PROP]
-        roff = rreg[OFFSET_PROP]; rsize = rreg[SIZE_PROP]
-        coff = creg[OFFSET_PROP]; csize = creg[SIZE_PROP]
         while True:
 
-            # Advance cross iterator
+            # Advance iterators until there is at least some overlap
             try:
+                while loff + lsize < roff:
+                    (loff, lsize) = lregs.next()
+                while roff + rsize < loff:
+                    (roff, rsize) = rregs.next()
                 while coff + csize <= loff or coff + csize <= roff:
-                    creg = cregs.next()
-                    coff = creg[OFFSET_PROP]; csize = creg[SIZE_PROP]
+                    (coff, csize) = cregs.next()
             except StopIteration:
                 break
 
@@ -354,23 +429,20 @@ class RegionBox:
             # Advance either left or right iterator
             try:
                 if loff + lsize < roff + rsize:
-                    lreg = lregs.next()
-                    loff = lreg[OFFSET_PROP]; lsize = lreg[SIZE_PROP]
+                    (loff, lsize) = lregs.next()
                 else:
-                    rreg = rregs.next()
-                    roff = rreg[OFFSET_PROP]; rsize = rreg[SIZE_PROP]
+                    (roff, rsize) = rregs.next()
             except StopIteration:
                 break
 
         return count
 
     def _edgeCrossMultOneSided(lbox, cbox, dom):
-        """Count how many """
-
-        # In contrast to _edgeMult, we must go through all individual
-        # regions separately. Slightly less efficient and more work,
-        # but on the other hand this means that we do not need to care
-        # about enumeration in the first place.
+        """Count how many edges cross 'out' of the cross boxes. This is used
+        when there is no valid end point for the edges, so all edges
+        cross. However, we still only want to count edges that come
+        from inside "cbox" in case it is enumerated.
+        """
 
         # Set up region iterators
         lregs = lbox.regions(dom)
@@ -398,7 +470,7 @@ class RegionBox:
             if loff >= coff and loff < coff + csize:
                 count += 1
 
-            # Advance either left or right iterator
+            # Advance iterator
             try:
                 lreg = lregs.next()
                 loff = lreg[OFFSET_PROP]; lsize = lreg[SIZE_PROP]
@@ -502,12 +574,12 @@ class RegionBoxes:
         self.regionsBox = regionsBox
 
         # Set up regions map. Every domain is only allowed to appear once
-        self.regions = {}
+        self.regionsMap = {}
         for regions in regionsBox:
-            if self.regions.has_key(regions.domain):
+            if self.regionsMap.has_key(regions.domain):
                 raise Exception('Domain %s has two regions in the same '
                                 'box, this is not allowed!' % regions.domain.name)
-            self.regions[regions.domain] = regions
+            self.regionsMap[regions.domain] = regions
 
         # Try to construct a list with all region boxes we need to
         # enumerate. This will add enumDomains as a side-effect
@@ -549,7 +621,7 @@ class RegionBoxes:
                 raise e
 
             # Sanity-check the domain we are supposed to enumerate
-            if not self.regions.has_key(e.domain):
+            if not self.regionsMap.has_key(e.domain):
                 raise Exception('Domain %s not in region box - can\'t depend on it.' % e.domain.name)
             if e.domain in self.enumDomains:
                 raise Exception('Domain %s already enumerated - domain dependency cycle?' % e.domain.name)
@@ -576,7 +648,7 @@ class RegionBoxes:
             # Multiply out all region boxes with all regions
             # for this domain.
             rboxPropsNew = []
-            regs = self.regions[edom]
+            regs = self.regionsMap[edom]
             for regProps in rboxProps:
 
                 # Make incomplete region box for evaluation count and
@@ -609,8 +681,25 @@ class RegionBoxes:
         return rboxes
 
     def regions(self, dom):
-        assert dom in self.regions
-        return self.regions[dom].regions(self)
+        """Returns all regions we see for the given domain. Note that regions
+        might be duplicated due to enumeration. This is the right
+        behaviour, as different region boxes might have different
+        regions for this domain.
+        """
+        assert dom in self.regionsMap
+        from itertools import chain
+        it = iter([])
+        for box in self.boxes:
+            it = chain(it, box.regions(dom))
+        return it
+
+    def _cheapRegionBounds(self, dom):
+        assert dom in self.regionsMap
+        from itertools import chain
+        it = iter([])
+        for box in self.boxes:
+            it = chain(it, box._cheapRegionBounds(dom))
+        return it
 
     def count(self):
         """Return the total number of boxes in this box set."""
@@ -668,13 +757,13 @@ class RegionBoxes:
         leftDoms = []
         rightDoms = []
         commonDoms = []
-        for dom in left.regions.iterkeys():
-            if right.regions.has_key(dom):
+        for dom in left.regionsMap.iterkeys():
+            if right.regionsMap.has_key(dom):
                 commonDoms.append(dom)
             else:
                 leftDoms.append(dom)
-        for dom in right.regions.iterkeys():
-            if not left.regions.has_key(dom):
+        for dom in right.regionsMap.iterkeys():
+            if not left.regionsMap.has_key(dom):
                 rightDoms.append(dom)
 
         # Sum up result of zip
@@ -693,13 +782,13 @@ class RegionBoxes:
         leftDoms = []
         rightDoms = []
         commonDoms = []
-        for dom in left.regions.iterkeys():
-            if right.regions.has_key(dom):
+        for dom in left.regionsMap.iterkeys():
+            if right.regionsMap.has_key(dom):
                 commonDoms.append(dom)
             else:
                 leftDoms.append(dom)
-        for dom in right.regions.iterkeys():
-            if not left.regions.has_key(dom):
+        for dom in right.regionsMap.iterkeys():
+            if not left.regionsMap.has_key(dom):
                 rightDoms.append(dom)
 
         # Sum up result of zip
@@ -1173,20 +1262,31 @@ class DataFlowTests(unittest.TestCase):
         self._test_rboxes_cross_zip([split1,split2],[reg1, reg2], [split1,split2],self.size1 * self.size2 - 1)
 
     def _test_rboxes_cross_zip(self, regsA, regsB, regsC, edges):
-        def oneProp(dom): return lambda rb: 1 + rb(dom, 'dummy')
-        def onePropEdge(rbA, rbB): return 1
         import itertools
         def enums(regs):
             doms = map(lambda rs: rs.domain, regs)
             return itertools.product(doms, [False, True])
         for (domA, enumA), (domB, enumB), (domC, enumC) in \
                 itertools.product(enums(regsA), enums(regsB), enums(regsC)):
+
+            # Construct region boxes
             rboxesA = RegionBoxes(regsA)
-            if enumA: rboxesA.sum(oneProp(domA))
             rboxesB = RegionBoxes(regsB)
-            if enumB: rboxesB.sum(oneProp(domB))
             rboxesC = RegionBoxes(regsC)
+
+            # Make sure the right domains end up enumerated
+            def oneProp(dom): return lambda rb: 1 + rb(dom, 'dummy')
+            if enumA: rboxesA.sum(oneProp(domA))
+            if enumB: rboxesB.sum(oneProp(domB))
             if enumC: rboxesC.sum(oneProp(domC))
+
+            # Check that _cheapRegionBounds is consistent, as
+            # zipCrossSum will depend on it heavily
+            def toOffSize(reg): return (reg[OFFSET_PROP], reg[SIZE_PROP])
+            self.assertEqual(map(toOffSize, rboxesA.regions(domA)), list(rboxesA._cheapRegionBounds(domA)))
+            self.assertEqual(map(toOffSize, rboxesB.regions(domB)), list(rboxesB._cheapRegionBounds(domB)))
+            self.assertEqual(map(toOffSize, rboxesC.regions(domC)), list(rboxesC._cheapRegionBounds(domC)))
+
             # Summing one per edge should give us the number of
             # edges, no matter whether we ask for the dummy
             # property or not.
@@ -1195,6 +1295,7 @@ class DataFlowTests(unittest.TestCase):
                  domA.name if enumA else '',
                  domB.name if enumB else '',
                  domC.name if enumC else '')
+            def onePropEdge(rbA, rbB): return 1
             self.assertEqual(rboxesA.zipCrossSum(rboxesB, rboxesC, onePropEdge),edges,msg=msg)
             self.assertEqual(rboxesB.zipCrossSum(rboxesA, rboxesC, onePropEdge),edges,msg='reversed ' + msg)
 
