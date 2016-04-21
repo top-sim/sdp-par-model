@@ -860,9 +860,31 @@ class Flow:
 
         return list(recDeps)
 
-def flowsToDot(flows, t, computeSpeed=None,
+    def getDep(self, name):
+        """Returns a flow with the given name from all (possibly indirect)
+        dependencies of this node."""
+
+        active = [self]
+        recDeps = [self]
+        while len(active) > 0:
+            node = active.pop()
+            if node is None:
+                continue
+            if node.name == name:
+                return node
+            for dep, _ in node.deps:
+                if not dep in recDeps:
+                    active.append(dep)
+                    recDeps.append(dep)
+
+        return None
+
+def flowsToDot(root, t, computeSpeed=None,
                graph_attr={}, node_attr={'shape':'box'}, edge_attr={},
                crossRegs=None):
+
+    # Get root flow dependencies
+    flows = root.recursiveDeps()
 
     # Make digraph
     dot = Digraph(graph_attr=graph_attr,node_attr=node_attr,edge_attr=edge_attr)

@@ -121,12 +121,11 @@ class Pipeline:
         self.tm = Flow('Telescope Management', cluster = 'interface')
 
         self.lsm = Flow('Local Sky Model', attrs = {'pos':'0 0'},
-                        deps = [self.tm], cluster = 'interface')
+                        cluster = 'interface')
 
         self.uvw = Flow(
             'UVW generation',
-            [self.eachBeam, self.eachFacet, self.snapTime, self.islandFreqs,
-             self.allBaselines],
+            [self.eachBeam, self.snapTime, self.islandFreqs, self.allBaselines],
             deps = [self.tm],
             costs = {
                 'transfer': lambda rbox:
@@ -145,8 +144,8 @@ class Pipeline:
 
         # TODO - buffer contains averaged visibilities...
         self.buf = Flow(
-            'Buffer',
-            [self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolar],
+            'Visibility Buffer',
+            [self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolars],
             cluster = 'interface',
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)}
         )
@@ -177,7 +176,7 @@ class Pipeline:
     def create_ingest(self):
 
         ingest = Flow(
-            'Receive',
+            Products.Receive,
             [self.eachBeam, self.snapTime,
              self.islandFreqs, self.xyPolar, self.allBaselines],
             deps = [self.tm, self.corr],
@@ -185,7 +184,7 @@ class Pipeline:
             costs = self._costs_from_product(Products.Receive))
 
         demix = Flow(
-            'Demix',
+            Products.Demix,
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolar],
             deps = [ingest],
@@ -193,7 +192,7 @@ class Pipeline:
             costs = self._costs_from_product(Products.Demix))
 
         average = Flow(
-            'Average',
+            Products.Average,
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolar, self.allBaselines],
             deps = [demix],
@@ -201,7 +200,7 @@ class Pipeline:
             costs = self._costs_from_product(Products.Average))
 
         rfi = Flow(
-            'Flagging',
+            Products.Flag,
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolar, self.allBaselines],
             deps = [average],
@@ -210,56 +209,33 @@ class Pipeline:
 
         buf = Flow('Buffer', [self.islandFreqs], deps=[rfi])
 
-        return (ingest, demix, average, rfi, buf)
+        return buf
 
     def create_flagging(self,vis):
 
         return Flow(
-            'Flagging',
+            Products.Flag,
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolars, self.allBaselines],
-            deps = [vis],
+            deps = [vis], cluster='calibrate',
             costs = self._costs_from_product(Products.Flag))
 
-    def create_calibrate(self,vis,model):
+    def create_calibrate(self,vis,modelVis):
 
         # No calibration?
         if Products.Solve in self.tp.products:
 
-            # Source finding
-            if self.tp.pipeline == Pipelines.ICAL:
-                source_find = Flow(
-                    'Source Finding',
-                    [self.eachSelfCal],
-                    costs = self._costs_from_product(Products.Source_Find),
-                    deps = [model], cluster='calibrate',
-                )
-                sources = [source_find]
-            else:
-                sources = []
-                source_find = None
-
-            # DFT Predict
-            dft = Flow(
-                'DFT',
-                [self.eachBeam, self.eachSelfCal, self.xyPolar, self.snapTime, self.visFreq],
-                costs = self._costs_from_product(Products.DFT),
-                deps = sources, cluster='calibrate',
-            )
-
             # Solve
             solve = Flow(
-                'Calibration',
+                Products.Solve,
                 [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
                 costs = self._costs_from_product(Products.Solve),
-                deps = [dft, vis], cluster='calibrate',
+                deps = [vis, modelVis], cluster='calibrate',
             )
             calibration = solve
 
         else:
 
-            source_find = None
-            dft = None
             solve = None
 
             # Load calibration
@@ -267,47 +243,92 @@ class Pipeline:
                 'Calibration Buffer',
                 [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
                 cluster='calibrate',
+                costs = {
+                    'transfer': lambda rb:
+                      self.tp.Mjones * self.tp.Na * self.tp.Nf_max * self.tp.Tsnap / self.tp.Tdump_ref
+                }
             )
 
         # Apply the calibration
         app = Flow(
-            'Correct',
+            Products.Correct,
             [self.snapTime, self.islandFreqs, self.eachBeam,
              self.allLoops, self.xyPolar],
             deps = [vis, calibration], cluster='calibrate',
             costs = self._costs_from_product(Products.Correct)
         )
 
-        return (source_find, dft, solve, app)
+        return app
 
-    def create_predict(self,vis,model):
+    def create_predict(self,uvw,model):
         """ Predicts visibilities from a model """
 
+        # Extract relevant components from LSM
+        extract = Flow(
+            Products.Extract_LSM,
+            [self.eachBeam],
+            costs = self._costs_from_product(Products.Extract_LSM),
+            deps = [model], cluster='predict',
+        )
+
+        # Assume we do both FFT + DFT for every predict
+        degrid = self.create_predict_grid(uvw,extract)
+        dft = self.create_predict_direct(uvw,extract)
+
+        # Sum up both
+        add = Flow(
+            "Sum visibilities",
+            [self.eachBeam, self.eachLoop, self.xyPolar,
+             self.snapTime, self.predFreqs, self.binBaselines,
+             self.predTaylor],
+            deps = [dft, degrid], cluster='predict',
+            costs = {
+                'transfer': self._transfer_cost_vis(self.tp.Tdump_scaled)
+            }
+        )
+
+        return add
+
+    def create_predict_direct(self,uvw,sources):
+        """ Predict visibilities by DFT """
+
+        return Flow(
+            Products.DFT,
+            [self.eachBeam, self.eachSelfCal, self.xyPolars,
+             self.snapTime, self.visFreq],
+            costs = self._costs_from_product(Products.DFT),
+            deps = [sources], cluster='predict',
+        )
+
+    def create_predict_grid(self,uvw,sources):
+        """ Predict visibilities by FFT, then degrid. """
+
+        # Do faceting?
         if self.tp.scale_predict_by_facet:
             predictFacets = self.eachFacet
         else:
             predictFacets = self.allFacets
 
-        # Predict
+        # FFT to make a uv-grid
         fft = Flow(
-            'IFFT',
+            Products.IFFT,
             # FIXME: eachLoop and xyPolar might be wrong
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
              self.snapTime, self.fftPredFreqs],
             costs = self._costs_from_product(Products.IFFT),
-            deps = [model], cluster='predict',
+            deps = [sources], cluster='predict',
         )
 
+        # Degrid
         gcf = Flow(
-            'Degrid w-kernels',
+            Products.Degridding_Kernel_Update,
             [self.eachBeam, self.eachLoop, self.xyPolar,
              self.kernelPredTime, self.gcfPredFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.Degridding_Kernel_Update),
-            deps = [vis], cluster='predict'
+            deps = [uvw], cluster='predict'
         )
-
         degrid = Flow(
-            "Degrid",
+            Products.Degrid,
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
              self.snapTime, self.predFreqs, self.binBaselines,
              self.predTaylor],
@@ -315,31 +336,17 @@ class Pipeline:
             deps = [fft, gcf], cluster='predict'
         )
 
-        return (fft, gcf, degrid)
-
-    def create_rotate(self,vis,backward):
-        """ Rotates the phase center of visibilities for facetting """
-
-        # Select the right cost function
-        product = Products.PhaseRotation
-        facets = self.eachFacet
-        cluster = 'backward'
-        if not backward:
-            product = Products.PhaseRotationPredict
-            assert(self.tp.scale_predict_by_facet)
-            facets = self.allFacets
-            cluster = 'predict'
-
-        # TODO: This product is for backward *and* forward!
-        rotate = Flow(
-            "Rotate Phase",
-            [self.eachBeam, self.eachLoop, facets, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.binBaselines],
-            costs = self._costs_from_product(product),
-            deps = [vis], cluster = cluster
-        )
-
-        return rotate
+        # Rotate if we are doing faceting
+        if self.tp.scale_predict_by_facet:
+            return Flow(
+                Products.PhaseRotationPredict,
+                [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
+                 self.snapTime, self.islandFreqs, self.binBaselines],
+                costs = self._costs_from_product(Products.PhaseRotationPredict),
+                deps = [degrid], cluster = 'predict'
+            )
+        else:
+            return degrid
 
     def create_project(self, facets, regLoop):
         """ Reprojects facets so they can be seen as part of the same image plane """
@@ -349,19 +356,19 @@ class Pipeline:
             return facets
 
         return Flow(
-            'Project',
+            Products.Reprojection,
             [self.eachBeam, regLoop, self.xyPolar,
              self.snapTime, self.projFreqs, self.eachFacet],
             costs = self._costs_from_product(Products.Reprojection),
             deps = [facets],
-            cluster = 'backend'
+            cluster = 'backward'
         )
 
     def create_subtract(self, vis, model_vis):
         """ Subtracts model visibilities from measured visibilities """
 
         return Flow(
-            "Subtract",
+            Products.Subtract_Visibility,
             [self.eachBeam, self.eachLoop, self.xyPolar,
              self.snapTime, self.islandFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.Subtract_Visibility),
@@ -371,29 +378,34 @@ class Pipeline:
     def create_backward(self, vis, uvw):
         """ Creates dirty image from visibilities """
 
-        regLoop = self.eachLoop
-        fftFreqs = self.fftBackFreqs
+        # TODO: This product is for backward *and* forward!
+        rotate = Flow(
+            Products.PhaseRotation,
+            [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+             self.snapTime, self.islandFreqs, self.binBaselines],
+            costs = self._costs_from_product(Products.PhaseRotation),
+            deps = [vis], cluster = 'backward'
+        )
 
-        tp = self.tp
         gcf = Flow(
-            'Grid w-kernels',
-            [self.eachBeam, regLoop, self.xyPolar,
+            Products.Gridding_Kernel_Update,
+            [self.eachBeam, self.eachLoop, self.xyPolar,
              self.kernelBackTime, self.gcfBackFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.Gridding_Kernel_Update),
             deps = [uvw], cluster = 'backward',
         )
 
         grid = Flow(
-            'Grid',
-            [self.eachBeam, regLoop, self.eachFacet, self.xyPolar,
+            Products.Grid,
+            [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
              self.snapTime, self.backFreqs, self.binBaselines,
              self.backTaylor],
             costs = self._costs_from_product(Products.Grid),
-            deps = [vis, gcf], cluster = 'backward',
+            deps = [rotate, gcf], cluster = 'backward',
         )
 
         fft = Flow(
-            'FFT',
+            Products.FFT,
             # FIXME: eachLoop and xyPolar might be wrong?
             [self.eachBeam, self.eachLoop, self.eachFacet,
              self.xyPolar, self.snapTime, self.fftBackFreqs],
@@ -401,44 +413,53 @@ class Pipeline:
             deps = [grid], cluster = 'backward',
         )
 
-        return (fft, gcf, grid)
+        return fft
 
     def create_clean(self, dirty):
 
         # Skip for fast imaging
         if not Products.Subtract_Image_Component in self.tp.products:
-            return (None, None, dirty)
+            return dirty
 
         if self.tp.pipeline != Pipelines.DPrepA_Image:
             spectral_fit = dirty
         else:
             spectral_fit = Flow(
-                'Spectral Fitting',
+                Products.Image_Spectral_Fitting,
                 [self.eachBeam, self.eachLoop,
                  self.xyPolar, self.obsTime, self.eachTaylor],
                 costs = self._costs_from_product(Products.Image_Spectral_Fitting),
-                deps = [dirty], cluster = 'backend',
+                deps = [dirty], cluster = 'deconvolve',
             )
 
         identify =  Flow(
-            'Identify',
-            [self.eachBeam, self.eachLoop,
-             self.obsTime, self.allFreqs],
+            Products.Identify_Component,
+            [self.eachBeam, self.eachLoop],
             costs = self._costs_from_product(Products.Identify_Component),
             deps = [spectral_fit],
-            cluster = 'backend'
+            cluster = 'deconvolve'
         )
 
         subtract =  Flow(
-            'Subtract Component',
-            [self.eachBeam, self.eachLoop,
-             self.obsTime, self.allFreqs],
+            Products.Subtract_Image_Component,
+            [self.eachBeam, self.eachLoop],
             costs = self._costs_from_product(Products.Subtract_Image_Component),
-            deps = [dirty,identify],
-            cluster = 'backend'
+            deps = [identify],
+            cluster = 'deconvolve'
         )
+        identify.depend(subtract)
 
-        return (spectral_fit, identify, subtract)
+        # Is our result found sources?
+        if Products.Source_Find in self.tp.products:
+            return Flow(
+                Products.Source_Find,
+                [self.eachLoop],
+                costs = self._costs_from_product(Products.Source_Find),
+                deps = [identify], cluster='deconvolve',
+            )
+        else:
+            # Residual?
+            return subtract
 
     def create_update(self, lsm):
 
@@ -461,33 +482,30 @@ class Pipeline:
         # Visibilities from buffer, flagged
         vis = self.create_flagging(self.buf)
 
-        # Calibrate
-        vis_calibrated = self.create_calibrate(vis, lsm)[-1]
-
         # Predict
-        degrid = self.create_predict(uvws, lsm)[-1]
-        if self.tp.scale_predict_by_facet:
-            predVis = self.create_rotate(degrid, False)
-        else:
-            predVis = degrid
+        predict = self.create_predict(uvws, lsm)
+
+        # Calibrate
+        calibrated = self.create_calibrate(vis, predict)
 
         # Subtract
-        subtract = self.create_subtract(vis_calibrated, predVis)
+        subtract = self.create_subtract(calibrated, predict)
 
-        # Phase rotate
-        rotate = self.create_rotate(subtract, True)
+        # Image
+        dirty = self.create_backward(subtract, uvws)
 
-        # Intermediate loops
-        fftBack = self.create_backward(rotate, uvws)[0]
-        project = self.create_project(fftBack, self.eachLoop)
+        # Reproject
+        project = self.create_project(dirty, self.eachLoop)
+
+        # Clean
         if has_clean:
-            (_, _, clean) = self.create_clean(project)
+            clean = self.create_clean(project)
             lsm.depend(clean, 0)
             out = clean
         else:
             out = project
 
-        return out.recursiveDeps()
+        return out
 
     def create_pipeline(self):
 
@@ -524,6 +542,10 @@ class PipelineTestsBase(unittest.TestCase):
         product is undefined, the flow should be None.
         """
 
+        # Look up flow in dependencies
+        if not flow is None:
+            flow = flow.getDep(product)
+
         if product not in self.df.tp.products:
             # Product not defined? Make sure there's no node for it either
             fname = "" if flow is None else flow.name # ...
@@ -540,7 +562,7 @@ class PipelineTestsBase(unittest.TestCase):
                 float(self.df.tp.products[product]['Rout']),
                 delta = self.df.tp.products[product]['Rout'] / 1e10)
 
-    def _assertPipelineComplete(self, flows):
+    def _assertPipelineComplete(self, flow):
         """Checks whether the given flow has the same compute and transfer
         rate as the product in our telescope parameters. If the
         product is undefined, the flow should be None.
@@ -548,6 +570,7 @@ class PipelineTestsBase(unittest.TestCase):
 
         # Sort costs, match descending
         def flowCost(f): return -f.cost('compute')
+        flows = flow.recursiveDeps()
         flowsSorted = sorted(flows, key=flowCost)
         def productsCost((n,c)): return -c['Rflop']
         productsSorted = sorted(self.df.tp.products.items(), key=productsCost)
@@ -622,34 +645,25 @@ class PipelineTestsImaging(PipelineTestsBase):
         self.assertAlmostEqual(-rboxes.max(ntimeSize),
                                tp.Tkernel_backward(tp.Bmax_bins[-1]))
 
-    def test_ingest(self):
-        if self.df.tp.pipeline != Pipelines.Ingest: return
-        (ingest, rfi, demix, average, _) = self.df.create_ingest()
-        self._assertEqualProduct(ingest, Products.Receive)
-        self._assertEqualProduct(rfi, Products.Flag)
-        self._assertEqualProduct(demix, Products.Demix)
-        self._assertEqualProduct(average, Products.Average)
-
     def test_flag(self):
         if self.df.tp.pipeline == Pipelines.Ingest: return
         rfi = self.df.create_flagging(None)
         self._assertEqualProduct(rfi, Products.Flag)
 
-    def test_grid(self):
-        (fftPred, gcfPred, gridPred) = self.df.create_predict(None, None)
-        (fftBack, gcfBack, gridBack) = self.df.create_backward(None, None)
-        self._assertEqualProduct(fftBack, Products.FFT)
-        self._assertEqualProduct(fftPred, Products.IFFT)
-        self._assertEqualProduct(gridPred, Products.Degrid)
-        self._assertEqualProduct(gridBack, Products.Grid)
-        self._assertEqualProduct(gcfPred, Products.Degridding_Kernel_Update)
-        self._assertEqualProduct(gcfBack, Products.Gridding_Kernel_Update)
+    def test_predict(self):
+        predict = self.df.create_predict(None, None)
+        self._assertEqualProduct(predict, Products.DFT)
+        self._assertEqualProduct(predict, Products.IFFT)
+        self._assertEqualProduct(predict, Products.Degrid)
+        self._assertEqualProduct(predict, Products.Degridding_Kernel_Update)
+        self._assertEqualProduct(predict, Products.PhaseRotationPredict)
 
-    def test_rotate(self):
-        rotBack = self.df.create_rotate(None,backward=True)
-        rotPred = self.df.create_rotate(None,backward=False)
-        self._assertEqualProduct(rotBack, Products.PhaseRotation)
-        self._assertEqualProduct(rotPred, Products.PhaseRotationPredict)
+    def test_backward(self):
+        backward = self.df.create_backward(None, None)
+        self._assertEqualProduct(backward, Products.FFT)
+        self._assertEqualProduct(backward, Products.Grid)
+        self._assertEqualProduct(backward, Products.Gridding_Kernel_Update)
+        self._assertEqualProduct(backward, Products.PhaseRotation)
 
     def test_project(self):
         if Products.Reprojection in self.df.tp.products:
@@ -657,20 +671,20 @@ class PipelineTestsImaging(PipelineTestsBase):
             self._assertEqualProduct(proj, Products.Reprojection)
 
     def test_calibrate(self):
-        (source_find, dft, solve, app) = self.df.create_calibrate(None,None)
-        self._assertEqualProduct(source_find, Products.Source_Find)
-        self._assertEqualProduct(dft, Products.DFT)
-        self._assertEqualProduct(solve, Products.Solve)
+        calibrate = self.df.create_calibrate(None,None)
+        self._assertEqualProduct(calibrate, Products.Solve)
+        self._assertEqualProduct(calibrate, Products.Correct)
 
     def test_subtract(self):
         subtract = self.df.create_subtract(None, None)
         self._assertEqualProduct(subtract, Products.Subtract_Visibility)
 
     def test_clean(self):
-        (spectral_fit, identify, subtract) = self.df.create_clean(None)
-        self._assertEqualProduct(spectral_fit, Products.Image_Spectral_Fitting)
-        self._assertEqualProduct(identify, Products.Identify_Component)
-        self._assertEqualProduct(subtract, Products.Subtract_Image_Component)
+        clean = self.df.create_clean(None)
+        self._assertEqualProduct(clean, Products.Image_Spectral_Fitting)
+        self._assertEqualProduct(clean, Products.Identify_Component)
+        self._assertEqualProduct(clean, Products.Subtract_Image_Component)
+        self._assertEqualProduct(clean, Products.Source_Find)
 
     def test_imaging(self):
 
@@ -703,6 +717,12 @@ class PipelineTestsIngest(PipelineTestsBase):
         self._loadTelParams(Pipelines.Ingest)
 
     def test_ingest(self):
+
+        ingest = self.df.create_ingest()
+        self._assertEqualProduct(ingest, Products.Receive)
+        self._assertEqualProduct(ingest, Products.Flag)
+        self._assertEqualProduct(ingest, Products.Demix)
+        self._assertEqualProduct(ingest, Products.Average)
 
         # Check ingest pipeline
         self.assertEqual(self.df.tp.pipeline, Pipelines.Ingest)
