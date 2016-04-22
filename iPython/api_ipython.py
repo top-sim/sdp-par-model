@@ -83,7 +83,8 @@ class SkaIPythonAPI(api):
         ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
         ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
-        ('Visibilities total',         '1/s',        False,   False, lambda tp: tp.Nvis,              ),
+        ('Visibilities ingest',        '1/s',        False,   False, lambda tp: tp.Nvis_ingest,       ),
+        ('Visibilities averaged',      '1/s',        False,   False, lambda tp: tp.Nvis,              ),
         ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Nvis_predict,      ),
         ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Nvis_backward,     ),
 
@@ -170,7 +171,7 @@ class SkaIPythonAPI(api):
                  '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
                  '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
                  '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5']
-        return cat20[:len(rows)]
+        return (cat20 + cat20)[:len(rows)]
 
     @staticmethod
     def format_result(value):
@@ -250,7 +251,7 @@ class SkaIPythonAPI(api):
             if not isinstance(values_1[i], dict) and not isinstance(values_2[i], dict):
                 s += row(labels[i], values_1[i], values_2[i])
             else:
-                for name in set(values_1[i]).union(values_2[i]):
+                for name in sorted(set(values_1[i]).union(values_2[i])):
                     s += row(labels[i] + name, values_1[i].get(name, 0), values_2[i].get(name, 0))
 
         s += '</table>'
@@ -563,7 +564,7 @@ class SkaIPythonAPI(api):
         # Show comparison stacked bars
         products_1 = tels_result_values[0][-1]
         products_2 = tels_result_values[1][-1]
-        labels = set(products_1).union(products_2)
+        labels = sorted(set(products_1).union(products_2))
         colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
         blcoal_text = {True: ' (BLCOAL)', False: ' (no BLCOAL)'}
         otf_text = {True: ' (otf kernels)', False: ''}

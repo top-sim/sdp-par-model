@@ -7,7 +7,7 @@ from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinit
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
-from sympy import Lambda, FiniteSet
+from sympy import Lambda, FiniteSet, Function, Expr
 import warnings
 
 class SkaPythonAPI:
@@ -322,3 +322,80 @@ class SkaPythonAPI:
             result = SkaPythonAPI.evaluate_expression(expression, tp, tsnap, nfacet)
             results.append(result)
         return results
+
+    @staticmethod
+    def eval_products_symbolic(pipelineConfig, expression='Rflop', symbolify='product'):
+        """
+        Returns formulas for the given product property.
+        @param pipelineConfig: Pipeline configuration to use.
+        @param expression: Product property to query. FLOP rate by default.
+        @param symbolify: How aggressively sub-formulas should be replaced by symbols.
+        """
+
+        # Create symbol-ified telescope model
+        tp = imp.calc_tel_params(pipelineConfig, symbolify=symbolify)
+
+        # Collect equations and free variables
+        eqs = {}
+        for product in tp.products:
+            eqs[product] = tp.products[product].get(expression, 0)
+        return eqs
+
+    @staticmethod
+    def eval_symbols(pipelineConfig, symbols, recursive=False, symbolify=''):
+        """Returns formulas for the given symbol names. This can be used to
+        look up the definitions behind sympy Symbols returned by
+        eval_products_symbolic or this function.
+
+        The returned dictionary will contain an entry for all symbols
+        that we could look up sucessfully - this excludes symbols that
+        are not defined or have only a tautological definition ("sym =
+        sym").
+
+        @param pipelineConfig: Pipeline configuration to use.
+        @param symbols: Symbols to query
+        @param recursive: Look up free symbols in symbol definitions?
+        @param symbolify: How aggressively sub-formulas should be replaced by symbols.
+        """
+
+        # Create possibly symbol-ified telescope model
+        tp = imp.calc_tel_params(pipelineConfig, symbolify=symbolify)
+
+        # Create lookup map for symbols
+        symMap = {}
+        for name, v in tp.__dict__.iteritems():
+            symMap[tp._make_symbol_name(name)] = v
+
+        # Start collecting equations
+        eqs = {}
+        while len(symbols) > 0:
+            new_symbols = set()
+            for sym in symbols:
+                if str(sym) in eqs: continue
+
+                # Look up
+                if not symMap.has_key(str(sym)): continue
+                v = symMap[str(sym)]
+
+                # If the equation is "name = name", it is not defined at this level. Push back to next level
+                if str(v) == str(sym):
+                    continue
+                eqs[str(sym)] = v
+                if isinstance(v, Expr):
+                    new_symbols = new_symbols.union(SkaPythonAPI.collect_free_symbols([v]))
+            symbols = new_symbols
+        return eqs
+
+    @staticmethod
+    def collect_free_symbols(formulas):
+        """
+        Returns all free symbols in the given formulas. We always count
+        all functions as free.
+        @param formulas: Formulas to search for free symbols.
+        """
+
+        def free_f(expr):
+            return set(expr.free_symbols).union(
+                map(lambda f: f.func, expr.atoms(Function)))
+        return set().union(*map(free_f, formulas))
+
