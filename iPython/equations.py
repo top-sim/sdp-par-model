@@ -414,9 +414,11 @@ class Equations:
     def _apply_reprojection_equations(o):
         """ Re-Projection """
 
-        o.Nf_proj = o.Nf_FFT_backward
+        o.Nf_proj_predict = o.Nf_FFT_predict
+        o.Nf_proj_backward = o.Nf_FFT_backward
         if o.pipeline == Pipelines.DPrepA_Image:
-            o.Nf_proj = o.number_taylor_terms
+            o.Nf_proj_predict = o.number_taylor_terms
+            o.Nf_proj_backward = o.number_taylor_terms
 
          # (Consistent with PDR05 280115)
         if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
@@ -424,7 +426,13 @@ class Equations:
             Equations._set_product(
                 o, Products.Reprojection,
                 T = o.Tsnap,
-                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj * o.Nfacet**2,
+                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_backward * o.Nfacet**2,
+                Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
+                Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
+            Equations._set_product(
+                o, Products.ReprojectionPredict,
+                T = o.Tsnap,
+                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_predict * o.Nfacet**2,
                 Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
                 Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
 
@@ -516,7 +524,7 @@ class Equations:
             b = Symbol("b")
             Equations._set_product(o, Products.DFT,
                 T = o.Tsnap,
-                N = o.Nbeam * (o.Nselfcal + 1) * o.Nf_vis,
+                N = o.Nbeam * o.Nmajortotal * o.Nf_vis,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
                         / o.Tdump_scaled,
                 Rout = o.Mvis * o.Nvis / o.Nf_vis)
@@ -529,11 +537,10 @@ class Equations:
             # have 600 FMults . Ignore for the moment Theta_beam the
             # solution of these normal equations. This really is a
             # stopgap. We need an estimate for a non-linear solver.
-#            o.Rflop_source_find= 6 * 100 *o.Nselfcal*o.Nsource_find_iterations*o.rho_gsm*o.Theta_fov**2 / o.Tobs
             Equations._set_product(
                 o, Products.Source_Find,
                 T = o.Tobs,
-                N = (o.Nselfcal+1),
+                N = o.Nmajortotal,
                 Rflop = 6 * 100 * o.Nsource_find_iterations * o.Nsource / o.Tobs,
                 Rout = 100 * o.Mcpx # guessed
             )

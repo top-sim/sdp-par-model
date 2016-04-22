@@ -221,13 +221,14 @@ class Products:
     QA = 'QA'
     Receive = 'Receive'
     Reprojection = 'Reprojection'
+    ReprojectionPredict = 'Reprojection Predict'
     Select = 'Select'
     Solve = 'Solve'
     Source_Find = 'Source Find'
     Subtract_Visibility = 'Subtract Visibility'
     Subtract_Image_Component = 'Subtract Image Component'
     Update_LSM = 'Update LSM'
-    Visibility_Weighting = 'Visibility_Weighting'
+    Visibility_Weighting = 'Visibility Weighting'
 
 class Pipelines:
     """

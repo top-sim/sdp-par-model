@@ -67,7 +67,8 @@ class Pipeline:
             lambda rbox: tp.Nf_gcf_backward(rbox(self.baseline,'bmax')))
         self.fftPredFreqs = self.allFreqs.split(tp.Nf_FFT_predict)
         self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward)
-        self.projFreqs = self.allFreqs.split(tp.Nf_proj)
+        self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict)
+        self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward)
 
         # Make beam domain
         self.beam = Domain('Beam')
@@ -294,7 +295,7 @@ class Pipeline:
 
         return Flow(
             Products.DFT,
-            [self.eachBeam, self.eachSelfCal, self.xyPolars,
+            [self.eachBeam, self.eachLoop, self.xyPolars,
              self.snapTime, self.visFreq],
             costs = self._costs_from_product(Products.DFT),
             deps = [sources], cluster='predict',
@@ -309,6 +310,19 @@ class Pipeline:
         else:
             predictFacets = self.allFacets
 
+        # Reproject to generate model image
+        if Products.ReprojectionPredict in self.tp.products:
+            modelImage = Flow(
+                Products.ReprojectionPredict,
+                [self.eachBeam, self.eachLoop, self.xyPolar,
+                 self.snapTime, self.projPredFreqs, self.eachFacet],
+                costs = self._costs_from_product(Products.ReprojectionPredict),
+                deps = [sources],
+                cluster = 'predict'
+            )
+        else:
+            modelImage = sources
+
         # FFT to make a uv-grid
         fft = Flow(
             Products.IFFT,
@@ -316,7 +330,7 @@ class Pipeline:
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
              self.snapTime, self.fftPredFreqs],
             costs = self._costs_from_product(Products.IFFT),
-            deps = [sources], cluster='predict',
+            deps = [modelImage], cluster='predict',
         )
 
         # Degrid
@@ -348,7 +362,7 @@ class Pipeline:
         else:
             return degrid
 
-    def create_project(self, facets, regLoop):
+    def create_project(self, facets):
         """ Reprojects facets so they can be seen as part of the same image plane """
 
         # No reprojection?
@@ -357,8 +371,8 @@ class Pipeline:
 
         return Flow(
             Products.Reprojection,
-            [self.eachBeam, regLoop, self.xyPolar,
-             self.snapTime, self.projFreqs, self.eachFacet],
+            [self.eachBeam, self.eachLoop, self.xyPolar,
+             self.snapTime, self.projBackFreqs, self.eachFacet],
             costs = self._costs_from_product(Products.Reprojection),
             deps = [facets],
             cluster = 'backward'
@@ -491,7 +505,7 @@ class Pipeline:
         dirty = self.create_backward(flagged, self.uvw)
 
         # Reproject
-        project = self.create_project(dirty, self.eachLoop)
+        project = self.create_project(dirty)
 
         # Clean
         if has_clean:
@@ -648,6 +662,7 @@ class PipelineTestsImaging(PipelineTestsBase):
 
     def test_predict(self):
         predict = self.df.create_predict(None, None)
+        self._assertEqualProduct(predict, Products.ReprojectionPredict)
         self._assertEqualProduct(predict, Products.DFT)
         self._assertEqualProduct(predict, Products.IFFT)
         self._assertEqualProduct(predict, Products.Degrid)
@@ -663,7 +678,7 @@ class PipelineTestsImaging(PipelineTestsBase):
 
     def test_project(self):
         if Products.Reprojection in self.df.tp.products:
-            proj = self.df.create_project(None, self.df.eachLoop)
+            proj = self.df.create_project(None)
             self._assertEqualProduct(proj, Products.Reprojection)
 
     def test_calibrate(self):
