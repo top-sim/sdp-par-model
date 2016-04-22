@@ -139,7 +139,7 @@ class Pipeline:
         self.corr = Flow(
             'Correlator',
             [self.allBeams, self.dumpTime,
-             self.eachFreq, self.xyPolars, self.allBaselines],
+             self.eachFreq, self.xyPolar, self.allBaselines],
             cluster = 'interface',
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)})
 
