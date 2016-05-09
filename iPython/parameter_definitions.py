@@ -262,39 +262,59 @@ class HPSOs:
     hpso_max_Mid_s = 'max_MID_spectral'
     hpso_max_band5_Mid_c = 'max_Band5_MID_continuum'
     hpso_max_band5_Mid_s = 'max_Band5_MID_spectral'
-    hpso01 = '01'
-    hpso01c = '01c'
-    hpso01s = '01s'
-    hpso02A = '02A'
-    hpso02B = '02B'
-    hpso13 = '13'
-    hpso13c = '13c'  # Continuum component of HPSO 13
-    hpso13s = '13s'  # Spectral component of HPSO 13
-#    hpso14 = '14'   # Not defined
-    hpso14c = '14c'  # Continuum component of HPSO 14
-    hpso14s = '14s'  # Spectral  component of HPSO 14
-    hpso14sfull = '14sfull'
-    hpso15 = '15'
-    hpso15c = '15c'  # Continuum component of HPSO 15
-    hpso15s = '15s'  # Spectral  component of HPSO 15
-    hpso19 = '19'
-    hpso22 = '22'
-    hpso27 = '27'
-    hpso33 = '33'
-    hpso35 = '35'
-    hpso37a = '37a'
-    hpso37b = '37b'
-    hpso37c = '37c'
-    hpso38a = '38a'
-    hpso38b = '38b'
+    hpso01ICAL = '01ICAL'
+    hpso01DPrepA = '01DPrepA'
+    hpso01DPrepB = '01DPrepB'
+    hpso01DPrepC = '01DPrepC'
+    hpso02AICAL = '02AICAL'
+    hpso02ADprepA = '02ADPrepA'
+    hpso02ADPrepB = '02ADPrepB'
+    hpso02ADPrepC = '02ADPrepC'
+    hpso02BICAL = '02BICAL'
+    hpso02BDPrepA = '02BDPrepA'
+    hpso02BDPrepB = '02BDPrepB'
+    hpso02BDPrepC = '02BDPrepC'
+    hpso13ICAL = '13ICAL'
+    hpso13DPrepA = '13DPrepA'
+    hpso13DPrepB = '13DPrepB'
+    hpso13DPrepC = '13DPrepC'
+    hpso14ICAL = '14ICAL'
+    hpso14DPrepA = '14DPrepA'
+    hpso14DPrepB = '14DPrepB'
+    hpso14DPrepC = '14DPrepC'
+    hpso15ICAL = '15ICAL'
+    hpso15DPrepA = '15DPrepA'
+    hpso15DPrepB = '15DPrepB'
+    hpso15DPrepC = '15DPrepC'
+    hpso22ICAL = '22ICAL'
+    hpso22DprepA = '22DPrepA'
+    hpso22DprepB = '22DPrepB'
+    hpso27ICAL = '27ICAL'
+    hpso27DPrepA = '27DPrepA'
+    hpso27DPrepB = '27DPrepB'
+    hpso37aICAL = '37aICAL'
+    hpso37aDprepA = '37aDPrepA'
+    hpso37aDprepB = '37aDPrepB'
+    hpso37bICAL = '37bICAL'
+    hpso37bDprepA = '37bDPrepA'
+    hpso37bDprepB = '37bDPrepB'
+    hpso37cICAL = '37cICAL'
+    hpso37cDPrepA = '37cDPrepA'
+    hpso37cDPrepB = '37cDPrepB'
+    hpso38aICAL = '38aICAL'
+    hpso38aDPrepA = '38aDPrepA'
+    hpso38aDPrepB = '38aDPrepB'
+    hpso38bICAL = '38bICAL'
+    hpso38bDPrepA = '38bDPrepA'
+    hpso38bDPrepB = '38bDPrepB'
 
     # group the HPSOs according to which telescope they refer to
-    hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B}
-    hpsos_using_SKA1Mid = {hpso19, hpso22, hpso37a, hpso37b, hpso38a,
-                           hpso38b, hpso14c, hpso14s, hpso14sfull}
-    hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
+    #    hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B}
+    #hpsos_using_SKA1Mid = {hpso19, hpso22, hpso37a, hpso37b, hpso38a,
+#hpso38b, hpso14c, hpso14s, hpso14sfull}
+    #hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27c, hpso27s, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
     # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
-    hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
+#hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
 
 
 class ParameterDefinitions:
@@ -916,9 +936,31 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 6 * 3600.0  # sec
             o.Tpoint = 6 * 3600.0  # sec
-        elif hpso == HPSOs.hpso01c:
+        elif hpso == HPSOs.hpso01ICAL:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0
+            o.Nf_max = 65536
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso01DPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0
+            o.Nf_max = 65536
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso01DPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -928,7 +970,8 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso01s:
+            o.Npp=4
+        elif hpso == HPSOs.hpso01DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepC
             o.freq_min = 50e6
@@ -940,7 +983,19 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso02A:
+            o.Npp=4
+        elif hpso == HPSOs.hpso02AICAL:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max    = 65536
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 100 * 3600.0  # sec
+        elif hpso == HPSOs.hpso02ADprepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA
             o.freq_min = 50e6
@@ -948,13 +1003,73 @@ class ParameterDefinitions:
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max    = 65536
-            o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
-        elif hpso == HPSOs.hpso02B:
+        elif hpso == HPSOs.hpso02ADPrepB:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.DPrepB
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max    = 65536
+            o.Nf_out = 500  # 500 channel pseudo continuum output
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 100 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso02ADPrepC:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepC
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max    = 65536
+            o.Nf_out = 1500  # 1500 channels in output
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 100 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso02BICAL:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 10 * 3600.0  # sec
+        elif hpso == HPSOs.hpso02BDPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 10 * 3600.0  # sec
+        elif hpso == HPSOs.hpso02BDPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepB
+            o.freq_min = 50e6
+            o.freq_max = 200e6
+            o.Nbeam = 2  # using 2 beams as per HPSO request...
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 500  # 500 channel pseudo continuum
+            o.Bmax = 80000  # m
+            o.Texp = 2500 * 3600.0  # sec
+            o.Tpoint = 10 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso02BDPrepC:
+            o.set_param('telescope', Telescopes.SKA1_Low)
+            o.pipeline = Pipelines.DPrepC
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -964,19 +1079,44 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-        elif hpso == HPSOs.hpso13c:
+            o.Npp=4
+        elif hpso == HPSOs.hpso13ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
             o.comment = 'HI, limited BW'
             o.freq_min = 790e6
             o.freq_max = 950e6
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 41000  #41k comes from assuming 3.9kHz width over 790-950MHz
-            o.Nf_out = 500
-            o.Bmax = 150000 # 40000  # m
+            o.Bmax = 40000  # m
             o.Texp = 5000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso13s:
+        elif hpso == HPSOs.hpso13DPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
+            o.pipeline = Pipelines.DPrepA_Image
+            o.comment = 'HI, limited BW'
+            o.freq_min = 790e6
+            o.freq_max = 950e6
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 41000  #41k comes from assuming 3.9kHz width over 790-950MHz
+            #o.Nf_out = 500
+            o.Bmax = 40000  # m
+            o.Texp = 5000 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso13DPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
+            o.pipeline = Pipelines.DPrepB
+            o.comment = 'HI, limited BW'
+            o.freq_min = 790e6
+            o.freq_max = 950e6
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 500 #500 channel pseudo continuum
+            o.Bmax = 40000  # m
+            o.Texp = 5000 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso13DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepC
             o.comment = 'HI, limited BW'
@@ -988,19 +1128,43 @@ class ParameterDefinitions:
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso14c:
+            o.Npp=4
+        elif hpso == HPSOs.hpso14ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
             o.comment = 'HI'
             o.freq_min = 1.2e9
             o.freq_max = 1.5e9 #Increase freq range to give >1.2 ratio for continuum
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536  #
             o.Nf_out = 500
-            o.Bmax = 150000  # m
+            o.Bmax = 25000  # m (25km set by experiment)
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-        elif hpso == HPSOs.hpso14s:
+        elif hpso == HPSOs.hpso14DPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.comment = 'HI'
+            o.freq_min = 1.2e9
+            o.freq_max = 1.5e9 #Increase freq range to give >1.2 ratio for continuum
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536  #
+            o.Bmax = 25000  # m (25km set by experiment)
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 10 * 3600.0  # sec
+        elif hpso == HPSOs.hpso14DPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
+            o.comment = 'HI'
+            o.freq_min = 1.2e9
+            o.freq_max = 1.5e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 100  # 300 channel pseudo continuum (small BW)
+            o.Bmax = 25000  # m
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 10 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso14DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepC
             o.comment = 'HI'
@@ -1008,23 +1172,48 @@ class ParameterDefinitions:
             o.freq_max = 1.4e9
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 5000  # Only 5,000 spectral line channels.
-            o.Bmax = 150000  # m
+            o.Bmax = 25000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-        elif hpso == HPSOs.hpso15c:
+            o.Npp=4
+        elif hpso == HPSOs.hpso15ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
             o.comment = 'HI, limited spatial resolution'
             o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
             o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
             o.Tobs = 4.4 * 3600.0  # sec
             o.Nf_max = 65536
             o.Nf_out = 500
-            o.Bmax = 150000 #13000  # m
+            o.Bmax = 15000 #13000  # m (Experiment needs 13, use 15 (round up to nearest 5km) for ICAL as part of Science roll out work)
             o.Texp = 12600 * 3600.0  # sec
             o.Tpoint = 4.4 * 3600.0  # sec
-            o.Nmajor=10
-        elif hpso == HPSOs.hpso15s:
+        elif hpso == HPSOs.hpso15DPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
+            o.pipeline = Pipelines.DPrepA_Image
+            o.comment = 'HI, limited spatial resolution'
+            o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
+            o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
+            o.Tobs = 4.4 * 3600.0  # sec
+            o.Nf_max = 65536
+            #o.Nf_out = 500
+            o.Bmax = 15000  # m (matched for experiment)
+            o.Texp = 12600 * 3600.0  # sec
+            o.Tpoint = 4.4 * 3600.0  # sec
+        elif hpso == HPSOs.hpso15DPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
+            o.pipeline = Pipelines.DPrepB
+            o.comment = 'HI, limited spatial resolution'
+            o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
+            o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
+            o.Tobs = 4.4 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 300 # 300 channels pseudo continuum
+            o.Bmax = 15000  # m (matched for experiment)
+            o.Texp = 12600 * 3600.0  # sec
+            o.Tpoint = 4.4 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso15DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepC
             o.comment = 'HI, limited spatial resolution'
@@ -1032,10 +1221,21 @@ class ParameterDefinitions:
             o.freq_max = 1.425e9
             o.Tobs = 4.4 * 3600.0  # sec
             o.Nf_max = 2500  # Only 2,500 spectral line channels.
-            o.Bmax = 13000  # m
+            o.Bmax = 15000  # m (for experinemt)
             o.Texp = 12600 * 3600.0  # sec
             o.Tpoint = 4.4 * 3600.0  # sec
-        elif hpso == HPSOs.hpso22:
+            o.Npp=4
+        elif hpso == HPSOs.hpso22ICAL:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.ICAL
+            o.comment = 'Cradle of life'
+            o.freq_min = 10e9
+            o.freq_max = 12e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 6000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso22DprepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA
             o.comment = 'Cradle of life'
@@ -1043,35 +1243,80 @@ class ParameterDefinitions:
             o.freq_max = 12e9
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536
-            o.Nf_out = 5000  # 4000 channel continuum observation - band 5.
             o.Bmax = 150000  # m
             o.Texp = 6000 * 3600.0  # sec
             o.Tpoint = 600 * 3600.0  # sec
-        elif hpso == HPSOs.hpso27:
+            o.Tpoint = 600 * 3600.0  # sec
+        elif hpso == HPSOs.hpso22DprepB:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.DPrepB
+            o.comment = 'Cradle of life'
+            o.freq_min = 10e9
+            o.freq_max = 12e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 500  # 500 channel continuum observation - band 5.
+            o.Bmax = 150000  # m
+            o.Texp = 6000 * 3600.0  # sec
+            o.Tpoint = 600 * 3600.0  # sec
+            o.Tpoint = 600 * 3600.0  # sec
+            o.Npp=4
+        elif hpso == HPSOs.hpso27ICAL:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 1.0e9
+            o.freq_max = 1.5e9
+            o.Tobs = 0.123 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 50000  # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 0.123 * 3600.0  # sec
+        elif hpso == HPSOs.hpso27DPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 1.0e9
+            o.freq_max = 1.5e9
+            o.Tobs = 0.123 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 50000  # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 0.123 * 3600.0  # sec
+        elif hpso == HPSOs.hpso27DPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 1.0e9
             o.freq_max = 1.5e9
             o.Tobs = 0.123 * 3600.0  # sec
             o.Nf_max = 65536
             o.Nf_out = 500 # continuum experiment with 500 output channels
-            o.Bmax = 150000 #50000  # m
+            o.Bmax = 50000  # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 0.123 * 3600.0  # sec
-        elif hpso == HPSOs.hpso33:
-            o.set_param('telescope', Telescopes.SKA1_Mid) #WAS SURVEY: UPDATED
-            o.pipeline = Pipelines.DPrepA
-            o.freq_min = 1.0e9
-            o.freq_max = 1.5e9
-            o.Tobs = 0.123 * 3600.0  # sec
-            o.Nf_max = 65536
-            o.Nf_out = 500  # continuum experiment with 500 output channels
-            o.Bmax = 150000 #50000  # m
-            o.Texp = 10000 * 3600.0  # sec
-            o.Tpoint = 0.123 * 3600.0  # sec
-        elif hpso == HPSOs.hpso37a:
+            o.Npp=4
+        elif hpso == HPSOs.hpso37aICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 500  # 700 channels required in output continuum cubes
+            o.Bmax = 150000  # m
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 95 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37aDprepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 95 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37aDprepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 1e9
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600.0  # sec
@@ -1080,9 +1325,30 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
-        elif hpso == HPSOs.hpso37b:
+            o.Npp=4
+        elif hpso == HPSOs.hpso37bICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 2000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37bDprepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 2000 * 3600.0  # sec
+            o.Tpoint = 2000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37bDprepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 1e9
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600.0  # sec
@@ -1091,20 +1357,62 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 2000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso37c:
+            o.Npp=4
+        elif hpso == HPSOs.hpso37cICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
             o.freq_min = 1e9
-            o.freq_max = 1.5e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000 # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 95 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37cDPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000 # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 95 * 3600.0  # sec
+        elif hpso == HPSOs.hpso37cDPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
+            o.freq_min = 1e9
+            o.freq_max = 1.7e9
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536
             o.Nf_out = 700 # 700 channels in output cube
-            o.Bmax = 150000 #93000  # m
+            o.Bmax = 150000 ## m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
-        elif hpso == HPSOs.hpso38a:
+            o.Npp=4
+        elif hpso == HPSOs.hpso38aICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 7e9
+            o.freq_max = 11e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 1000 * 3600.0  # sec
+            o.Tpoint = 16.4 * 3600.0  # sec
+        elif hpso == HPSOs.hpso38aDPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 7e9
+            o.freq_max = 11e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 1000 * 3600.0  # sec
+            o.Tpoint = 16.4 * 3600.0  # sec
+        elif hpso == HPSOs.hpso38aDPrepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600.0  # sec
@@ -1113,9 +1421,30 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 16.4 * 3600.0  # sec
-        elif hpso == HPSOs.hpso38b:
+            o.Npp=4
+        elif hpso == HPSOs.hpso38bICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 7e9
+            o.freq_max = 11e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 1000 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso38bDPrepA:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepA_Image
+            o.freq_min = 7e9
+            o.freq_max = 11e9
+            o.Tobs = 6 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Bmax = 150000  # m
+            o.Texp = 1000 * 3600.0  # sec
+            o.Tpoint = 1000 * 3600.0  # sec
+        elif hpso == HPSOs.hpso38bDprepB:
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
             o.freq_min = 7e9
             o.freq_max = 11e9
             o.Tobs = 6 * 3600.0  # sec
@@ -1124,6 +1453,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
+            o.Npp=4
         else:
             raise Exception('Unknown HPSO %s!' % hpso)
 
