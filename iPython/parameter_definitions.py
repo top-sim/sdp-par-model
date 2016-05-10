@@ -997,7 +997,7 @@ class ParameterDefinitions:
             o.Tpoint = 100 * 3600.0  # sec
         elif hpso == HPSOs.hpso02ADprepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
-            o.pipeline = Pipelines.DPrepA
+            o.pipeline = Pipelines.DPrepA_Image
             o.freq_min = 50e6
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -1235,6 +1235,7 @@ class ParameterDefinitions:
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6000 * 3600.0  # sec
+            o.Tpoint = 600 * 3600.0  # sec
         elif hpso == HPSOs.hpso22DprepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA
@@ -1245,7 +1246,6 @@ class ParameterDefinitions:
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6000 * 3600.0  # sec
-            o.Tpoint = 600 * 3600.0  # sec
             o.Tpoint = 600 * 3600.0  # sec
         elif hpso == HPSOs.hpso22DprepB:
             o.set_param('telescope', Telescopes.SKA1_Mid)
@@ -1442,7 +1442,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-        elif hpso == HPSOs.hpso38bDprepB:
+        elif hpso == HPSOs.hpso38bDPrepB:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepB
             o.freq_min = 7e9
