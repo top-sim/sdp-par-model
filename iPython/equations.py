@@ -623,7 +623,7 @@ class Equations:
             Equations._set_product_blsum(
                 o, Products.PhaseRotationPredict, b=b,
                 T = o.Tsnap,
-                N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels,
+                N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels * o.Ntaylor_predict,
                 Rflop = 25 * o.Nfacet**2 * o.Nvis / o.nbaselines / o.minimum_channels,
                 Rout = o.Mvis * o.Nvis / o.nbaselines / o.minimum_channels)
 

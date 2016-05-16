@@ -356,7 +356,8 @@ class Pipeline:
             return Flow(
                 Products.PhaseRotationPredict,
                 [self.eachBeam, self.eachLoop, self.allFacets, self.xyPolar,
-                 self.snapTime, self.islandFreqs, self.binBaselines],
+                 self.snapTime, self.islandFreqs, self.binBaselines,
+                 self.predTaylor],
                 costs = self._costs_from_product(Products.PhaseRotationPredict),
                 deps = [degrid], cluster = 'predict'
             )
