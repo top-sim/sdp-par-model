@@ -255,7 +255,7 @@ class Pipeline:
         app = Flow(
             Products.Correct,
             [self.snapTime, self.islandFreqs, self.eachBeam,
-             self.allLoops, self.xyPolar],
+             self.eachLoop, self.xyPolar],
             deps = [vis, calibration], cluster='calibrate',
             costs = self._costs_from_product(Products.Correct)
         )

@@ -358,7 +358,7 @@ class Equations:
         if not o.pipeline == Pipelines.Ingest:
             Equations._set_product(
                 o, Products.Correct,
-                T = o.Tsnap, N = o.Nbeam*o.Npp * o.minimum_channels,
+                T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.minimum_channels,
                 Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels,
                 Rout = o.Mvis * o.Nvis / o.minimum_channels)
 
