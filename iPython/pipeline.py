@@ -30,7 +30,7 @@ class Pipeline:
         self.allBaselines = self.baseline.regions(usedBls)
         if isinstance(tp.Bmax_bins, Symbol):
             b = Symbol("b")
-            self.binBaselines = self.allBaselines.split(tp.nbaselines, sym_props={
+            self.binBaselines = self.allBaselines.split(tp.nbaselines, props={
                 'bmax': Lambda(b, Symbol("B_max")(b)),
                 'size': 1
             })
@@ -85,8 +85,9 @@ class Pipeline:
         # Make (major) loop domain
         self.loop = Domain('Major Loop')
         self.allLoops = self.loop.regions(tp.Nmajortotal)
-        self.eachSelfCal = self.allLoops.split(tp.Nselfcal + 1)
         self.eachLoop = self.allLoops.split(tp.Nmajortotal)
+        self.allSelfCals = self.loop.regions(tp.Nselfcal + 1)
+        self.eachSelfCal = self.allSelfCals.split(tp.Nselfcal + 1)
 
         # Make facet domain
         self.facet = Domain('Facet')
@@ -267,7 +268,7 @@ class Pipeline:
         # Extract relevant components from LSM
         extract = Flow(
             Products.Extract_LSM,
-            [self.eachBeam],
+            [self.eachBeam, self.eachLoop],
             costs = self._costs_from_product(Products.Extract_LSM),
             deps = [model], cluster='predict',
         )
@@ -280,7 +281,7 @@ class Pipeline:
         add = Flow(
             "Sum visibilities",
             [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.binBaselines,
+             self.snapTime, self.islandFreqs, self.allBaselines,
              self.predTaylor],
             deps = [dft, degrid], cluster='predict',
             costs = {
@@ -296,7 +297,7 @@ class Pipeline:
         return Flow(
             Products.DFT,
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.visFreq],
+             self.snapTime, self.visFreq, self.allBaselines],
             costs = self._costs_from_product(Products.DFT),
             deps = [sources], cluster='predict',
         )
