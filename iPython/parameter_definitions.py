@@ -353,7 +353,7 @@ class ParameterDefinitions:
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
         o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
         o.Mpx = 8.0  # Memory size of an image pixel in bytes
-        o.Mcpx = 8.0  # Memory size of a complex grid pixel in bytes
+        o.Mcpx = 16.0  # Memory size of a complex grid pixel in bytes
         o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
         o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
