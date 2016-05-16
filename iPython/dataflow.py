@@ -29,7 +29,7 @@ class Domain:
         self.name = name
         self.unit = unit
 
-    def __str__(self):
+    def __repr__(self):
         return '<Domain %s>' % self.name
 
     def regions(self, size, props = {}):
@@ -47,6 +47,9 @@ class Regions:
         self.size = size
         self.count = mk_lambda(count)
         self.props = props
+
+    def __repr__(self):
+        return '<Regions %d x %s>' % (self.size, self.domain.name)
 
     def split(self, split, props = {}):
         return Regions(self.domain, self.size,
@@ -185,6 +188,11 @@ class RegionBox:
         self.regionBoxes = regionBoxes
         self.domainProps = domainProps
         self.symbols = {}
+
+    def __repr__(self):
+        return '<RegionBox %s %s>' % (
+            ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.iterkeys())),
+            repr(self.domainProps))
 
     def __call__(self, domain, prop):
 
@@ -349,7 +357,7 @@ class RegionBox:
         else:
             return rcount * int((lcount + rcount - 1) / rcount)
 
-    def _zipSum(lbox, rbox, commonDoms, leftDoms, rightDoms, f):
+    def _zipSum(lbox, rbox, commonDoms, leftDoms, rightDoms, f, verbose):
         """Return sum of function, applied to all pairs of edges between
         individual region boxes between lbox and rbox.
         """
@@ -359,6 +367,7 @@ class RegionBox:
         mult = 1
         for dom in commonDoms:
             m = lbox._edgeMult(rbox, dom)
+            if verbose: print "common", dom, m
             mult *= m
             if mult == 0: return 0
 
@@ -367,9 +376,13 @@ class RegionBox:
         for dom in leftDoms:
             if not dom in lbox.regionBoxes.enumDomains:
                 mult *= lbox(dom, COUNT_PROP)
+                if verbose: print "left", dom, lbox(dom, COUNT_PROP)
         for dom in rightDoms:
             if not dom in rbox.regionBoxes.enumDomains:
                 mult *= rbox(dom, COUNT_PROP)
+                if verbose: print "right", dom, rbox(dom, COUNT_PROP)
+
+        if verbose: print "-> mult:", mult
 
         # Okay, now call and multiply
         return mult * f(lbox, rbox)
@@ -486,7 +499,7 @@ class RegionBox:
 
         return count
 
-    def _zipCrossSum(lbox, rbox, cbox, commonDoms, leftDoms, rightDoms, f):
+    def _zipCrossSum(lbox, rbox, cbox, commonDoms, leftDoms, rightDoms, f, verbose):
         """Return sum of function, applied to all pairs of edges between
         individual region boxes between lbox and rbox that start in a
         different region of the cross domain than they end in.
@@ -522,8 +535,10 @@ class RegionBox:
             # appear in the cross domains, it means no edges cross.
             if dom in cross_doms:
                 cm = lbox._edgeCrossMult(rbox, cbox, dom)
+                if verbose: print "Common cross", dom, ":", (m, cm)
             else:
                 cm = 0
+                if verbose: print "Common non-cross", dom, ":", (m, cm)
             mults.append((m,cm))
 
         # Domains on only one side: Edge multiplier is given by region
@@ -534,22 +549,26 @@ class RegionBox:
         for dom in leftDoms:
             if dom in cross_doms:
                 m = cm = lbox._edgeCrossMultOneSided(cbox, dom)
+                if verbose: print "Left cross ", dom, ":", (m, cm)
             else:
                 if dom in lbox.regionBoxes.enumDomains:
                     m = 1
                 else:
                     m = lbox(dom, COUNT_PROP)
                 cm = 0
+                if verbose: print "Left non-cross ", dom, ":", (m, cm)
             mults.append((m,cm))
         for dom in rightDoms:
             if dom in cross_doms:
                 m = cm = rbox._edgeCrossMultOneSided(cbox, dom)
+                if verbose: print "Right cross ", dom, ":", (m, cm)
             else:
                 if dom in rbox.regionBoxes.enumDomains:
                     m = 1
                 else:
                     m = rbox(dom, COUNT_PROP)
                 cm = 0
+                if verbose: print "Right non-cross ", dom, ":", (m, cm)
             mults.append((m,cm))
 
         # Multiply out. It is easiest to achieve this by determining
@@ -751,10 +770,10 @@ class RegionBoxes:
                 s = Max(s, box.the(prop))
         return s
 
-    def zipSum(left, right, f):
+    def zipSum(left, right, f, verbose=False):
         return left._withEnums(lambda: right._withEnums(
-            lambda: left._zipSum(right, f)))
-    def _zipSum(left, right, f):
+            lambda: left._zipSum(right, f, verbose)))
+    def _zipSum(left, right, f, verbose):
         """Return sum of function, applied to all edges from one region box
         set to another. An edge exists between two region boxes if all
         domains that exist on both sides agree. Agreement means 
@@ -777,13 +796,13 @@ class RegionBoxes:
         result = 0
         for lbox in left.boxes:
             for rbox in right.boxes:
-                result += lbox._zipSum(rbox, commonDoms, leftDoms, rightDoms, f)
+                result += lbox._zipSum(rbox, commonDoms, leftDoms, rightDoms, f, verbose)
         return result
 
-    def zipCrossSum(left, right, cross, f):
+    def zipCrossSum(left, right, cross, f, verbose=False):
         return left._withEnums(lambda: right._withEnums(
-            lambda: left._zipCrossSum(right, cross, f)))
-    def _zipCrossSum(left, right, cross, f):
+            lambda: left._zipCrossSum(right, cross, f, verbose)))
+    def _zipCrossSum(left, right, cross, f, verbose):
 
         # Classify domains
         leftDoms = []
@@ -798,12 +817,18 @@ class RegionBoxes:
             if not left.regionsMap.has_key(dom):
                 rightDoms.append(dom)
 
+        if verbose:
+            print "Left doms:", leftDoms
+            print "Right doms:", rightDoms
+            print "Common doms:", commonDoms
+            print "Cross doms:", cross.regionsMap.keys()
+
         # Sum up result of zip
         result = 0
         for cbox in cross.boxes:
             for lbox in left.boxes:
                 for rbox in right.boxes:
-                    result += lbox._zipCrossSum(rbox, cbox, commonDoms, leftDoms, rightDoms, f)
+                    result += lbox._zipCrossSum(rbox, cbox, commonDoms, leftDoms, rightDoms, f, verbose)
         return result
 
 class Flow:
@@ -888,7 +913,7 @@ class Flow:
 
 def flowsToDot(root, t, computeSpeed=None,
                graph_attr={}, node_attr={'shape':'box'}, edge_attr={},
-               cross_regs=None):
+               cross_regs=None, quiet = False):
 
     # Get root flow dependencies
     flows = root.recursiveDeps()
@@ -927,37 +952,39 @@ def flowsToDot(root, t, computeSpeed=None,
 
             # Add relevant regions
             def regName(r): return r.domain.name
-            for region in sorted(flow.regions(), key=regName):
-                count = flow.max(lambda rb: rb(region.domain, 'count'))
-                size = flow.max(lambda rb: rb(region.domain, 'size'))
-                if count == 1 and size == 1:
-                    continue
-                text += "\n%s: %d x %g %s" % \
-                        (region.domain.name,
-                         flow.max(lambda rb: rb(region.domain, 'count')),
-                         flow.max(lambda rb: rb(region.domain, 'size')),
-                         region.domain.unit)
+            if not quiet:
+                for region in sorted(flow.regions(), key=regName):
+                    count = flow.max(lambda rb: rb(region.domain, 'count'))
+                    size = flow.max(lambda rb: rb(region.domain, 'size'))
+                    if count == 1 and size == 1:
+                        continue
+                    text += "\n%s: %d x %g %s" % \
+                            (region.domain.name,
+                             flow.max(lambda rb: rb(region.domain, 'count')),
+                             flow.max(lambda rb: rb(region.domain, 'size')),
+                             region.domain.unit)
 
             # Add compute count
-            count = flow.count()
-            if count != 1:
-                if count < t:
-                    text += "\nTasks: %d" % (count)
-                else:
-                    text += "\nTask Rate: %d 1/s" % (count/t)
-            try:
-                compute = flow.cost('compute')
-                transfer = flow.cost('transfer')
-            except:
-                print
-                print "Exception raised while determining cost for '" + flow.name + "':"
-                raise
-            if compute > 0 and computeSpeed is not None:
-                text += "\nTime: %.2g s/task" % (compute/count/computeSpeed)
-            if compute > 0:
-                text += "\nFLOPs: %.2f TOP/s" % (compute/t/Constants.tera)
-            if transfer > 0:
-                text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
+            if not quiet:
+                count = flow.count()
+                if count != 1:
+                    if count < t:
+                        text += "\nTasks: %d" % (count)
+                    else:
+                        text += "\nTask Rate: %d 1/s" % (count/t)
+                try:
+                    compute = flow.cost('compute')
+                    transfer = flow.cost('transfer')
+                except:
+                    print
+                    print "Exception raised while determining cost for '" + flow.name + "':"
+                    raise
+                if compute > 0 and computeSpeed is not None:
+                    text += "\nRuntime: %.2g s/task" % (compute/count/computeSpeed)
+                if compute > 0:
+                    text += "\nFLOPs: %.2f TOP/s" % (compute/t/Constants.tera)
+                if transfer > 0:
+                    text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
 
             attrs = flow.attrs
             graph.node(flowIds[flow], text, attrs)
@@ -965,6 +992,10 @@ def flowsToDot(root, t, computeSpeed=None,
             # Add dependencies
             for dep, weight in flow.deps:
                 if flowIds.has_key(dep):
+
+                    if quiet:
+                        dot.edge(flowIds[dep], flowIds[flow], '', weight=str(weight))
+                        continue
 
                     # Calculate number of edges, and use node counts
                     # on both sides to calculate (average!) in and out
@@ -979,8 +1010,8 @@ def flowsToDot(root, t, computeSpeed=None,
                         if n < 10**9: return '%.1f MB' % (n/10**6)
                         return '%.1f GB' % (n/10**9)
                     if dep.costs.has_key('transfer') and transfer > 0:
-                        label = 'packet: %s\nout: %d (%s)\nin: %d (%s)' % \
-                                (format_bytes(transfer/edges),
+                        label = 'packets: %.1g x %s\nout: %.1f (%s)\nin: %.1f (%s)' % \
+                                (edges, format_bytes(transfer/edges),
                                  edges/depcount, format_bytes(transfer/depcount),
                                  edges/flowcount, format_bytes(transfer/flowcount))
                     else:
@@ -990,7 +1021,8 @@ def flowsToDot(root, t, computeSpeed=None,
                         cross = dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
                         label += '\ncrossing: %.1f%%' % (100 * cross / edges)
                         if dep.costs.has_key('transfer') and transfer > 0:
-                            crossTransfer = dep.boxes.zipCrossSum(flow.boxes, crossBoxes,
+                            crossTransfer = dep.boxes.zipCrossSum(
+                                flow.boxes, crossBoxes,
                                 lambda l, r: mk_lambda(dep.costs['transfer'])(l))
                             label += ' (%.2f TB/s)' % (transfer * cross / edges / t / Constants.tera)
 
