@@ -125,10 +125,9 @@ class Regions:
         if self.constantSpacing():
             size = float(self.props.get(SIZE_PROP, self.size / self.count(rbox)))
             for i in range(int(round(self.count(rbox)))):
-                yield (i * size, size)
+                yield (floor(i * size), floor(size))
         # Otherwise fall back to enumerating
         else:
-            print "non-constant spacing..."
             for reg in self.regions(rbox):
                 yield (reg[OFFSET_PROP], reg[SIZE_PROP])
 
@@ -323,24 +322,32 @@ class RegionBox:
             lsize = lbox(dom, SIZE_PROP)
             rsize = rbox(dom, SIZE_PROP)
             rcount = rbox(dom, COUNT_PROP)
-            def bound(x): return min(rcount, max(0, floor(x)))
+            if loff >= rsize * rcount: return 0
+            def bound(x): return min(rcount-1, max(0, int(x)))
             return 1 + bound((loff + lsize - 1) / rsize) - bound(loff / rsize)
         if dom in right.enumDomains:
             lsize = lbox(dom, SIZE_PROP)
             lcount = lbox(dom, COUNT_PROP)
             roff = rbox(dom, OFFSET_PROP)
             rsize = rbox(dom, SIZE_PROP)
-            def bound(x): return min(lcount, max(0, floor(x)))
+            if roff >= lsize * lcount: return 0
+            def bound(x): return min(lcount-1, max(0, int(x)))
             return 1 + bound((roff + rsize - 1) / lsize) - bound(roff / lsize)
         # Otherwise, the higher granularity gives the number
         # of edges.
         lcount = lbox(dom, COUNT_PROP)
         rcount = rbox(dom, COUNT_PROP)
+        lsize = lbox(dom, SIZE_PROP)
+        rsize = rbox(dom, SIZE_PROP)
         import math
+        if lcount * lsize > rcount * rsize:
+            lcount = int((rcount * rsize + lsize - 1) / lsize)
+        elif lcount * lsize < rcount * rsize:
+            rcount = int((lcount * lsize + rsize - 1) / rsize)
         if lcount < rcount:
-            return lcount * ((rcount + lcount - 1) / lcount)
+            return lcount * int((rcount + lcount - 1) / lcount)
         else:
-            return rcount * ((lcount + rcount - 1) / rcount)
+            return rcount * int((lcount + rcount - 1) / rcount)
 
     def _zipSum(lbox, rbox, commonDoms, leftDoms, rightDoms, f):
         """Return sum of function, applied to all pairs of edges between
@@ -999,26 +1006,34 @@ class DataFlowTests(unittest.TestCase):
 
     def setUp(self):
 
-        # Set up a domain with four different splits - all, each, split
-        # into 4 regions and split into 3 regions.
-        self.size1 = 12
+        # Set up a domain with four different splits - all, each,
+        # split into 4 regions and split into 3 regions. All sizes
+        # given as floating point numbers, as we should be able to
+        # somewhat consistently work with that.
+        self.size1 = 12.
         self.dom1 = Domain("Domain 1")
         props = {'dummy': lambda rb: 0 }
         self.reg1 = self.dom1.regions(self.size1, props=props)
         self.split1 = self.reg1.split(self.size1, props=props)
-        self.size1a = 4
+        self.size1a = 4.
         self.split1a = self.reg1.split(self.size1a, props=props)
-        self.size1b = 3
+        self.size1b = 3.
         self.split1b = self.reg1.split(self.size1b, props=props)
 
         # Assumed by tests
         assert self.size1a > self.size1b and self.size1a < 2*self.size1b
 
         # Second domain, with splits "all" and "each".
-        self.size2 = 7
+        self.size2 = 7.
         self.dom2 = Domain("Domain 2")
         self.reg2 = self.dom2.regions(self.size2, props=props)
         self.split2 = self.reg2.split(self.size2, props=props)
+
+        # Smaller region for the second domain, with splits "all" and "each".
+        self.size3 = 5.
+        self.dom3 = self.dom2
+        self.reg3 = self.dom3.regions(self.size3, props=props)
+        self.split3 = self.reg3.split(self.size3, props=props)
 
     def test_size(self):
 
@@ -1166,6 +1181,20 @@ class DataFlowTests(unittest.TestCase):
                               self.size1a * self.size2)
         self._test_rboxes_zip([self.split2, self.split1a],[self.reg2],   self.dom2, self.dom2,
                               self.size1a * self.size2)
+
+    def test_rboxes_zip_different_root(self):
+
+        # Domain 3 is the same as domain 2, however has a different
+        # root region size. This means that a few regions split from
+        # the larger root region might end up without edges.
+        self._test_rboxes_zip([self.reg2],   [self.reg3],   self.dom2, self.dom2, 1)
+        self._test_rboxes_zip([self.reg2],   [self.split3], self.dom2, self.dom2, self.size3)
+        self._test_rboxes_zip([self.split2], [self.reg3],   self.dom2, self.dom2, self.size3)
+        self._test_rboxes_zip([self.split2], [self.split3], self.dom2, self.dom2, self.size3)
+        self._test_rboxes_zip([self.reg3],   [self.reg2],   self.dom2, self.dom2, 1)
+        self._test_rboxes_zip([self.split3], [self.reg2],   self.dom2, self.dom2, self.size3)
+        self._test_rboxes_zip([self.reg3],   [self.split2], self.dom2, self.dom2, self.size3)
+        self._test_rboxes_zip([self.split3], [self.split2], self.dom2, self.dom2, self.size3)
 
     def _test_rboxes_zip(self, regsA, regsB, domA, domB, edges):
         rboxesA = RegionBoxes(regsA)
