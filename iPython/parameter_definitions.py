@@ -747,7 +747,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.DPrepA:
-            o.Qfov = 2.7  # Field of view factor
+            o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -763,7 +763,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.DPrepA_Image:
-            o.Qfov = 2.7  # Field of view factor
+            o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -779,7 +779,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.DPrepB:
-            o.Qfov = 2.7  # Field of view factor
+            o.Qfov = 1.0  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -947,6 +947,7 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso01DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA_Image
@@ -995,6 +996,7 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
+            o.Qfov=1.8
         elif hpso == HPSOs.hpso02ADprepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1043,6 +1045,7 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso02BDPrepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1091,6 +1094,7 @@ class ParameterDefinitions:
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
+            o.Qfov = 2.7
         elif hpso == HPSOs.hpso13DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepA_Image
@@ -1141,6 +1145,7 @@ class ParameterDefinitions:
             o.Bmax = 25000  # m (25km set by experiment)
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso14DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1188,6 +1193,7 @@ class ParameterDefinitions:
             o.Bmax = 15000 #13000  # m (Experiment needs 13, use 15 (round up to nearest 5km) for ICAL as part of Science roll out work)
             o.Texp = 12600 * 3600.0  # sec
             o.Tpoint = 4.4 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso15DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepA_Image
@@ -1236,6 +1242,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 6000 * 3600.0  # sec
             o.Tpoint = 600 * 3600.0  # sec
+            o.Qfov = 2.7
         elif hpso == HPSOs.hpso22DprepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA
@@ -1271,6 +1278,7 @@ class ParameterDefinitions:
             o.Bmax = 50000  # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 0.123 * 3600.0  # sec
+            o.Qfov = 1.0
         elif hpso == HPSOs.hpso27DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1304,6 +1312,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso37aDprepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1336,6 +1345,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 2000 * 3600.0  # sec
+            o.Qfov = 2.7
         elif hpso == HPSOs.hpso37bDprepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1368,6 +1378,7 @@ class ParameterDefinitions:
             o.Bmax = 150000 # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso37cDPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1400,6 +1411,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 16.4 * 3600.0  # sec
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso38aDPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1432,6 +1444,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
+            o.Qfov = 2.7
         elif hpso == HPSOs.hpso38bDPrepA:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepA_Image
