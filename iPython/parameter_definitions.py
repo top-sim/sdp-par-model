@@ -947,7 +947,7 @@ class ParameterDefinitions:
             o.Bmax = 80000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Qfov = 1.8
+            o.Qfov = 2.7
         elif hpso == HPSOs.hpso01DPrepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1119,7 +1119,7 @@ class ParameterDefinitions:
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso13DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepC
@@ -1132,7 +1132,7 @@ class ParameterDefinitions:
             o.Bmax = 40000  # m
             o.Texp = 5000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso14ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1168,7 +1168,7 @@ class ParameterDefinitions:
             o.Bmax = 25000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso14DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.DPrepC
@@ -1180,7 +1180,7 @@ class ParameterDefinitions:
             o.Bmax = 25000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso15ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.ICAL
@@ -1218,7 +1218,7 @@ class ParameterDefinitions:
             o.Bmax = 15000  # m (matched for experiment)
             o.Texp = 12600 * 3600.0  # sec
             o.Tpoint = 4.4 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso15DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.DPrepC
@@ -1230,7 +1230,7 @@ class ParameterDefinitions:
             o.Bmax = 15000  # m (for experinemt)
             o.Texp = 12600 * 3600.0  # sec
             o.Tpoint = 4.4 * 3600.0  # sec
-            o.Npp=4
+            o.Npp=2
         elif hpso == HPSOs.hpso22ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
