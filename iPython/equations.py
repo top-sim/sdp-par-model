@@ -6,6 +6,8 @@ This class contains a method for (symbolically) computing derived parameters usi
 in PDR05 (version 1.85).
 """
 
+from __future__ import print_function
+
 from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, Lambda, Add, Sum, Mul
 from numpy import pi, round
 import math
@@ -66,7 +68,7 @@ class Equations:
         if hasattr(o, 'Tobs') and (o.Tobs < 10.0):
             o.Tsnap_min = o.Tobs
             if verbose:
-                print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
+                print('Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s')
 
         # Load common equations.
         Equations._apply_common_equations(o)
@@ -695,7 +697,7 @@ class Equations:
         # Collect properties
         if T is None: T = o.Tobs
         props = { "N": N, "T": T }
-        for k, expr in args.iteritems():
+        for k, expr in args.items():
             props[k] = N * expr
 
         # Set product
@@ -714,7 +716,7 @@ class Equations:
             return o.nbaselines * expr.subs(bcount, 1)
         if isinstance(expr, Mul):
             def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
-            indepFactors = filter(indep, expr.as_ordered_factors())
+            indepFactors = list(filter(indep, expr.as_ordered_factors()))
             if len(indepFactors) > 0:
                 def not_indep(e): return not indep(e)
                 restFactors = filter(not_indep, expr.as_ordered_factors())
@@ -755,7 +757,7 @@ class Equations:
         # Collect properties
         if T is None: T = o.Tobs
         props = { "N": Lambda(b, N), "T": Lambda(b, T) }
-        for k, expr in args.iteritems():
+        for k, expr in args.items():
             bcount = Symbol('bcount')
             props[k] = Equations._sum_bl_bins(o, bcount, b, bcount * N * expr)
             props[k+"_task"] = Lambda(b, expr)

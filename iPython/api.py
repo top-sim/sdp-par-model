@@ -1,7 +1,8 @@
 """
 This file contains methods for programmatically interacting with the SKA SDP Parametric Model using Python.
 """
-import copy
+
+from __future__ import print_function
 
 from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinitions
 from equations import Equations
@@ -42,7 +43,7 @@ class SkaPythonAPI:
         # Dictionary? Recurse
         if isinstance(expression, dict):
             return { k: SkaPythonAPI.evaluate_expression(e, tp, tsnap, nfacet)
-                     for k, e in expression.iteritems() }
+                     for k, e in expression.items() }
 
         # Otherwise try to evaluate using sympy
         try:
@@ -124,8 +125,8 @@ class SkaPythonAPI:
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
             # Loop through defined products, add to result
-            for name, product in tp.products.iteritems():
-                if product.has_key(expression):
+            for name, product in tp.products.items():
+                if expression in product:
                     values[name] = values.get(name, 0) + \
                         SkaPythonAPI.evaluate_expression(product[expression], tp, tsnap, nfacet)
 
@@ -152,9 +153,9 @@ class SkaPythonAPI:
         """
         assert param_val_max > param_val_min
 
-        print "Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps " \
-              "(i.e. %d data points)" % \
-              (parameter_string, expression_string, str(param_val_min), str(param_val_max), number_steps, number_steps + 1)
+        print("Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps "
+              "(i.e. %d data points)" %
+              (parameter_string, expression_string, str(param_val_min), str(param_val_max), number_steps, number_steps + 1))
 
         param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
 
@@ -165,8 +166,8 @@ class SkaPythonAPI:
             tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
             percentage_done = i * 100.0 / len(param_values)
-            print "> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression_string,
-                                                                parameter_string, param_values[i])
+            print("> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression_string,
+                                                                parameter_string, param_values[i]))
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
@@ -182,7 +183,7 @@ class SkaPythonAPI:
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
-        print 'done with parameter sweep!'
+        print('done with parameter sweep!')
         return (param_values, results)
 
     @staticmethod
@@ -211,10 +212,10 @@ class SkaPythonAPI:
         n_param_y_values = number_steps + 1
         nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
 
-        print "Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d " \
-              "steps each,\nfor a total of %d data evaluation points" % \
+        print("Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d "
+              "steps each,\nfor a total of %d data evaluation points" %
               (expression_string, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
-               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations)
+               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations))
 
         param_x_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=n_param_x_values)
         param_y_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=n_param_y_values)
@@ -234,24 +235,22 @@ class SkaPythonAPI:
                 tp = imp.calc_tel_params(pipelineConfig, verbose, adjusts=adjusts)
 
                 percentage_done = (ix * n_param_y_values + iy) * 100.0 / nr_evaluations
-                print "> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression_string,
+                print("> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression_string,
                                                                                 parameters[0], parameters[1],
-                                                                                str(param_x_value), str(param_y_value))
+                                                                                str(param_x_value), str(param_y_value)))
 
                 # Perform a check to see that the value of the assigned parameters weren't changed by the imaging
                 # equations, otherwise the assigned values would have been lost (i.e. not free parameters)
-                parameter1_final_value = None
-                parameter2_final_value = None
-                exec('parameter1_final_value = tp.%s' % parameters[0])
-                exec('parameter2_final_value = tp.%s' % parameters[1])
+                parameter1_final_value = eval('tp.%s' % parameters[0])
+                parameter2_final_value = eval('tp.%s' % parameters[1])
                 eta = 1e-10
                 if abs((parameter1_final_value - param_x_value) / param_x_value) > eta:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[0])
                 if abs((parameter2_final_value - param_y_value) / param_y_value) > eta:
-                    print parameter2_final_value
-                    print param_y_value
+                    print(parameter2_final_value)
+                    print(param_y_value)
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
@@ -260,7 +259,7 @@ class SkaPythonAPI:
                 (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
-        print 'done with parameter sweep!'
+        print('done with parameter sweep!')
         return (param_x_values, param_y_values, results)
 
     @staticmethod
@@ -275,8 +274,8 @@ class SkaPythonAPI:
         n_param_x_values = len(nfacets)
         nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
 
-        print "Evaluating expression %s while\nsweeping parameters tsnap and nfacet over 2D domain %s x %s " % \
-              (expression, str(tsnaps), str(nfacets))
+        print("Evaluating expression %s while\nsweeping parameters tsnap and nfacet over 2D domain %s x %s " %
+              (expression, str(tsnaps), str(nfacets)))
 
         # Generate telescope parameters, lambdify target expression
         telescope_params = imp.calc_tel_params(pipelineConfig, verbose=verbose)
@@ -299,12 +298,12 @@ class SkaPythonAPI:
 
                 if verbose:
                     percentage_done = (ix + iy * n_param_x_values) * 100.0 / nr_evaluations
-                    print "> %.1f%% done: Evaluating %s for (tsnap, nfacet) = (%s, %s)" % (percentage_done, expression,
-                                                                                 str(tsnap), str(nfacet))
+                    print("> %.1f%% done: Evaluating %s for (tsnap, nfacet) = (%s, %s)" % (percentage_done, expression,
+                                                                                 str(tsnap), str(nfacet)))
 
                 results[iy, ix] = expression_lam(nfacet)(tsnap)
 
-        print 'Done with parameter sweep!'
+        print('Done with parameter sweep!')
         return (tsnaps, nfacets, results)
 
     @staticmethod
@@ -363,7 +362,7 @@ class SkaPythonAPI:
 
         # Create lookup map for symbols
         symMap = {}
-        for name, v in tp.__dict__.iteritems():
+        for name, v in tp.__dict__.items():
             symMap[tp._make_symbol_name(name)] = v
 
         # Start collecting equations
@@ -374,7 +373,7 @@ class SkaPythonAPI:
                 if str(sym) in eqs: continue
 
                 # Look up
-                if not symMap.has_key(str(sym)): continue
+                if not str(sym) in symMap: continue
                 v = symMap[str(sym)]
 
                 # If the equation is "name = name", it is not defined at this level. Push back to next level

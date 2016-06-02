@@ -22,7 +22,6 @@ from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
 
 import csv
-from string import find
 
 class SkaIPythonAPI(api):
     """
@@ -122,7 +121,7 @@ class SkaIPythonAPI(api):
         @param resultMap:
         @return:
         """
-        return map(lambda row: row[3], resultMap)
+        return list(map(lambda row: row[3], resultMap))
 
     @staticmethod
     def get_result_expressions(resultMap,tp):
@@ -137,10 +136,10 @@ class SkaIPythonAPI(api):
                 return row[4](tp)
             except AttributeError:
                 return "(undefined)"
-        return map(expr, resultMap)
+        return list(map(expr, resultMap))
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-9:])
+    GRAPH_ROWS = list(map(lambda row: row[0], RESULT_MAP[-9:]))
 
     @staticmethod
     def mk_result_map_rows(verbosity = 'Overview'):
@@ -151,13 +150,13 @@ class SkaIPythonAPI(api):
         '''
 
         if verbosity == 'Overview':
-            result_map = filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP)
+            result_map = list(filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP))
         else:
             result_map = SkaIPythonAPI.RESULT_MAP
 
         return (result_map,
-                map(lambda row: row[0], result_map),
-                map(lambda row: row[1], result_map))
+                list(map(lambda row: row[0], result_map)),
+                list(map(lambda row: row[1], result_map)))
 
     @staticmethod
     def default_rflop_plotting_colours(rows):
@@ -217,7 +216,7 @@ class SkaIPythonAPI(api):
             if not isinstance(values[i], dict):
                 s += row(labels[i], values[i])
             else:
-                for name in sorted(values[i].iterkeys()):
+                for name in sorted(values[i].keys()):
                     s += row(labels[i] + name, values[i][name])
         s += '</table>'
         display(HTML(s))
@@ -374,7 +373,7 @@ class SkaIPythonAPI(api):
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(xx, yy, z_values, nlevels, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
                                antialiased=True, shade=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
@@ -633,7 +632,7 @@ class SkaIPythonAPI(api):
         # Show pie graph of FLOP counts
         values = result_values[-1]  # the last value
         colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
     @staticmethod
     def evaluate_hpso_optimized(hpso_key, blcoal=True,
@@ -854,11 +853,11 @@ class SkaIPythonAPI(api):
         Writes pipeline calculation results as a CSV file
         """
 
-        with open(filename, 'wb') as csvfile:
+        with open(filename, 'w') as csvfile:
             w = csv.writer(csvfile)
 
             # Output row with configurations
-            w.writerow([''] + map(lambda r: r[0].describe(), results))
+            w.writerow([''] + list(map(lambda r: r[0].describe(), results)))
 
             # Output actual results
             for i, row in enumerate(rows):
@@ -874,12 +873,12 @@ class SkaIPythonAPI(api):
 
                 # Dictionary? Expand
                 dicts = filter(lambda r: isinstance(r, dict), resultRow)
-                if len(dicts) > 0:
+                if len(list(dicts)) > 0:
 
                     # Collect labels
                     labels = set()
                     for d in dicts:
-                        labels = labels.union(d.iterkeys())
+                        labels = labels.union(d.keys())
 
                     # Show all of them, properly sorted. Non-dicts
                     # (errors) are simply shoved into the first row.
@@ -891,13 +890,13 @@ class SkaIPythonAPI(api):
                             elif first:
                                 return r
                             return ''
-                        w.writerow([rowTitle + str(label) + rowUnit] + map(printRow, resultRow))
+                        w.writerow([rowTitle + str(label) + rowUnit] + list(map(printRow, resultRow)))
                         first = False
 
                 else:
 
                     # Simple write out as-is
-                    w.writerow([rowTitle + rowUnit] + resultRow)
+                    w.writerow([rowTitle + rowUnit] + list(resultRow))
 
 
         display(HTML('<font color="blue">Results written to %s.</font>' % filename))
@@ -909,7 +908,7 @@ class SkaIPythonAPI(api):
         """
 
         display(HTML('<font color="blue">Reading %s...</font>' % filename))
-        with open(filename, 'rb') as csvfile:
+        with open(filename, 'r') as csvfile:
             r = csv.reader(csvfile)
             it = iter(r)
 
@@ -942,7 +941,7 @@ class SkaIPythonAPI(api):
 
         def strip_modifiers(head):
             if ignore_modifiers:
-                p = find(head, ' [')
+                p = head.find(' [')
                 if p != -1: return head[:p]
             return head
 
@@ -959,7 +958,7 @@ class SkaIPythonAPI(api):
 
             # Locate reference results
             refRow = ref.get(name, [])
-            refRow = map(lambda (h, v): (strip_modifiers(h), v), refRow)
+            refRow = map(lambda h_v: (strip_modifiers(h_v[0]), h_v[1]), refRow)
             refRow = dict(refRow)
 
             # Loop through values
@@ -975,7 +974,7 @@ class SkaIPythonAPI(api):
 
                     # Try to get reference as number, too
                     ref_num = None
-                    if refRow.has_key(head):
+                    if head in refRow:
                         try: ref_num = float(refRow[head])
                         except ValueError: ref_num = None
 
@@ -991,8 +990,8 @@ class SkaIPythonAPI(api):
                     # Output
                     if not diff is None:
                         s += '<td bgcolor="#%2x%2x00">%s (%+d%%)</td>' % (
-                            min(diff_rel/50*255, 255),
-                            255-min(max(0, diff_rel-50)/50*255, 255),
+                            int(min(diff_rel/50*255, 255)),
+                            int(255-min(max(0, diff_rel-50)/50*255, 255)),
                             SkaIPythonAPI.format_result(num),
                             diff)
                     else:

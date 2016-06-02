@@ -159,7 +159,7 @@ class Pipeline:
         t = product_costs.get("T", 0)
 
         # Baseline-dependent task?
-        if product_costs.has_key(cost + "_task"):
+        if cost + "_task" in product_costs:
             task_cost = product_costs[cost + "_task"]
             # Pass baseline length, multiply by number of baselines
             return rbox(self.baseline,'size') * \
@@ -584,7 +584,7 @@ class PipelineTestsBase(unittest.TestCase):
         def flowCost(f): return -f.cost('compute')
         flows = flow.recursiveDeps()
         flowsSorted = sorted(flows, key=flowCost)
-        def productsCost((n,c)): return -c['Rflop']
+        def productsCost(n_c): return -n_c[1]['Rflop']
         productsSorted = sorted(self.df.tp.products.items(), key=productsCost)
 
         # Zip, match and sum
@@ -601,7 +601,7 @@ class PipelineTestsBase(unittest.TestCase):
                     "Flow list: %s\nProduct list: %s" % (
                         flow.name, pname, fcost, pcost, pcost/max(fcost, 0.001),
                         map(lambda f: f.name, flowsSorted),
-                        map(lambda (n,c): n, productsSorted))
+                        map(lambda n_c: n_c[0], productsSorted))
             )
 
         # Finally check sum

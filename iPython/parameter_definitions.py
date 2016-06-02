@@ -4,6 +4,8 @@ etc. Several methods are supplied by which values can be found by lookup as well
 (e.g. finding the telescope that is associated with a given mode)
 """
 
+from __future__ import print_function
+
 import numpy as np
 from math import sqrt
 from sympy import symbols, Symbol, Expr
@@ -103,7 +105,7 @@ class ParameterContainer:
     def symbolify(self):
 
         # Replace all values and expressions with symbols
-        for name, v in self.__dict__.iteritems():
+        for name, v in self.__dict__.items():
             if isinstance(v, int) or isinstance(v, float) or self.is_expr(v):
                 self.__dict__[name] = Symbol(self._make_symbol_name(name))
 
@@ -121,14 +123,14 @@ class ParameterContainer:
         return isinstance(e, Expr)
 
     def set_product(self, product, **args):
-        if not self.products.has_key(product):
+        if not product in self.products:
             self.products[product] = {}
         self.products[product].update(args)
 
     def get_products(self, expression='Rflop', scale=1):
         results = {}
-        for product, exprs in self.products.iteritems():
-            if exprs.has_key(expression):
+        for product, exprs in self.products.items():
+            if expression in exprs:
                 results[product] = exprs[expression] / scale
         return results
 
@@ -644,7 +646,7 @@ class ParameterDefinitions:
             o.freq_min = 11.3e9
             o.freq_max = 13.8e9
         elif band == Bands.Mid5C:
-            print "Band = Mid5C: using 2x2.5GHz subbands from 4.6-9.6GHz for band 5"
+            print("Band = Mid5C: using 2x2.5GHz subbands from 4.6-9.6GHz for band 5")
             o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 4.6e9
             o.freq_max = 9.6e9

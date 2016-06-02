@@ -1,4 +1,6 @@
 
+from __future__ import print_function
+
 from parameter_definitions import Constants
 
 from sympy import Max, Expr, Lambda, Symbol, Sum
@@ -61,7 +63,7 @@ class Regions:
         to reason about these regions cheaper."""
 
         # No size property? Then we assume constant spacing
-        if not self.props.has_key(SIZE_PROP):
+        if not SIZE_PROP in self.props:
             return True
 
         # Otherwise, our size property must convert to a plain number
@@ -83,7 +85,7 @@ class Regions:
             # worked with even if the region stays anonymous.
             reg = {
                 k: v
-                for k, v in self.props.iteritems()
+                for k, v in self.props.items()
                 if not callable(v) or isinstance(v, Lambda)
             }
 
@@ -94,7 +96,7 @@ class Regions:
             # region..
             reg = {
                 k: mk_lambda(v)(i)
-                for k, v in self.props.iteritems()
+                for k, v in self.props.items()
             }
             reg[INDEX_PROP] = i
             reg[OFFSET_PROP] = off
@@ -105,8 +107,8 @@ class Regions:
 
         # If size does not get defined in self.props, we provide a
         # default implementation.
-        if not reg.has_key(SIZE_PROP) and \
-           not self.props.has_key(SIZE_PROP) and \
+        if not SIZE_PROP in reg and \
+           not SIZE_PROP in self.props and \
            reg[COUNT_PROP] != 0:
             reg[SIZE_PROP] = self.size / reg[COUNT_PROP]
 
@@ -159,7 +161,7 @@ class Regions:
         # See above
         return RegionBoxes([self]).max(prop)
 
-class DomainPrecendenceException:
+class DomainPrecendenceException(BaseException):
     """Thrown when the properties of a region are accessed 'before' they
     are defined. This should only happen while RegionBoxes._getBoxes()
     builds up all region boxes, because that is when region boxes
@@ -170,7 +172,7 @@ class DomainPrecendenceException:
         self.regionBoxes = rboxes
         self.domain = domain
 
-class NeedRegionEnumerationException:
+class NeedRegionEnumerationException(BaseException):
 
     """Thrown when we detect that we need concrete region information
     about a given domain. This exception gets thrown by RegionBox
@@ -191,7 +193,7 @@ class RegionBox:
 
     def __repr__(self):
         return '<RegionBox %s %s>' % (
-            ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.iterkeys())),
+            ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.keys())),
             repr(self.domainProps))
 
     def __call__(self, domain, prop):
@@ -199,17 +201,17 @@ class RegionBox:
         # No properties known yet? This should only happen while we're
         # inside RegionBoxes._getBoxes(). Then it means that this
         # domain needs to be defined before whatever we're doing here.
-        if not self.domainProps.has_key(domain):
+        if not domain in self.domainProps:
             raise DomainPrecendenceException(self.regionBoxes, domain)
 
         # If we don't have the property, this might also point towards
         # the need for enumeration.
-        if not self.domainProps[domain].has_key(prop) and \
+        if not prop in self.domainProps[domain] and \
            not domain in self.regionBoxes.enumDomains:
             raise NeedRegionEnumerationException(self.regionBoxes, domain)
 
         # Not there?
-        if not self.domainProps[domain].has_key(prop):
+        if not prop in self.domainProps[domain]:
             raise Exception('Property %s is undefined for this region set of domain %s!'
                              % (prop, domain.name))
 
@@ -218,7 +220,7 @@ class RegionBox:
 
         # Symbolised? Pass region index as symbol. Otherwise just return as-is.
         if isinstance(val, Lambda):
-            if not self.symbols.has_key(domain):
+            if not domain in self.symbols:
                 self.symbols[domain] = Symbol("i_" + domain.name)
             return val(self.symbols[domain])
         return val
@@ -226,7 +228,7 @@ class RegionBox:
     def count(self):
         count = 1
         # Multiply out all non-enumerated (!) regions
-        for dom in self.regionBoxes.regionsMap.iterkeys():
+        for dom in self.regionBoxes.regionsMap.keys():
             if not dom in self.regionBoxes.enumDomains:
                 count *= self(dom, COUNT_PROP)
         return count
@@ -252,11 +254,11 @@ class RegionBox:
         # this - the "count" property can depend on other domains, so
         # there's no guarantee that we don't end up using undefined
         # symbols here...
-        for dom in self.regionBoxes.regionsMap.iterkeys():
+        for dom in self.regionBoxes.regionsMap.keys():
             if not dom in self.symbols and not dom in self.regionBoxes.enumDomains:
                 expr = self(dom, COUNT_PROP) * expr
         sums = []
-        for dom in self.regionBoxes.regionsMap.iterkeys():
+        for dom in self.regionBoxes.regionsMap.keys():
             if dom in self.symbols:
                 sums.append((self.symbols[dom],
                              0, self(dom, COUNT_PROP) - 1))
@@ -367,7 +369,7 @@ class RegionBox:
         mult = 1
         for dom in commonDoms:
             m = lbox._edgeMult(rbox, dom)
-            if verbose: print "common", dom, m
+            if verbose: print("common", dom, m)
             mult *= m
             if mult == 0: return 0
 
@@ -376,13 +378,13 @@ class RegionBox:
         for dom in leftDoms:
             if not dom in lbox.regionBoxes.enumDomains:
                 mult *= lbox(dom, COUNT_PROP)
-                if verbose: print "left", dom, lbox(dom, COUNT_PROP)
+                if verbose: print("left", dom, lbox(dom, COUNT_PROP))
         for dom in rightDoms:
             if not dom in rbox.regionBoxes.enumDomains:
                 mult *= rbox(dom, COUNT_PROP)
-                if verbose: print "right", dom, rbox(dom, COUNT_PROP)
+                if verbose: print("right", dom, rbox(dom, COUNT_PROP))
 
-        if verbose: print "-> mult:", mult
+        if verbose: print("-> mult:", mult)
 
         # Okay, now call and multiply
         return mult * f(lbox, rbox)
@@ -418,9 +420,9 @@ class RegionBox:
         rregs = rbox._cheapRegionBounds(dom)
         cregs = cbox._cheapRegionBounds(dom)
         try:
-            (loff, lsize) = lregs.next()
-            (roff, rsize) = rregs.next()
-            (coff, csize) = cregs.next()
+            (loff, lsize) = next(lregs)
+            (roff, rsize) = next(rregs)
+            (coff, csize) = next(cregs)
         except StopIteration:
             return 0
 
@@ -430,11 +432,11 @@ class RegionBox:
             # Advance iterators until there is at least some overlap
             try:
                 while loff + lsize < roff:
-                    (loff, lsize) = lregs.next()
+                    (loff, lsize) = next(lregs)
                 while roff + rsize < loff:
-                    (roff, rsize) = rregs.next()
+                    (roff, rsize) = next(rregs)
                 while coff + csize <= loff or coff + csize <= roff:
-                    (coff, csize) = cregs.next()
+                    (coff, csize) = next(cregs)
             except StopIteration:
                 break
 
@@ -449,9 +451,9 @@ class RegionBox:
             # Advance either left or right iterator
             try:
                 if loff + lsize < roff + rsize:
-                    (loff, lsize) = lregs.next()
+                    (loff, lsize) = next(lregs)
                 else:
-                    (roff, rsize) = rregs.next()
+                    (roff, rsize) = next(rregs)
             except StopIteration:
                 break
 
@@ -468,8 +470,8 @@ class RegionBox:
         lregs = lbox.regions(dom)
         cregs = cbox.regions(dom)
         try:
-            lreg = lregs.next()
-            creg = cregs.next()
+            lreg = next(lregs)
+            creg = next(cregs)
         except StopIteration:
             return 0
 
@@ -481,7 +483,7 @@ class RegionBox:
             # Advance cross iterator
             try:
                 while coff + csize < loff + lsize:
-                    creg = cregs.next()
+                    creg = next(cregs)
                     coff = creg[OFFSET_PROP]; csize = creg[SIZE_PROP]
             except StopIteration:
                 break
@@ -492,7 +494,7 @@ class RegionBox:
 
             # Advance iterator
             try:
-                lreg = lregs.next()
+                lreg = next(lregs)
                 loff = lreg[OFFSET_PROP]; lsize = lreg[SIZE_PROP]
             except StopIteration:
                 break
@@ -535,10 +537,10 @@ class RegionBox:
             # appear in the cross domains, it means no edges cross.
             if dom in cross_doms:
                 cm = lbox._edgeCrossMult(rbox, cbox, dom)
-                if verbose: print "Common cross", dom, ":", (m, cm)
+                if verbose: print("Common cross", dom, ":", (m, cm))
             else:
                 cm = 0
-                if verbose: print "Common non-cross", dom, ":", (m, cm)
+                if verbose: print("Common non-cross", dom, ":", (m, cm))
             mults.append((m,cm))
 
         # Domains on only one side: Edge multiplier is given by region
@@ -549,26 +551,26 @@ class RegionBox:
         for dom in leftDoms:
             if dom in cross_doms:
                 m = cm = lbox._edgeCrossMultOneSided(cbox, dom)
-                if verbose: print "Left cross ", dom, ":", (m, cm)
+                if verbose: print("Left cross ", dom, ":", (m, cm))
             else:
                 if dom in lbox.regionBoxes.enumDomains:
                     m = 1
                 else:
                     m = lbox(dom, COUNT_PROP)
                 cm = 0
-                if verbose: print "Left non-cross ", dom, ":", (m, cm)
+                if verbose: print("Left non-cross ", dom, ":", (m, cm))
             mults.append((m,cm))
         for dom in rightDoms:
             if dom in cross_doms:
                 m = cm = rbox._edgeCrossMultOneSided(cbox, dom)
-                if verbose: print "Right cross ", dom, ":", (m, cm)
+                if verbose: print("Right cross ", dom, ":", (m, cm))
             else:
                 if dom in rbox.regionBoxes.enumDomains:
                     m = 1
                 else:
                     m = rbox(dom, COUNT_PROP)
                 cm = 0
-                if verbose: print "Right non-cross ", dom, ":", (m, cm)
+                if verbose: print("Right non-cross ", dom, ":", (m, cm))
             mults.append((m,cm))
 
         # Multiply out. It is easiest to achieve this by determining
@@ -602,7 +604,7 @@ class RegionBoxes:
         # Set up regions map. Every domain is only allowed to appear once
         self.regionsMap = {}
         for regions in regionsBox:
-            if self.regionsMap.has_key(regions.domain):
+            if regions.domain in self.regionsMap:
                 raise Exception('Domain %s has two regions in the same '
                                 'box, this is not allowed!' % regions.domain.name)
             self.regionsMap[regions.domain] = regions
@@ -647,7 +649,7 @@ class RegionBoxes:
                 raise e
 
             # Sanity-check the domain we are supposed to enumerate
-            if not self.regionsMap.has_key(e.domain):
+            if not e.domain in self.regionsMap:
                 raise Exception('Domain %s not in region box - can\'t depend on it.' % e.domain.name)
             if e.domain in self.enumDomains:
                 raise Exception('Domain %s already enumerated - domain dependency cycle?' % e.domain.name)
@@ -783,13 +785,13 @@ class RegionBoxes:
         leftDoms = []
         rightDoms = []
         commonDoms = []
-        for dom in left.regionsMap.iterkeys():
-            if right.regionsMap.has_key(dom):
+        for dom in left.regionsMap.keys():
+            if dom in right.regionsMap:
                 commonDoms.append(dom)
             else:
                 leftDoms.append(dom)
-        for dom in right.regionsMap.iterkeys():
-            if not left.regionsMap.has_key(dom):
+        for dom in right.regionsMap.keys():
+            if not dom in left.regionsMap:
                 rightDoms.append(dom)
 
         # Sum up result of zip
@@ -808,20 +810,20 @@ class RegionBoxes:
         leftDoms = []
         rightDoms = []
         commonDoms = []
-        for dom in left.regionsMap.iterkeys():
-            if right.regionsMap.has_key(dom):
+        for dom in left.regionsMap.keys():
+            if dom in right.regionsMap:
                 commonDoms.append(dom)
             else:
                 leftDoms.append(dom)
-        for dom in right.regionsMap.iterkeys():
-            if not left.regionsMap.has_key(dom):
+        for dom in right.regionsMap.keys():
+            if not dom in left.regionsMap:
                 rightDoms.append(dom)
 
         if verbose:
-            print "Left doms:", leftDoms
-            print "Right doms:", rightDoms
-            print "Common doms:", commonDoms
-            print "Cross doms:", cross.regionsMap.keys()
+            print("Left doms:", leftDoms)
+            print("Right doms:", rightDoms)
+            print("Common doms:", commonDoms)
+            print("Cross doms:", cross.regionsMap.keys())
 
         # Sum up result of zip
         result = 0
@@ -845,7 +847,7 @@ class Flow:
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
-        self.deps = map(lambda d: (d,1), deps)
+        self.deps = list(map(lambda d: (d,1), deps))
         self.cluster = cluster
 
     def depend(self, flow, weight=1):
@@ -869,7 +871,7 @@ class Flow:
         return self.boxes.max(prop)
 
     def cost(self, name):
-        if self.costs.has_key(name):
+        if name in self.costs:
             return self.sum(self.costs[name])
         else:
             return 0
@@ -926,7 +928,7 @@ def flowsToDot(root, t, computeSpeed=None,
     clusters = {}
     for i, flow in enumerate(flows):
         flowIds[flow] = "node.%d" % i
-        if clusters.has_key(flow.cluster):
+        if flow.cluster in clusters:
             clusters[flow.cluster].append(flow)
         else:
             clusters[flow.cluster] = [flow]
@@ -937,7 +939,7 @@ def flowsToDot(root, t, computeSpeed=None,
         crossBoxes = RegionBoxes(cross_regs)
 
     # Make nodes per cluster
-    for cluster, cflows in clusters.iteritems():
+    for cluster, cflows in clusters.items():
 
         if cluster == '':
             graph = dot
@@ -976,8 +978,8 @@ def flowsToDot(root, t, computeSpeed=None,
                     compute = flow.cost('compute')
                     transfer = flow.cost('transfer')
                 except:
-                    print
-                    print "Exception raised while determining cost for '" + flow.name + "':"
+                    print()
+                    print("Exception raised while determining cost for '" + flow.name + "':")
                     raise
                 if compute > 0 and computeSpeed is not None:
                     text += "\nRuntime: %.2g s/task" % (compute/count/computeSpeed)
@@ -991,7 +993,7 @@ def flowsToDot(root, t, computeSpeed=None,
 
             # Add dependencies
             for dep, weight in flow.deps:
-                if flowIds.has_key(dep):
+                if dep in flowIds:
 
                     if quiet:
                         dot.edge(flowIds[dep], flowIds[flow], '', weight=str(weight))
@@ -1001,7 +1003,7 @@ def flowsToDot(root, t, computeSpeed=None,
                     # on both sides to calculate (average!) in and out
                     # degrees.
                     edges = dep.boxes.zipSum(flow.boxes, lambda l, r: 1)
-                    if dep.costs.has_key('transfer'):
+                    if 'transfer' in dep.costs:
                         def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
                         transfer = dep.boxes.zipSum(flow.boxes, transfer_prop)
                     depcount = dep.boxes.count()
@@ -1009,7 +1011,7 @@ def flowsToDot(root, t, computeSpeed=None,
                     def format_bytes(n):
                         if n < 10**9: return '%.1f MB' % (n/10**6)
                         return '%.1f GB' % (n/10**9)
-                    if dep.costs.has_key('transfer') and transfer > 0:
+                    if 'transfer' in dep.costs and transfer > 0:
                         label = 'packets: %.1g x %s\nout: %.1f (%s)\nin: %.1f (%s)' % \
                                 (edges, format_bytes(transfer/edges),
                                  edges/depcount, format_bytes(transfer/depcount),
@@ -1020,7 +1022,7 @@ def flowsToDot(root, t, computeSpeed=None,
                     if crossBoxes:
                         cross = dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
                         label += '\ncrossing: %.1f%%' % (100 * cross / edges)
-                        if dep.costs.has_key('transfer') and transfer > 0:
+                        if 'transfer' in dep.costs and transfer > 0:
                             crossTransfer = dep.boxes.zipCrossSum(
                                 flow.boxes, crossBoxes,
                                 lambda l, r: mk_lambda(dep.costs['transfer'])(l))
@@ -1375,9 +1377,9 @@ class DataFlowTests(unittest.TestCase):
             # Check that _cheapRegionBounds is consistent, as
             # zipCrossSum will depend on it heavily
             def toOffSize(reg): return (reg[OFFSET_PROP], reg[SIZE_PROP])
-            self.assertEqual(map(toOffSize, rboxesA.regions(domA)), list(rboxesA._cheapRegionBounds(domA)))
-            self.assertEqual(map(toOffSize, rboxesB.regions(domB)), list(rboxesB._cheapRegionBounds(domB)))
-            self.assertEqual(map(toOffSize, rboxesC.regions(domC)), list(rboxesC._cheapRegionBounds(domC)))
+            self.assertEqual(list(map(toOffSize, rboxesA.regions(domA))), list(rboxesA._cheapRegionBounds(domA)))
+            self.assertEqual(list(map(toOffSize, rboxesB.regions(domB))), list(rboxesB._cheapRegionBounds(domB)))
+            self.assertEqual(list(map(toOffSize, rboxesC.regions(domC))), list(rboxesC._cheapRegionBounds(domC)))
 
             # Summing one per edge should give us the number of
             # edges, no matter whether we ask for the dummy

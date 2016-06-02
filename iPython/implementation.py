@@ -9,6 +9,9 @@ Implementation contains a collection of methods for performing computations, but
 themselves. Instead, it specifies how values are substituted, optimized, and summed across bins.
 """
 
+from __future__ import print_function
+from builtins import int
+
 from parameter_definitions import ParameterContainer
 from parameter_definitions import Telescopes, Pipelines, Bands
 from parameter_definitions import ParameterDefinitions as p
@@ -177,8 +180,7 @@ class Implementation:
         Returns true iff the expression is already a literal (e.g. float or integer) value that cannot be substituted
         or evaluated further. Used to halt attempts at further evaluating symbolic expressions
         """
-        return (isinstance(expression, str) or isinstance(expression, float) or isinstance(expression, int)
-                or isinstance(expression, long) or isinstance(expression, np.ndarray) or isinstance(expression, list))
+        return isinstance(expression, (str, float, int, np.ndarray, list))
 
     @staticmethod
     def seconds_to_hms(seconds):
@@ -229,7 +231,7 @@ class Implementation:
             'ceiling': 'math.ceil',
         }
         expr_body = str(expression)
-        for (sympy_name, numpy_name) in module.iteritems():
+        for (sympy_name, numpy_name) in module.items():
             expr_body = expr_body.replace(sympy_name + '(', numpy_name + '(')
 
         # Create head of lambda expression
@@ -308,7 +310,7 @@ class Implementation:
 
         # Apply parameter adjustments. Needs to be done before bin calculation in case Bmax gets changed.
         # Note that an overwrite is required, i.e. the parameter must exist.
-        for par, value in adjusts.iteritems():
+        for par, value in adjusts.items():
             telescope_params.__dict__[par] = value
 
         if cfg.blcoal:
@@ -334,10 +336,10 @@ class Implementation:
             bins[nbins_used-1] = telescope_params.Bmax
             binfracs[nbins_used-1] *= float(binsizeNew) / float(binsize)
             if verbose:
-                print "Baseline coalescing on"
+                print("Baseline coalescing on")
         else:
             if verbose:
-                print "Baseline coalescing off"
+                print("Baseline coalescing off")
             telescope_params.baseline_bins = np.array((telescope_params.Bmax,))  # m
             telescope_params.baseline_bin_distribution = np.array((1.0,))
             bins = [telescope_params.Bmax]
@@ -370,18 +372,17 @@ class Implementation:
         assert hasattr(telescope_parameters, expr_to_minimize_string)
 
         if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
-            print telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet"
+            print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
             return (telescope_parameters.Tobs, 1)
 
         result_per_nfacet = {}
         result_array = []
         optimal_Tsnap_array = []
         warned = False
-        expression_original = None
 
         # Construct lambda from our two parameters (facet number and
         # snapshot time) to the expression to minimise
-        exec('expression_original = telescope_parameters.%s' % expr_to_minimize_string)
+        expression_original = eval('telescope_parameters.%s' % expr_to_minimize_string)
 
         if isinstance(telescope_parameters.Nfacet, Symbol):
             params = (telescope_parameters.Nfacet, telescope_parameters.Tsnap)
