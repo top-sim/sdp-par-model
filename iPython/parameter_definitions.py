@@ -99,7 +99,7 @@ class ParameterContainer:
             return name
         if name[0].isupper():
             i0 = 2 if name[1] == '_' else 1
-            return name[0] + "_" + string.replace(name[i0:], '_', ',')
+            return name[0] + "_" + name[i0:].replace('_', ',')
         return name
 
     def symbolify(self):
