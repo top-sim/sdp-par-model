@@ -482,7 +482,7 @@ class RegionBox:
 
             # Advance cross iterator
             try:
-                while coff + csize < loff + lsize:
+                while coff + csize <= loff:
                     creg = next(cregs)
                     coff = creg[OFFSET_PROP]; csize = creg[SIZE_PROP]
             except StopIteration:
@@ -1266,10 +1266,16 @@ class DataFlowTests(unittest.TestCase):
         # All of them cross if we go in or out of the cross domain
         self._test_rboxes_cross_zip([reg2],   [reg1],    [reg1], 1)
         self._test_rboxes_cross_zip([reg2],   [reg1],    [reg2], 1)
+        self._test_rboxes_cross_zip([reg2],   [reg1],    [split1], 1)
+        self._test_rboxes_cross_zip([reg2],   [reg1],    [split2], 1)
         self._test_rboxes_cross_zip([reg2],   [reg2],    [reg1], 0)
         self._test_rboxes_cross_zip([reg1],   [reg1],    [reg2], 0)
+        self._test_rboxes_cross_zip([reg2],   [reg2],    [split1], 0)
+        self._test_rboxes_cross_zip([reg1],   [reg1],    [split2], 0)
         self._test_rboxes_cross_zip([reg2],   [reg2],    [reg1], 0)
         self._test_rboxes_cross_zip([reg1],   [reg1],    [reg2], 0)
+        self._test_rboxes_cross_zip([reg2],   [reg2],    [split1], 0)
+        self._test_rboxes_cross_zip([reg1],   [reg1],    [split2], 0)
         self._test_rboxes_cross_zip([reg2],   [split1],  [reg1], self.size1)
         self._test_rboxes_cross_zip([reg2],   [split1],  [reg2], self.size1)
         self._test_rboxes_cross_zip([split2], [split1],  [reg1], self.size1 * self.size2)
@@ -1330,7 +1336,7 @@ class DataFlowTests(unittest.TestCase):
 
         # If a split domain doesn't exist on one side, all existing edges cross.
         self._test_rboxes_cross_zip([reg1,split2],  [reg1],       [reg1, split2], self.size2)
-        self._test_rboxes_cross_zip([split1,reg2],  [reg1],       [reg1, split2], 0)
+        self._test_rboxes_cross_zip([split1,reg2],  [reg1],       [reg1, split2], self.size1)
         self._test_rboxes_cross_zip([split1,reg2],  [reg1],       [split1, reg2], self.size1)
         self._test_rboxes_cross_zip([split1,split2],[reg1],       [reg1, split2], self.size1*self.size2)
         self._test_rboxes_cross_zip([split1,split2],[reg1],       [split1,split2],self.size1*self.size2)
