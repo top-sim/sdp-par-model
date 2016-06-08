@@ -292,6 +292,8 @@ class HPSOs:
     hpso27ICAL = '27ICAL'
     hpso27DPrepA = '27DPrepA'
     hpso27DPrepB = '27DPrepB'
+    hpso32ICAL = '32ICAL'
+    hpso32DPrepB = '32DPrepB'
     hpso37aICAL = '37aICAL'
     hpso37aDprepA = '37aDPrepA'
     hpso37aDprepB = '37aDPrepB'
@@ -1301,6 +1303,34 @@ class ParameterDefinitions:
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 0.123 * 3600.0  # sec
             o.Npp=4
+        
+        
+        elif hpso == HPSOs.hpso32ICAL: #defintions for interferometry support for SUC 32 are work in progress...
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.ICAL
+            o.freq_min = 350e6
+            o.freq_max = 1050e6
+            o.Tobs = 2.2 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 500  # 700 channels required in output continuum cubes
+            o.Bmax = 20000  # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 2.2 * 3600.0  # sec
+            o.Qfov = 1.0
+        elif hpso == HPSOs.hpso32DPrepB: #defintions for interferometry support for SUC 32 are work in progress...
+            o.set_param('telescope', Telescopes.SKA1_Mid)
+            o.pipeline = Pipelines.DPrepB
+            o.freq_min = 350e6
+            o.freq_max = 1050e6
+            o.Tobs = 2.2 * 3600.0  # sec
+            o.Nf_max = 65536
+            o.Nf_out = 700  # 700 channels required in output continuum cubes
+            o.Bmax = 20000  # m
+            o.Texp = 10000 * 3600.0  # sec
+            o.Tpoint = 2.2 * 3600.0  # sec
+            o.Npp=2
+        
+        
         elif hpso == HPSOs.hpso37aICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
