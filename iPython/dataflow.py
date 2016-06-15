@@ -74,32 +74,19 @@ class Regions:
         except ValueError:
             return False
 
-    def region(self, rb, i = None, off = None):
-        """Get properties of a region of this region set"""
+    def region(self, rb):
 
-        # Enumerated?
-        if i is None:
+        # Properties that do not depend on the region, or only
+        # need to know it symbolically (sympy Lambda) can be
+        # worked with even if the region stays anonymous.
+        reg = {
+            k: v
+            for k, v in self.props.items()
+            if not callable(v) or isinstance(v, Lambda)
+        }
 
-            # Properties that do not depend on the region, or only
-            # need to know it symbolically (sympy Lambda) can be
-            # worked with even if the region stays anonymous.
-            reg = {
-                k: v
-                for k, v in self.props.items()
-                if not callable(v) or isinstance(v, Lambda)
-            }
-
-        else:
-
-            # Only copy over detailed properties if our domain is
-            # enumerated - they are allowed to depend on the concrete
-            # region..
-            reg = {
-                k: mk_lambda(v)(i)
-                for k, v in self.props.items()
-            }
-            reg[INDEX_PROP] = i
-            reg[OFFSET_PROP] = off
+        reg[INDEX_PROP] = 0
+        reg[OFFSET_PROP] = 0
 
         # The split degree is one of the few things we know about
         # regions no matter what.
@@ -114,16 +101,40 @@ class Regions:
 
         return reg
 
+    def region_enum(self, rb, index, offset):
+        """Get properties of a region of this region set"""
+
+        # Only copy over detailed properties if our domain is
+        # enumerated - they are allowed to depend on the concrete
+        # region..
+        reg = {
+            k: mk_lambda(v)(index)
+            for k, v in self.props.items()
+        }
+
+        # Regions are unary now, with an index and offset
+        reg[INDEX_PROP] = index
+        reg[OFFSET_PROP] = offset
+        reg[COUNT_PROP] = 1
+
+        # If size does not get defined in self.props, we provide a
+        # default implementation.
+        if not SIZE_PROP in reg and \
+           not SIZE_PROP in self.props:
+           reg[SIZE_PROP] = self.size / self.count(rb)
+
+        return reg
+
     def regions(self, rbox):
         """Get all regions of this region set."""
 
         off = 0 # TODO: regions start offset?
         for i in range(int(round(self.count(rbox)))):
-            props = self.region(rbox, i, off)
+            props = self.region_enum(rbox, i, off)
             off += props[SIZE_PROP]
             yield props
 
-    def _cheapRegionBounds(self, rbox):
+    def bounds(self, rbox):
         """Cheaper version of regions that only returns the region bounds."""
 
         # Constant spacing?
@@ -237,6 +248,74 @@ class RegionBox:
         """Return the value of the given property for this region box"""
         return mk_lambda(prop)(self)
 
+    def mults(lbox, rbox, verbose):
+        """Determines multiplicity of region overlaps between two boxes. This
+        will return for every domain and either side:
+
+        * the index of the first overlapping region
+        * the total number of overlapping regions
+
+        If there is no overlap, this returns None. If a region does
+        not exist on the right side, we return None in the dictionary
+        instead of the index/count pair.
+        """
+
+        # Check whether we have any overlap
+        dims = {}
+        for dom in lbox.domains():
+
+            # Get left box properties
+            loff = lbox(dom, 'offset')
+            lsize = lbox(dom, 'size')
+            lix = lbox(dom, 'index')
+            lcount = lbox(dom, 'count')
+
+            # Domain not existent on the right? Then we assume that
+            # all from the left apply.
+            if not dom in rbox.domains():
+                dims[dom] = ((int(lix), int(lcount)), None)
+                continue
+
+            # Get box properties
+            roff = rbox(dom, 'offset')
+            rsize = rbox(dom, 'size')
+            rix = rbox(dom, 'index')
+            rcount = rbox(dom, 'count')
+
+            if verbose:
+                print('%s Left off=%d size=%d index=%d count=%d' %
+                       (dom.name, loff, lsize, lix, lcount))
+                print('%s Right off=%d size=%d index=%d count=%d' %
+                       (dom.name, roff, rsize, rix, rcount))
+
+            # Determine overlap region
+            off = max(loff, roff)
+            size = min(loff + lsize*lcount, roff + rsize*rcount) - off
+
+            # Size substantially smaller than a region on either side?
+            # Ignore it. There's a bunch of rounding issues there, the
+            # limit of half a region size is unlikely to trigger them.
+            # print (" => off=%d size=%d" % (off, size))
+            if size < lsize / 2 and size < rsize / 2:
+                return None
+
+            # Identify indices
+            from math import ceil
+            lix0 = lix + int((off - loff) / lsize)
+            lix1 = lix + int(min(lcount, ceil((off + size - loff) / lsize)))
+            rix0 = rix + int((off - roff) / rsize)
+            rix1 = rix + int(min(rcount, ceil((off + size - roff) / rsize)))
+
+            # Bail out if no overlap. Otherwise add input dimension.
+            if rix1 <= rix0:
+                return None
+            if verbose:
+                print (" => Left ", (lix0, lix1-lix0))
+                print (" => Right ", (rix0, rix1-rix0))
+            dims[dom] = ((lix0, lix1-lix0), (rix0, rix1-rix0))
+
+        return dims
+
     def sum(self, prop):
         """Return the sum of the given property for this region box"""
 
@@ -278,12 +357,16 @@ class RegionBox:
         else:
             return self.regionBoxes.regionsMap[dom].regions(self)
 
-    def _cheapRegionBounds(self, dom):
+    def bounds(self, dom):
         if dom in self.regionBoxes.enumDomains:
             return iter([(self.domainProps[dom][OFFSET_PROP],
                           self.domainProps[dom][SIZE_PROP])])
         else:
-            return self.regionBoxes.regionsMap[dom]._cheapRegionBounds(self)
+            return self.regionBoxes.regionsMap[dom].bounds(self)
+
+    def allBounds(self):
+        return [ self.bounds(dom)
+                 for dom in self.domainProps ]
 
     def regionsEqual(self, rbox, dom):
         """Check whether we have the same regions for the given domain. This
@@ -416,9 +499,9 @@ class RegionBox:
         # about enumeration in the first place.
 
         # Set up region iterators
-        lregs = lbox._cheapRegionBounds(dom)
-        rregs = rbox._cheapRegionBounds(dom)
-        cregs = cbox._cheapRegionBounds(dom)
+        lregs = lbox.bounds(dom)
+        rregs = rbox.bounds(dom)
+        cregs = cbox.bounds(dom)
         try:
             (loff, lsize) = next(lregs)
             (roff, rsize) = next(rregs)
@@ -715,19 +798,17 @@ class RegionBoxes:
         regions for this domain.
         """
         assert dom in self.regionsMap
-        from itertools import chain
-        it = iter([])
-        for box in self.boxes:
-            it = chain(it, box.regions(dom))
-        return it
+        return [ list(box.regions(dom)) for box in self.boxes ]
 
-    def _cheapRegionBounds(self, dom):
+    def bounds(self, dom):
         assert dom in self.regionsMap
         from itertools import chain
-        it = iter([])
-        for box in self.boxes:
-            it = chain(it, box._cheapRegionBounds(dom))
-        return it
+        return [ list(box.bounds(dom)) for box in self.boxes ]
+
+    def allBounds(self):
+        assert dom in self.regionsMap
+        from itertools import chain
+        return [ box.allBounds() for box in self.boxes ]
 
     def count(self):
         """Return the total number of boxes in this box set."""
@@ -753,6 +834,7 @@ class RegionBoxes:
                 if s != s2:
                     raise Exception("Property is not constant: %s != %s!" % (s, s2))
         return s
+
     def sum(self, prop):
         return self._withEnums(lambda: self._sum(prop))
     def _sum(self, prop):
@@ -832,6 +914,7 @@ class RegionBoxes:
                 for rbox in right.boxes:
                     result += lbox._zipCrossSum(rbox, cbox, commonDoms, leftDoms, rightDoms, f, verbose)
         return result
+
 
 class Flow:
     """A flow is a set of results, produced for the cartesian product of a
@@ -1380,12 +1463,13 @@ class DataFlowTests(unittest.TestCase):
             if enumB: rboxesB.sum(oneProp(domB))
             if enumC: rboxesC.sum(oneProp(domC))
 
-            # Check that _cheapRegionBounds is consistent, as
+            # Check that bounds is consistent, as
             # zipCrossSum will depend on it heavily
             def toOffSize(reg): return (reg[OFFSET_PROP], reg[SIZE_PROP])
-            self.assertEqual(list(map(toOffSize, rboxesA.regions(domA))), list(rboxesA._cheapRegionBounds(domA)))
-            self.assertEqual(list(map(toOffSize, rboxesB.regions(domB))), list(rboxesB._cheapRegionBounds(domB)))
-            self.assertEqual(list(map(toOffSize, rboxesC.regions(domC))), list(rboxesC._cheapRegionBounds(domC)))
+            def toOffSizes(regs): return list(map(toOffSize, regs))
+            self.assertEqual(list(map(toOffSizes, rboxesA.regions(domA))), list(rboxesA.bounds(domA)))
+            self.assertEqual(list(map(toOffSizes, rboxesB.regions(domB))), list(rboxesB.bounds(domB)))
+            self.assertEqual(list(map(toOffSizes, rboxesC.regions(domC))), list(rboxesC.bounds(domC)))
 
             # Summing one per edge should give us the number of
             # edges, no matter whether we ask for the dummy
