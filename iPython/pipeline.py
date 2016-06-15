@@ -703,6 +703,16 @@ class PipelineTestsImaging(PipelineTestsBase):
         self.assertIn(self.df.tp.pipeline, Pipelines.imaging)
         self._assertPipelineComplete(self.df.create_imaging())
 
+    def test_dot(self):
+
+        dot = flowsToDot(self.df.create_imaging(), self.df.tp.Tobs)
+
+        # Do some rough sanity checks. Probably not exactly robust,
+        # but there's little we know about the contents...
+        self.assertGreater(len(dot.source), 4000)
+        self.assertGreater(dot.source.count('['), 40)
+        self.assertGreater(dot.source.count(']'), 40)
+
 class PipelineTestsRCAL(PipelineTestsImaging):
     def setUp(self):
         self._loadTelParams(Pipelines.RCAL)
