@@ -930,11 +930,13 @@ class Flow:
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
-        self.deps = list(map(lambda d: (d,1), deps))
+        self.deps = deps
+        self.weights = [1] * len(deps)
         self.cluster = cluster
 
     def depend(self, flow, weight=1):
-        self.deps.append((flow, weight))
+        self.deps.append(flow)
+        self.weights.append(weight)
 
     def output(self, name, costs, attrs={}):
         """Make a new Flow for an output of this Flow. Useful when a Flow has
@@ -970,7 +972,7 @@ class Flow:
 
         while len(active) > 0:
             node = active.pop()
-            for dep, _ in node.deps:
+            for dep in node.deps:
                 if not dep in recDeps:
                     active.append(dep)
                     recDeps.append(dep)
@@ -989,7 +991,7 @@ class Flow:
                 continue
             if node.name == name:
                 return node
-            for dep, _ in node.deps:
+            for dep in node.deps:
                 if not dep in recDeps:
                     active.append(dep)
                     recDeps.append(dep)
@@ -1075,7 +1077,7 @@ def flowsToDot(root, t, computeSpeed=None,
             graph.node(flowIds[flow], text, attrs)
 
             # Add dependencies
-            for dep, weight in flow.deps:
+            for dep, weight in zip(flow.deps, flow.weights):
                 if dep in flowIds:
 
                     if quiet:
