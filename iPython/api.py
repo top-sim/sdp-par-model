@@ -4,7 +4,7 @@ This file contains methods for programmatically interacting with the SKA SDP Par
 
 from __future__ import print_function
 
-from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinitions
+from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinitions, BLDep
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
@@ -51,21 +51,16 @@ class SkaPythonAPI:
             # First substitute parameters
             expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
 
-            # Lambda? Assume it depends on baseline lengths
-            if isinstance(expression_subst, Lambda):
-                result = []
-                counts = (tp.nbaselines / sum(tp.baseline_bin_distribution)) * tp.baseline_bin_distribution
-                for (bcount, bmax) in zip(counts, tp.baseline_bins):
-                    if expression_subst.nargs == FiniteSet(1):
-                        result.append(float(expression_subst(bmax)))
-                    else:
-                        result.append(float(expression_subst(bcount, bmax)))
+            # Baseline dependent?
+            if isinstance(expression_subst, BLDep):
+                result = [ float(expression_subst(bmax, tp.nbaselines_full*frac_val))
+                           for frac_val,bmax in zip(tp.frac_bins, tp.Bmax_bins) ]
             else:
                 # Otherwise just evaluate directly
                 result = float(expression_subst)
 
         except Exception as e:
-            result = "Failed to evaluate: " + str(expression)
+            result = "Failed to evaluate (%s): %s" % (e, str(expression))
 
         return result
 

@@ -134,6 +134,56 @@ class ParameterContainer:
                 results[product] = exprs[expression] / scale
         return results
 
+class BLDep:
+    """A baseline-dependent sympy expression.
+
+    Baseline length will be represented as a symbol in the
+    formula. Baseline count can also be used, however this is
+    cumbersome, so we probably don't want to use it often.
+
+    Note that this mostly replicates functionality of numpy's own
+    Lambda expression (down to the call syntax). The difference is
+    that this class documents the semantics of the parameter.
+    """
+
+    def __init__(self, b, term):
+        if isinstance(b, tuple):
+            self.b = b[0]
+            self.bcount = b[1]
+        else:
+            self.b = b
+            self.bcount = Symbol('bcount')
+        assert isinstance(self.b, Symbol)
+        self.term = term
+
+    def __call__(self, b_val, bcount_val = None):
+        if not isinstance(self.term, Expr):
+            return self.term
+        if bcount_val is None:
+            assert not self.bcount in self.term.free_symbols
+            return self.term.subs(self.b, b_val)
+        else:
+            return self.term.subs([(self.b, b_val),
+                                   (self.bcount, bcount_val)])
+
+    def __mul__(self, other):
+        if isinstance(other, BLDep):
+            return BLDep((other.b, other.bcount),
+                         self(other.b, other.bcount) * other.term)
+        else:
+            return BLDep((self.b, self.bcount), self.term * other)
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def subs(self, *args, **kwargs):
+        return BLDep((self.b, self.bcount), self.term.subs(*args, **kwargs))
+
+def unbldep(term, b_val, bcount_val = None):
+    if isinstance(term, BLDep):
+        return term(b_val, bcount_val)
+    else:
+        return term
+
 class Constants:
     """
     A new class that takes over the roles of sympy.physics.units and astropy.const, because it is simpler this way

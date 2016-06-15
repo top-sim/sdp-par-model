@@ -12,13 +12,17 @@ from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, Lambda, Add
 from numpy import pi, round
 import math
 from parameter_definitions import Pipelines, Products
-from parameter_definitions import ParameterContainer
+from parameter_definitions import ParameterContainer, BLDep
 import warnings
 
 # Check sympy compatibility
 import sympy
 if sympy.__version__ == "1.0":
     raise Exception("SymPy version 1.0 is broken. Please either upgrade or downgrade your version!")
+
+def blsum(b, expr):
+    bcount = Symbol('bcount')
+    return BLDep((b, bcount), bcount * expr)
 
 class Equations:
     def __init__(self):
@@ -206,9 +210,9 @@ class Equations:
 
         o.Nf_no_smear = \
             log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
-        o.Nf_no_smear_backward = Lambda(b,
+        o.Nf_no_smear_backward = BLDep(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
-        o.Nf_no_smear_predict = Lambda(b,
+        o.Nf_no_smear_predict = BLDep(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov_predict * o.Qbw))))
 
         # The number of visibility channels used in each direction
@@ -216,9 +220,9 @@ class Equations:
         # and input channel count.
         o.Nf_vis = \
             Min(Max(o.Nf_out, o.Nf_no_smear),o.Nf_max)
-        o.Nf_vis_backward = Lambda(b,
+        o.Nf_vis_backward = BLDep(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
-        o.Nf_vis_predict = Lambda(b,
+        o.Nf_vis_predict = BLDep(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_predict(b if o.scale_predict_by_facet else o.Bmax)),
                 o.Nf_max))
 
@@ -230,29 +234,29 @@ class Equations:
 
         # correlator output averaging time scaled for max baseline.
         b = Symbol('b')
-        o.combine_time_samples = Lambda(b,
+        o.combine_time_samples = BLDep(b,
             Max(floor(o.epsilon_f_approx * o.wl /
                       (o.Total_fov * o.Omega_E * b * o.Tdump_scaled)), 1.))
 
         # coalesce visibilities in time.
-        o.Tcoal_skipper = Lambda(b,
+        o.Tcoal_skipper = BLDep(b,
             o.Tdump_scaled * o.combine_time_samples(b))
 
         if o.blcoal:
             # For backward step at gridding only, allow coalescance of
             # visibility points at Facet FoV smearing limit only for
-            # BLDep averaging case.
-            o.Tcoal_backward = Lambda(b,
+            # bl-dep averaging case.
+            o.Tcoal_backward = BLDep(b,
                 Min(o.Tcoal_skipper(b) * o.Nfacet/(1+o.using_facet_overlap_frac), o.Tion))
             if o.scale_predict_by_facet:
-                o.Tcoal_predict = Lambda(b, o.Tcoal_backward(b))
+                o.Tcoal_predict = BLDep(b, o.Tcoal_backward(b))
             else:
                 # Don't let any bl-dependent time averaging be for
                 # longer than either 1.2s or Tion. ?Why 1.2s?
-                o.Tcoal_predict = Lambda(b, Min(o.Tcoal_skipper(b), 1.2, o.Tion))
+                o.Tcoal_predict = BLDep(b, Min(o.Tcoal_skipper(b), 1.2, o.Tion))
         else:
-            o.Tcoal_predict = Lambda(b, o.Tdump_scaled)
-            o.Tcoal_backward = Lambda(b, o.Tdump_scaled)
+            o.Tcoal_predict = BLDep(b, o.Tdump_scaled)
+            o.Tcoal_backward = BLDep(b, o.Tdump_scaled)
 
         # Visibility rate on ingest, including autocorrelations
         o.Nvis_ingest = (o.nbaselines + o.Na) * o.Nf_max / o.Tdump_ref
@@ -261,12 +265,9 @@ class Equations:
 
         # Eq. 31 Visibility rate for backward step, allow coalescing
         # in time and freq prior to gridding
-        bcount = Symbol('bcount')
-        o.Nvis_backward = Lambda((bcount, b),
-            bcount * o.Nf_vis_backward(b) / o.Tcoal_backward(b))
+        o.Nvis_backward = blsum(b, o.Nf_vis_backward(b) / o.Tcoal_backward(b))
         # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict = Lambda((bcount, b),
-            bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
+        o.Nvis_predict = blsum(b, o.Nf_vis_predict(b) / o.Tcoal_predict(b))
 
         # The line above uses Tdump_scaled independent of whether
         # BLDTA is used.  This is because BLDTA is only done for
@@ -281,34 +282,34 @@ class Equations:
         # ===============================================================================================
 
         b = Symbol('b')
-        o.DeltaW_Earth = Lambda(b, b ** 2 / (8. * o.R_Earth * o.wl))  # Eq. 19
+        o.DeltaW_Earth = BLDep(b, b ** 2 / (8. * o.R_Earth * o.wl))  # Eq. 19
         # TODO: in the two lines below, PDR05 uses lambda_min, not mean.
         # Eq. 26 : W-deviation for snapshot.
-        o.DeltaW_SShot = Lambda(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
-        o.DeltaW_max = Lambda(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
+        o.DeltaW_SShot = BLDep(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
+        o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
 
         # Eq. 25, w-kernel support size **Note difference in cellsize assumption**
         def Ngw(deltaw, fov):
             return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                                   (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
-        o.Ngw_backward = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
-        o.Ngw_predict = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
+        o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
+        o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
 
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_backward = Lambda(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
-        o.Nkernel_AW_backward = Lambda(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
+        o.Nkernel2_backward = BLDep(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_backward = BLDep(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_predict = Lambda(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
-        o.Nkernel_AW_predict = Lambda(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
+        o.Nkernel2_predict = BLDep(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_predict = BLDep(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
         if o.on_the_fly:
             o.Qgcf = 1.0
 
         # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_backward = Lambda(b,
+        o.Ncvff_backward = BLDep(b,
             sqrt(o.Nkernel2_backward(b))*o.Qgcf)
         # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_predict = Lambda(b,
+        o.Ncvff_predict = BLDep(b,
             sqrt(o.Nkernel2_predict(b))*o.Qgcf)
 
     @staticmethod
@@ -378,16 +379,18 @@ class Equations:
             o.Ntaylor_predict = o.number_taylor_terms
 
         if not o.pipeline in Pipelines.imaging: return
-        Equations._set_product_blsum(
-            o, Products.Grid, b=b, T=o.Tsnap,
-            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_backward * o.Nfacet**2 * o.Nf_vis_backward(b),
-            Rflop = 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b),
+        Equations._set_product(
+            o, Products.Grid, T=o.Tsnap,
+            N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_backward *
+                         o.Nfacet**2 * o.Nf_vis_backward(b)),
+            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
             Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap)
-        Equations._set_product_blsum(
-            o, Products.Degrid, b=b, T = o.Tsnap,
-            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_predict * o.Nfacet_predict**2 * o.Nf_vis_predict(b),
-            Rflop = 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b),
-            Rout = o.Mvis / o.Tcoal_predict(b))
+        Equations._set_product(
+            o, Products.Degrid, T = o.Tsnap,
+            N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_predict *
+                         o.Nfacet_predict**2 * o.Nf_vis_predict(b)),
+            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
+            Rout = blsum(b, o.Mvis / o.Tcoal_predict(b)))
 
     @staticmethod
     def _apply_fft_equations(o):
@@ -565,16 +568,16 @@ class Equations:
         """
 
         b = Symbol('b')
-        o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
-        o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
+        o.dfonF_backward = BLDep(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
+        o.dfonF_predict = BLDep(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
 
         # allow uv positional errors up to o.epsilon_f_approx *
         # 1/Qkernel of a cell from frequency smearing.(But not more
         # than Nf_max channels...)
-        o.Nf_gcf_backward_nosmear = Lambda(b,
+        o.Nf_gcf_backward_nosmear = BLDep(b,
             Min(log(o.wl_max / o.wl_min) /
                 log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-        o.Nf_gcf_predict_nosmear  = Lambda(b,
+        o.Nf_gcf_predict_nosmear  = BLDep(b,
             Min(log(o.wl_max / o.wl_min) /
                 log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
 
@@ -586,27 +589,27 @@ class Equations:
         else:
             # For both of the following, maintain distributability;
             # need at least minimum_channels (500) kernels.
-            o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
-            o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
+            o.Nf_gcf_backward = BLDep(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
+            o.Nf_gcf_predict  = BLDep(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
             # TODO: some baseline dependent re-use limits along the
             # same lines as the frequency re-use? PIP.IMG check
             # please.
-            o.Tkernel_backward = Lambda(b, o.Tion)
-            o.Tkernel_predict  = Lambda(b, o.Tion)
+            o.Tkernel_backward = BLDep(b, o.Tion)
+            o.Tkernel_predict  = BLDep(b, o.Tion)
 
         if o.pipeline in Pipelines.imaging:
 
             # The following two equations correspond to Eq. 35
-            Equations._set_product_blsum(o, Products.Gridding_Kernel_Update, b=b,
-                T = o.Tkernel_backward(b),
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b),
-                Rflop = 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b),
-                Rout = 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b))
-            Equations._set_product_blsum(o, Products.Degridding_Kernel_Update, b=b,
-                T = o.Tkernel_predict(b),
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b),
-                Rflop = 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b),
-                Rout = 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b))
+            Equations._set_product(o, Products.Gridding_Kernel_Update,
+                T = BLDep(b, o.Tkernel_backward(b)),
+                N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b)),
+                Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
+            Equations._set_product(o, Products.Degridding_Kernel_Update,
+                T = BLDep(b,o.Tkernel_predict(b)),
+                N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b)),
+                Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 
     @staticmethod
     def _apply_phrot_equations(o):
@@ -622,21 +625,21 @@ class Equations:
         # Predict phase rotation: Input from facets at predict
         # visibility rate, output at same rate.
         if o.scale_predict_by_facet:
-            Equations._set_product_blsum(
-                o, Products.PhaseRotationPredict, b=b,
+            Equations._set_product(
+                o, Products.PhaseRotationPredict,
                 T = o.Tsnap,
                 N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels * o.Ntaylor_predict,
-                Rflop = 25 * o.Nfacet**2 * o.Nvis / o.nbaselines / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.nbaselines / o.minimum_channels)
+                Rflop = blsum(b, 25 * o.Nfacet**2 * o.Nvis / o.nbaselines / o.minimum_channels),
+                Rout = blsum(b, o.Mvis * o.Nvis / o.nbaselines / o.minimum_channels))
 
         # Backward phase rotation: Input at overall visibility
         # rate, output averaged down to backward visibility rate.
-        Equations._set_product_blsum(
-            o, Products.PhaseRotation, b=b,
+        Equations._set_product(
+            o, Products.PhaseRotation,
             T = o.Tsnap,
             N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels,
-            Rflop = 25 * o.Nvis / o.nbaselines / o.minimum_channels,
-            Rout = o.Mvis * o.Nvis_backward(1, b) / o.minimum_channels)
+            Rflop = blsum(b, 25 * o.Nvis / o.nbaselines / o.minimum_channels),
+            Rout = blsum(b, o.Mvis * o.Nvis_backward(1, b) / o.minimum_channels))
 
     @staticmethod
     def _apply_flop_equations(o):
@@ -662,12 +665,11 @@ class Equations:
         # inevitable overheads. However, this size does include a
         # factor for double-buffering
 
-        bcount = Symbol('bcount')
         b = Symbol('b')
         o.Mw_cache = \
             o.Ncbytes * o.Nbeam * (o.Qgcf ** 3) * \
-            Equations._sum_bl_bins(o, bcount, b,
-                o.Nf_vis_predict(b) * o.Ngw_predict(b) ** 3)
+            Equations._sum_bl_bins(o,
+                blsum(b, o.Nf_vis_predict(b) * o.Ngw_predict(b) ** 3))
             # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
         # (allowing storage of a full observation while simultaneously capturing the next)
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
@@ -682,32 +684,18 @@ class Equations:
         o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis  # Eq 50
 
     @staticmethod
-    def _set_product(o, product, T=None, N=1, **args):
-        """Sets product properties using a task abstraction.
-
-        @param product: Product to set.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           to yield rate for all tasks.
-        """
-
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": N, "T": T }
-        for k, expr in args.items():
-            props[k] = N * expr
-
-        # Set product
-        o.set_product(product, **props)
-
-    @staticmethod
-    def _sum_bl_bins(o, bcount, b, expr):
+    def _sum_bl_bins(o, bldep):
         """Helper for dealing with baseline dependence. For a term
         depending on the given symbols, "sum_bl_bins" will build a
         sum term over all baseline bins."""
+
+        # Actually baseline-dependent?
+        if isinstance(bldep, BLDep):
+            b = bldep.b
+            bcount = bldep.bcount
+            expr = bldep.term
+        else:
+            return o.nbaselines * bldep
 
         # Small bit of ad-hoc formula optimisation: Exploit
         # independent factors. Makes for smaller terms, which is good
@@ -720,47 +708,55 @@ class Equations:
             if len(indepFactors) > 0:
                 def not_indep(e): return not indep(e)
                 restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * Equations._sum_bl_bins(o, bcount, b, Mul(*restFactors))
+                return Mul(*indepFactors) * Equations._sum_bl_bins(o, BLDep((b, bcount), Mul(*restFactors)))
 
         # Replace in concrete values for baseline fractions and
         # length. Using Lambda here is a solid 25% faster than
         # subs(). Unfortunately very slow nonetheless...
         results = []
-        lam = Lambda((bcount,b), expr)
 
         # Symbolic? Generate actual symbolic sum expression
         if isinstance(o.Bmax_bins, Symbol):
-            return Sum(lam(1, o.Bmax_bins(b)), (b, 1, o.nbaselines))
+            return Sum(bldep(o.Bmax_bins(b), 1), (b, 1, o.nbaselines))
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
         for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
-            results.append(lam(frac_val*o.nbaselines_full, bmax_val))
+            results.append(bldep(bmax_val, frac_val*o.nbaselines_full))
         return Add(*results, evaluate=False)
 
     @staticmethod
-    def _set_product_blsum(o, product, b, T=None, N=1, **args):
+    def _set_product(o, product, T=None, N=1, **args):
         """Sets product properties using a task abstraction. Each property is
         expressed as a sum over baselines.
 
         @param product: Product to set.
-        @param b: SymPy symbol for baseline length. Can be used in T
-           and N and all properties.
         @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
+          entire observation (Tobs). Can be baseline-dependent.
         @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           and summed over baselines to yield the rate for all tasks.
+           tasks that work on the data in parallel. Can be
+           baseline-dependent.
+        @param args: Task properties as rates. Will be multiplied by
+           N.  If it is baseline-dependent, it will be summed over all
+           baselines to yield the final rate.
         """
 
         # Collect properties
         if T is None: T = o.Tobs
-        props = { "N": Lambda(b, N), "T": Lambda(b, T) }
+        props = { "N": N, "T": T }
         for k, expr in args.items():
-            bcount = Symbol('bcount')
-            props[k] = Equations._sum_bl_bins(o, bcount, b, bcount * N * expr)
-            props[k+"_task"] = Lambda(b, expr)
+
+            # Multiply out multiplicator. If either of them is
+            # baseline-dependent, this will generate a new
+            # baseline-dependent term (see BLDep)
+            total = N * expr
+
+            # Baseline-dependent? Generate a sum term, otherwise just say as-is
+            if isinstance(total, BLDep):
+                props[k] = Equations._sum_bl_bins(o, total)
+                props[k+"_task"] = expr
+            else:
+                props[k] = total
 
         # Set product
         o.set_product(product, **props)

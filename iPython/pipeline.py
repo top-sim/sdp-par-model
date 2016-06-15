@@ -162,9 +162,7 @@ class Pipeline:
         if cost + "_task" in product_costs:
             task_cost = product_costs[cost + "_task"]
             # Pass baseline length, multiply by number of baselines
-            return rbox(self.baseline,'size') * \
-                t(rbox(self.baseline,'bmax')) * \
-                task_cost(rbox(self.baseline,'bmax'))
+            return unbldep(t * task_cost, rbox(self.baseline,'bmax'), rbox(self.baseline,SIZE_PROP))
         else:
             # Otherwise simply return the value as-is
             return t * product_costs.get(cost, 0) / product_costs.get("N", 1)
