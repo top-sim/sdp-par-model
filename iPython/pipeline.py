@@ -101,6 +101,17 @@ class Pipeline:
         self.predTaylor = self.allTaylor.split(tp.Ntaylor_predict)
         self.backTaylor = self.allTaylor.split(tp.Ntaylor_backward)
 
+        # We want to completely remove taylor terms for pipelines that
+        # don't actually use them.
+        if tp.Ntaylor_predict == 1:
+            self.maybePredTaylor = []
+        else:
+            self.maybePredTaylor = [self.predTaylor]
+        if tp.Ntaylor_backward == 1:
+            self.maybeBackTaylor = []
+        else:
+            self.maybeBackTaylor = [self.backTaylor]
+
     def _transfer_cost_vis(self, Tdump):
         """Utility transfer cost function for visibility data. Multiplies out
         frequency, baselines, polarisations and time given a dump time"""
@@ -279,8 +290,8 @@ class Pipeline:
         add = Flow(
             "Sum visibilities",
             [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.allBaselines,
-             self.predTaylor],
+             self.snapTime, self.islandFreqs, self.allBaselines] +
+             self.maybePredTaylor,
             deps = [dft, degrid], cluster='predict',
             costs = {
                 'transfer': self._transfer_cost_vis(self.tp.Tdump_scaled)
@@ -343,8 +354,8 @@ class Pipeline:
         degrid = Flow(
             Products.Degrid,
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
-             self.snapTime, self.predFreqs, self.binBaselines,
-             self.predTaylor],
+             self.snapTime, self.predFreqs, self.binBaselines] +
+             self.maybePredTaylor,
             costs = self._costs_from_product(Products.Degrid),
             deps = [fft, gcf], cluster='predict'
         )
@@ -354,8 +365,8 @@ class Pipeline:
             return Flow(
                 Products.PhaseRotationPredict,
                 [self.eachBeam, self.eachLoop, self.allFacets, self.xyPolar,
-                 self.snapTime, self.islandFreqs, self.binBaselines,
-                 self.predTaylor],
+                 self.snapTime, self.islandFreqs, self.binBaselines] +
+                 self.maybePredTaylor,
                 costs = self._costs_from_product(Products.PhaseRotationPredict),
                 deps = [degrid], cluster = 'predict'
             )
@@ -412,8 +423,8 @@ class Pipeline:
         grid = Flow(
             Products.Grid,
             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
-             self.snapTime, self.backFreqs, self.binBaselines,
-             self.backTaylor],
+             self.snapTime, self.backFreqs, self.binBaselines] +
+             self.maybeBackTaylor,
             costs = self._costs_from_product(Products.Grid),
             deps = [rotate, gcf], cluster = 'backward',
         )
