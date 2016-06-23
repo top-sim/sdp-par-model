@@ -713,6 +713,18 @@ class PipelineTestsImaging(PipelineTestsBase):
         self.assertGreater(dot.source.count('['), 40)
         self.assertGreater(dot.source.count(']'), 40)
 
+    def test_baseline_split(self):
+
+        # Check that the baseline split actually is done for the
+        # appropriate flows.
+        imaging = self.df.create_imaging()
+        for product in [Products.Grid, Products.Degrid]:
+            dep = imaging.getDep(product)
+            def baseline_count_prop(rb):
+                return rb(self.df.baseline, 'count')
+            self.assertEqual(dep.the(baseline_count_prop),
+                             self.df.binBaselines.the(baseline_count_prop))
+
 class PipelineTestsRCAL(PipelineTestsImaging):
     def setUp(self):
         self._loadTelParams(Pipelines.RCAL)

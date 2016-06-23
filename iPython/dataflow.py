@@ -9,10 +9,14 @@ from math import floor
 
 import unittest
 
+# Special region properties
 INDEX_PROP = 'index'
-OFFSET_PROP = 'offset'
 COUNT_PROP = 'count'
 SIZE_PROP = 'size'
+OFFSET_PROP = 'offset'
+
+# Internal properties. Might not be transparent with enumeration!
+SPLIT_PROP = '_split'
 
 DEBUG = False
 
@@ -85,12 +89,12 @@ class Regions:
             if not callable(v) or isinstance(v, Lambda)
         }
 
-        reg[INDEX_PROP] = 0
-        reg[OFFSET_PROP] = 0
-
         # The split degree is one of the few things we know about
         # regions no matter what.
         reg[COUNT_PROP] = self.count(rb)
+
+        # Split degree - starts at zero index and offset, not enumerated
+        reg[SPLIT_PROP] = (0, 0, reg[COUNT_PROP])
 
         # If size does not get defined in self.props, we provide a
         # default implementation.
@@ -115,7 +119,10 @@ class Regions:
         # Regions are unary now, with an index and offset
         reg[INDEX_PROP] = index
         reg[OFFSET_PROP] = offset
-        reg[COUNT_PROP] = 1
+        reg[COUNT_PROP] = self.count(rb)
+
+        # Set split degree accordingly
+        reg[SPLIT_PROP] = (index, offset, 1)
 
         # If size does not get defined in self.props, we provide a
         # default implementation.
@@ -265,10 +272,8 @@ class RegionBox:
         for dom in lbox.domains():
 
             # Get left box properties
-            loff = lbox(dom, 'offset')
-            lsize = lbox(dom, 'size')
-            lix = lbox(dom, 'index')
-            lcount = lbox(dom, 'count')
+            lsize = lbox(dom, SIZE_PROP)
+            lix, loff, lcount = lbox(dom, SPLIT_PROP)
 
             # Domain not existent on the right? Then we assume that
             # all from the left apply.
@@ -277,10 +282,8 @@ class RegionBox:
                 continue
 
             # Get box properties
-            roff = rbox(dom, 'offset')
-            rsize = rbox(dom, 'size')
-            rix = rbox(dom, 'index')
-            rcount = rbox(dom, 'count')
+            rsize = rbox(dom, SIZE_PROP)
+            rix, roff, rcount = rbox(dom, SPLIT_PROP)
 
             if verbose:
                 print('%s Left off=%d size=%d index=%d count=%d' %
@@ -1179,6 +1182,8 @@ class DataFlowTests(unittest.TestCase):
 
         # Summing up a value of one per box should yield the box count
         self.assertEqual(rboxes.sum(lambda rb: 1), count)
+        def countProp(rb): return rb(self.dom1, COUNT_PROP)
+        self.assertEqual(rboxes.the(countProp), count)
 
         # Summing up the box sizes should give us the region size
         def sizeProp(rb): return rb(self.dom1, SIZE_PROP)
@@ -1192,6 +1197,15 @@ class DataFlowTests(unittest.TestCase):
         self.assertEqual(rboxes.the(dummySizeProp), boxSize)
         self.assertEqual(rboxes.sum(dummySizeProp), self.size1)
         self.assertTrue(self.dom1 in rboxes.enumDomains)
+        self.assertEqual(rboxes.the(countProp), count)
+
+        # Summing up indices should work as expected
+        def indexProp(rb): return rb(self.dom1, INDEX_PROP)
+        self.assertEqual(rboxes.max(indexProp), count-1)
+        self.assertEqual(rboxes.sum(indexProp), count * (count-1) // 2)
+        def offsetProp(rb): return rb(self.dom1, OFFSET_PROP)
+        self.assertEqual(rboxes.max(offsetProp), (count-1) * boxSize)
+        self.assertEqual(rboxes.sum(offsetProp), (count * (count-1) // 2) * boxSize)
 
     def test_rboxes_2(self):
 
