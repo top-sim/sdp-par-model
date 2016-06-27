@@ -639,7 +639,7 @@ class Equations:
             T = o.Tsnap,
             N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels,
             Rflop = blsum(b, 25 * o.Nvis / o.nbaselines / o.minimum_channels),
-            Rout = blsum(b, o.Mvis * o.Nvis_backward(1, b) / o.minimum_channels))
+            Rout = blsum(b, o.Mvis * o.Nvis_backward(b, 1) / o.minimum_channels))
 
     @staticmethod
     def _apply_flop_equations(o):
