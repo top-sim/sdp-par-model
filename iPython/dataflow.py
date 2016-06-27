@@ -345,7 +345,7 @@ class RegionBox:
                 sums.append((self.symbols[dom],
                              0, self(dom, COUNT_PROP) - 1))
         if len(sums) > 0:
-            expr = Sum(expr, *sums).doit()
+            expr = Sum(expr, *sums)
         return expr
 
     def domains(self):
@@ -1517,8 +1517,8 @@ class DataFlowTestsSymbol(unittest.TestCase):
         rbox = RegionBoxes([split])
         self.assertEqual(rbox.count(), size)
         self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p1')), size)
-        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p2')), size)
-        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p3')), size**2/2-size/2)
+        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p2')).doit(), size)
+        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p3')).doit(), size**2/2-size/2)
 
 if __name__ == '__main__':
     unittest.main()
