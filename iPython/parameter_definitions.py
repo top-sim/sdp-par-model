@@ -426,8 +426,8 @@ class ParameterDefinitions:
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
-        o.minimum_channels = 100  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
-        o.Fast_Img_channels = 100  #minimum number of channels to still enable distributed computing, and to calculate spectral images
+        o.minimum_channels = 20  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
+        o.Fast_Img_channels = 20  #minimum number of channels to still enable distributed computing, and to calculate spectral images
         o.number_taylor_terms = 5 # Number of Taylor terms to compute
         o.NB_parameters = 500 # Number of terms in B parametrization
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
