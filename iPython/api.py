@@ -375,7 +375,7 @@ class SkaPythonAPI:
                 if str(v) == str(sym):
                     continue
                 eqs[str(sym)] = v
-                if isinstance(v, Expr):
+                if isinstance(v, Expr) or isinstance(v, BLDep):
                     new_symbols = new_symbols.union(SkaPythonAPI.collect_free_symbols([v]))
             symbols = new_symbols
         return eqs
@@ -389,7 +389,7 @@ class SkaPythonAPI:
         """
 
         def free_f(expr):
-            return set(expr.free_symbols).union(
-                map(lambda f: f.func, expr.atoms(Function)))
-        return set().union(*map(free_f, formulas))
-
+            functions = set(map(lambda f: f.func, expr.atoms(Function)))
+            frees = set(expr.free_symbols)
+            return set(frees).union(functions)
+        return set().union(*list(map(free_f, formulas)))

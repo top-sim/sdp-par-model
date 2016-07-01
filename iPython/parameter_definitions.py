@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import numpy as np
 from math import sqrt
-from sympy import symbols, Symbol, Expr
+from sympy import symbols, Symbol, Expr, Lambda
 import warnings
 import string
 
@@ -122,7 +122,7 @@ class ParameterContainer:
             return True
 
     def is_expr(self, e):
-        return isinstance(e, Expr)
+        return isinstance(e, Expr) or isinstance(e, BLDep)
 
     def set_product(self, product, **args):
         if not product in self.products:
@@ -179,6 +179,12 @@ class BLDep:
 
     def subs(self, *args, **kwargs):
         return BLDep((self.b, self.bcount), self.term.subs(*args, **kwargs))
+
+    @property
+    def free_symbols(self):
+        return Lambda((self.b, self.bcount), self.term).free_symbols
+    def atoms(self, typ):
+        return Lambda((self.b, self.bcount), self.term).atoms(typ)
 
 def unbldep(term, b_val, bcount_val = None):
     if isinstance(term, BLDep):
