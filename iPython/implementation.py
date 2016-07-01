@@ -372,7 +372,8 @@ class Implementation:
         assert hasattr(telescope_parameters, expr_to_minimize_string)
 
         if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
-            print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
+            if verbose:
+                print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
             return (telescope_parameters.Tobs, 1)
 
         result_per_nfacet = {}
