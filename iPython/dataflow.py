@@ -1028,9 +1028,77 @@ class Flow:
 
         return None
 
+    def getDeps(self, names):
+        """Look up multiple dependencies."""
+
+        return list(filter(lambda f: not f is None,
+                           map(lambda n: self.getDep(n), names)))
+
+def mergeFlows(root, group, regs):
+    """Group given flows into a common Flow with the desired
+    granularity. This is only allowed if there is one designated
+    output Flow. Or put another way: Only one Flow is allowed to have
+    outside Flows depend on it.
+    """
+
+    boxes = RegionBoxes(regs)
+    count = boxes.count()
+    allFlows = root.recursiveDeps()
+
+    flops = 0
+    in_transfer = 0
+    in_count = 0
+    out_transfer = 0
+    cluster = None
+    deps = set()
+    revDeps = set()
+
+    for flow in group:
+
+        # Determine cluster
+        if cluster is None:
+            cluster = flow.cluster
+        elif cluster != flow.cluster:
+            cluster = ''
+
+        # Count flops
+        flops += flow.cost('compute')
+
+        # Determine input transfer
+        for d in flow.deps:
+            if not d in group:
+                deps.add(d)
+
+        # Only count transfer that leaves group
+        outside_dep = False
+        for f in root.recursiveDeps():
+            if f in group:
+                continue
+            for d in f.deps:
+                if d == flow:
+                    outside_dep = True
+                    revDeps.add(f)
+        if outside_dep:
+            out_transfer += flow.cost('transfer')
+
+    # Create new Flow
+    groupFlow = Flow(' + '.join(map(lambda f: f.name, group)), regs,
+                     cluster=cluster,
+                     costs = { 'compute': lambda rb: flops / count,
+                               'transfer': lambda rb: out_transfer / count },
+                     deps = list(deps)
+    )
+
+    # Change dependencies of existing flows
+    for f in revDeps:
+        f.deps = list(filter(lambda f: not f in group, f.deps)) + [groupFlow]
+
+    return groupFlow
+
 def flowsToDot(root, t, computeSpeed=None,
                graph_attr={}, node_attr={'shape':'box'}, edge_attr={},
-               cross_regs=None, quiet = False):
+               showRegions=True, showRates=True, showTaskRates=False,
+               showGranularity=True, showDegrees=True, cross_regs=None):
 
     # Get root flow dependencies
     flows = root.recursiveDeps()
@@ -1053,6 +1121,11 @@ def flowsToDot(root, t, computeSpeed=None,
     if not cross_regs is None:
         crossBoxes = RegionBoxes(cross_regs)
 
+    # Helper for formatting sizes
+    def format_bytes(n):
+        if n < 10**9: return '%.1f MB' % (n/10**6)
+        return '%.1f GB' % (n/10**9)
+
     # Make nodes per cluster
     for cluster, cflows in clusters.items():
 
@@ -1069,7 +1142,7 @@ def flowsToDot(root, t, computeSpeed=None,
 
             # Add relevant regions
             def regName(r): return r.domain.name
-            if not quiet:
+            if showRegions:
                 for region in sorted(flow.regions(), key=regName):
                     count = flow.max(lambda rb: rb(region.domain, 'count'))
                     size = flow.max(lambda rb: rb(region.domain, 'size'))
@@ -1082,26 +1155,57 @@ def flowsToDot(root, t, computeSpeed=None,
                              region.domain.unit)
 
             # Add compute count
-            if not quiet:
-                count = flow.count()
+            count = flow.count()
+            try:
+                compute = flow.cost('compute')
+                transfer = flow.cost('transfer')
+            except:
+                print()
+                print("Exception raised while determining cost for '" + flow.name + "':")
+                raise
+            if showGranularity:
                 if count != 1:
-                    if count < t:
-                        text += "\nTasks: %d" % (count)
-                    else:
-                        text += "\nTask Rate: %d 1/s" % (count/t)
-                try:
-                    compute = flow.cost('compute')
-                    transfer = flow.cost('transfer')
-                except:
-                    print()
-                    print("Exception raised while determining cost for '" + flow.name + "':")
-                    raise
+                    text += "\nTasks: %.3g" % (count)
+                    if count > t:
+                        text += " (%d/s)" % (count/t)
                 if compute > 0 and computeSpeed is not None:
-                    text += "\nRuntime: %.2g s/task" % (compute/count/computeSpeed)
+                    text += "\nRuntime: %.3g s/task" % (compute/count/computeSpeed)
+
+            # Show overall rates
+            if showRates:
                 if compute > 0:
                     text += "\nFLOPs: %.2f TOP/s" % (compute/t/Constants.tera)
                 if transfer > 0:
                     text += "\nOutput: %.2f TB/s" % (transfer/t/Constants.tera)
+
+            # Show per-task data statistic
+            if showTaskRates:
+
+                # Determine input data
+                in_count = 0
+                in_transfer = 0
+                for dep in flow.deps:
+                    in_count += dep.boxes.zipSum(flow.boxes, lambda l,r: 1)
+                    if 'transfer' in dep.costs:
+                        def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
+                        in_transfer += dep.boxes.zipSum(flow.boxes, transfer_prop)
+
+                if compute > 0:
+                    if in_transfer > 0:
+                        text += "\nTask Input: %s (%s/s)" % \
+                                (format_bytes(in_transfer / flow.boxes.count()),
+                                 format_bytes(in_transfer / flow.boxes.count() / compute*count*computeSpeed))
+                    if transfer > 0:
+                        text += "\nTask Output: %s (%s/s)" % \
+                                (format_bytes(transfer / flow.boxes.count()),
+                                 format_bytes(transfer / flow.boxes.count() / compute*count*computeSpeed))
+                else:
+                    if in_transfer > 0:
+                        text += "\nTask Input: %s\n" % \
+                                format_bytes(in_transfer / flow.boxes.count())
+                    if transfer > 0:
+                        text += "\nTask Output: %s" % \
+                                format_bytes(transfer / flow.boxes.count())
 
             attrs = flow.attrs
             graph.node(flowIds[flow], text, attrs)
@@ -1110,30 +1214,31 @@ def flowsToDot(root, t, computeSpeed=None,
             for dep, weight in zip(flow.deps, flow.weights):
                 if dep in flowIds:
 
-                    if quiet:
-                        dot.edge(flowIds[dep], flowIds[flow], '', weight=str(weight))
-                        continue
-
                     # Calculate number of edges, and use node counts
                     # on both sides to calculate (average!) in and out
                     # degrees.
                     edges = dep.boxes.zipSum(flow.boxes, lambda l, r: 1)
+                    label = ''
                     if 'transfer' in dep.costs:
                         def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
                         transfer = dep.boxes.zipSum(flow.boxes, transfer_prop)
-                    depcount = dep.boxes.count()
-                    flowcount = flow.boxes.count()
-                    def format_bytes(n):
-                        if n < 10**9: return '%.1f MB' % (n/10**6)
-                        return '%.1f GB' % (n/10**9)
-                    if 'transfer' in dep.costs and transfer > 0:
-                        label = 'packets: %.1g x %s\nout: %.1f (%s)\nin: %.1f (%s)' % \
-                                (edges, format_bytes(transfer/edges),
-                                 edges/depcount, format_bytes(transfer/depcount),
-                                 edges/flowcount, format_bytes(transfer/flowcount))
-                    else:
-                        label = 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
+                        label = '%.1g x %s' % \
+                                (edges, format_bytes(transfer/edges))
 
+                    # Do in-/out-degree analysis
+                    if showDegrees:
+                        depcount = dep.boxes.count()
+                        flowcount = flow.boxes.count()
+                        if label != '':
+                            label += '\n'
+                        if 'transfer' in dep.costs and transfer > 0:
+                            label += 'out: %.1f (%s)\nin: %.1f (%s)' % \
+                                     (edges/depcount, format_bytes(transfer/depcount),
+                                      edges/flowcount, format_bytes(transfer/flowcount))
+                        else:
+                            label += 'out: %d\nin: %d' % (edges/depcount, edges/flowcount)
+
+                    # Check for box crossings
                     if crossBoxes:
                         cross = dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
                         label += '\ncrossing: %.1f%%' % (100 * cross / edges)
