@@ -453,7 +453,9 @@ class SkaIPythonAPI(api):
         plt.savefig(filename, format='svg', dpi=1200)
 
     @staticmethod
-    def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays, colours=None):
+    def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays,
+                          colours=None, width=0.35,
+                          save=None):
         """
         Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
         @param title:
@@ -467,10 +469,9 @@ class SkaIPythonAPI(api):
         if colours is not None:
             assert number_of_elements == len(colours)
         for key in dictionary_of_value_arrays:
-            assert len(dictionary_of_value_arrays[key]) == len(labels)
+            assert len(list(dictionary_of_value_arrays[key])) == len(list(labels))
 
         #Plot a stacked bar chart
-        width = 0.35
         nr_bars = len(labels)
         indices = np.arange(nr_bars)  # The indices of the bars
         bottoms = {} # The height of each bar, by key
@@ -488,11 +489,18 @@ class SkaIPythonAPI(api):
                 plt.bar(indices, values, width, color=colours[index], bottom=bottoms[key])
             else:
                 plt.bar(indices, values, width, bottom=bottom[key])
+            for x, v, b in zip(indices, values, bottoms[key]):
+                if v >= np.amax(np.array(valueSum)) / 40:
+                    plt.text(x+width/2, b+v/2, "%.1f%%" % (100 * v / valueSum[x]),
+                             horizontalalignment='center', verticalalignment='center')
 
         plt.xticks(indices+width/2., labels)
         plt.title(title)
         plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
+
+        if not save is None:
+            plt.savefig(save, format='pdf', dpi=1200, bbox_inches = 'tight')
         pylab.show()
 
     @staticmethod
@@ -567,9 +575,6 @@ class SkaIPythonAPI(api):
         products_2 = tels_result_values[1][-1]
         labels = sorted(set(products_1).union(products_2))
         colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
-        blcoal_text = {True: ' (BLCOAL)', False: ' (no BLCOAL)'}
-        otf_text = {True: ' (otf kernels)', False: ''}
-
         telescope_labels = (cfg_1.describe(), cfg_2.describe())
 
         values = {
@@ -733,14 +738,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
-    def write_csv_pipelines(filename, telescopes, bands, pipelines,
-                            blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
-        """
-        Evaluates all valid configurations of this telescope and dumps the
-        result as a CSV file.
-        """
+    def _pipeline_configurations(telescopes, bands, pipelines,
+                                 blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
+        """Make a list of all valid configuration combinations in the list."""
 
-        # Make configuration list
         configs = []
         for telescope in telescopes:
             for band in bands:
@@ -749,18 +750,38 @@ class SkaIPythonAPI(api):
                                          pipeline=pipeline, blcoal=blcoal,
                                          on_the_fly=on_the_fly,
                                          scale_predict_by_facet=scale_predict_by_facet)
-                    configs.append(cfg)
+
+                    # Check whether the configuration is valid
+                    (okay, msgs) = cfg.is_valid()
+                    if okay:
+                        configs.append(cfg)
+
+        return configs
+
+    @staticmethod
+    def write_csv_pipelines(filename, telescopes, bands, pipelines,
+                            blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                            verbose=False):
+        """
+        Evaluates all valid configurations of this telescope and dumps the
+        result as a CSV file.
+        """
+
+        # Make configuration list
+        configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+                                                         blcoal, on_the_fly, scale_predict_by_facet)
 
         # Calculate
         rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+        results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
 
         # Write CSV
         SkaIPythonAPI._write_csv(filename, results, rows)
 
     @staticmethod
     def write_csv_hpsos(filename, hpsos,
-                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
+                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                        verbose=False):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.
@@ -775,7 +796,7 @@ class SkaIPythonAPI(api):
 
         # Calculate
         rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+        results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
 
         # Write CSV
         SkaIPythonAPI._write_csv(filename, results, rows)
@@ -845,7 +866,8 @@ class SkaIPythonAPI(api):
                 continue
 
             # Compute, add to results
-            display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
+            if verbose:
+                display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
             results.append((cfg, SkaIPythonAPI._compute_results(cfg, verbose, result_map)))
         return results
 
@@ -870,11 +892,11 @@ class SkaIPythonAPI(api):
 
                 # Convert lists to dictionaries
                 resultRow = map(lambda r: r[1][i], results)
-                resultRow = map(lambda r: dict(enumerate(r)) if isinstance(r,list) else r,
-                                resultRow)
+                resultRow = list(map(lambda r: dict(enumerate(r)) if isinstance(r,list) else r,
+                                     resultRow))
 
                 # Dictionary? Expand
-                dicts = filter(lambda r: isinstance(r, dict), resultRow)
+                dicts = list(filter(lambda r: isinstance(r, dict), resultRow))
                 if len(list(dicts)) > 0:
 
                     # Collect labels
@@ -898,7 +920,7 @@ class SkaIPythonAPI(api):
                 else:
 
                     # Simple write out as-is
-                    w.writerow([rowTitle + rowUnit] + list(resultRow))
+                    w.writerow([rowTitle + rowUnit] + resultRow)
 
 
         display(HTML('<font color="blue">Results written to %s.</font>' % filename))
@@ -1021,3 +1043,33 @@ class SkaIPythonAPI(api):
 
         display(HTML(s))
         display(HTML('<font color="blue">Done.</font>'))
+
+    @staticmethod
+    def stack_bars_pipelines(title, telescopes, bands, pipelines,
+                             blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                             save=None):
+        """
+        Evaluates all valid configurations of this telescope and shows
+        results as stacked bars.
+        """
+
+        # Make configurations
+        configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+                                                         blcoal, on_the_fly, scale_predict_by_facet)
+
+        # Calculate
+        rows = [SkaIPythonAPI.RESULT_MAP[-1]] # Products only
+        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+
+        products = list(map(lambda r: r[1][-1], results))
+        labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
+        tel_labels = list(map(lambda cfg: cfg.describe().replace(" ", "\n"), configs))
+        values = {
+            label: list(map(lambda p: p.get(label, 0), products))
+            for label in labels
+        }
+
+        # Show stacked bar graph
+        SkaIPythonAPI.plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7, save=save)
+
