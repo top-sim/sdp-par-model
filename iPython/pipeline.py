@@ -49,6 +49,11 @@ class Pipeline:
             lambda rbox: tp.Tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
         self.kernelBackTime = self.obsTime.split(
             lambda rbox: tp.Tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
+        self.solveTime = self.snapTime
+        if tp.pipeline == Pipelines.ICAL:
+            self.solveTime = self.obsTime.split(tp.Tobs / tp.tICAL_G)
+        elif tp.pipeline == Pipelines.RCAL:
+            self.solveTime = self.obsTime.split(tp.Tobs / tp.tRCAL_G)
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch')
@@ -57,6 +62,7 @@ class Pipeline:
         self.visFreq = self.allFreqs.split(tp.Nf_vis)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
         self.islandFreqs = self.allFreqs.split(self.Nisland)
+        self.granFreqs = self.allFreqs.split(tp.minimum_channels_gran)
         self.predFreqs = self.allFreqs.split(
             lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')))
         self.backFreqs = self.allFreqs.split(
@@ -141,11 +147,11 @@ class Pipeline:
             [self.eachBeam, self.snapTime, self.islandFreqs, self.allBaselines],
             deps = [self.tm],
             costs = {
-                'transfer': lambda rbox:
-                  3 * 8 * rbox(self.frequency, 'size')
-                        * rbox(self.baseline, 'size')
-                        * rbox(self.time, 'size')
-                        / self.tp.Tdump_scaled
+                #'transfer': lambda rbox:
+                #  3 * 8 * rbox(self.frequency, 'size')
+                #        * rbox(self.baseline, 'size')
+                #        * rbox(self.time, 'size')
+                #        / self.tp.Tdump_scaled
             })
 
         self.corr = Flow(
@@ -158,7 +164,7 @@ class Pipeline:
         # TODO - buffer contains averaged visibilities...
         self.buf = Flow(
             'Visibility Buffer',
-            [self.eachBeam, self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolars],
+            [self.eachBeam, self.granFreqs, self.allBaselines, self.snapTime, self.xyPolars],
             cluster = 'interface',
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)}
         )
@@ -189,7 +195,7 @@ class Pipeline:
         ingest = Flow(
             Products.Receive,
             [self.eachBeam, self.snapTime,
-             self.islandFreqs, self.xyPolar, self.allBaselines],
+             self.islandFreqs, self.xyPolars, self.allBaselines],
             deps = [self.tm, self.corr],
             cluster='ingest',
             costs = self._costs_from_product(Products.Receive))
@@ -197,7 +203,7 @@ class Pipeline:
         demix = Flow(
             Products.Demix,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar],
+             self.xyPolars],
             deps = [ingest],
             cluster='ingest',
             costs = self._costs_from_product(Products.Demix))
@@ -205,7 +211,7 @@ class Pipeline:
         average = Flow(
             Products.Average,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar, self.allBaselines],
+             self.xyPolars, self.allBaselines],
             deps = [demix],
             cluster='ingest',
             costs = self._costs_from_product(Products.Average))
@@ -213,7 +219,7 @@ class Pipeline:
         rfi = Flow(
             Products.Flag,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar, self.allBaselines],
+             self.xyPolars, self.allBaselines],
             deps = [average],
             cluster='ingest',
             costs = self._costs_from_product(Products.Flag))
@@ -226,8 +232,8 @@ class Pipeline:
 
         return Flow(
             Products.Flag,
-            [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars, self.allBaselines],
+            [self.eachBeam, self.snapTime, self.granFreqs,
+             self.xyPolars, self.allBaselines, self.eachLoop],
             deps = [vis], cluster='calibrate',
             costs = self._costs_from_product(Products.Flag))
 
@@ -239,7 +245,7 @@ class Pipeline:
             # Solve
             solve = Flow(
                 Products.Solve,
-                [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
+                [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
                 costs = self._costs_from_product(Products.Solve),
                 deps = [vis, modelVis], cluster='calibrate',
             )
@@ -263,7 +269,7 @@ class Pipeline:
         # Apply the calibration
         app = Flow(
             Products.Correct,
-            [self.snapTime, self.islandFreqs, self.eachBeam,
+            [self.snapTime, self.granFreqs, self.eachBeam,
              self.eachLoop, self.xyPolar],
             deps = [vis, calibration], cluster='calibrate',
             costs = self._costs_from_product(Products.Correct)
@@ -289,11 +295,12 @@ class Pipeline:
         # Sum up both
         add = Flow(
             "Sum visibilities",
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.allBaselines] +
+            [self.eachBeam, self.eachLoop, self.xyPolars,
+             self.snapTime, self.granFreqs, self.allBaselines] +
              self.maybePredTaylor,
             deps = [dft, degrid], cluster='predict',
             costs = {
+                #'compute': lambda rb: 2 * (1 + self.tp.Nfacet) * self._transfer_cost_vis(self.tp.Tdump_scaled)(rb),
                 'transfer': self._transfer_cost_vis(self.tp.Tdump_scaled)
             }
         )
@@ -306,7 +313,7 @@ class Pipeline:
         return Flow(
             Products.DFT,
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.visFreq, self.allBaselines],
+             self.snapTime, self.granFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.DFT),
             deps = [sources], cluster='predict',
         )
@@ -364,8 +371,8 @@ class Pipeline:
         if self.tp.scale_predict_by_facet:
             return Flow(
                 Products.PhaseRotationPredict,
-                [self.eachBeam, self.eachLoop, self.allFacets, self.xyPolar,
-                 self.snapTime, self.islandFreqs, self.binBaselines] +
+                [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+                 self.snapTime, self.granFreqs, self.binBaselines] +
                  self.maybePredTaylor,
                 costs = self._costs_from_product(Products.PhaseRotationPredict),
                 deps = [degrid], cluster = 'predict'
@@ -394,8 +401,8 @@ class Pipeline:
 
         return Flow(
             Products.Subtract_Visibility,
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.allBaselines],
+            [self.eachBeam, self.eachLoop, self.xyPolars,
+             self.snapTime, self.granFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.Subtract_Visibility),
             deps = [vis, model_vis], cluster='calibrate'
         )
@@ -407,7 +414,7 @@ class Pipeline:
         rotate = Flow(
             Products.PhaseRotation,
             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.binBaselines],
+             self.snapTime, self.granFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.PhaseRotation),
             deps = [vis], cluster = 'backward'
         )
@@ -609,8 +616,8 @@ class PipelineTestsBase(unittest.TestCase):
                     "have a matching flow (or vice-versa)\n"
                     "Flow list: %s\nProduct list: %s" % (
                         flow.name, pname, fcost, pcost, pcost/max(fcost, 0.001),
-                        map(lambda f: f.name, flowsSorted),
-                        map(lambda n_c: n_c[0], productsSorted))
+                        list(map(lambda f: f.name, flowsSorted)),
+                        list(map(lambda n_c: n_c[0], productsSorted)))
             )
 
         # Finally check sum

@@ -319,29 +319,29 @@ class Equations:
         if o.pipeline == Pipelines.Ingest:
             Equations._set_product(
                 o, Products.Receive,
-                T = o.Tsnap, N = o.Nbeam * o.minimum_channels * o.Npp,
-                Rflop = 2 * o.Nvis_ingest / o.minimum_channels +
+                T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
+                Rflop = 2 * o.Npp * o.Nvis_ingest / o.minimum_channels +
                         1000 * o.Na / o.Tdump_ref,
-                Rout = o.Mvis * o.Nvis_ingest)
+                Rout = o.Mvis * o.Npp * o.Nvis_ingest)
             Equations._set_product(
                 o, Products.Flag,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 279 * o.Nvis_ingest / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis_ingest / o.minimum_channels)
+                T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
+                Rflop = 279 * o.Npp * o.Nvis_ingest / o.minimum_channels,
+                Rout = o.Mvis * o.Npp * o.Nvis_ingest / o.minimum_channels)
             # Ndemix is the number of time-frequency products used
             # (typically 1000) so we have to divide out the number of
             # input channels
             Equations._set_product(
                 o, Products.Demix,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 8 * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
+                T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
+                Rflop = 8 * o.Npp * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
                         / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels)
             Equations._set_product(
                 o, Products.Average,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 8 * o.Nvis_ingest / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
+                Rflop = 8 * o.Npp * o.Nvis_ingest / o.minimum_channels,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels)
 
     @staticmethod
     def _apply_flag_equations(o):
@@ -350,9 +350,9 @@ class Equations:
         if not (o.pipeline == Pipelines.Ingest):
             Equations._set_product(
                 o, Products.Flag,
-                T=o.Tsnap, N=o.Nbeam * o.minimum_channels,
-                Rflop=279 * o.Nvis / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.minimum_channels_gran,
+                Rflop=279 * o.Npp * o.Nvis / o.minimum_channels_gran,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels_gran)
 
     @staticmethod
     def _apply_correct_equations(o):
@@ -361,9 +361,9 @@ class Equations:
         if not o.pipeline == Pipelines.Ingest:
             Equations._set_product(
                 o, Products.Correct,
-                T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.minimum_channels,
-                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.minimum_channels_gran,
+                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels_gran,
+                Rout = o.Mvis * o.Nvis / o.minimum_channels_gran)
 
     @staticmethod
     def _apply_grid_equations(o):
@@ -500,7 +500,7 @@ class Equations:
             Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
             Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
             Equations._set_product(o, Products.Solve,
-                T = o.Tsnap,
+                T = o.tICAL_G,
                 # We do one calibration to start with (using the original
                 # LSM from the GSM and then we do Nselfcal more.
                 N = (o.Nselfcal + 1) * o.Nbeam,
@@ -514,7 +514,7 @@ class Equations:
             Flop_averaging = Flop_averager * o.Nvis * o.Nf_max * o.tRCAL_G
             Flop_solving   = Flop_solver * N_Gslots
             Equations._set_product(o, Products.Solve,
-                T = o.Tsnap,
+                T = o.tRCAL_G,
                 # We need to complete one entire calculation within real time tCal_G
                 N = o.Nbeam,
                 Rflop = (Flop_solving + Flop_averaging) / o.Tobs,
@@ -529,10 +529,10 @@ class Equations:
             b = Symbol("b")
             Equations._set_product(o, Products.DFT,
                 T = o.Tsnap,
-                N = o.Nbeam * o.Nmajortotal * o.Nf_vis,
+                N = o.Nbeam * o.Nmajortotal * o.minimum_channels_gran,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
-                        / o.Tdump_scaled,
-                Rout = o.Mvis * o.Nvis / o.Nf_vis)
+                        * o.Nf_vis / o.minimum_channels_gran / o.Tdump_scaled,
+                Rout = o.Npp * o.Mvis * o.Nvis / o.minimum_channels_gran)
 
     @staticmethod
     def _apply_source_find_equations(o):
@@ -557,9 +557,9 @@ class Equations:
         if o.pipeline in Pipelines.imaging:
             Equations._set_product(o, Products.Subtract_Visibility,
                 T = o.Tsnap,
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels,
-                Rflop = 8 * o.Nvis / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                N = o.Nmajortotal * o.Nbeam * o.minimum_channels_gran,
+                Rflop = 8 * o.Npp * o.Nvis / o.minimum_channels_gran,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels_gran)
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -628,18 +628,19 @@ class Equations:
             Equations._set_product(
                 o, Products.PhaseRotationPredict,
                 T = o.Tsnap,
-                N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels * o.Ntaylor_predict,
-                Rflop = blsum(b, 25 * o.Nfacet**2 * o.Nvis / o.nbaselines / o.minimum_channels),
-                Rout = blsum(b, o.Mvis * o.Nvis / o.nbaselines / o.minimum_channels))
+                N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels_gran *
+                    o.Ntaylor_predict * o.Nfacet**2 ,
+                Rflop = blsum(b, 25 * o.Nf_vis / o.minimum_channels_gran / o.Tdump_scaled),
+                Rout = blsum(b, o.Mvis * o.Nf_vis / o.minimum_channels_gran / o.Tdump_scaled))
 
         # Backward phase rotation: Input at overall visibility
         # rate, output averaged down to backward visibility rate.
         Equations._set_product(
             o, Products.PhaseRotation,
             T = o.Tsnap,
-            N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels,
-            Rflop = blsum(b, 25 * o.Nvis / o.nbaselines / o.minimum_channels),
-            Rout = blsum(b, o.Mvis * o.Nvis_backward(b, 1) / o.minimum_channels))
+            N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels_gran,
+            Rflop = blsum(b, 25 * o.Nvis / o.nbaselines / o.minimum_channels_gran),
+            Rout = blsum(b, o.Mvis * o.Nvis_backward(b, 1) / o.minimum_channels_gran))
 
     @staticmethod
     def _apply_flop_equations(o):

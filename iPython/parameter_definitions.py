@@ -87,6 +87,8 @@ class ParameterContainer:
             return 'N_{bl}'
         if name == 'minimum_channels':
             return 'N_{f,min}'
+        if name == 'minimum_channels_gran':
+            return 'N_{f,min,g}'
         if name == 'using_facet_overlap_frac':
             return 'Q_{ov}'
         if name == 'subband_frequency_ratio':
@@ -428,6 +430,7 @@ class ParameterDefinitions:
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
         o.minimum_channels = 20  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
         o.Fast_Img_channels = 20  #minimum number of channels to still enable distributed computing, and to calculate spectral images
+        o.minimum_channels_gran = 800 # minimum number of channels in predict output to prevent overly large output sizes
         o.number_taylor_terms = 5 # Number of Taylor terms to compute
         o.NB_parameters = 500 # Number of terms in B parametrization
         o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
