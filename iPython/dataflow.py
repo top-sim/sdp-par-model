@@ -3,7 +3,7 @@ from __future__ import print_function
 
 from parameter_definitions import Constants
 
-from sympy import Max, Expr, Lambda, Symbol, Sum
+from sympy import Max, Expr, Lambda, Symbol, Sum, Mul
 from graphviz import Digraph
 from math import floor
 
@@ -340,13 +340,36 @@ class RegionBox:
             if not dom in self.symbols and not dom in self.regionBoxes.enumDomains:
                 expr = self(dom, COUNT_PROP) * expr
         sums = []
+        sumSymbols = []
         for dom in self.regionBoxes.regionsMap.keys():
             if dom in self.symbols:
+                sumSymbols.append(self.symbols[dom])
                 sums.append((self.symbols[dom],
                              0, self(dom, COUNT_PROP) - 1))
-        if len(sums) > 0:
-            expr = Sum(expr, *sums)
-        return expr
+
+        # Do we need to formulate a sum? If not (common case), we can
+        # just return "expr" here.
+        if len(sums) == 0:
+            return expr
+
+        # Factor out independent product terms before formulating
+        # the sum. Not sure why sympy doens't do this by default?
+        # Probably overlooking something...
+        if isinstance(expr, Mul):
+            def indep(e): return len(set(sumSymbols).intersection(e.free_symbols)) == 0
+            indepFactors = list(filter(indep, expr.as_ordered_factors()))
+            if len(indepFactors) > 0:
+                def not_indep(e): return not indep(e)
+                restFactors = list(filter(not_indep, expr.as_ordered_factors()))
+                if len(restFactors) == 0:
+                    m = 1
+                    for _, low, high in sums:
+                        m *= (high - low + 1)
+                    return Mul(m, *indepFactors)
+                else:
+                    return Mul(*indepFactors) * Sum(Mul(*restFactors), *sums)
+
+        return Sum(expr, *sums)
 
     def domains(self):
         return self.domainProps.keys()
