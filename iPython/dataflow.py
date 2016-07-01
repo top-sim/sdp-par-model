@@ -884,9 +884,13 @@ class RegionBoxes:
         return left._withEnums(lambda: right._withEnums(
             lambda: left._zipSum(right, f, verbose)))
     def _zipSum(left, right, f, verbose):
-        """Return sum of function, applied to all edges from one region box
+        """
+        Return sum of function, applied to all edges from one region box
         set to another. An edge exists between two region boxes if all
-        domains that exist on both sides agree. Agreement means 
+        regions overlap. Domains that exist on only one side are
+        ignored for this purpose - so e.g. region boxes involving
+        distinct domains always have an edge, but region boxes that
+        have a non-overlapping region in some domain never have.
         """
 
         # Classify domains
