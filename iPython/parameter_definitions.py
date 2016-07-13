@@ -412,8 +412,6 @@ class ParameterDefinitions:
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
         o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
-        o.Mpx = 8.0  # Memory size of an image pixel in bytes
-        o.Mcpx = 16.0  # Memory size of a complex grid pixel in bytes
         o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
         o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
@@ -421,6 +419,8 @@ class ParameterDefinitions:
         o.Nw = 2  # Bytes per value
         o.Ncbytes = 8 # Number of bytes per complex
         o.Nrbytes = 4 # Number of bytes per real
+        o.Mpx = o.Nrbytes  # Memory size of an image pixel in bytes
+        o.Mcpx = o.Ncbytes  # Memory size of a complex grid pixel in bytes
         o.Ndemix = 1000 # Number of time-frequency samples used in demixing
         o.NA = 10 # Number of A-team sources used in demixing
         # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error

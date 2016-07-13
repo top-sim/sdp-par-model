@@ -667,10 +667,7 @@ class Equations:
         # factor for double-buffering
 
         b = Symbol('b')
-        o.Mw_cache = \
-            o.Ncbytes * o.Nbeam * (o.Qgcf ** 3) * \
-            Equations._sum_bl_bins(o,
-                blsum(b, o.Nf_vis_predict(b) * o.Ngw_predict(b) ** 3))
+        o.Mw_cache = (o.Ngw_predict(o.Bmax) ** 3) * (o.Qgcf ** 3) * o.Ncbytes * o.Nbeam * o.Nf_vis_predict(o.Bmax)
             # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
         # (allowing storage of a full observation while simultaneously capturing the next)
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
