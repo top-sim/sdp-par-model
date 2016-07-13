@@ -8,7 +8,7 @@ from parameter_definitions import Telescopes, Pipelines, Bands, ParameterDefinit
 from equations import Equations
 from implementation import Implementation as imp
 import numpy as np
-from sympy import Lambda, FiniteSet, Function, Expr
+from sympy import Lambda, FiniteSet, Function, Expr, Symbol
 import warnings
 
 class SkaPythonAPI:
@@ -336,7 +336,8 @@ class SkaPythonAPI:
         return eqs
 
     @staticmethod
-    def eval_symbols(pipelineConfig, symbols, recursive=False, symbolify=''):
+    def eval_symbols(pipelineConfig, symbols,
+                     recursive=False, symbolify='', optimize_expression=None):
         """Returns formulas for the given symbol names. This can be used to
         look up the definitions behind sympy Symbols returned by
         eval_products_symbolic or this function.
@@ -355,6 +356,12 @@ class SkaPythonAPI:
         # Create possibly symbol-ified telescope model
         tp = imp.calc_tel_params(pipelineConfig, symbolify=symbolify)
 
+        # Optimise to settle Tsnap and Nfacet
+        if not optimize_expression is None:
+            assert(symbolify == '') # Will likely fail otherwise
+            (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, expr_to_minimize_string=optimize_expression)
+            tp = imp.calc_tel_params(pipelineConfig, adjusts={'Tsnap': tsnap_opt, 'Nfacet': nfacet_opt})
+
         # Create lookup map for symbols
         symMap = {}
         for name, v in tp.__dict__.items():
@@ -365,14 +372,14 @@ class SkaPythonAPI:
         while len(symbols) > 0:
             new_symbols = set()
             for sym in symbols:
-                if str(sym) in eqs: continue
+                if sym in eqs: continue
 
                 # Look up
-                if not str(sym) in symMap: continue
+                if not sym in symMap: continue
                 v = symMap[str(sym)]
 
                 # If the equation is "name = name", it is not defined at this level. Push back to next level
-                if str(v) == str(sym):
+                if isinstance(v, Symbol) and str(v) == sym:
                     continue
                 eqs[str(sym)] = v
                 if isinstance(v, Expr) or isinstance(v, BLDep):
@@ -383,13 +390,16 @@ class SkaPythonAPI:
     @staticmethod
     def collect_free_symbols(formulas):
         """
-        Returns all free symbols in the given formulas. We always count
-        all functions as free.
+        Returns the names of all free symbol in the given formulas. We
+        always count all functions as free.
+
         @param formulas: Formulas to search for free symbols.
         """
 
         def free_f(expr):
-            functions = set(map(lambda f: f.func, expr.atoms(Function)))
-            frees = set(expr.free_symbols)
+            if not isinstance(expr, Expr):
+                return set()
+            functions = set(map(lambda f: str(f.func), expr.atoms(Function)))
+            frees = set(map(lambda s: str(s), expr.free_symbols))
             return set(frees).union(functions)
         return set().union(*list(map(free_f, formulas)))

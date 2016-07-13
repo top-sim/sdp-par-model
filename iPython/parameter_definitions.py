@@ -89,6 +89,8 @@ class ParameterContainer:
             return 'N_{f,min}'
         if name == 'minimum_channels_gran':
             return 'N_{f,min,g}'
+        if name == 'number_taylor_terms':
+            return 'N_{taylor}'
         if name == 'using_facet_overlap_frac':
             return 'Q_{ov}'
         if name == 'subband_frequency_ratio':
