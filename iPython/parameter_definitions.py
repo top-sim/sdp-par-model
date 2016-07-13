@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import numpy as np
 from math import sqrt
-from sympy import symbols, Symbol, Expr, Lambda
+from sympy import symbols, Symbol, Expr, Lambda, Mul, Add, Sum
 import warnings
 import string
 
@@ -124,17 +124,96 @@ class ParameterContainer:
     def is_expr(self, e):
         return isinstance(e, Expr) or isinstance(e, BLDep)
 
-    def set_product(self, product, **args):
-        if not product in self.products:
-            self.products[product] = {}
-        self.products[product].update(args)
-
     def get_products(self, expression='Rflop', scale=1):
         results = {}
         for product, exprs in self.products.items():
             if expression in exprs:
                 results[product] = exprs[expression] / scale
         return results
+
+    def sum_bl_bins(self, bldep):
+        """
+        Converts a possibly baseline-dependent terms (e.g. constructed
+        using "BLDep" or "blsum") into a formula by summing over
+        baselines.
+
+        This relies on the "nbaselines", "frac_bins" and "Bmax_bins"
+        fields to be set. If "Bmax_bins" is a symbol, we will generate
+        a symbolic sum term utilising "Bmax_bins" as a function.
+        """
+
+        # Actually baseline-dependent?
+        if isinstance(bldep, BLDep):
+            b = bldep.b
+            bcount = bldep.bcount
+            expr = bldep.term
+        else:
+            return self.nbaselines * bldep
+
+        # Small bit of ad-hoc formula optimisation: Exploit
+        # independent factors. Makes for smaller terms, which is good
+        # both for Sympy as well as for output.
+        if not b in expr.free_symbols:
+            return self.nbaselines * expr.subs(bcount, 1)
+        if isinstance(expr, Mul):
+            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
+            indepFactors = list(filter(indep, expr.as_ordered_factors()))
+            if len(indepFactors) > 0:
+                def not_indep(e): return not indep(e)
+                restFactors = filter(not_indep, expr.as_ordered_factors())
+                return Mul(*indepFactors) * self.sum_bl_bins(BLDep((b, bcount), Mul(*restFactors)))
+
+        # Replace in concrete values for baseline fractions and
+        # length. Using Lambda here is a solid 25% faster than
+        # subs(). Unfortunately very slow nonetheless...
+        results = []
+
+        # Symbolic? Generate actual symbolic sum expression
+        if isinstance(self.Bmax_bins, Symbol):
+            return Sum(bldep(self.Bmax_bins(b), 1), (b, 1, self.nbaselines))
+
+        # Otherwise generate sum term manually that approximates the
+        # full sum using baseline bins
+        for (frac_val, bmax_val) in zip(self.frac_bins, self.Bmax_bins):
+            results.append(bldep(bmax_val, frac_val*self.nbaselines_full))
+        return Add(*results, evaluate=False)
+
+    def set_product(self, product, T=None, N=1, **args):
+        """Sets product properties using a task abstraction. Each property is
+        expressed as a sum over baselines.
+
+        @param product: Product to set.
+        @param T: Observation time covered by this task. Default is the
+          entire observation (Tobs). Can be baseline-dependent.
+        @param N: Task parallelism / rate multiplier. The number of
+           tasks that work on the data in parallel. Can be
+           baseline-dependent.
+        @param args: Task properties as rates. Will be multiplied by
+           N.  If it is baseline-dependent, it will be summed over all
+           baselines to yield the final rate.
+        """
+
+        # Collect properties
+        if T is None: T = self.Tobs
+        props = { "N": N, "T": T }
+        for k, expr in args.items():
+
+            # Multiply out multiplicator. If either of them is
+            # baseline-dependent, this will generate a new
+            # baseline-dependent term (see BLDep)
+            total = N * expr
+
+            # Baseline-dependent? Generate a sum term, otherwise just say as-is
+            if isinstance(total, BLDep):
+                props[k] = self.sum_bl_bins(total)
+                props[k+"_task"] = expr
+            else:
+                props[k] = total
+
+        # Update
+        if not product in self.products:
+            self.products[product] = {}
+        self.products[product].update(props)
 
 class BLDep:
     """A baseline-dependent sympy expression.
@@ -191,6 +270,15 @@ def unbldep(term, b_val, bcount_val = None):
         return term(b_val, bcount_val)
     else:
         return term
+
+def blsum(b, expr):
+    """
+    A baseline sum of an expression.
+
+    Returns a BLDep object of the expression multiplied with the baseline count.
+    """
+    bcount = Symbol('bcount')
+    return BLDep((b, bcount), bcount * expr)
 
 class Constants:
     """

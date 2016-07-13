@@ -8,21 +8,17 @@ in PDR05 (version 1.85).
 
 from __future__ import print_function
 
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, Lambda, Add, Sum, Mul
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
 from numpy import pi, round
 import math
 from parameter_definitions import Pipelines, Products
-from parameter_definitions import ParameterContainer, BLDep
+from parameter_definitions import ParameterContainer, BLDep, blsum
 import warnings
 
 # Check sympy compatibility
 import sympy
 if sympy.__version__ == "1.0":
     raise Exception("SymPy version 1.0 is broken. Please either upgrade or downgrade your version!")
-
-def blsum(b, expr):
-    bcount = Symbol('bcount')
-    return BLDep((b, bcount), bcount * expr)
 
 class Equations:
     def __init__(self):
@@ -317,28 +313,24 @@ class Equations:
         """ Ingest equations """
 
         if o.pipeline == Pipelines.Ingest:
-            Equations._set_product(
-                o, Products.Receive,
+            o.set_product(Products.Receive,
                 T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
                 Rflop = 2 * o.Npp * o.Nvis_ingest / o.minimum_channels +
                         1000 * o.Na / o.Tdump_ref,
                 Rout = o.Mvis * o.Npp * o.Nvis_ingest)
-            Equations._set_product(
-                o, Products.Flag,
+            o.set_product(Products.Flag,
                 T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
                 Rflop = 279 * o.Npp * o.Nvis_ingest / o.minimum_channels,
                 Rout = o.Mvis * o.Npp * o.Nvis_ingest / o.minimum_channels)
             # Ndemix is the number of time-frequency products used
             # (typically 1000) so we have to divide out the number of
             # input channels
-            Equations._set_product(
-                o, Products.Demix,
+            o.set_product(Products.Demix,
                 T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
                 Rflop = 8 * o.Npp * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
                         / o.minimum_channels,
                 Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels)
-            Equations._set_product(
-                o, Products.Average,
+            o.set_product(Products.Average,
                 T = o.Tsnap, N = o.Nbeam * o.minimum_channels,
                 Rflop = 8 * o.Npp * o.Nvis_ingest / o.minimum_channels,
                 Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels)
@@ -348,8 +340,7 @@ class Equations:
         """ Flagging equations for non-ingest pipelines"""
 
         if not (o.pipeline == Pipelines.Ingest):
-            Equations._set_product(
-                o, Products.Flag,
+            o.set_product(Products.Flag,
                 T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.minimum_channels_gran,
                 Rflop=279 * o.Npp * o.Nvis / o.minimum_channels_gran,
                 Rout = o.Mvis * o.Npp * o.Nvis / o.minimum_channels_gran)
@@ -359,8 +350,7 @@ class Equations:
         """ Correction of gains"""
 
         if not o.pipeline == Pipelines.Ingest:
-            Equations._set_product(
-                o, Products.Correct,
+            o.set_product(Products.Correct,
                 T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.minimum_channels_gran,
                 Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels_gran,
                 Rout = o.Mvis * o.Nvis / o.minimum_channels_gran)
@@ -379,14 +369,12 @@ class Equations:
             o.Ntaylor_predict = o.number_taylor_terms
 
         if not o.pipeline in Pipelines.imaging: return
-        Equations._set_product(
-            o, Products.Grid, T=o.Tsnap,
+        o.set_product(Products.Grid, T=o.Tsnap,
             N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_backward *
                          o.Nfacet**2 * o.Nf_vis_backward(b)),
             Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
             Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap)
-        Equations._set_product(
-            o, Products.Degrid, T = o.Tsnap,
+        o.set_product(Products.Degrid, T = o.Tsnap,
             N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_predict *
                          o.Nfacet_predict**2 * o.Nf_vis_predict(b)),
             Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
@@ -402,15 +390,13 @@ class Equations:
 
         # Eq. 33, per output grid (i.e. frequency)
         # These are real-to-complex for which the prefactor in the FFT is 2.5
-        Equations._set_product(
-            o, Products.FFT, T = o.Tsnap,
+        o.set_product(Products.FFT, T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
             Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
             Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
 
         # Eq. 33 per predicted grid (i.e. frequency)
-        Equations._set_product(
-            o, Products.IFFT, T = o.Tsnap,
+        o.set_product(Products.IFFT, T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
             Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
             Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
@@ -428,14 +414,12 @@ class Equations:
          # (Consistent with PDR05 280115)
         if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
             # We do 2*o.Nmajortotal*(Tobs/Tsnap) entire image reprojections (i.e. both directions)
-            Equations._set_product(
-                o, Products.Reprojection,
+            o.set_product(Products.Reprojection,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_backward * o.Nfacet**2,
                 Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
                 Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
-            Equations._set_product(
-                o, Products.ReprojectionPredict,
+            o.set_product(Products.ReprojectionPredict,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_predict * o.Nfacet**2,
                 Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
@@ -445,8 +429,7 @@ class Equations:
     def _apply_spectral_fitting_equations(o):
 
         if o.pipeline == Pipelines.DPrepA_Image:
-            Equations._set_product(
-                o, Products.Image_Spectral_Fitting,
+            o.set_product(Products.Image_Spectral_Fitting,
                 T = o.Tobs,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.number_taylor_terms,
                 Rflop = 2.0 * (o.Nf_FFT_backward + o.Nf_FFT_predict) *
@@ -470,14 +453,14 @@ class Equations:
             return
 
         # Create products
-        Equations._set_product(o, Products.Identify_Component,
+        o.set_product(Products.Identify_Component,
             T = o.Tobs,
             N = o.Nmajortotal * o.Nbeam,
             Rflop = 2 * o.Npp * o.Nminor * Nf_identify * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
             Rout = o.Mcpx / o.Tobs)
 
         # Subtract on all scales and only one frequency
-        Equations._set_product(o, Products.Subtract_Image_Component,
+        o.set_product(Products.Subtract_Image_Component,
             T = o.Tobs,
             N = o.Nmajortotal * o.Nbeam,
             Rflop = 2 * o.Npp * o.Nminor * o.Nscales * o.Npatch**2 / o.Tobs,
@@ -499,7 +482,7 @@ class Equations:
             N_Islots = o.Tobs / o.tICAL_I
             Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
             Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
-            Equations._set_product(o, Products.Solve,
+            o.set_product(Products.Solve,
                 T = o.tICAL_G,
                 # We do one calibration to start with (using the original
                 # LSM from the GSM and then we do Nselfcal more.
@@ -513,7 +496,7 @@ class Equations:
             # Need to remember to average over all frequencies because a BP may have been applied.
             Flop_averaging = Flop_averager * o.Nvis * o.Nf_max * o.tRCAL_G
             Flop_solving   = Flop_solver * N_Gslots
-            Equations._set_product(o, Products.Solve,
+            o.set_product(Products.Solve,
                 T = o.tRCAL_G,
                 # We need to complete one entire calculation within real time tCal_G
                 N = o.Nbeam,
@@ -527,7 +510,7 @@ class Equations:
             # once but since we do an update of the model every
             # selfcal, we need to do it every selfcal.
             b = Symbol("b")
-            Equations._set_product(o, Products.DFT,
+            o.set_product(Products.DFT,
                 T = o.Tsnap,
                 N = o.Nbeam * o.Nmajortotal * o.minimum_channels_gran,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
@@ -542,8 +525,7 @@ class Equations:
             # have 600 FMults . Ignore for the moment Theta_beam the
             # solution of these normal equations. This really is a
             # stopgap. We need an estimate for a non-linear solver.
-            Equations._set_product(
-                o, Products.Source_Find,
+            o.set_product(Products.Source_Find,
                 T = o.Tobs,
                 N = o.Nmajortotal,
                 Rflop = 6 * 100 * o.Nsource_find_iterations * o.Nsource / o.Tobs,
@@ -555,7 +537,7 @@ class Equations:
 
         # Note that we assume this is done for every Selfcal and Major Cycle
         if o.pipeline in Pipelines.imaging:
-            Equations._set_product(o, Products.Subtract_Visibility,
+            o.set_product(Products.Subtract_Visibility,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.minimum_channels_gran,
                 Rflop = 8 * o.Npp * o.Nvis / o.minimum_channels_gran,
@@ -600,12 +582,12 @@ class Equations:
         if o.pipeline in Pipelines.imaging:
 
             # The following two equations correspond to Eq. 35
-            Equations._set_product(o, Products.Gridding_Kernel_Update,
+            o.set_product(Products.Gridding_Kernel_Update,
                 T = BLDep(b, o.Tkernel_backward(b)),
                 N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b)),
                 Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
-            Equations._set_product(o, Products.Degridding_Kernel_Update,
+            o.set_product(Products.Degridding_Kernel_Update,
                 T = BLDep(b,o.Tkernel_predict(b)),
                 N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b)),
                 Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b)),
@@ -625,8 +607,7 @@ class Equations:
         # Predict phase rotation: Input from facets at predict
         # visibility rate, output at same rate.
         if o.scale_predict_by_facet:
-            Equations._set_product(
-                o, Products.PhaseRotationPredict,
+            o.set_product(Products.PhaseRotationPredict,
                 T = o.Tsnap,
                 N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels_gran *
                     o.Ntaylor_predict * o.Nfacet**2 ,
@@ -635,8 +616,7 @@ class Equations:
 
         # Backward phase rotation: Input at overall visibility
         # rate, output averaged down to backward visibility rate.
-        Equations._set_product(
-            o, Products.PhaseRotation,
+        o.set_product(Products.PhaseRotation,
             T = o.Tsnap,
             N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels_gran,
             Rflop = blsum(b, 25 * o.Nvis / o.nbaselines / o.minimum_channels_gran),
@@ -680,82 +660,3 @@ class Equations:
         # It probably can go much smaller, though: see SDPPROJECT-133
 #        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50
         o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis  # Eq 50
-
-    @staticmethod
-    def _sum_bl_bins(o, bldep):
-        """Helper for dealing with baseline dependence. For a term
-        depending on the given symbols, "sum_bl_bins" will build a
-        sum term over all baseline bins."""
-
-        # Actually baseline-dependent?
-        if isinstance(bldep, BLDep):
-            b = bldep.b
-            bcount = bldep.bcount
-            expr = bldep.term
-        else:
-            return o.nbaselines * bldep
-
-        # Small bit of ad-hoc formula optimisation: Exploit
-        # independent factors. Makes for smaller terms, which is good
-        # both for Sympy as well as for output.
-        if not b in expr.free_symbols:
-            return o.nbaselines * expr.subs(bcount, 1)
-        if isinstance(expr, Mul):
-            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
-            indepFactors = list(filter(indep, expr.as_ordered_factors()))
-            if len(indepFactors) > 0:
-                def not_indep(e): return not indep(e)
-                restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * Equations._sum_bl_bins(o, BLDep((b, bcount), Mul(*restFactors)))
-
-        # Replace in concrete values for baseline fractions and
-        # length. Using Lambda here is a solid 25% faster than
-        # subs(). Unfortunately very slow nonetheless...
-        results = []
-
-        # Symbolic? Generate actual symbolic sum expression
-        if isinstance(o.Bmax_bins, Symbol):
-            return Sum(bldep(o.Bmax_bins(b), 1), (b, 1, o.nbaselines))
-
-        # Otherwise generate sum term manually that approximates the
-        # full sum using baseline bins
-        for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
-            results.append(bldep(bmax_val, frac_val*o.nbaselines_full))
-        return Add(*results, evaluate=False)
-
-    @staticmethod
-    def _set_product(o, product, T=None, N=1, **args):
-        """Sets product properties using a task abstraction. Each property is
-        expressed as a sum over baselines.
-
-        @param product: Product to set.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs). Can be baseline-dependent.
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel. Can be
-           baseline-dependent.
-        @param args: Task properties as rates. Will be multiplied by
-           N.  If it is baseline-dependent, it will be summed over all
-           baselines to yield the final rate.
-        """
-
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": N, "T": T }
-        for k, expr in args.items():
-
-            # Multiply out multiplicator. If either of them is
-            # baseline-dependent, this will generate a new
-            # baseline-dependent term (see BLDep)
-            total = N * expr
-
-            # Baseline-dependent? Generate a sum term, otherwise just say as-is
-            if isinstance(total, BLDep):
-                props[k] = Equations._sum_bl_bins(o, total)
-                props[k+"_task"] = expr
-            else:
-                props[k] = total
-
-        # Set product
-        o.set_product(product, **props)
-
