@@ -365,7 +365,7 @@ class SkaPythonAPI:
         # Create lookup map for symbols
         symMap = {}
         for name, v in tp.__dict__.items():
-            symMap[tp._make_symbol_name(name)] = v
+            symMap[tp.make_symbol_name(name)] = v
 
         # Start collecting equations
         eqs = {}
@@ -397,6 +397,8 @@ class SkaPythonAPI:
         """
 
         def free_f(expr):
+            if isinstance(expr, BLDep):
+                expr = expr.term
             if not isinstance(expr, Expr):
                 return set()
             functions = set(map(lambda f: str(f.func), expr.atoms(Function)))

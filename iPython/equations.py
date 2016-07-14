@@ -84,9 +84,12 @@ class Equations:
         # Apply general imaging equations. These next 4 methods just set up
         # parameters.
         Equations._apply_image_equations(o)
-        Equations._apply_channel_equations(o)
-        Equations._apply_coalesce_equations(o)
-        Equations._apply_geometry_equations(o)
+        if symbolify == 'helper':
+            o.symbolify()
+            o.Bmax_bins = Symbol("B_max")
+        Equations._apply_channel_equations(o, symbolify)
+        Equations._apply_coalesce_equations(o, symbolify)
+        Equations._apply_geometry_equations(o, symbolify)
 
         # If requested, we replace all parameters so far with symbols,
         # so product equations are purely symbolic.
@@ -159,7 +162,7 @@ class Equations:
         o.Theta_fov = 7.66 * o.wl_sb_max * o.Qfov * (1+o.using_facet_overlap_frac) \
                       / (pi * o.Ds * o.Nfacet)
         # Total linear field of view of map (all facets)
-        o.Total_fov = 7.66 * o.wl_sb_max * o.Qfov / (pi * o.Ds)
+        o.Theta_fov_total = 7.66 * o.wl_sb_max * o.Qfov / (pi * o.Ds)
         # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
         # Synthesized beam at fiducial wavelength. Called Theta_PSF in PDR05.
         o.Theta_beam = 3 * o.wl_sb_min / (2. * o.Bmax)
@@ -168,19 +171,19 @@ class Equations:
 
         # Eq 8 - Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
-        o.Npix_linear_total_fov = (o.Total_fov / o.Theta_pix)
+        o.Npix_linear_fov_total = (o.Theta_fov_total / o.Theta_pix)
         # Predict fov and number of pixels depends on whether we facet
         if o.scale_predict_by_facet:
             o.Theta_fov_predict = o.Theta_fov
             o.Nfacet_predict = o.Nfacet
             o.Npix_linear_predict = o.Npix_linear
         else:
-            o.Theta_fov_predict = o.Total_fov
+            o.Theta_fov_predict = o.Theta_fov_total
             o.Nfacet_predict = 1
-            o.Npix_linear_predict = o.Npix_linear_total_fov
+            o.Npix_linear_predict = o.Npix_linear_fov_total
 
     @staticmethod
-    def _apply_channel_equations(o):
+    def _apply_channel_equations(o, symbolify):
         """
         Determines the number of frequency channels to use in backward &
         predict steps.
@@ -196,16 +199,15 @@ class Equations:
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
         o.Qbw = 1.47 / o.epsilon_f_approx
 
-        # The two equations below => combination of Eq 4 and Eq 5 for
-        # full and facet FOV at max baseline respectively.  These
-        # limit bandwidth smearing to within a fraction
-        # (epsilon_f_approx) of a uv cell.
-        # Done: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * o.Q_fov * o.Qbw)).
-        # This is fine - substituting in the equation for theta_fov shows it is indeed correct.
-        #Use full FoV for de-grid (predict) for high accuracy
+        if symbolify == 'helper':
+            o.epsilon_f_approx = Symbol(o.make_symbol_name('epsilon_f_approx'))
+            o.Qbw = Symbol(o.make_symbol_name('Qbw'))
 
+        # Combination of Eq 4 and Eq 5 for full and facet FOV at max
+        # baseline respectively.  These limit bandwidth smearing to
+        # within a fraction (epsilon_f_approx) of a uv cell.
         o.Nf_no_smear = \
-            log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
+            log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Theta_fov_total * o.Qbw)))
         o.Nf_no_smear_backward = BLDep(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
         o.Nf_no_smear_predict = BLDep(b,
@@ -223,7 +225,7 @@ class Equations:
                 o.Nf_max))
 
     @staticmethod
-    def _apply_coalesce_equations(o):
+    def _apply_coalesce_equations(o, symbolify):
         """
         Determines amount of coalescing of visibilities in time.
         """
@@ -232,11 +234,13 @@ class Equations:
         b = Symbol('b')
         o.combine_time_samples = BLDep(b,
             Max(floor(o.epsilon_f_approx * o.wl /
-                      (o.Total_fov * o.Omega_E * b * o.Tdump_scaled)), 1.))
+                      (o.Theta_fov_total * o.Omega_E * b * o.Tdump_scaled)), 1.))
 
         # coalesce visibilities in time.
         o.Tcoal_skipper = BLDep(b,
             o.Tdump_scaled * o.combine_time_samples(b))
+        if symbolify == 'helper':
+            o.Tcoal_skipper = Symbol(o.make_symbol_name("Tcoal_skipper"))
 
         if o.blcoal:
             # For backward step at gridding only, allow coalescance of
@@ -271,7 +275,7 @@ class Equations:
         # buffered
 
     @staticmethod
-    def _apply_geometry_equations(o):
+    def _apply_geometry_equations(o, symbolify):
 
         # ===============================================================================================
         # PDR05 Sec 12.2 - 12.5
@@ -283,8 +287,13 @@ class Equations:
         # Eq. 26 : W-deviation for snapshot.
         o.DeltaW_SShot = BLDep(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
         o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
+        if symbolify == 'helper':
+            o.DeltaW_Earth = Symbol(o.make_symbol_name('DeltaW_Earth'))
+            o.DeltaW_SShot = Symbol(o.make_symbol_name('DeltaW_SShot'))
+            o.DeltaW_max = Symbol(o.make_symbol_name('DeltaW_max'))
 
-        # Eq. 25, w-kernel support size **Note difference in cellsize assumption**
+        # Eq. 25, w-kernel support size. Note possible difference in
+        # cellsize assumption!
         def Ngw(deltaw, fov):
             return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                                   (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
@@ -433,8 +442,8 @@ class Equations:
                 T = o.Tobs,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.number_taylor_terms,
                 Rflop = 2.0 * (o.Nf_FFT_backward + o.Nf_FFT_predict) *
-                        o.Npix_linear_total_fov ** 2 / o.Tobs,
-                Rout = o.Mpx * o.Npix_linear_total_fov ** 2 / o.Tobs)
+                        o.Npix_linear_fov_total ** 2 / o.Tobs,
+                Rout = o.Mpx * o.Npix_linear_fov_total ** 2 / o.Tobs)
 
     @staticmethod
     def _apply_minor_cycle_equations(o):

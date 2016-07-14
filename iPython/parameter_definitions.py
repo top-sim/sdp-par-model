@@ -77,7 +77,7 @@ class ParameterContainer:
 
         return return_value
 
-    def _make_symbol_name(self, name):
+    def make_symbol_name(self, name):
         """Make names used in our code into something more suitable to be used
         as a Latex symbol. This is a quick-n-dirty heuristic based on
         what the names used in equations.py tend to look like.
@@ -90,15 +90,19 @@ class ParameterContainer:
         if name == 'minimum_channels_gran':
             return 'N_{f,min,g}'
         if name == 'number_taylor_terms':
-            return 'N_{taylor}'
+            return 'N_{Tt}'
         if name == 'using_facet_overlap_frac':
-            return 'Q_{ov}'
+            return 'r_{facet}'
         if name == 'subband_frequency_ratio':
-            return 'Q_{sb}'
+            return 'Q_{subband}'
         if name.startswith("wl"):
             return 'lambda' + name[2:]
         if name.startswith("freq_"):
             return 'f_' + name[5:]
+        if name.startswith("Delta"):
+            return 'Delta_' + name[5:]
+        if name.startswith("Theta_"):
+            return 'Theta_' + name[6:].replace('_', ',')
         if name.startswith("Omega_"):
             return name
         if name[0].isupper():
@@ -111,12 +115,12 @@ class ParameterContainer:
         # Replace all values and expressions with symbols
         for name, v in self.__dict__.items():
             if isinstance(v, int) or isinstance(v, float) or self.is_expr(v):
-                self.__dict__[name] = Symbol(self._make_symbol_name(name))
+                self.__dict__[name] = Symbol(self.make_symbol_name(name))
 
         # For products too
         for product, rates in self.products:
             for rname in rates:
-                rates[rname] = Symbol(self._make_symbol_name(rname + "_" + product))
+                rates[rname] = Symbol(self.make_symbol_name(rname + "_" + product))
 
     def is_value(self, v):
         if isinstance(v, int) or isinstance(v, float) or \
