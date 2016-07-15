@@ -14,7 +14,7 @@ class Pipeline:
         # Set telescope parameters
         self.tp = tp
 
-        self.Nisland = tp.minimum_channels
+        self.Nisland = tp.Nf_min
         self.Mdbl = 8
         self.Mcpx = self.Mdbl * 2
 
@@ -26,18 +26,18 @@ class Pipeline:
 
         # Make baseline domain
         self.baseline = Domain('Baseline')
-        usedBls = tp.nbaselines
+        usedBls = tp.Nbl
         self.allBaselines = self.baseline.regions(usedBls)
         if isinstance(tp.Bmax_bins, Symbol):
             b = Symbol("b")
-            self.binBaselines = self.allBaselines.split(tp.nbaselines, props={
+            self.binBaselines = self.allBaselines.split(tp.Nbl, props={
                 'bmax': Lambda(b, Symbol("B_max")(b)),
                 'size': 1
             })
         else:
             self.binBaselines = self.allBaselines.split(len(tp.Bmax_bins), props={
                 'bmax': lambda i: tp.Bmax_bins[i],
-                'size': lambda i: tp.nbaselines_full * tp.frac_bins[i]
+                'size': lambda i: tp.Nbl_full * tp.frac_bins[i]
             })
 
         # Make time domain
@@ -62,7 +62,7 @@ class Pipeline:
         self.visFreq = self.allFreqs.split(tp.Nf_vis)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
         self.islandFreqs = self.allFreqs.split(self.Nisland)
-        self.granFreqs = self.allFreqs.split(tp.minimum_channels_gran)
+        self.granFreqs = self.allFreqs.split(tp.Nf_min_gran)
         self.predFreqs = self.allFreqs.split(
             lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')))
         self.backFreqs = self.allFreqs.split(
@@ -102,18 +102,18 @@ class Pipeline:
 
         # Make taylor term domain
         self.taylor = Domain('Taylor')
-        self.allTaylor = self.taylor.regions(tp.number_taylor_terms)
-        self.eachTaylor = self.allTaylor.split(tp.number_taylor_terms)
-        self.predTaylor = self.allTaylor.split(tp.Ntaylor_predict)
-        self.backTaylor = self.allTaylor.split(tp.Ntaylor_backward)
+        self.allTaylor = self.taylor.regions(tp.Ntt)
+        self.eachTaylor = self.allTaylor.split(tp.Ntt)
+        self.predTaylor = self.allTaylor.split(tp.Ntt_predict)
+        self.backTaylor = self.allTaylor.split(tp.Ntt_backward)
 
         # We want to completely remove taylor terms for pipelines that
         # don't actually use them.
-        if tp.Ntaylor_predict == 1:
+        if tp.Ntt_predict == 1:
             self.maybePredTaylor = []
         else:
             self.maybePredTaylor = [self.predTaylor]
-        if tp.Ntaylor_backward == 1:
+        if tp.Ntt_backward == 1:
             self.maybeBackTaylor = []
         else:
             self.maybeBackTaylor = [self.backTaylor]

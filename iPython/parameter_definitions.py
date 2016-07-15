@@ -83,18 +83,6 @@ class ParameterContainer:
         what the names used in equations.py tend to look like.
         """
 
-        if name == 'nbaselines':
-            return 'N_{bl}'
-        if name == 'minimum_channels':
-            return 'N_{f,min}'
-        if name == 'minimum_channels_gran':
-            return 'N_{f,min,g}'
-        if name == 'number_taylor_terms':
-            return 'N_{Tt}'
-        if name == 'using_facet_overlap_frac':
-            return 'r_{facet}'
-        if name == 'subband_frequency_ratio':
-            return 'Q_{subband}'
         if name.startswith("wl"):
             return 'lambda' + name[2:]
         if name.startswith("freq_"):
@@ -154,13 +142,13 @@ class ParameterContainer:
             bcount = bldep.bcount
             expr = bldep.term
         else:
-            return self.nbaselines * bldep
+            return self.Nbl * bldep
 
         # Small bit of ad-hoc formula optimisation: Exploit
         # independent factors. Makes for smaller terms, which is good
         # both for Sympy as well as for output.
         if not b in expr.free_symbols:
-            return self.nbaselines * expr.subs(bcount, 1)
+            return self.Nbl * expr.subs(bcount, 1)
         if isinstance(expr, Mul):
             def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
             indepFactors = list(filter(indep, expr.as_ordered_factors()))
@@ -176,12 +164,12 @@ class ParameterContainer:
 
         # Symbolic? Generate actual symbolic sum expression
         if isinstance(self.Bmax_bins, Symbol):
-            return Sum(bldep(self.Bmax_bins(b), 1), (b, 1, self.nbaselines))
+            return Sum(bldep(self.Bmax_bins(b), 1), (b, 1, self.Nbl))
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
         for (frac_val, bmax_val) in zip(self.frac_bins, self.Bmax_bins):
-            results.append(bldep(bmax_val, frac_val*self.nbaselines_full))
+            results.append(bldep(bmax_val, frac_val*self.Nbl_full))
         return Add(*results, evaluate=False)
 
     def set_product(self, product, T=None, N=1, **args):
@@ -554,12 +542,12 @@ class ParameterDefinitions:
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
-        o.minimum_channels = 20  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
+        o.Nf_min = 20  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
         o.Fast_Img_channels = 20  #minimum number of channels to still enable distributed computing, and to calculate spectral images
-        o.minimum_channels_gran = 800 # minimum number of channels in predict output to prevent overly large output sizes
-        o.number_taylor_terms = 5 # Number of Taylor terms to compute
+        o.Nf_min_gran = 800 # minimum number of channels in predict output to prevent overly large output sizes
+        o.Ntt = 5 # Number of Taylor terms to compute
         o.NB_parameters = 500 # Number of terms in B parametrization
-        o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
+        o.r_facet_base = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
         o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
@@ -630,11 +618,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 80000  # m
             o.Tdump_ref = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
-            o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -650,10 +637,9 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
-            o.nr_baselines = 10192608
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -668,13 +654,12 @@ class ParameterDefinitions:
             o.Nf_max = 65536  # maximum number of channels
             o.Tdump_ref = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 150000  # m
-            o.nr_baselines = 1165860
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
             o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
             o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -690,11 +675,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 200000  # m
             o.Tdump_ref = 0.08  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 200000))  # m
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -710,10 +694,9 @@ class ParameterDefinitions:
             o.B_dump_ref = 50000  # m
             o.Tdump_ref = 0.3  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
-            o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -730,7 +713,6 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 180000))  # m
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
@@ -749,11 +731,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 1800000  # m
             o.Tdump_ref = 0.008  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((44000, 67000, 103000, 157000, 240000, 367000, 560000, 856000, 1308000, 1800000))
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -901,9 +882,9 @@ class ParameterDefinitions:
             o.Nminor = 10000
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -917,9 +898,9 @@ class ParameterDefinitions:
             o.Nmajor = 0
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -933,9 +914,9 @@ class ParameterDefinitions:
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms * o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
+            o.Nf_FFT_backward = o.Ntt * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -949,9 +930,9 @@ class ParameterDefinitions:
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -966,7 +947,7 @@ class ParameterDefinitions:
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600.0  # in seconds
@@ -984,7 +965,7 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Nf_FFT_predict = o.Ntt * o.Nf_min
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
@@ -1001,7 +982,7 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Nf_FFT_predict = o.Ntt * o.Nf_min
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02

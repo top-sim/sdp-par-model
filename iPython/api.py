@@ -53,7 +53,7 @@ class SkaPythonAPI:
 
             # Baseline dependent?
             if isinstance(expression_subst, BLDep):
-                result = [ float(expression_subst(bmax, tp.nbaselines_full*frac_val))
+                result = [ float(expression_subst(bmax, tp.Nbl_full*frac_val))
                            for frac_val,bmax in zip(tp.frac_bins, tp.Bmax_bins) ]
             else:
                 # Otherwise just evaluate directly
