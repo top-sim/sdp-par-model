@@ -694,7 +694,7 @@ class Equations:
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
         o.Rinterfacet = \
-            2 * o.Nmajortotal * Min(3.0, 2.0 + 18.0 * o.r_facet) * \
+            2 * o.Nmajortotal * Min(3.0, 2.0 + 18.0 * o.r_facet_base) * \
             (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
 
     @staticmethod

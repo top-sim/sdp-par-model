@@ -57,15 +57,15 @@ class SkaIPythonAPI(api):
 
         ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
         ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),
-        ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Total_fov/c.degree,),
+        ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov_total/c.degree,),
         ('PSF size',                   'arcs',       False,   False, lambda tp: tp.Theta_beam/c.arcsecond,),
         ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
         ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
-        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_total_fov,     ),
+        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_fov_total,),
         ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
         ('Qbw',                        '',           False,   False, lambda tp: tp.Qbw,               ),
         ('Max subband ratio',          '',           False,   False, lambda tp: tp.max_subband_freq_ratio,),
-        ('Number subbands',            '',           False,   False, lambda tp: tp.Number_imaging_subbands,),
+        ('Number subbands',            '',           False,   False, lambda tp: tp.Nsubbands,),
         ('Station/antenna diameter',   '',           False,   False, lambda tp: tp.Ds,),
 
         ('-- Channelization --',       '',           False,   False, lambda tp: ''                    ),
@@ -1032,6 +1032,7 @@ class SkaIPythonAPI(api):
 
                     # No number, output as is
                     if not ref_str is None:
+                        total_count += 1
                         if val == ref_str:
                             if val == '':
                                 s += '<td></td>'
@@ -1039,6 +1040,7 @@ class SkaIPythonAPI(api):
                                 s += '<td bgcolor="#00ff00">%s (same)</td>' % val
                         else:
                             s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
+                            diff_total += 100
                     else:
                         s += '<td>%s</td>' % val
 
