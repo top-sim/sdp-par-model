@@ -693,7 +693,7 @@ class SkaIPythonAPI(api):
         # Show pie graph of FLOP counts
         values = result_values[-1]  # the last value
         colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
