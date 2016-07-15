@@ -6,7 +6,7 @@ notebooks easier.
 """
 from api import SkaPythonAPI as api  # This class' (SkaIPythonAPI's) parent class
 
-from IPython.display import clear_output, display, HTML
+from IPython.display import clear_output, display, HTML, FileLink
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
@@ -950,7 +950,7 @@ class SkaIPythonAPI(api):
             return results
 
     @staticmethod
-    def compare_csv(result_file, ref_file, ignore_modifiers=True):
+    def compare_csv(result_file, ref_file, ignore_modifiers=True, export_html=''):
         """
         Read and compare two CSV files with telescope parameters
 
@@ -969,13 +969,15 @@ class SkaIPythonAPI(api):
                 if p != -1: return head[:p]
             return head
 
-        s = '<h3>Comparison:</h3><table>\n'
-
         # Headings
-        s += '<tr><td></td>'
+        s = '<table><tr><td></td>'
         for head, _ in results[0][1]:
             s += '<th>%s</th>' % head
         s += '</tr>\n'
+
+        # Sum up differences
+        diff_total = 0
+        total_count = 0
 
         for name, row in results:
             s += '<tr><td>%s</td>' % name
@@ -1010,6 +1012,8 @@ class SkaIPythonAPI(api):
                         # reference for negative changes, as -50% is
                         # about as bad as +200%.
                         diff_rel = max(diff, 100*(ref_num-num)/num)
+                        diff_total += abs(diff_rel)
+                        total_count += 1
 
                     # Output
                     if not diff is None:
@@ -1041,8 +1045,23 @@ class SkaIPythonAPI(api):
             s += '</tr>\n'
         s += '</table>'
 
-        display(HTML(s))
-        display(HTML('<font color="blue">Done.</font>'))
+        if export_html != '':
+            f = open(export_html, 'w')
+            print("<!doctype html>", file=f)
+            print("<html>", file=f)
+            print("  <title>SDP Parametric Model Result Comparison</title>", file=f)
+            print("  <body><p>Comparing %s against %s</p>" % (result_file, ref_file), file=f)
+            print(s, file=f)
+            print("  </body>", file=f)
+            print("</html>", file=f)
+            f.close()
+            display(FileLink(export_html))
+        else:
+            display(HTML('<h3>Comparison:</h3>'))
+            display(HTML(s))
+        display(HTML('<font color="blue">Done. %.2f %% average relative difference.</font>' % (diff_total / total_count)))
+
+        return diff_total
 
     @staticmethod
     def stack_bars_pipelines(title, telescopes, bands, pipelines,

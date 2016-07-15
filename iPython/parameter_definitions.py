@@ -316,6 +316,8 @@ class Telescopes:
     SKA2_Low = 'SKA2_Low'
     SKA2_Mid = 'SKA2_Mid'
 
+    # Currently supported telescopes (will show up in notebooks)
+    available_teles = (SKA1_Low, SKA1_Mid)
 
 class Bands:
     """
@@ -347,6 +349,9 @@ class Bands:
     low_bands_ska2 = {SKA2Low}
     mid_bands_ska2 = {SKA2Mid}
 
+    available_bands = (Low,
+                       Mid1, Mid2, Mid5A, Mid5B, Mid5C,
+                       Sur1)
 
 class Products:
     """
@@ -404,7 +409,8 @@ class Pipelines:
     all = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
     pure_pipelines = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
 
-
+    # Pipelines that are currently supported (will show up in notebooks)
+    available_pipelines = all
 
 class HPSOs:
     """
@@ -469,6 +475,26 @@ class HPSOs:
     #hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27c, hpso27s, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
     # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
 #hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
+
+    # HPSOs that are currently supported (will show up in notebooks).
+    # The High Priority Science Objective list below includes the
+    # HPSOs that were originally intended for The Survey
+    # telescope. These have since been reassigned to Mid.
+    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
+                       hpso_max_band5_Mid_c, hpso_max_band5_Mid_s,
+                       hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
+                       hpso02AICAL, hpso02ADprepA, hpso02ADPrepB, hpso02ADPrepC,
+                       hpso02BICAL, hpso02BDPrepA, hpso02BDPrepB, hpso02BDPrepC,
+                       hpso13ICAL, hpso13DPrepA, hpso13DPrepB, hpso13DPrepC,
+                       hpso14ICAL, hpso14DPrepA, hpso14DPrepB, hpso14DPrepC,
+                       hpso15ICAL, hpso15DPrepA, hpso15DPrepB, hpso15DPrepC,
+                       hpso22ICAL, hpso22DprepA, hpso22DprepB,
+                       hpso27ICAL, hpso27DPrepA, hpso27DPrepB,
+                       hpso37aICAL,hpso37aDprepA,hpso37aDprepB,
+                       hpso37bICAL, hpso37bDprepA, hpso37bDprepB,
+                       hpso37cICAL, hpso37cDPrepA, hpso37cDPrepB,
+                       hpso38aICAL, hpso38aDPrepA, hpso38aDPrepB,
+                       hpso38bICAL, hpso38bDPrepA, hpso38bDPrepB]
 
 
 class ParameterDefinitions:
