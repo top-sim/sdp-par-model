@@ -4,6 +4,7 @@ This file contains methods for interacting with the SKA SDP Parametric model usi
 The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
 notebooks easier.
 """
+from __future__ import print_function
 from api import SkaPythonAPI as api  # This class' (SkaIPythonAPI's) parent class
 
 from IPython.display import clear_output, display, HTML, FileLink
