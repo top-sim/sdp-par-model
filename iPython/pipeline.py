@@ -14,7 +14,7 @@ class Pipeline:
         # Set telescope parameters
         self.tp = tp
 
-        self.Nisland = tp.minimum_channels
+        self.Nisland = tp.Nf_min
         self.Mdbl = 8
         self.Mcpx = self.Mdbl * 2
 
@@ -26,18 +26,18 @@ class Pipeline:
 
         # Make baseline domain
         self.baseline = Domain('Baseline')
-        usedBls = tp.nbaselines
+        usedBls = tp.Nbl
         self.allBaselines = self.baseline.regions(usedBls)
         if isinstance(tp.Bmax_bins, Symbol):
             b = Symbol("b")
-            self.binBaselines = self.allBaselines.split(tp.nbaselines, props={
+            self.binBaselines = self.allBaselines.split(tp.Nbl, props={
                 'bmax': Lambda(b, Symbol("B_max")(b)),
                 'size': 1
             })
         else:
             self.binBaselines = self.allBaselines.split(len(tp.Bmax_bins), props={
                 'bmax': lambda i: tp.Bmax_bins[i],
-                'size': lambda i: tp.nbaselines_full * tp.frac_bins[i]
+                'size': lambda i: tp.Nbl_full * tp.frac_bins[i]
             })
 
         # Make time domain
@@ -49,6 +49,11 @@ class Pipeline:
             lambda rbox: tp.Tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
         self.kernelBackTime = self.obsTime.split(
             lambda rbox: tp.Tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
+        self.solveTime = self.snapTime
+        if tp.pipeline == Pipelines.ICAL:
+            self.solveTime = self.obsTime.split(tp.Tobs / tp.tICAL_G)
+        elif tp.pipeline == Pipelines.RCAL:
+            self.solveTime = self.obsTime.split(tp.Tobs / tp.tRCAL_G)
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch')
@@ -57,6 +62,7 @@ class Pipeline:
         self.visFreq = self.allFreqs.split(tp.Nf_vis)
         self.outFreqs = self.allFreqs.split(tp.Nf_out)
         self.islandFreqs = self.allFreqs.split(self.Nisland)
+        self.granFreqs = self.allFreqs.split(tp.Nf_min_gran)
         self.predFreqs = self.allFreqs.split(
             lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')))
         self.backFreqs = self.allFreqs.split(
@@ -96,10 +102,21 @@ class Pipeline:
 
         # Make taylor term domain
         self.taylor = Domain('Taylor')
-        self.allTaylor = self.taylor.regions(tp.number_taylor_terms)
-        self.eachTaylor = self.allTaylor.split(tp.number_taylor_terms)
-        self.predTaylor = self.allTaylor.split(tp.Ntaylor_predict)
-        self.backTaylor = self.allTaylor.split(tp.Ntaylor_backward)
+        self.allTaylor = self.taylor.regions(tp.Ntt)
+        self.eachTaylor = self.allTaylor.split(tp.Ntt)
+        self.predTaylor = self.allTaylor.split(tp.Ntt_predict)
+        self.backTaylor = self.allTaylor.split(tp.Ntt_backward)
+
+        # We want to completely remove taylor terms for pipelines that
+        # don't actually use them.
+        if tp.Ntt_predict == 1:
+            self.maybePredTaylor = []
+        else:
+            self.maybePredTaylor = [self.predTaylor]
+        if tp.Ntt_backward == 1:
+            self.maybeBackTaylor = []
+        else:
+            self.maybeBackTaylor = [self.backTaylor]
 
     def _transfer_cost_vis(self, Tdump):
         """Utility transfer cost function for visibility data. Multiplies out
@@ -130,11 +147,11 @@ class Pipeline:
             [self.eachBeam, self.snapTime, self.islandFreqs, self.allBaselines],
             deps = [self.tm],
             costs = {
-                'transfer': lambda rbox:
-                  3 * 8 * rbox(self.frequency, 'size')
-                        * rbox(self.baseline, 'size')
-                        * rbox(self.time, 'size')
-                        / self.tp.Tdump_scaled
+                #'transfer': lambda rbox:
+                #  3 * 8 * rbox(self.frequency, 'size')
+                #        * rbox(self.baseline, 'size')
+                #        * rbox(self.time, 'size')
+                #        / self.tp.Tdump_scaled
             })
 
         self.corr = Flow(
@@ -147,7 +164,7 @@ class Pipeline:
         # TODO - buffer contains averaged visibilities...
         self.buf = Flow(
             'Visibility Buffer',
-            [self.eachBeam, self.islandFreqs, self.allBaselines, self.snapTime, self.xyPolars],
+            [self.eachBeam, self.granFreqs, self.allBaselines, self.snapTime, self.xyPolars],
             cluster = 'interface',
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)}
         )
@@ -159,12 +176,10 @@ class Pipeline:
         t = product_costs.get("T", 0)
 
         # Baseline-dependent task?
-        if product_costs.has_key(cost + "_task"):
+        if cost + "_task" in product_costs:
             task_cost = product_costs[cost + "_task"]
             # Pass baseline length, multiply by number of baselines
-            return rbox(self.baseline,'size') * \
-                t(rbox(self.baseline,'bmax')) * \
-                task_cost(rbox(self.baseline,'bmax'))
+            return unbldep(t * task_cost, rbox(self.baseline,'bmax'), rbox(self.baseline,SIZE_PROP))
         else:
             # Otherwise simply return the value as-is
             return t * product_costs.get(cost, 0) / product_costs.get("N", 1)
@@ -180,7 +195,7 @@ class Pipeline:
         ingest = Flow(
             Products.Receive,
             [self.eachBeam, self.snapTime,
-             self.islandFreqs, self.xyPolar, self.allBaselines],
+             self.islandFreqs, self.xyPolars, self.allBaselines],
             deps = [self.tm, self.corr],
             cluster='ingest',
             costs = self._costs_from_product(Products.Receive))
@@ -188,7 +203,7 @@ class Pipeline:
         demix = Flow(
             Products.Demix,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar],
+             self.xyPolars],
             deps = [ingest],
             cluster='ingest',
             costs = self._costs_from_product(Products.Demix))
@@ -196,7 +211,7 @@ class Pipeline:
         average = Flow(
             Products.Average,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar, self.allBaselines],
+             self.xyPolars, self.allBaselines],
             deps = [demix],
             cluster='ingest',
             costs = self._costs_from_product(Products.Average))
@@ -204,7 +219,7 @@ class Pipeline:
         rfi = Flow(
             Products.Flag,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolar, self.allBaselines],
+             self.xyPolars, self.allBaselines],
             deps = [average],
             cluster='ingest',
             costs = self._costs_from_product(Products.Flag))
@@ -217,8 +232,8 @@ class Pipeline:
 
         return Flow(
             Products.Flag,
-            [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars, self.allBaselines],
+            [self.eachBeam, self.snapTime, self.granFreqs,
+             self.xyPolars, self.allBaselines, self.eachLoop],
             deps = [vis], cluster='calibrate',
             costs = self._costs_from_product(Products.Flag))
 
@@ -230,7 +245,7 @@ class Pipeline:
             # Solve
             solve = Flow(
                 Products.Solve,
-                [self.eachBeam, self.eachSelfCal, self.snapTime, self.allFreqs],
+                [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
                 costs = self._costs_from_product(Products.Solve),
                 deps = [vis, modelVis], cluster='calibrate',
             )
@@ -254,7 +269,7 @@ class Pipeline:
         # Apply the calibration
         app = Flow(
             Products.Correct,
-            [self.snapTime, self.islandFreqs, self.eachBeam,
+            [self.snapTime, self.granFreqs, self.eachBeam,
              self.eachLoop, self.xyPolar],
             deps = [vis, calibration], cluster='calibrate',
             costs = self._costs_from_product(Products.Correct)
@@ -280,11 +295,12 @@ class Pipeline:
         # Sum up both
         add = Flow(
             "Sum visibilities",
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.allBaselines,
-             self.predTaylor],
+            [self.eachBeam, self.eachLoop, self.xyPolars,
+             self.snapTime, self.granFreqs, self.allBaselines] +
+             self.maybePredTaylor,
             deps = [dft, degrid], cluster='predict',
             costs = {
+                #'compute': lambda rb: 2 * (1 + self.tp.Nfacet) * self._transfer_cost_vis(self.tp.Tdump_scaled)(rb),
                 'transfer': self._transfer_cost_vis(self.tp.Tdump_scaled)
             }
         )
@@ -297,7 +313,7 @@ class Pipeline:
         return Flow(
             Products.DFT,
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.visFreq, self.allBaselines],
+             self.snapTime, self.granFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.DFT),
             deps = [sources], cluster='predict',
         )
@@ -345,8 +361,8 @@ class Pipeline:
         degrid = Flow(
             Products.Degrid,
             [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
-             self.snapTime, self.predFreqs, self.binBaselines,
-             self.predTaylor],
+             self.snapTime, self.predFreqs, self.binBaselines] +
+             self.maybePredTaylor,
             costs = self._costs_from_product(Products.Degrid),
             deps = [fft, gcf], cluster='predict'
         )
@@ -355,9 +371,9 @@ class Pipeline:
         if self.tp.scale_predict_by_facet:
             return Flow(
                 Products.PhaseRotationPredict,
-                [self.eachBeam, self.eachLoop, self.allFacets, self.xyPolar,
-                 self.snapTime, self.islandFreqs, self.binBaselines,
-                 self.predTaylor],
+                [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+                 self.snapTime, self.granFreqs, self.binBaselines] +
+                 self.maybePredTaylor,
                 costs = self._costs_from_product(Products.PhaseRotationPredict),
                 deps = [degrid], cluster = 'predict'
             )
@@ -385,8 +401,8 @@ class Pipeline:
 
         return Flow(
             Products.Subtract_Visibility,
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.allBaselines],
+            [self.eachBeam, self.eachLoop, self.xyPolars,
+             self.snapTime, self.granFreqs, self.allBaselines],
             costs = self._costs_from_product(Products.Subtract_Visibility),
             deps = [vis, model_vis], cluster='calibrate'
         )
@@ -398,7 +414,7 @@ class Pipeline:
         rotate = Flow(
             Products.PhaseRotation,
             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
-             self.snapTime, self.islandFreqs, self.binBaselines],
+             self.snapTime, self.granFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.PhaseRotation),
             deps = [vis], cluster = 'backward'
         )
@@ -414,8 +430,8 @@ class Pipeline:
         grid = Flow(
             Products.Grid,
             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
-             self.snapTime, self.backFreqs, self.binBaselines,
-             self.backTaylor],
+             self.snapTime, self.backFreqs, self.binBaselines] +
+             self.maybeBackTaylor,
             costs = self._costs_from_product(Products.Grid),
             deps = [rotate, gcf], cluster = 'backward',
         )
@@ -584,7 +600,7 @@ class PipelineTestsBase(unittest.TestCase):
         def flowCost(f): return -f.cost('compute')
         flows = flow.recursiveDeps()
         flowsSorted = sorted(flows, key=flowCost)
-        def productsCost((n,c)): return -c['Rflop']
+        def productsCost(n_c): return -n_c[1]['Rflop']
         productsSorted = sorted(self.df.tp.products.items(), key=productsCost)
 
         # Zip, match and sum
@@ -600,8 +616,8 @@ class PipelineTestsBase(unittest.TestCase):
                     "have a matching flow (or vice-versa)\n"
                     "Flow list: %s\nProduct list: %s" % (
                         flow.name, pname, fcost, pcost, pcost/max(fcost, 0.001),
-                        map(lambda f: f.name, flowsSorted),
-                        map(lambda (n,c): n, productsSorted))
+                        list(map(lambda f: f.name, flowsSorted)),
+                        list(map(lambda n_c: n_c[0], productsSorted)))
             )
 
         # Finally check sum
@@ -704,6 +720,28 @@ class PipelineTestsImaging(PipelineTestsBase):
         # Check whole pipeline
         self.assertIn(self.df.tp.pipeline, Pipelines.imaging)
         self._assertPipelineComplete(self.df.create_imaging())
+
+    def test_dot(self):
+
+        dot = flowsToDot(self.df.create_imaging(), self.df.tp.Tobs)
+
+        # Do some rough sanity checks. Probably not exactly robust,
+        # but there's little we know about the contents...
+        self.assertGreater(len(dot.source), 4000)
+        self.assertGreater(dot.source.count('['), 40)
+        self.assertGreater(dot.source.count(']'), 40)
+
+    def test_baseline_split(self):
+
+        # Check that the baseline split actually is done for the
+        # appropriate flows.
+        imaging = self.df.create_imaging()
+        for product in [Products.Grid, Products.Degrid]:
+            dep = imaging.getDep(product)
+            def baseline_count_prop(rb):
+                return rb(self.df.baseline, 'count')
+            self.assertEqual(dep.the(baseline_count_prop),
+                             self.df.binBaselines.the(baseline_count_prop))
 
 class PipelineTestsRCAL(PipelineTestsImaging):
     def setUp(self):

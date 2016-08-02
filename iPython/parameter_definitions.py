@@ -4,9 +4,11 @@ etc. Several methods are supplied by which values can be found by lookup as well
 (e.g. finding the telescope that is associated with a given mode)
 """
 
+from __future__ import print_function
+
 import numpy as np
 from math import sqrt
-from sympy import symbols, Symbol, Expr
+from sympy import symbols, Symbol, Expr, Lambda, Mul, Add, Sum
 import warnings
 import string
 
@@ -75,42 +77,38 @@ class ParameterContainer:
 
         return return_value
 
-    def _make_symbol_name(self, name):
+    def make_symbol_name(self, name):
         """Make names used in our code into something more suitable to be used
         as a Latex symbol. This is a quick-n-dirty heuristic based on
         what the names used in equations.py tend to look like.
         """
 
-        if name == 'nbaselines':
-            return 'N_{bl}'
-        if name == 'minimum_channels':
-            return 'N_{f,min}'
-        if name == 'using_facet_overlap_frac':
-            return 'Q_{ov}'
-        if name == 'subband_frequency_ratio':
-            return 'Q_{sb}'
         if name.startswith("wl"):
             return 'lambda' + name[2:]
         if name.startswith("freq_"):
             return 'f_' + name[5:]
+        if name.startswith("Delta"):
+            return 'Delta_' + name[5:]
+        if name.startswith("Theta_"):
+            return 'Theta_' + name[6:].replace('_', ',')
         if name.startswith("Omega_"):
             return name
         if name[0].isupper():
             i0 = 2 if name[1] == '_' else 1
-            return name[0] + "_" + string.replace(name[i0:], '_', ',')
+            return name[0] + "_" + name[i0:].replace('_', ',')
         return name
 
     def symbolify(self):
 
         # Replace all values and expressions with symbols
-        for name, v in self.__dict__.iteritems():
+        for name, v in self.__dict__.items():
             if isinstance(v, int) or isinstance(v, float) or self.is_expr(v):
-                self.__dict__[name] = Symbol(self._make_symbol_name(name))
+                self.__dict__[name] = Symbol(self.make_symbol_name(name))
 
         # For products too
         for product, rates in self.products:
             for rname in rates:
-                rates[rname] = Symbol(self._make_symbol_name(rname + "_" + product))
+                rates[rname] = Symbol(self.make_symbol_name(rname + "_" + product))
 
     def is_value(self, v):
         if isinstance(v, int) or isinstance(v, float) or \
@@ -118,19 +116,163 @@ class ParameterContainer:
             return True
 
     def is_expr(self, e):
-        return isinstance(e, Expr)
-
-    def set_product(self, product, **args):
-        if not self.products.has_key(product):
-            self.products[product] = {}
-        self.products[product].update(args)
+        return isinstance(e, Expr) or isinstance(e, BLDep)
 
     def get_products(self, expression='Rflop', scale=1):
         results = {}
-        for product, exprs in self.products.iteritems():
-            if exprs.has_key(expression):
+        for product, exprs in self.products.items():
+            if expression in exprs:
                 results[product] = exprs[expression] / scale
         return results
+
+    def sum_bl_bins(self, bldep):
+        """
+        Converts a possibly baseline-dependent terms (e.g. constructed
+        using "BLDep" or "blsum") into a formula by summing over
+        baselines.
+
+        This relies on the "nbaselines", "frac_bins" and "Bmax_bins"
+        fields to be set. If "Bmax_bins" is a symbol, we will generate
+        a symbolic sum term utilising "Bmax_bins" as a function.
+        """
+
+        # Actually baseline-dependent?
+        if isinstance(bldep, BLDep):
+            b = bldep.b
+            bcount = bldep.bcount
+            expr = bldep.term
+        else:
+            return self.Nbl * bldep
+
+        # Small bit of ad-hoc formula optimisation: Exploit
+        # independent factors. Makes for smaller terms, which is good
+        # both for Sympy as well as for output.
+        if not b in expr.free_symbols:
+            return self.Nbl * expr.subs(bcount, 1)
+        if isinstance(expr, Mul):
+            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
+            indepFactors = list(filter(indep, expr.as_ordered_factors()))
+            if len(indepFactors) > 0:
+                def not_indep(e): return not indep(e)
+                restFactors = filter(not_indep, expr.as_ordered_factors())
+                return Mul(*indepFactors) * self.sum_bl_bins(BLDep((b, bcount), Mul(*restFactors)))
+
+        # Replace in concrete values for baseline fractions and
+        # length. Using Lambda here is a solid 25% faster than
+        # subs(). Unfortunately very slow nonetheless...
+        results = []
+
+        # Symbolic? Generate actual symbolic sum expression
+        if isinstance(self.Bmax_bins, Symbol):
+            return Sum(bldep(self.Bmax_bins(b), 1), (b, 1, self.Nbl))
+
+        # Otherwise generate sum term manually that approximates the
+        # full sum using baseline bins
+        for (frac_val, bmax_val) in zip(self.frac_bins, self.Bmax_bins):
+            results.append(bldep(bmax_val, frac_val*self.Nbl_full))
+        return Add(*results, evaluate=False)
+
+    def set_product(self, product, T=None, N=1, **args):
+        """Sets product properties using a task abstraction. Each property is
+        expressed as a sum over baselines.
+
+        @param product: Product to set.
+        @param T: Observation time covered by this task. Default is the
+          entire observation (Tobs). Can be baseline-dependent.
+        @param N: Task parallelism / rate multiplier. The number of
+           tasks that work on the data in parallel. Can be
+           baseline-dependent.
+        @param args: Task properties as rates. Will be multiplied by
+           N.  If it is baseline-dependent, it will be summed over all
+           baselines to yield the final rate.
+        """
+
+        # Collect properties
+        if T is None: T = self.Tobs
+        props = { "N": N, "T": T }
+        for k, expr in args.items():
+
+            # Multiply out multiplicator. If either of them is
+            # baseline-dependent, this will generate a new
+            # baseline-dependent term (see BLDep)
+            total = N * expr
+
+            # Baseline-dependent? Generate a sum term, otherwise just say as-is
+            if isinstance(total, BLDep):
+                props[k] = self.sum_bl_bins(total)
+                props[k+"_task"] = expr
+            else:
+                props[k] = total
+
+        # Update
+        if not product in self.products:
+            self.products[product] = {}
+        self.products[product].update(props)
+
+class BLDep:
+    """A baseline-dependent sympy expression.
+
+    Baseline length will be represented as a symbol in the
+    formula. Baseline count can also be used, however this is
+    cumbersome, so we probably don't want to use it often.
+
+    Note that this mostly replicates functionality of numpy's own
+    Lambda expression (down to the call syntax). The difference is
+    that this class documents the semantics of the parameter.
+    """
+
+    def __init__(self, b, term):
+        if isinstance(b, tuple):
+            self.b = b[0]
+            self.bcount = b[1]
+        else:
+            self.b = b
+            self.bcount = Symbol('bcount')
+        assert isinstance(self.b, Symbol)
+        self.term = term
+
+    def __call__(self, b_val, bcount_val = None):
+        if not isinstance(self.term, Expr):
+            return self.term
+        if bcount_val is None:
+            assert not self.bcount in self.term.free_symbols
+            return self.term.subs(self.b, b_val)
+        else:
+            return self.term.subs([(self.b, b_val),
+                                   (self.bcount, bcount_val)])
+
+    def __mul__(self, other):
+        if isinstance(other, BLDep):
+            return BLDep((other.b, other.bcount),
+                         self(other.b, other.bcount) * other.term)
+        else:
+            return BLDep((self.b, self.bcount), self.term * other)
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def subs(self, *args, **kwargs):
+        return BLDep((self.b, self.bcount), self.term.subs(*args, **kwargs))
+
+    @property
+    def free_symbols(self):
+        return Lambda((self.b, self.bcount), self.term).free_symbols
+    def atoms(self, typ):
+        return Lambda((self.b, self.bcount), self.term).atoms(typ)
+
+def unbldep(term, b_val, bcount_val = None):
+    if isinstance(term, BLDep):
+        return term(b_val, bcount_val)
+    else:
+        return term
+
+def blsum(b, expr):
+    """
+    A baseline sum of an expression.
+
+    Returns a BLDep object of the expression multiplied with the baseline count.
+    """
+    bcount = Symbol('bcount')
+    return BLDep((b, bcount), bcount * expr)
 
 class Constants:
     """
@@ -162,6 +304,8 @@ class Telescopes:
     SKA2_Low = 'SKA2_Low'
     SKA2_Mid = 'SKA2_Mid'
 
+    # Currently supported telescopes (will show up in notebooks)
+    available_teles = (SKA1_Low, SKA1_Mid)
 
 class Bands:
     """
@@ -193,6 +337,9 @@ class Bands:
     low_bands_ska2 = {SKA2Low}
     mid_bands_ska2 = {SKA2Mid}
 
+    available_bands = (Low,
+                       Mid1, Mid2, Mid5A, Mid5B, Mid5C,
+                       Sur1)
 
 class Products:
     """
@@ -250,7 +397,8 @@ class Pipelines:
     all = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
     pure_pipelines = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
 
-
+    # Pipelines that are currently supported (will show up in notebooks)
+    available_pipelines = all
 
 class HPSOs:
     """
@@ -318,6 +466,27 @@ class HPSOs:
     # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
 #hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
 
+    # HPSOs that are currently supported (will show up in notebooks).
+    # The High Priority Science Objective list below includes the
+    # HPSOs that were originally intended for The Survey
+    # telescope. These have since been reassigned to Mid.
+    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
+                       hpso_max_band5_Mid_c, hpso_max_band5_Mid_s,
+                       hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
+                       hpso02AICAL, hpso02ADprepA, hpso02ADPrepB, hpso02ADPrepC,
+                       hpso02BICAL, hpso02BDPrepA, hpso02BDPrepB, hpso02BDPrepC,
+                       hpso13ICAL, hpso13DPrepA, hpso13DPrepB, hpso13DPrepC,
+                       hpso14ICAL, hpso14DPrepA, hpso14DPrepB, hpso14DPrepC,
+                       hpso15ICAL, hpso15DPrepA, hpso15DPrepB, hpso15DPrepC,
+                       hpso22ICAL, hpso22DprepA, hpso22DprepB,
+                       hpso27ICAL, hpso27DPrepA, hpso27DPrepB,
+                       hpso32ICAL, hpso32DPrepB,
+                       hpso37aICAL,hpso37aDprepA,hpso37aDprepB,
+                       hpso37bICAL, hpso37bDprepA, hpso37bDprepB,
+                       hpso37cICAL, hpso37cDPrepA, hpso37cDPrepB,
+                       hpso38aICAL, hpso38aDPrepA, hpso38aDPrepB,
+                       hpso38bICAL, hpso38bDPrepA, hpso38bDPrepB]
+
 
 class ParameterDefinitions:
     """
@@ -354,8 +523,6 @@ class ParameterDefinitions:
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
         o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
-        o.Mpx = 8.0  # Memory size of an image pixel in bytes
-        o.Mcpx = 16.0  # Memory size of a complex grid pixel in bytes
         o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
         o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
@@ -363,6 +530,8 @@ class ParameterDefinitions:
         o.Nw = 2  # Bytes per value
         o.Ncbytes = 8 # Number of bytes per complex
         o.Nrbytes = 4 # Number of bytes per real
+        o.Mpx = o.Nrbytes  # Memory size of an image pixel in bytes
+        o.Mcpx = o.Ncbytes  # Memory size of a complex grid pixel in bytes
         o.Ndemix = 1000 # Number of time-frequency samples used in demixing
         o.NA = 10 # Number of A-team sources used in demixing
         # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
@@ -376,11 +545,12 @@ class ParameterDefinitions:
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
-        o.minimum_channels = 100  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
-        o.Fast_Img_channels = 100  #minimum number of channels to still enable distributed computing, and to calculate spectral images
-        o.number_taylor_terms = 5 # Number of Taylor terms to compute
+        o.Nf_min = 20  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
+        o.Fast_Img_channels = 20  #minimum number of channels to still enable distributed computing, and to calculate spectral images
+        o.Nf_min_gran = 800 # minimum number of channels in predict output to prevent overly large output sizes
+        o.Ntt = 5 # Number of Taylor terms to compute
         o.NB_parameters = 500 # Number of terms in B parametrization
-        o.facet_overlap_frac = 0.2 #fraction of overlap (linear) in adjacent facets.
+        o.r_facet_base = 0.2 #fraction of overlap (linear) in adjacent facets.
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
         o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
@@ -451,11 +621,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 80000  # m
             o.Tdump_ref = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
-            o.nr_baselines = 10180233
             o.baseline_bin_distribution = np.array(
                 (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
         #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -471,10 +640,9 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
-            o.nr_baselines = 10192608
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -489,13 +657,12 @@ class ParameterDefinitions:
             o.Nf_max = 65536  # maximum number of channels
             o.Tdump_ref = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 150000  # m
-            o.nr_baselines = 1165860
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
             o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
             o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -511,11 +678,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 200000  # m
             o.Tdump_ref = 0.08  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 200000))  # m
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -531,10 +697,9 @@ class ParameterDefinitions:
             o.B_dump_ref = 50000  # m
             o.Tdump_ref = 0.3  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
-            o.nr_baselines = 167616
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -551,7 +716,6 @@ class ParameterDefinitions:
             o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 180000))  # m
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
@@ -570,11 +734,10 @@ class ParameterDefinitions:
             o.B_dump_ref = 1800000  # m
             o.Tdump_ref = 0.008  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((44000, 67000, 103000, 157000, 240000, 367000, 560000, 856000, 1308000, 1800000))
-            o.nr_baselines = 1165860
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            o.NAProducts = 1 # Each antenna can be modelled as the same.
+            # o.NAProducts = 1 # Each antenna can be modelled as the same.
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -646,7 +809,7 @@ class ParameterDefinitions:
             o.freq_min = 11.3e9
             o.freq_max = 13.8e9
         elif band == Bands.Mid5C:
-            print "Band = Mid5C: using 2x2.5GHz subbands from 4.6-9.6GHz for band 5"
+            print("Band = Mid5C: using 2x2.5GHz subbands from 4.6-9.6GHz for band 5")
             o.telescope = Telescopes.SKA1_Mid
             o.freq_min = 4.6e9
             o.freq_max = 9.6e9
@@ -722,9 +885,9 @@ class ParameterDefinitions:
             o.Nminor = 10000
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -738,9 +901,9 @@ class ParameterDefinitions:
             o.Nmajor = 0
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -754,9 +917,9 @@ class ParameterDefinitions:
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
-            o.Nf_FFT_backward = o.number_taylor_terms * o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
+            o.Nf_FFT_backward = o.Ntt * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -770,9 +933,9 @@ class ParameterDefinitions:
             o.Nmajor = 10
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.Nf_out
+            o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
             o.Tobs = 6 * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
@@ -787,7 +950,7 @@ class ParameterDefinitions:
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Npp = 4 # We want Stokes I, Q, U, V
-            o.Nf_out = min(o.minimum_channels, o.Nf_max)
+            o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Tobs = 6 * 3600.0  # in seconds
@@ -805,7 +968,7 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Nf_FFT_predict = o.Ntt * o.Nf_min
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
@@ -822,7 +985,7 @@ class ParameterDefinitions:
             o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
-            o.Nf_FFT_predict = o.number_taylor_terms * o.minimum_channels
+            o.Nf_FFT_predict = o.Ntt * o.Nf_min
             o.Tobs = 6 * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02

@@ -6,11 +6,13 @@ This class contains a method for (symbolically) computing derived parameters usi
 in PDR05 (version 1.85).
 """
 
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, Lambda, Add, Sum, Mul
+from __future__ import print_function
+
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
 from numpy import pi, round
 import math
 from parameter_definitions import Pipelines, Products
-from parameter_definitions import ParameterContainer
+from parameter_definitions import ParameterContainer, BLDep, blsum
 import warnings
 
 # Check sympy compatibility
@@ -66,7 +68,7 @@ class Equations:
         if hasattr(o, 'Tobs') and (o.Tobs < 10.0):
             o.Tsnap_min = o.Tobs
             if verbose:
-                print 'Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s'
+                print('Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s')
 
         # Load common equations.
         Equations._apply_common_equations(o)
@@ -82,9 +84,12 @@ class Equations:
         # Apply general imaging equations. These next 4 methods just set up
         # parameters.
         Equations._apply_image_equations(o)
-        Equations._apply_channel_equations(o)
-        Equations._apply_coalesce_equations(o)
-        Equations._apply_geometry_equations(o)
+        if symbolify == 'helper':
+            o.symbolify()
+            o.Bmax_bins = Symbol("B_max")
+        Equations._apply_channel_equations(o, symbolify)
+        Equations._apply_coalesce_equations(o, symbolify)
+        Equations._apply_geometry_equations(o, symbolify)
 
         # If requested, we replace all parameters so far with symbols,
         # so product equations are purely symbolic.
@@ -123,67 +128,69 @@ class Equations:
         # Derive simple parameters. Note that we ignore some baselines
         # when Bmax is lower than the telescope's maximum.
         #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
-        o.nbaselines_full = o.Na * (o.Na - 1) / 2.0
-        o.nbaselines = sum(o.frac_bins) * o.nbaselines_full
+        o.Nbl_full = o.Na * (o.Na - 1) / 2.0
+        o.Nbl = sum(o.frac_bins) * o.Nbl_full
         o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
-
-        # Facet overlap is only needed if Nfacet > 1
-        o.using_facet_overlap_frac=sign(o.Nfacet - 1)*o.facet_overlap_frac
 
         # Wavelengths
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
         o.wl_min = o.c / o.freq_max  # Minimum Wavelength
         o.wl = 0.5 * (o.wl_max + o.wl_min)  # Representative Wavelength
 
-        # TODO: In line below: PDR05 uses *wl_max* instead of wl. Also
-        # uses 7.6 instead of 7.66. Is this correct?
-        o.Number_imaging_subbands = ceiling(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
-        o.subband_frequency_ratio = (o.wl_max/o.wl_min)**(1./o.Number_imaging_subbands)
+        # Calculate number of subbands
+        o.Nsubbands = ceiling(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
+        o.Qsubband = (o.wl_max/o.wl_min)**(1./o.Nsubbands)
 
     @staticmethod
     def _apply_image_equations(o):
         """
         Calculate image parameters, such as resolution and size
 
-        References: PDR05 (version 1.85) Sec 9.2
+        References:
+         * SKA-TEL-SDP-0000040 01D section D - The Resolution and Extent of Images and uv Planes
+         * SKA-TEL-SDP-0000040 01D section H.2 - Faceting
         """
 
         # max subband wavelength to set image FoV
-        o.wl_sb_max = o.wl *sqrt(o.subband_frequency_ratio)
+        o.wl_sb_max = o.wl *sqrt(o.Qsubband)
         # min subband wavelength to set pixel size
-        o.wl_sb_min = o.wl_sb_max / o.subband_frequency_ratio
+        o.wl_sb_min = o.wl_sb_max / o.Qsubband
 
-        # Eq 6 - Facet Field-of-view (linear) at max sub-band wavelength
-        o.Theta_fov = 7.66 * o.wl_sb_max * o.Qfov * (1+o.using_facet_overlap_frac) \
+        # Facet overlap is only needed if Nfacet > 1
+        o.r_facet = sign(o.Nfacet - 1)*o.r_facet_base
+
+        # Facet Field-of-view (linear) at max sub-band wavelength
+        o.Theta_fov = 7.66 * o.wl_sb_max * o.Qfov * (1+o.r_facet) \
                       / (pi * o.Ds * o.Nfacet)
         # Total linear field of view of map (all facets)
-        o.Total_fov = 7.66 * o.wl_sb_max * o.Qfov / (pi * o.Ds)
-        # TODO: In the two lines below, PDR05 uses *wl_min* instead of wl
+        o.Theta_fov_total = 7.66 * o.wl_sb_max * o.Qfov / (pi * o.Ds)
         # Synthesized beam at fiducial wavelength. Called Theta_PSF in PDR05.
         o.Theta_beam = 3 * o.wl_sb_min / (2. * o.Bmax)
-        # Eq 7 - Pixel size at fiducial wavelength.
+        # Pixel size at fiducial wavelength.
         o.Theta_pix = o.Theta_beam / (2. * o.Qpix)
 
-        # Eq 8 - Number of pixels on side of facet in subband.
+        # Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
-        o.Npix_linear_total_fov = (o.Total_fov / o.Theta_pix)
+        o.Npix_linear_fov_total = (o.Theta_fov_total / o.Theta_pix)
         # Predict fov and number of pixels depends on whether we facet
         if o.scale_predict_by_facet:
             o.Theta_fov_predict = o.Theta_fov
             o.Nfacet_predict = o.Nfacet
             o.Npix_linear_predict = o.Npix_linear
         else:
-            o.Theta_fov_predict = o.Total_fov
+            o.Theta_fov_predict = o.Theta_fov_total
             o.Nfacet_predict = 1
-            o.Npix_linear_predict = o.Npix_linear_total_fov
+            o.Npix_linear_predict = o.Npix_linear_fov_total
 
     @staticmethod
-    def _apply_channel_equations(o):
+    def _apply_channel_equations(o, symbolify):
         """
         Determines the number of frequency channels to use in backward &
         predict steps.
 
-        References: PDR05 Sec 9.1
+        References:
+         * SKA-TEL-SDP-0000040 01D section B - Covering the Frequency Axis
+         * SKA-TEL-SDP-0000040 01D section D - Visibility Averaging and Coalescing
         """
 
         b = Symbol('b')
@@ -194,19 +201,18 @@ class Equations:
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
         o.Qbw = 1.47 / o.epsilon_f_approx
 
-        # The two equations below => combination of Eq 4 and Eq 5 for
-        # full and facet FOV at max baseline respectively.  These
-        # limit bandwidth smearing to within a fraction
-        # (epsilon_f_approx) of a uv cell.
-        # Done: PDR05 Eq 5 says o.Nf = log_wl_ratio / (1 + 0.6 * o.Ds / (o.Bmax * o.Q_fov * o.Qbw)).
-        # This is fine - substituting in the equation for theta_fov shows it is indeed correct.
-        #Use full FoV for de-grid (predict) for high accuracy
+        if symbolify == 'helper':
+            o.epsilon_f_approx = Symbol(o.make_symbol_name('epsilon_f_approx'))
+            o.Qbw = Symbol(o.make_symbol_name('Qbw'))
 
+        # Frequency number to avoid smearing for full and facet FOV at
+        # max baseline respectively.  These limit bandwidth smearing
+        # to within a fraction (epsilon_f_approx) of a uv cell.
         o.Nf_no_smear = \
-            log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Total_fov * o.Qbw)))
-        o.Nf_no_smear_backward = Lambda(b,
+            log_wl_ratio / log(1 + (3 * o.wl / (2. * o.Bmax * o.Theta_fov_total * o.Qbw)))
+        o.Nf_no_smear_backward = BLDep(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov * o.Qbw))))
-        o.Nf_no_smear_predict = Lambda(b,
+        o.Nf_no_smear_predict = BLDep(b,
             log_wl_ratio / log(1 + (3 * o.wl / (2. * b * o.Theta_fov_predict * o.Qbw))))
 
         # The number of visibility channels used in each direction
@@ -214,223 +220,235 @@ class Equations:
         # and input channel count.
         o.Nf_vis = \
             Min(Max(o.Nf_out, o.Nf_no_smear),o.Nf_max)
-        o.Nf_vis_backward = Lambda(b,
+        o.Nf_vis_backward = BLDep(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
-        o.Nf_vis_predict = Lambda(b,
+        o.Nf_vis_predict = BLDep(b,
             Min(Max(o.Nf_out, o.Nf_no_smear_predict(b if o.scale_predict_by_facet else o.Bmax)),
                 o.Nf_max))
 
     @staticmethod
-    def _apply_coalesce_equations(o):
+    def _apply_coalesce_equations(o, symbolify):
         """
         Determines amount of coalescing of visibilities in time.
+
+        References:
+         * SKA-TEL-SDP-0000040 01D section A - Covering the Time Axis
+         * SKA-TEL-SDP-0000040 01D section D - Visibility Averaging and Coalescing
         """
 
         # correlator output averaging time scaled for max baseline.
         b = Symbol('b')
-        o.combine_time_samples = Lambda(b,
+        o.combine_time_samples = BLDep(b,
             Max(floor(o.epsilon_f_approx * o.wl /
-                      (o.Total_fov * o.Omega_E * b * o.Tdump_scaled)), 1.))
+                      (o.Theta_fov_total * o.Omega_E * b * o.Tdump_scaled)), 1.))
 
         # coalesce visibilities in time.
-        o.Tcoal_skipper = Lambda(b,
+        o.Tcoal_skipper = BLDep(b,
             o.Tdump_scaled * o.combine_time_samples(b))
+        if symbolify == 'helper':
+            o.Tcoal_skipper = Symbol(o.make_symbol_name("Tcoal_skipper"))
 
         if o.blcoal:
             # For backward step at gridding only, allow coalescance of
             # visibility points at Facet FoV smearing limit only for
-            # BLDep averaging case.
-            o.Tcoal_backward = Lambda(b,
-                Min(o.Tcoal_skipper(b) * o.Nfacet/(1+o.using_facet_overlap_frac), o.Tion))
+            # bl-dep averaging case.
+            o.Tcoal_backward = BLDep(b,
+                Min(o.Tcoal_skipper(b) * o.Nfacet/(1+o.r_facet), o.Tion))
             if o.scale_predict_by_facet:
-                o.Tcoal_predict = Lambda(b, o.Tcoal_backward(b))
+                o.Tcoal_predict = BLDep(b, o.Tcoal_backward(b))
             else:
                 # Don't let any bl-dependent time averaging be for
                 # longer than either 1.2s or Tion. ?Why 1.2s?
-                o.Tcoal_predict = Lambda(b, Min(o.Tcoal_skipper(b), 1.2, o.Tion))
+                o.Tcoal_predict = BLDep(b, Min(o.Tcoal_skipper(b), 1.2, o.Tion))
         else:
-            o.Tcoal_predict = Lambda(b, o.Tdump_scaled)
-            o.Tcoal_backward = Lambda(b, o.Tdump_scaled)
+            o.Tcoal_predict = BLDep(b, o.Tdump_scaled)
+            o.Tcoal_backward = BLDep(b, o.Tdump_scaled)
 
         # Visibility rate on ingest, including autocorrelations
-        o.Nvis_ingest = (o.nbaselines + o.Na) * o.Nf_max / o.Tdump_ref
-        # Total visibility rate after global coalescing
-        o.Nvis = o.nbaselines * o.Nf_vis / o.Tdump_scaled
+        o.Nvis_ingest = (o.Nbl + o.Na) * o.Nf_max / o.Tdump_ref
+        # Total visibility rate after global coalescing. This uses
+        # Tdump_scaled independent of whether BLDTA is used.  This is
+        # because BLDTA is only done for gridding, and doesn't affect
+        # the amount of data to be buffered.
+        o.Nvis = o.Nbl * o.Nf_vis / o.Tdump_scaled
 
-        # Eq. 31 Visibility rate for backward step, allow coalescing
+        # Visibility rate for backward step, allow coalescing
         # in time and freq prior to gridding
-        bcount = Symbol('bcount')
-        o.Nvis_backward = Lambda((bcount, b),
-            bcount * o.Nf_vis_backward(b) / o.Tcoal_backward(b))
-        # Eq. 31 Visibility rate for predict step
-        o.Nvis_predict = Lambda((bcount, b),
-            bcount * o.Nf_vis_predict(b) / o.Tcoal_predict(b))
-
-        # The line above uses Tdump_scaled independent of whether
-        # BLDTA is used.  This is because BLDTA is only done for
-        # gridding, and doesn't affect the amount of data to be
-        # buffered
+        o.Nvis_backward = blsum(b, o.Nf_vis_backward(b) / o.Tcoal_backward(b))
+        # Visibility rate for predict step
+        o.Nvis_predict = blsum(b, o.Nf_vis_predict(b) / o.Tcoal_predict(b))
 
     @staticmethod
-    def _apply_geometry_equations(o):
+    def _apply_geometry_equations(o, symbolify):
+        """
+        Telescope geometry in space and time, given curvature and rotation
+        of the earth. This determines the maximum w-term that needs to
+        be corrected for and hence the size of w-kernels.
 
-        # ===============================================================================================
-        # PDR05 Sec 12.2 - 12.5
-        # ===============================================================================================
+        References:
+          * SKA-TEL-SDP-0000040 01D section G - Convolution Kernel Sizes
+          * SKA-TEL-SDP-0000040 01D section H.1 - Imaging Pipeline Geometry Assumptions
+        """
 
         b = Symbol('b')
-        o.DeltaW_Earth = Lambda(b, b ** 2 / (8. * o.R_Earth * o.wl))  # Eq. 19
-        # TODO: in the two lines below, PDR05 uses lambda_min, not mean.
-        # Eq. 26 : W-deviation for snapshot.
-        o.DeltaW_SShot = Lambda(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
-        o.DeltaW_max = Lambda(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
 
-        # Eq. 25, w-kernel support size **Note difference in cellsize assumption**
+        # Contribution of earth curvature to w-term
+        o.DeltaW_Earth = BLDep(b, b ** 2 / (8. * o.R_Earth * o.wl))
+        # Contribution of earth movement to w-term
+        o.DeltaW_SShot = BLDep(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
+        o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
+        if symbolify == 'helper':
+            o.DeltaW_Earth = Symbol(o.make_symbol_name('DeltaW_Earth'))
+            o.DeltaW_SShot = Symbol(o.make_symbol_name('DeltaW_SShot'))
+            o.DeltaW_max = Symbol(o.make_symbol_name('DeltaW_max'))
+
+        # Eq. 25, w-kernel support size. Note possible difference in
+        # cellsize assumption!
         def Ngw(deltaw, fov):
             return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                                   (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
-        o.Ngw_backward = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
-        o.Ngw_predict = Lambda(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
+        o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
+        o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
 
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_backward = Lambda(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
-        o.Nkernel_AW_backward = Lambda(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
+        o.Nkernel2_backward = BLDep(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_backward = BLDep(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_predict = Lambda(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
-        o.Nkernel_AW_predict = Lambda(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
+        o.Nkernel2_predict = BLDep(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
+        o.Nkernel_AW_predict = BLDep(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
+
+        # Combined kernel support size and oversampling
         if o.on_the_fly:
             o.Qgcf = 1.0
-
-        # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_backward = Lambda(b,
-            sqrt(o.Nkernel2_backward(b))*o.Qgcf)
-        # Eq. 23 : combined kernel support size and oversampling
-        o.Ncvff_predict = Lambda(b,
-            sqrt(o.Nkernel2_predict(b))*o.Qgcf)
+        o.Ncvff_backward = BLDep(b, sqrt(o.Nkernel2_backward(b))*o.Qgcf)
+        o.Ncvff_predict = BLDep(b, sqrt(o.Nkernel2_predict(b))*o.Qgcf)
 
     @staticmethod
     def _apply_ingest_equations(o):
-        """ Ingest equations """
+        """
+        Ingest equations
+
+        References: SKA-TEL-SDP-0000040 01D section 3.3 - The Fast and Buffered pre-processing pipelines1
+        """
 
         if o.pipeline == Pipelines.Ingest:
-            Equations._set_product(
-                o, Products.Receive,
-                T = o.Tsnap, N = o.Nbeam * o.minimum_channels * o.Npp,
-                Rflop = 2 * o.Nvis_ingest / o.minimum_channels +
+            o.set_product(Products.Receive,
+                T = o.Tsnap, N = o.Nbeam * o.Nf_min,
+                Rflop = 2 * o.Npp * o.Nvis_ingest / o.Nf_min +
                         1000 * o.Na / o.Tdump_ref,
-                Rout = o.Mvis * o.Nvis_ingest)
-            Equations._set_product(
-                o, Products.Flag,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 279 * o.Nvis_ingest / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis_ingest / o.minimum_channels)
+                Rout = o.Mvis * o.Npp * o.Nvis_ingest)
+            o.set_product(Products.Flag,
+                T = o.Tsnap, N = o.Nbeam * o.Nf_min,
+                Rflop = 279 * o.Npp * o.Nvis_ingest / o.Nf_min,
+                Rout = o.Mvis * o.Npp * o.Nvis_ingest / o.Nf_min)
             # Ndemix is the number of time-frequency products used
             # (typically 1000) so we have to divide out the number of
             # input channels
-            Equations._set_product(
-                o, Products.Demix,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 8 * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
-                        / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
-            Equations._set_product(
-                o, Products.Average,
-                T = o.Tsnap, N = o.Nbeam * o.Npp * o.minimum_channels,
-                Rflop = 8 * o.Nvis_ingest / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+            o.set_product(Products.Demix,
+                T = o.Tsnap, N = o.Nbeam * o.Nf_min,
+                Rflop = 8 * o.Npp * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
+                        / o.Nf_min,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min)
+            o.set_product(Products.Average,
+                T = o.Tsnap, N = o.Nbeam * o.Nf_min,
+                Rflop = 8 * o.Npp * o.Nvis_ingest / o.Nf_min,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min)
 
     @staticmethod
     def _apply_flag_equations(o):
         """ Flagging equations for non-ingest pipelines"""
 
         if not (o.pipeline == Pipelines.Ingest):
-            Equations._set_product(
-                o, Products.Flag,
-                T=o.Tsnap, N=o.Nbeam * o.minimum_channels,
-                Rflop=279 * o.Nvis / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+            o.set_product(Products.Flag,
+                T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
+                Rflop=279 * o.Npp * o.Nvis / o.Nf_min_gran,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_correct_equations(o):
-        """ Correction of gains"""
+        """
+        Correction of gains
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.7 - Correct
+        """
 
         if not o.pipeline == Pipelines.Ingest:
-            Equations._set_product(
-                o, Products.Correct,
-                T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.minimum_channels,
-                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+            o.set_product(Products.Correct,
+                T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran,
+                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.Nf_min_gran,
+                Rout = o.Mvis * o.Nvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_grid_equations(o):
-        """ Grid """
+        """
+        Gridding and degridding of visibilities
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.11 - Grid and Degrid
+        """
 
         # For the ASKAP MSMFS, we grid all data for each taylor term
         # with polynominal of delta freq/freq
         b = Symbol('b')
-        o.Ntaylor_backward = 1
-        o.Ntaylor_predict = 1
+        o.Ntt_backward = 1
+        o.Ntt_predict = 1
         if o.pipeline == Pipelines.DPrepA:
-            o.Ntaylor_backward = o.number_taylor_terms
-            o.Ntaylor_predict = o.number_taylor_terms
+            o.Ntt_backward = o.Ntt
+            o.Ntt_predict = o.Ntt
 
         if not o.pipeline in Pipelines.imaging: return
-        Equations._set_product_blsum(
-            o, Products.Grid, b=b, T=o.Tsnap,
-            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_backward * o.Nfacet**2 * o.Nf_vis_backward(b),
-            Rflop = 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b),
+        o.set_product(Products.Grid, T=o.Tsnap,
+            N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_backward *
+                         o.Nfacet**2 * o.Nf_vis_backward(b)),
+            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
             Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap)
-        Equations._set_product_blsum(
-            o, Products.Degrid, b=b, T = o.Tsnap,
-            N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntaylor_predict * o.Nfacet_predict**2 * o.Nf_vis_predict(b),
-            Rflop = 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b),
-            Rout = o.Mvis / o.Tcoal_predict(b))
+        o.set_product(Products.Degrid, T = o.Tsnap,
+            N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_predict *
+                         o.Nfacet_predict**2 * o.Nf_vis_predict(b)),
+            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
+            Rout = blsum(b, o.Mvis / o.Tcoal_predict(b)))
 
     @staticmethod
     def _apply_fft_equations(o):
-        """ FFT """
+        """
+        Discrete fourier transformation of grids to images (and back)
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.13 - FFT and iFFT
+        """
 
         if not o.pipeline in Pipelines.imaging: return
 
-        b = Symbol("b")
-
-        # Eq. 33, per output grid (i.e. frequency)
         # These are real-to-complex for which the prefactor in the FFT is 2.5
-        Equations._set_product(
-            o, Products.FFT, T = o.Tsnap,
+        o.set_product(Products.FFT, T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
             Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
             Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
-
-        # Eq. 33 per predicted grid (i.e. frequency)
-        Equations._set_product(
-            o, Products.IFFT, T = o.Tsnap,
+        o.set_product(Products.IFFT, T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
             Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
             Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
 
     @staticmethod
     def _apply_reprojection_equations(o):
-        """ Re-Projection """
+        """
+        Re-projection of skewed images as generated by w snapshots
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.14 - Reprojection
+        """
 
         o.Nf_proj_predict = o.Nf_FFT_predict
         o.Nf_proj_backward = o.Nf_FFT_backward
         if o.pipeline == Pipelines.DPrepA_Image:
-            o.Nf_proj_predict = o.number_taylor_terms
-            o.Nf_proj_backward = o.number_taylor_terms
+            o.Nf_proj_predict = o.Ntt
+            o.Nf_proj_backward = o.Ntt
 
-         # (Consistent with PDR05 280115)
         if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
-            # We do 2*o.Nmajortotal*(Tobs/Tsnap) entire image reprojections (i.e. both directions)
-            Equations._set_product(
-                o, Products.Reprojection,
+            o.set_product(Products.Reprojection,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_backward * o.Nfacet**2,
                 Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
                 Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
-            Equations._set_product(
-                o, Products.ReprojectionPredict,
+            o.set_product(Products.ReprojectionPredict,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_predict * o.Nfacet**2,
                 Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
@@ -438,19 +456,27 @@ class Equations:
 
     @staticmethod
     def _apply_spectral_fitting_equations(o):
+        """
+        Spectral fitting of the image for CASA-style MSMFS clean.
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.15 - Image Spectral Fitting
+        """
 
         if o.pipeline == Pipelines.DPrepA_Image:
-            Equations._set_product(
-                o, Products.Image_Spectral_Fitting,
+            o.set_product(Products.Image_Spectral_Fitting,
                 T = o.Tobs,
-                N = o.Nmajortotal * o.Nbeam * o.Npp * o.number_taylor_terms,
+                N = o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt,
                 Rflop = 2.0 * (o.Nf_FFT_backward + o.Nf_FFT_predict) *
-                        o.Npix_linear_total_fov ** 2 / o.Tobs,
-                Rout = o.Mpx * o.Npix_linear_total_fov ** 2 / o.Tobs)
+                        o.Npix_linear_fov_total ** 2 / o.Tobs,
+                Rout = o.Mpx * o.Npix_linear_fov_total ** 2 / o.Tobs)
 
     @staticmethod
     def _apply_minor_cycle_equations(o):
-        """ Minor Cycles """
+        """
+        Minor Cycles implementing deconvolution / cleaning
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.16 - Subtract Image Component
+        """
 
         if not o.pipeline in Pipelines.imaging: return
 
@@ -465,14 +491,14 @@ class Equations:
             return
 
         # Create products
-        Equations._set_product(o, Products.Identify_Component,
+        o.set_product(Products.Identify_Component,
             T = o.Tobs,
             N = o.Nmajortotal * o.Nbeam,
             Rflop = 2 * o.Npp * o.Nminor * Nf_identify * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
             Rout = o.Mcpx / o.Tobs)
 
         # Subtract on all scales and only one frequency
-        Equations._set_product(o, Products.Subtract_Image_Component,
+        o.set_product(Products.Subtract_Image_Component,
             T = o.Tobs,
             N = o.Nmajortotal * o.Nbeam,
             Rflop = 2 * o.Npp * o.Nminor * o.Nscales * o.Npatch**2 / o.Tobs,
@@ -480,6 +506,11 @@ class Equations:
 
     @staticmethod
     def _apply_calibration_equations(o):
+        """
+        Self-calibration using predicted visibilities
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.5 - Solve
+        """
 
         # Number of flops needed per solution interval
         Flop_solver = 12 * o.Npp * o.Nsolve * o.Na**2
@@ -494,8 +525,8 @@ class Equations:
             N_Islots = o.Tobs / o.tICAL_I
             Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
             Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
-            Equations._set_product(o, Products.Solve,
-                T = o.Tsnap,
+            o.set_product(Products.Solve,
+                T = o.tICAL_G,
                 # We do one calibration to start with (using the original
                 # LSM from the GSM and then we do Nselfcal more.
                 N = (o.Nselfcal + 1) * o.Nbeam,
@@ -508,8 +539,8 @@ class Equations:
             # Need to remember to average over all frequencies because a BP may have been applied.
             Flop_averaging = Flop_averager * o.Nvis * o.Nf_max * o.tRCAL_G
             Flop_solving   = Flop_solver * N_Gslots
-            Equations._set_product(o, Products.Solve,
-                T = o.Tsnap,
+            o.set_product(Products.Solve,
+                T = o.tRCAL_G,
                 # We need to complete one entire calculation within real time tCal_G
                 N = o.Nbeam,
                 Rflop = (Flop_solving + Flop_averaging) / o.Tobs,
@@ -517,28 +548,38 @@ class Equations:
 
     @staticmethod
     def _apply_dft_equations(o):
+        """
+        Direct discrete fourier transform as predict alternative to
+        Reproject+FFT+Degrid+Phase Rotation.
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.4 - Predict via Direct Fourier Transform
+        """
+
         if o.pipeline in Pipelines.imaging:
             # If the selfcal loop is embedded, we only need to do this
             # once but since we do an update of the model every
             # selfcal, we need to do it every selfcal.
             b = Symbol("b")
-            Equations._set_product(o, Products.DFT,
+            o.set_product(Products.DFT,
                 T = o.Tsnap,
-                N = o.Nbeam * o.Nmajortotal * o.Nf_vis,
+                N = o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
-                        / o.Tdump_scaled,
-                Rout = o.Mvis * o.Nvis / o.Nf_vis)
+                        * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled,
+                Rout = o.Npp * o.Mvis * o.Nvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_source_find_equations(o):
-        """Rough estimate of source finding flops"""
+        """
+        Rough estimate of source finding flops.
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.17 - Source find
+        """
         if o.pipeline == Pipelines.ICAL:
             # We need to fit 6 degrees of freedom to 100 points so we
             # have 600 FMults . Ignore for the moment Theta_beam the
             # solution of these normal equations. This really is a
             # stopgap. We need an estimate for a non-linear solver.
-            Equations._set_product(
-                o, Products.Source_Find,
+            o.set_product(Products.Source_Find,
                 T = o.Tobs,
                 N = o.Nmajortotal,
                 Rflop = 6 * 100 * o.Nsource_find_iterations * o.Nsource / o.Tobs,
@@ -547,34 +588,43 @@ class Equations:
 
     @staticmethod
     def _apply_major_cycle_equations(o):
+        """
+        Subtract predicted visibilities from last major cycle
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.6 - Subtract
+        """
 
         # Note that we assume this is done for every Selfcal and Major Cycle
         if o.pipeline in Pipelines.imaging:
-            Equations._set_product(o, Products.Subtract_Visibility,
+            o.set_product(Products.Subtract_Visibility,
                 T = o.Tsnap,
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels,
-                Rflop = 8 * o.Nvis / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.minimum_channels)
+                N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
+                Rflop = 8 * o.Npp * o.Nvis / o.Nf_min_gran,
+                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_kernel_equations(o):
         """
         Generate Convolution kernels
+
+        References:
+         * SKA-TEL-SDP-0000040 01D section 3.6.12 - Gridding Kernel Update
+         * SKA-TEL-SDP-0000040 01D section E - Re-use of Convolution Kernels
         """
 
         b = Symbol('b')
-        o.dfonF_backward = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
-        o.dfonF_predict = Lambda(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
+        o.dfonF_backward = BLDep(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_backward(b))))
+        o.dfonF_predict = BLDep(b, o.epsilon_f_approx / (o.Qkernel * sqrt(o.Nkernel2_predict(b))))
 
         # allow uv positional errors up to o.epsilon_f_approx *
         # 1/Qkernel of a cell from frequency smearing.(But not more
         # than Nf_max channels...)
-        o.Nf_gcf_backward_nosmear = Lambda(b,
+        o.Nf_gcf_backward_nosmear = BLDep(b,
             Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_backward(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
-        o.Nf_gcf_predict_nosmear  = Lambda(b,
+                log(o.dfonF_backward(b) + 1.), o.Nf_max))
+        o.Nf_gcf_predict_nosmear  = BLDep(b,
             Min(log(o.wl_max / o.wl_min) /
-                log(o.dfonF_predict(b) + 1.), o.Nf_max)) #TODO: PIP.IMG check please
+                log(o.dfonF_predict(b) + 1.), o.Nf_max))
 
         if o.on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
@@ -583,183 +633,100 @@ class Equations:
             o.Tkernel_predict  = o.Tcoal_predict
         else:
             # For both of the following, maintain distributability;
-            # need at least minimum_channels (500) kernels.
-            o.Nf_gcf_backward = Lambda(b, Max(o.Nf_gcf_backward_nosmear(b), o.minimum_channels))
-            o.Nf_gcf_predict  = Lambda(b, Max(o.Nf_gcf_predict_nosmear(b),  o.minimum_channels))
-            # TODO: some baseline dependent re-use limits along the
-            # same lines as the frequency re-use? PIP.IMG check
-            # please.
-            o.Tkernel_backward = Lambda(b, o.Tion)
-            o.Tkernel_predict  = Lambda(b, o.Tion)
+            # need at least Nf_min kernels.
+            o.Nf_gcf_backward = BLDep(b, Max(o.Nf_gcf_backward_nosmear(b), o.Nf_min))
+            o.Nf_gcf_predict  = BLDep(b, Max(o.Nf_gcf_predict_nosmear(b),  o.Nf_min))
+            o.Tkernel_backward = BLDep(b, o.Tion)
+            o.Tkernel_predict  = BLDep(b, o.Tion)
 
         if o.pipeline in Pipelines.imaging:
 
             # The following two equations correspond to Eq. 35
-            Equations._set_product_blsum(o, Products.Gridding_Kernel_Update, b=b,
-                T = o.Tkernel_backward(b),
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b),
-                Rflop = 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b),
-                Rout = 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b))
-            Equations._set_product_blsum(o, Products.Degridding_Kernel_Update, b=b,
-                T = o.Tkernel_predict(b),
-                N = o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b),
-                Rflop = 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b),
-                Rout = 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b))
+            o.set_product(Products.Gridding_Kernel_Update,
+                T = BLDep(b, o.Tkernel_backward(b)),
+                N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b)),
+                Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
+            o.set_product(Products.Degridding_Kernel_Update,
+                T = BLDep(b,o.Tkernel_predict(b)),
+                N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b)),
+                Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 
     @staticmethod
     def _apply_phrot_equations(o):
-        """Phase rotation (for the faceting)"""
+        """
+        Phase rotation (for the faceting)
+
+        References: SKA-TEL-SDP-0000040 01D section 3.6.9 - Phase Rotation
+        """
 
         if not o.pipeline in Pipelines.imaging: return
 
-        # Eq. 29. The sign() statement below serves as an "if > 1" statement for this symbolic equation.
-        # 25 FLOPS per visiblity. Only do it if we need to facet.
-        Nphrot = sign(o.Nfacet - 1)
         b = Symbol("b")
+
+        # 25 FLOPS per visiblity. Only do it if we need to facet.
 
         # Predict phase rotation: Input from facets at predict
         # visibility rate, output at same rate.
         if o.scale_predict_by_facet:
-            Equations._set_product_blsum(
-                o, Products.PhaseRotationPredict, b=b,
+            o.set_product(Products.PhaseRotationPredict,
                 T = o.Tsnap,
-                N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.minimum_channels * o.Ntaylor_predict,
-                Rflop = 25 * o.Nfacet**2 * o.Nvis / o.nbaselines / o.minimum_channels,
-                Rout = o.Mvis * o.Nvis / o.nbaselines / o.minimum_channels)
+                N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
+                    o.Ntt_predict * o.Nfacet**2 ,
+                Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled),
+                Rout = blsum(b, o.Mvis * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled))
 
         # Backward phase rotation: Input at overall visibility
         # rate, output averaged down to backward visibility rate.
-        Equations._set_product_blsum(
-            o, Products.PhaseRotation, b=b,
+        o.set_product(Products.PhaseRotation,
             T = o.Tsnap,
-            N = Nphrot * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.minimum_channels,
-            Rflop = 25 * o.Nvis / o.nbaselines / o.minimum_channels,
-            Rout = o.Mvis * o.Nvis_backward(1, b) / o.minimum_channels)
+            N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
+            Rflop = blsum(b, 25 * o.Nvis / o.Nbl / o.Nf_min_gran),
+            Rout = blsum(b, o.Mvis * o.Nvis_backward(b, 1) / o.Nf_min_gran))
 
     @staticmethod
     def _apply_flop_equations(o):
         """Calculate overall flop rate"""
 
-        # revised Eq. 30
+        # Sum up products
         o.Rflop = sum(o.get_products('Rflop').values())
 
         # Calculate interfacet IO rate for faceting: TCC-SDP-151123-1-1 rev 1.1
-        o.Rinterfacet = 2 * o.Nmajortotal * Min(3.0, 2.0 + 18.0 * o.facet_overlap_frac) * (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
-
+        o.Rinterfacet = \
+            2 * o.Nmajortotal * Min(3.0, 2.0 + 18.0 * o.r_facet_base) * \
+            (o.Nfacet * o.Npix_linear)**2 * o.Nf_out * 4  / o.Tobs
 
     @staticmethod
     def _apply_io_equations(o):
         """
         Compute the Buffer sizes
 
-        References: Section 12.15 in PDR05
+        References: SKA-TEL-SDP-0000040 01D section H.3 - Convolution Kernel Cache Size
         """
 
-        # Note: this is the size of the raw binary data that needs to
+        b = Symbol('b')
+
+        # Visibility buffer size
+        #
+        # This is the size of the raw binary data that needs to
         # be stored in the visibility buffer, and does not include
         # inevitable overheads. However, this size does include a
         # factor for double-buffering
-
-        bcount = Symbol('bcount')
-        b = Symbol('b')
-        o.Mw_cache = \
-            o.Ncbytes * o.Nbeam * (o.Qgcf ** 3) * \
-            Equations._sum_bl_bins(o, bcount, b,
-                o.Nf_vis_predict(b) * o.Ngw_predict(b) ** 3)
-            # Eq 48. TODO: re-implement this equation within a better description of where kernels will be stored etc.
-        # (allowing storage of a full observation while simultaneously capturing the next)
+        #
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-        o.Mbuf_vis = o.buffer_factor * o.Npp * o.Nvis * o.Nbeam * o.Mvis * o.Tobs  # Eq 49
+        o.Mbuf_vis = o.buffer_factor * o.Npp * o.Nvis * o.Nbeam * o.Mvis * o.Tobs
 
-        # added o.Nfacet dependence; changed Nmajor factor to Nmajor+1 as part of post PDR fixes.
-        # TODO: Differs quite substantially from Eq 50, by merit of the Nbeam and Npp, as well as Nfacet ** 2 factors.
-        # TODO: PDR05 lacking in this regard and must be updated.
-        # This is correct if we have only got facets for the backward step and use Nfacet=1 for predict step: TJC see TCC-SDP-151123-1-1
-        # It probably can go much smaller, though: see SDPPROJECT-133
-#        o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2  # Eq 50
-        o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis  # Eq 50
+        # Visibility read rate
+        #
+        # According to SDPPROJECT-133 (JIRA) assume that we only need
+        # to read all visibilities twice per major cycle and beam.
+        o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis
+        # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2
 
-    @staticmethod
-    def _set_product(o, product, T=None, N=1, **args):
-        """Sets product properties using a task abstraction.
-
-        @param product: Product to set.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           to yield rate for all tasks.
-        """
-
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": N, "T": T }
-        for k, expr in args.iteritems():
-            props[k] = N * expr
-
-        # Set product
-        o.set_product(product, **props)
-
-    @staticmethod
-    def _sum_bl_bins(o, bcount, b, expr):
-        """Helper for dealing with baseline dependence. For a term
-        depending on the given symbols, "sum_bl_bins" will build a
-        sum term over all baseline bins."""
-
-        # Small bit of ad-hoc formula optimisation: Exploit
-        # independent factors. Makes for smaller terms, which is good
-        # both for Sympy as well as for output.
-        if not b in expr.free_symbols:
-            return o.nbaselines * expr.subs(bcount, 1)
-        if isinstance(expr, Mul):
-            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
-            indepFactors = filter(indep, expr.as_ordered_factors())
-            if len(indepFactors) > 0:
-                def not_indep(e): return not indep(e)
-                restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * Equations._sum_bl_bins(o, bcount, b, Mul(*restFactors))
-
-        # Replace in concrete values for baseline fractions and
-        # length. Using Lambda here is a solid 25% faster than
-        # subs(). Unfortunately very slow nonetheless...
-        results = []
-        lam = Lambda((bcount,b), expr)
-
-        # Symbolic? Generate actual symbolic sum expression
-        if isinstance(o.Bmax_bins, Symbol):
-            return Sum(lam(1, o.Bmax_bins(b)), (b, 1, o.nbaselines))
-
-        # Otherwise generate sum term manually that approximates the
-        # full sum using baseline bins
-        for (frac_val, bmax_val) in zip(o.frac_bins, o.Bmax_bins):
-            results.append(lam(frac_val*o.nbaselines_full, bmax_val))
-        return Add(*results, evaluate=False)
-
-    @staticmethod
-    def _set_product_blsum(o, product, b, T=None, N=1, **args):
-        """Sets product properties using a task abstraction. Each property is
-        expressed as a sum over baselines.
-
-        @param product: Product to set.
-        @param b: SymPy symbol for baseline length. Can be used in T
-           and N and all properties.
-        @param T: Observation time covered by this task. Default is the
-          entire observation (Tobs).
-        @param N: Task parallelism / rate multiplier. The number of
-           tasks that work on the data in parallel.
-        @param args: Task properties as rates. Will be multiplied by N
-           and summed over baselines to yield the rate for all tasks.
-        """
-
-        # Collect properties
-        if T is None: T = o.Tobs
-        props = { "N": Lambda(b, N), "T": Lambda(b, T) }
-        for k, expr in args.iteritems():
-            bcount = Symbol('bcount')
-            props[k] = Equations._sum_bl_bins(o, bcount, b, bcount * N * expr)
-            props[k+"_task"] = Lambda(b, expr)
-
-        # Set product
-        o.set_product(product, **props)
-
+        # Convolution kernel cache size
+        #
+        # TODO: re-implement this equation within a better description
+        # of where kernels will be stored etc.  (allowing storage of a
+        # full observation while simultaneously capturing the next)
+        o.Mw_cache = (o.Ngw_predict(o.Bmax) ** 3) * (o.Qgcf ** 3) * o.Ncbytes * o.Nbeam * o.Nf_vis_predict(o.Bmax)

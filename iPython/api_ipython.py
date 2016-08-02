@@ -4,9 +4,10 @@ This file contains methods for interacting with the SKA SDP Parametric model usi
 The reason the code is implemented here is to keep notebooks themselves free from clutter, and to make using the
 notebooks easier.
 """
+from __future__ import print_function
 from api import SkaPythonAPI as api  # This class' (SkaIPythonAPI's) parent class
 
-from IPython.display import clear_output, display, HTML
+from IPython.display import clear_output, display, HTML, FileLink
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
@@ -22,7 +23,6 @@ from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
 
 import csv
-from string import find
 
 class SkaIPythonAPI(api):
     """
@@ -48,6 +48,7 @@ class SkaIPythonAPI(api):
         ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
         ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
         ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
+        ('Dump time',                  's',          False,   False, lambda tp: tp.Tdump_scaled,      ),
         ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
         ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
         ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
@@ -57,15 +58,15 @@ class SkaIPythonAPI(api):
 
         ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
         ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),
-        ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Total_fov/c.degree,),
+        ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov_total/c.degree,),
         ('PSF size',                   'arcs',       False,   False, lambda tp: tp.Theta_beam/c.arcsecond,),
         ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
         ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
-        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_total_fov,     ),
+        ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_fov_total,),
         ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
         ('Qbw',                        '',           False,   False, lambda tp: tp.Qbw,               ),
         ('Max subband ratio',          '',           False,   False, lambda tp: tp.max_subband_freq_ratio,),
-        ('Number subbands',            '',           False,   False, lambda tp: tp.Number_imaging_subbands,),
+        ('Number subbands',            '',           False,   False, lambda tp: tp.Nsubbands,),
         ('Station/antenna diameter',   '',           False,   False, lambda tp: tp.Ds,),
 
         ('-- Channelization --',       '',           False,   False, lambda tp: ''                    ),
@@ -79,6 +80,7 @@ class SkaIPythonAPI(api):
         ('Frequencies predict ifft',   '',           False,   False, lambda tp: tp.Nf_FFT_predict,    ),
         ('Frequencies predict kernels','',           False,   False, lambda tp: tp.Nf_gcf_predict,    ),
         ('Frequencies predict de-grid','',           False,   False, lambda tp: tp.Nf_vis_predict,    ),
+        ('Frequencies total',          '',           False,   False, lambda tp: tp.Nf_vis,            ),
         ('Frequencies backward kernels','',          False,   False, lambda tp: tp.Nf_gcf_backward,   ),
         ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
         ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
@@ -122,7 +124,7 @@ class SkaIPythonAPI(api):
         @param resultMap:
         @return:
         """
-        return map(lambda row: row[3], resultMap)
+        return list(map(lambda row: row[3], resultMap))
 
     @staticmethod
     def get_result_expressions(resultMap,tp):
@@ -137,10 +139,10 @@ class SkaIPythonAPI(api):
                 return row[4](tp)
             except AttributeError:
                 return "(undefined)"
-        return map(expr, resultMap)
+        return list(map(expr, resultMap))
 
     # Rows needed for graphs
-    GRAPH_ROWS = map(lambda row: row[0], RESULT_MAP[-9:])
+    GRAPH_ROWS = list(map(lambda row: row[0], RESULT_MAP[-9:]))
 
     @staticmethod
     def mk_result_map_rows(verbosity = 'Overview'):
@@ -151,13 +153,13 @@ class SkaIPythonAPI(api):
         '''
 
         if verbosity == 'Overview':
-            result_map = filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP)
+            result_map = list(filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP))
         else:
             result_map = SkaIPythonAPI.RESULT_MAP
 
         return (result_map,
-                map(lambda row: row[0], result_map),
-                map(lambda row: row[1], result_map))
+                list(map(lambda row: row[0], result_map)),
+                list(map(lambda row: row[1], result_map)))
 
     @staticmethod
     def default_rflop_plotting_colours(rows):
@@ -217,7 +219,7 @@ class SkaIPythonAPI(api):
             if not isinstance(values[i], dict):
                 s += row(labels[i], values[i])
             else:
-                for name in sorted(values[i].iterkeys()):
+                for name in sorted(values[i].keys()):
                     s += row(labels[i] + name, values[i][name])
         s += '</table>'
         display(HTML(s))
@@ -374,7 +376,7 @@ class SkaIPythonAPI(api):
 
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(xx, yy, z_values, nlevels, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
+        surf = ax.plot_surface(xx, yy, z_values, rstride=1, cstride=1, cmap=colourmap, linewidth=0.2, alpha=0.6,
                                antialiased=True, shade=True)
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
@@ -452,7 +454,9 @@ class SkaIPythonAPI(api):
         plt.savefig(filename, format='svg', dpi=1200)
 
     @staticmethod
-    def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays, colours=None):
+    def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays,
+                          colours=None, width=0.35,
+                          save=None):
         """
         Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
         @param title:
@@ -466,10 +470,9 @@ class SkaIPythonAPI(api):
         if colours is not None:
             assert number_of_elements == len(colours)
         for key in dictionary_of_value_arrays:
-            assert len(dictionary_of_value_arrays[key]) == len(labels)
+            assert len(list(dictionary_of_value_arrays[key])) == len(list(labels))
 
         #Plot a stacked bar chart
-        width = 0.35
         nr_bars = len(labels)
         indices = np.arange(nr_bars)  # The indices of the bars
         bottoms = {} # The height of each bar, by key
@@ -487,11 +490,18 @@ class SkaIPythonAPI(api):
                 plt.bar(indices, values, width, color=colours[index], bottom=bottoms[key])
             else:
                 plt.bar(indices, values, width, bottom=bottom[key])
+            for x, v, b in zip(indices, values, bottoms[key]):
+                if v >= np.amax(np.array(valueSum)) / 40:
+                    plt.text(x+width/2, b+v/2, "%.1f%%" % (100 * v / valueSum[x]),
+                             horizontalalignment='center', verticalalignment='center')
 
         plt.xticks(indices+width/2., labels)
         plt.title(title)
         plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
+
+        if not save is None:
+            plt.savefig(save, format='pdf', dpi=1200, bbox_inches = 'tight')
         pylab.show()
 
     @staticmethod
@@ -566,9 +576,6 @@ class SkaIPythonAPI(api):
         products_2 = tels_result_values[1][-1]
         labels = sorted(set(products_1).union(products_2))
         colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
-        blcoal_text = {True: ' (BLCOAL)', False: ' (no BLCOAL)'}
-        otf_text = {True: ' (otf kernels)', False: ''}
-
         telescope_labels = (cfg_1.describe(), cfg_2.describe())
 
         values = {
@@ -633,7 +640,7 @@ class SkaIPythonAPI(api):
         # Show pie graph of FLOP counts
         values = result_values[-1]  # the last value
         colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
     @staticmethod
     def evaluate_hpso_optimized(hpso_key, blcoal=True,
@@ -687,7 +694,7 @@ class SkaIPythonAPI(api):
         # Show pie graph of FLOP counts
         values = result_values[-1]  # the last value
         colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
+        SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
     @staticmethod
     def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
@@ -732,14 +739,10 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
 
     @staticmethod
-    def write_csv_pipelines(filename, telescopes, bands, pipelines,
-                            blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
-        """
-        Evaluates all valid configurations of this telescope and dumps the
-        result as a CSV file.
-        """
+    def _pipeline_configurations(telescopes, bands, pipelines,
+                                 blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
+        """Make a list of all valid configuration combinations in the list."""
 
-        # Make configuration list
         configs = []
         for telescope in telescopes:
             for band in bands:
@@ -748,18 +751,38 @@ class SkaIPythonAPI(api):
                                          pipeline=pipeline, blcoal=blcoal,
                                          on_the_fly=on_the_fly,
                                          scale_predict_by_facet=scale_predict_by_facet)
-                    configs.append(cfg)
+
+                    # Check whether the configuration is valid
+                    (okay, msgs) = cfg.is_valid()
+                    if okay:
+                        configs.append(cfg)
+
+        return configs
+
+    @staticmethod
+    def write_csv_pipelines(filename, telescopes, bands, pipelines,
+                            blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                            verbose=False):
+        """
+        Evaluates all valid configurations of this telescope and dumps the
+        result as a CSV file.
+        """
+
+        # Make configuration list
+        configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+                                                         blcoal, on_the_fly, scale_predict_by_facet)
 
         # Calculate
         rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+        results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
 
         # Write CSV
         SkaIPythonAPI._write_csv(filename, results, rows)
 
     @staticmethod
     def write_csv_hpsos(filename, hpsos,
-                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
+                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                        verbose=False):
         """
         Evaluates all valid configurations of this telescope and dumps the
         result as a CSV file.
@@ -774,7 +797,7 @@ class SkaIPythonAPI(api):
 
         # Calculate
         rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+        results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
 
         # Write CSV
         SkaIPythonAPI._write_csv(filename, results, rows)
@@ -844,7 +867,8 @@ class SkaIPythonAPI(api):
                 continue
 
             # Compute, add to results
-            display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
+            if verbose:
+                display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
             results.append((cfg, SkaIPythonAPI._compute_results(cfg, verbose, result_map)))
         return results
 
@@ -854,11 +878,11 @@ class SkaIPythonAPI(api):
         Writes pipeline calculation results as a CSV file
         """
 
-        with open(filename, 'wb') as csvfile:
+        with open(filename, 'w') as csvfile:
             w = csv.writer(csvfile)
 
             # Output row with configurations
-            w.writerow([''] + map(lambda r: r[0].describe(), results))
+            w.writerow([''] + list(map(lambda r: r[0].describe(), results)))
 
             # Output actual results
             for i, row in enumerate(rows):
@@ -869,17 +893,17 @@ class SkaIPythonAPI(api):
 
                 # Convert lists to dictionaries
                 resultRow = map(lambda r: r[1][i], results)
-                resultRow = map(lambda r: dict(enumerate(r)) if isinstance(r,list) else r,
-                                resultRow)
+                resultRow = list(map(lambda r: dict(enumerate(r)) if isinstance(r,list) else r,
+                                     resultRow))
 
                 # Dictionary? Expand
-                dicts = filter(lambda r: isinstance(r, dict), resultRow)
-                if len(dicts) > 0:
+                dicts = list(filter(lambda r: isinstance(r, dict), resultRow))
+                if len(list(dicts)) > 0:
 
                     # Collect labels
                     labels = set()
                     for d in dicts:
-                        labels = labels.union(d.iterkeys())
+                        labels = labels.union(d.keys())
 
                     # Show all of them, properly sorted. Non-dicts
                     # (errors) are simply shoved into the first row.
@@ -891,7 +915,7 @@ class SkaIPythonAPI(api):
                             elif first:
                                 return r
                             return ''
-                        w.writerow([rowTitle + str(label) + rowUnit] + map(printRow, resultRow))
+                        w.writerow([rowTitle + str(label) + rowUnit] + list(map(printRow, resultRow)))
                         first = False
 
                 else:
@@ -909,7 +933,7 @@ class SkaIPythonAPI(api):
         """
 
         display(HTML('<font color="blue">Reading %s...</font>' % filename))
-        with open(filename, 'rb') as csvfile:
+        with open(filename, 'r') as csvfile:
             r = csv.reader(csvfile)
             it = iter(r)
 
@@ -927,7 +951,7 @@ class SkaIPythonAPI(api):
             return results
 
     @staticmethod
-    def compare_csv(result_file, ref_file, ignore_modifiers=True):
+    def compare_csv(result_file, ref_file, ignore_modifiers=True, export_html=''):
         """
         Read and compare two CSV files with telescope parameters
 
@@ -942,24 +966,26 @@ class SkaIPythonAPI(api):
 
         def strip_modifiers(head):
             if ignore_modifiers:
-                p = find(head, ' [')
+                p = head.find(' [')
                 if p != -1: return head[:p]
             return head
 
-        s = '<h3>Comparison:</h3><table>\n'
-
         # Headings
-        s += '<tr><td></td>'
+        s = '<table><tr><td></td>'
         for head, _ in results[0][1]:
             s += '<th>%s</th>' % head
         s += '</tr>\n'
+
+        # Sum up differences
+        diff_total = 0
+        total_count = 0
 
         for name, row in results:
             s += '<tr><td>%s</td>' % name
 
             # Locate reference results
             refRow = ref.get(name, [])
-            refRow = map(lambda (h, v): (strip_modifiers(h), v), refRow)
+            refRow = map(lambda h_v: (strip_modifiers(h_v[0]), h_v[1]), refRow)
             refRow = dict(refRow)
 
             # Loop through values
@@ -975,7 +1001,7 @@ class SkaIPythonAPI(api):
 
                     # Try to get reference as number, too
                     ref_num = None
-                    if refRow.has_key(head):
+                    if head in refRow:
                         try: ref_num = float(refRow[head])
                         except ValueError: ref_num = None
 
@@ -987,12 +1013,14 @@ class SkaIPythonAPI(api):
                         # reference for negative changes, as -50% is
                         # about as bad as +200%.
                         diff_rel = max(diff, 100*(ref_num-num)/num)
+                        diff_total += abs(diff_rel)
+                        total_count += 1
 
                     # Output
                     if not diff is None:
                         s += '<td bgcolor="#%2x%2x00">%s (%+d%%)</td>' % (
-                            min(diff_rel/50*255, 255),
-                            255-min(max(0, diff_rel-50)/50*255, 255),
+                            int(min(diff_rel/50*255, 255)),
+                            int(255-min(max(0, diff_rel-50)/50*255, 255)),
                             SkaIPythonAPI.format_result(num),
                             diff)
                     else:
@@ -1005,6 +1033,7 @@ class SkaIPythonAPI(api):
 
                     # No number, output as is
                     if not ref_str is None:
+                        total_count += 1
                         if val == ref_str:
                             if val == '':
                                 s += '<td></td>'
@@ -1012,11 +1041,57 @@ class SkaIPythonAPI(api):
                                 s += '<td bgcolor="#00ff00">%s (same)</td>' % val
                         else:
                             s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
+                            diff_total += 100
                     else:
                         s += '<td>%s</td>' % val
 
             s += '</tr>\n'
         s += '</table>'
 
-        display(HTML(s))
-        display(HTML('<font color="blue">Done.</font>'))
+        if export_html != '':
+            f = open(export_html, 'w')
+            print("<!doctype html>", file=f)
+            print("<html>", file=f)
+            print("  <title>SDP Parametric Model Result Comparison</title>", file=f)
+            print("  <body><p>Comparing %s against %s</p>" % (result_file, ref_file), file=f)
+            print(s, file=f)
+            print("  </body>", file=f)
+            print("</html>", file=f)
+            f.close()
+            display(FileLink(export_html))
+        else:
+            display(HTML('<h3>Comparison:</h3>'))
+            display(HTML(s))
+        display(HTML('<font color="blue">Done. %.2f %% average relative difference.</font>' % (diff_total / total_count)))
+
+        return diff_total
+
+    @staticmethod
+    def stack_bars_pipelines(title, telescopes, bands, pipelines,
+                             blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                             save=None):
+        """
+        Evaluates all valid configurations of this telescope and shows
+        results as stacked bars.
+        """
+
+        # Make configurations
+        configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+                                                         blcoal, on_the_fly, scale_predict_by_facet)
+
+        # Calculate
+        rows = [SkaIPythonAPI.RESULT_MAP[-1]] # Products only
+        results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+
+        products = list(map(lambda r: r[1][-1], results))
+        labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
+        colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
+        tel_labels = list(map(lambda cfg: cfg.describe().replace(" ", "\n"), configs))
+        values = {
+            label: list(map(lambda p: p.get(label, 0), products))
+            for label in labels
+        }
+
+        # Show stacked bar graph
+        SkaIPythonAPI.plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7, save=save)
+
