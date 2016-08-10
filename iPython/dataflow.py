@@ -18,8 +18,6 @@ OFFSET_PROP = 'offset'
 # Internal properties. Might not be transparent with enumeration!
 SPLIT_PROP = '_split'
 
-DEBUG = False
-
 def mk_lambda(v):
     if callable(v) and not isinstance(v, Expr):
         return v
@@ -202,52 +200,13 @@ class NeedRegionEnumerationException(BaseException):
         self.regionBoxes = rboxes
         self.domain = domain
 
-class RegionBox:
-
-    def __init__(self, regionBoxes, domainProps):
-        self.regionBoxes = regionBoxes
-        self.domainProps = domainProps
-        self.symbols = {}
-
-    def __repr__(self):
-        return '<RegionBox %s %s>' % (
-            ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.keys())),
-            repr(self.domainProps))
-
-    def __call__(self, domain, prop):
-
-        # No properties known yet? This should only happen while we're
-        # inside RegionBoxes._getBoxes(). Then it means that this
-        # domain needs to be defined before whatever we're doing here.
-        if not domain in self.domainProps:
-            raise DomainPrecendenceException(self.regionBoxes, domain)
-
-        # If we don't have the property, this might also point towards
-        # the need for enumeration.
-        if not prop in self.domainProps[domain] and \
-           not domain in self.regionBoxes.enumDomains:
-            raise NeedRegionEnumerationException(self.regionBoxes, domain)
-
-        # Not there?
-        if not prop in self.domainProps[domain]:
-            raise Exception('Property %s is undefined for this region set of domain %s!'
-                             % (prop, domain.name))
-
-        # Look it up
-        val = self.domainProps[domain][prop]
-
-        # Symbolised? Pass region index as symbol. Otherwise just return as-is.
-        if isinstance(val, Lambda):
-            if not domain in self.symbols:
-                self.symbols[domain] = Symbol("i_" + domain.name)
-            return val(self.symbols[domain])
-        return val
+class RegionBoxBase:
 
     def count(self):
         count = 1
         # Multiply out all non-enumerated (!) regions
-        for dom in self.regionBoxes.regionsMap.keys():
-            if not dom in self.regionBoxes.enumDomains:
+        for dom in self.domains():
+            if not dom in self.enumDomains():
                 count *= self(dom, COUNT_PROP)
         return count
 
@@ -336,12 +295,12 @@ class RegionBox:
         # this - the "count" property can depend on other domains, so
         # there's no guarantee that we don't end up using undefined
         # symbols here...
-        for dom in self.regionBoxes.regionsMap.keys():
-            if not dom in self.symbols and not dom in self.regionBoxes.enumDomains:
+        for dom in self.domains():
+            if not dom in self.symbols and not dom in self.enumDomains():
                 expr = self(dom, COUNT_PROP) * expr
         sums = []
         sumSymbols = []
-        for dom in self.regionBoxes.regionsMap.keys():
+        for dom in self.domains():
             if dom in self.symbols:
                 sumSymbols.append(self.symbols[dom])
                 sums.append((self.symbols[dom],
@@ -371,42 +330,9 @@ class RegionBox:
 
         return Sum(expr, *sums)
 
-    def domains(self):
-        return self.domainProps.keys()
-
-    def regions(self, dom):
-        """Generates the properties of all regions of the given domain that
-        are contained in this region box."""
-        assert dom in self.domainProps
-        if dom in self.regionBoxes.enumDomains:
-            return iter([self.domainProps[dom]])
-        else:
-            return self.regionBoxes.regionsMap[dom].regions(self)
-
-    def bounds(self, dom):
-        if dom in self.regionBoxes.enumDomains:
-            return iter([(self.domainProps[dom][OFFSET_PROP],
-                          self.domainProps[dom][SIZE_PROP])])
-        else:
-            return self.regionBoxes.regionsMap[dom].bounds(self)
-
     def allBounds(self):
         return [ self.bounds(dom)
-                 for dom in self.domainProps ]
-
-    def regionsEqual(self, rbox, dom):
-        """Check whether we have the same regions for the given domain. This
-        is a cheap heuristic: We might return False even though the
-        regions are actually equal.
-        """
-        assert dom in self.domainProps and dom in rbox.domainProps
-        if dom in self.regionBoxes.enumDomains:
-            # Only one to compare - fall back to direct comparison
-            return False
-            return [self.domainProps[dom]] == list(rbox.regions(dom))
-        else:
-            return self.regionBoxes.regionsMap[dom].regionsEqual(
-                self, rbox.regionBoxes.regionsMap[dom], rbox)
+                 for dom in self.domains() ]
 
     def _edgeMult(lbox, rbox, dom):
         """Returns the edge multiplier between two region boxes concerning a
@@ -417,9 +343,7 @@ class RegionBox:
 
         # Domain enumerated on both sides? Then there's either one
         # edge or there is none. Check match.
-        left = lbox.regionBoxes
-        right = rbox.regionBoxes
-        if dom in left.enumDomains and dom in right.enumDomains:
+        if dom in lbox.enumDomains() and dom in rbox.enumDomains():
             # Must match so we don't zip both sides
             # all-to-all. If we find that the two boxes don't
             # match, we conclude that this box combination is
@@ -436,7 +360,7 @@ class RegionBox:
         # Enumerated on just one side? Assuming equal spacing
         # on the other side, calculate how many region starts
         # on the other side fall into the current region.
-        if dom in left.enumDomains:
+        if dom in lbox.enumDomains():
             loff = lbox(dom, OFFSET_PROP)
             lsize = lbox(dom, SIZE_PROP)
             rsize = rbox(dom, SIZE_PROP)
@@ -444,7 +368,7 @@ class RegionBox:
             if loff >= rsize * rcount: return 0
             def bound(x): return min(rcount-1, max(0, int(x)))
             return 1 + bound((loff + lsize - 1) / rsize) - bound(loff / rsize)
-        if dom in right.enumDomains:
+        if dom in rbox.enumDomains():
             lsize = lbox(dom, SIZE_PROP)
             lcount = lbox(dom, COUNT_PROP)
             roff = rbox(dom, OFFSET_PROP)
@@ -474,7 +398,6 @@ class RegionBox:
         """
 
         # Match common domains
-        right = rbox.regionBoxes
         mult = 1
         for dom in commonDoms:
             m = lbox._edgeMult(rbox, dom)
@@ -485,11 +408,11 @@ class RegionBox:
         # Domains on only one side: Simply multiply out (where
         # un-enumerated)
         for dom in leftDoms:
-            if not dom in lbox.regionBoxes.enumDomains:
+            if not dom in lbox.enumDomains():
                 mult *= lbox(dom, COUNT_PROP)
                 if verbose: print("left", dom, lbox(dom, COUNT_PROP))
         for dom in rightDoms:
-            if not dom in rbox.regionBoxes.enumDomains:
+            if not dom in rbox.enumDomains():
                 mult *= rbox(dom, COUNT_PROP)
                 if verbose: print("right", dom, rbox(dom, COUNT_PROP))
 
@@ -517,7 +440,7 @@ class RegionBox:
 
             # If cross domain is not enumerated, this is simply the
             # edge count
-            if not dom in cbox.regionBoxes.enumDomains:
+            if not dom in cbox.enumDomains():
                 return lbox._edgeMult(rbox, dom)
         # In contrast to _edgeMult, we must go through all individual
         # regions separately. Slightly less efficient and more work,
@@ -617,7 +540,6 @@ class RegionBox:
         """
 
         # Match common domains
-        right = rbox.regionBoxes
         mults = []
         cross_doms = cbox.domains()
         for dom in commonDoms:
@@ -697,6 +619,135 @@ class RegionBox:
         # Okay, now call and multiply
         return (mult - cmult) * f(lbox, rbox)
 
+    def product(lbox, rbox):
+        return RegionBoxProduct(lbox, rbox)
+
+class RegionBox(RegionBoxBase):
+
+    def __init__(self, regionBoxes, domainProps):
+        self.regionBoxes = regionBoxes
+        self.domainProps = domainProps
+        self.symbols = {}
+
+    def domains(self):
+        return self.domainProps.keys()
+
+    def enumDomains(self):
+        """Returns currently enumerated domains."""
+        return self.regionBoxes.enumDomains
+
+    def __repr__(self):
+        return '<RegionBox [%s] %s>' % (
+            ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.keys())),
+            repr(self.domainProps))
+
+    def __call__(self, domain, prop):
+
+        # Must be a domain of our regions box
+        assert domain in self.regionBoxes.domains()
+
+        # No properties known yet? This should only happen while we're
+        # inside RegionBoxes._getBoxes(). Then it means that this
+        # domain needs to be defined before whatever we're doing here.
+        if not domain in self.domainProps:
+            raise DomainPrecendenceException(self.regionBoxes, domain)
+
+        # If we don't have the property, this might also point towards
+        # the need for enumeration.
+        if not prop in self.domainProps[domain] and \
+           not domain in self.regionBoxes.enumDomains:
+            raise NeedRegionEnumerationException(self.regionBoxes, domain)
+
+        # Not there?
+        if not prop in self.domainProps[domain]:
+            raise Exception('Property %s is undefined for this region set of domain %s!'
+                             % (prop, domain.name))
+
+        # Look it up
+        val = self.domainProps[domain][prop]
+
+        # Symbolised? Pass region index as symbol. Otherwise just return as-is.
+        if isinstance(val, Lambda):
+            if not domain in self.symbols:
+                self.symbols[domain] = Symbol("i_" + domain.name)
+            return val(self.symbols[domain])
+        return val
+
+    def regions(self, dom):
+        """Generates the properties of all regions of the given domain that
+        are contained in this region box."""
+        assert dom in self.domains()
+        if dom in self.enumDomains():
+            return iter([self.domainProps[dom]])
+        else:
+            return self.regionBoxes.regionsMap[dom].regions(self)
+
+    def bounds(self, dom):
+        if dom in self.regionBoxes.enumDomains:
+            return iter([(self.domainProps[dom][OFFSET_PROP],
+                          self.domainProps[dom][SIZE_PROP])])
+        else:
+            return self.regionBoxes.regionsMap[dom].bounds(self)
+
+    def regionsEqual(self, rbox, dom):
+        """Check whether we have the same regions for the given domain. This
+        is a cheap heuristic: We might return False even though the
+        regions are actually equal.
+        """
+        assert dom in self.domainProps and dom in rbox.domainProps
+        if dom in self.regionBoxes.enumDomains:
+            # Only one to compare - fall back to direct comparison
+            return [self.domainProps[dom]] == list(rbox.regions(dom))
+        else:
+            return self.regionBoxes.regionsMap[dom].regionsEqual(
+                self, rbox.regionBoxes.regionsMap[dom], rbox)
+
+
+class RegionBoxProduct(RegionBoxBase):
+
+    def __init__(self, rbox1, rbox2):
+        assert len(set(rbox1.domains()).intersection(rbox2.domains())) == 0
+        self.rbox1 = rbox1
+        self.rbox2 = rbox2
+
+    def __repr__(self):
+        return '<RegionBoxProduct %s x %s>' % (self.rbox1, self.rbox2)
+
+    def __call__(self, domain, prop):
+
+        # Must be a domain of either region box
+        assert domain in self.domains()
+
+        # Forward
+        if domain in self.rbox1.domains():
+            return self.rbox1(domain, prop)
+        else:
+            return self.rbox2(domain, prop)
+
+    def domains(self):
+        return set(self.rbox1.domains()).union(self.rbox2.domains())
+
+    def enumDomains(self):
+        return set(self.rbox1.enumDomains()).union(self.rbox2.enumDomains())
+
+    def regions(self):
+        import itertools
+        return itertools.product(self.rbox1.regions(), self.rbox2.regions())
+
+    def bounds(self, dom):
+        assert dom in self.domains()
+        if dom in self.rbox1.domains():
+            return self.rbox1.bounds(dom)
+        else:
+            return self.rbox2.bounds(dom)
+
+    def regionsEqual(self, rbox, dom):
+        assert dom in self.domains()
+        if dom in self.rbox1.regionsEqual(rbox, dom):
+            return self.rbox1.regionsEqual(rbox, dom)
+        else:
+            return self.rbox2.regionsEqual(rbox, dom)
+
 class RegionBoxes:
     """A set of region boxes. Conceptually, this is the cartesian product
     of all involved regions, the full list of which might be very,
@@ -767,8 +818,8 @@ class RegionBoxes:
             self.enumDomains.insert(0,e.domain)
             if regenerateBoxes: self._genBoxes()
 
-            # Start over
-            return self._withEnums(code)
+        # Start over
+        return self._withEnums(code)
 
     def _getBoxes(self):
         """Generates all region boxes, determining all their properties as we
@@ -816,6 +867,12 @@ class RegionBoxes:
             # completed region box
             rboxes.append(RegionBox(self, props))
         return rboxes
+
+    def __repr__(self):
+        return '<RegionBoxes %s>' % (repr(self.boxes))
+
+    def domains(self):
+        return self.regionsMap.keys()
 
     def regions(self, dom):
         """Returns all regions we see for the given domain. Note that regions
@@ -954,24 +1011,35 @@ class Flow:
     transferred to other nodes.
     """
 
-    def __init__(self, name, regss = [], costs = {}, attrs = {}, deps = [],
+    def __init__(self, name, regss = [], costs = {}, attrs = {}, deps = [], weights = [],
                  cluster=''):
         self.name = name
         self.boxes = RegionBoxes(regss)
         self.costs = costs
         self.attrs = attrs
         self.deps = deps
-        self.weights = [1] * len(deps)
+        self.weights = weights + [1] * (len(deps) - len(weights))
         self.cluster = cluster
+
+    def domains(self):
+        return self.boxes.domains()
 
     def depend(self, flow, weight=1):
         self.deps.append(flow)
         self.weights.append(weight)
 
+    def removeDepend(self, flow):
+        try:
+            ix = self.deps.index(flow)
+            del self.deps[ix]
+            del self.weights[ix]
+        except ValueError:
+            pass
+
     def output(self, name, costs, attrs={}):
         """Make a new Flow for an output of this Flow. Useful when a Flow has
         multiple outputs that have different associated costs."""
-        return Flow(name, self.regionsBox, costs=costs, attrs=attrs)
+        return Flow(name, self.regionsBox, deps=[self], costs=costs, attrs=attrs)
 
     def count(self):
         return self.boxes.count()
@@ -985,9 +1053,42 @@ class Flow:
     def max(self, prop):
         return self.boxes.max(prop)
 
+    def edges(self, dep):
+        """Calculates number of edges coming from a dependency."""
+        return self.edgeSum(dep, 1)
+
+    def edgeSum(self, dep, prop):
+        """
+        Returns the sum of an edge property over all edges coming from the
+        given dependency.
+        """
+        if not dep in self.deps:
+            return 0
+        return dep.boxes.zipSum(self.boxes, lambda l, r: mk_lambda(prop)(l))
+
+    def crossEdges(self, dep, crossBoxes):
+        """
+        Calculates number of edges from a dependency that end in a
+        different region box than they start in (for a given granularity).
+        """
+        return self.crossEdgeSum(dep, crossBoxes, 1)
+
+    def crossEdgeSum(self, dep, crossBoxes, prop):
+        """
+        Sums up a property over all crossing edges from a dependency.
+        :param dep: Dependency to formulate edge cross sum for
+        :param crossBoxes: Granularity for cross check. An edge counts
+          as crossing if it starts in a different box than it ends in.
+        :param prop: Property to sum up. Can depend on properties of
+          the dependency's region box (the edge "start").
+        """
+        if not dep in self.deps:
+            return 0
+        return dep.boxes.zipCrossSum(self.boxes, crossBoxes, lambda l, r: mk_lambda(prop)(l))
+
     def cost(self, name):
         if name in self.costs:
-            return self.sum(self.costs[name])
+            return self.sum(mk_lambda(self.costs[name]))
         else:
             return 0
 
@@ -1034,11 +1135,48 @@ class Flow:
         return list(filter(lambda f: not f is None,
                            map(lambda n: self.getDep(n), names)))
 
+    def recursiveCost(self, name):
+        """
+        Returns the sum of the given cost over this flow and all its
+        dependencies.
+        """
+
+        cost = 0
+        for dep in self.recursiveDeps():
+            cost += dep.cost(name)
+        return cost
+
+    def recursiveEdgeCost(self, name):
+        """
+        Returns the sum of the given cost over all edges in the flow network
+        """
+
+        cost = 0
+        for flow in self.recursiveDeps():
+            for dep in flow.deps:
+                if name in dep.costs:
+                    cost += flow.edgeSum(dep, dep.costs[name])
+        return cost
+
 def mergeFlows(root, group, regs):
-    """Group given flows into a common Flow with the desired
-    granularity. This is only allowed if there is one designated
-    output Flow. Or put another way: Only one Flow is allowed to have
-    outside Flows depend on it.
+    """
+    Group given flows into a common Flow with the desired
+    granularity.
+
+    This is only allowed if there is one designated output Flow for
+    the group. Or put another way: Only one Flow is allowed to have
+    outside Flows depend on it. Note that the transfer size associated
+    with this Flow is going to get recalculated depending on the new
+    granularity.
+
+    If any domains are missing from the new granuarlity, we sum up the
+    cost contributions along that axis. This basically means that we
+    assume that the flow's result is going to be all individual flow
+    results, concatenated.
+
+    :param root: Root flow of the flow network
+    :param group: Flows to group together
+    :param regs: Granularity to use for merged flow
     """
 
     boxes = RegionBoxes(regs)
@@ -1048,12 +1186,13 @@ def mergeFlows(root, group, regs):
     flops = 0
     in_transfer = 0
     in_count = 0
-    out_transfer = 0
+    out_transfer = None
     cluster = None
     deps = set()
     revDeps = set()
 
     for flow in group:
+        assert flow in allFlows
 
         # Determine cluster
         if cluster is None:
@@ -1078,22 +1217,85 @@ def mergeFlows(root, group, regs):
                 if d == flow:
                     outside_dep = True
                     revDeps.add(f)
-        if outside_dep:
-            out_transfer += flow.cost('transfer')
+        if outside_dep and 'transfer' in flow.costs:
+
+            # Only one output flow allowed
+            assert out_transfer is None, "Cannot merge group %s with two outgoing flows!" % group
+            domains = { reg.domain for reg in regs }
+
+            # Determine whether any domains got removed
+            out_transfer = flow.costs['transfer']
+            removedDoms = set(flow.domains()).difference(domains)
+            if len(removedDoms) > 0:
+
+                # Make new regions box for the removed regions
+                remRegs = RegionBoxes([ flow.boxes.regionsMap[dom]
+                                        for dom in removedDoms ])
+
+                # Replace transfer property with a sum over the product
+                out_transfer_old = out_transfer # Prevent recursion
+                out_transfer = lambda rb: \
+                    remRegs.sum(lambda rb2:
+                        out_transfer_old(rb.product(rb2)))
 
     # Create new Flow
     groupFlow = Flow(' + '.join(map(lambda f: f.name, group)), regs,
                      cluster=cluster,
                      costs = { 'compute': lambda rb: flops / count,
-                               'transfer': lambda rb: out_transfer / count },
+                               'transfer': out_transfer },
                      deps = list(deps)
     )
 
     # Change dependencies of existing flows
     for f in revDeps:
-        f.deps = list(filter(lambda f: not f in group, f.deps)) + [groupFlow]
+        for mf in group:
+            f.removeDepend(mf)
+        f.depend(groupFlow)
 
     return groupFlow
+
+def makeSplitFlow(root, flow, regs):
+    """
+    Make a new Flow that redistributes the given flow's output. This
+    makes sense if downstream flows have a finer granularity, and we
+    do not want to send the full task result to each of them. This
+    cleanly splits the 'compute' and 'transfer' costs: The new split
+    flow will have zero computation cost, and the old flow will have
+    zero transfer cost.
+
+    Note that the effect of this chiefly depends on how the given
+    flow's 'transfer' property scales with the changed granularity.
+
+    :param root: Root flow of the flow network
+    :param flow: Flow we want to split the output for
+    :param regs: Granularity to use for split flow
+    """
+
+    allFlows = root.recursiveDeps()
+    assert flow in allFlows
+
+    # Set transfer cost of old flow to zero (by copying it)
+    copyCosts = { name: cost for (name, cost) in flow.costs.items()
+                  if name != 'transfer' }
+    copy = Flow(flow.name, flow.boxes.regionsBox,
+                cluster=flow.cluster,
+                costs=copyCosts,
+                deps=flow.deps[:],
+                weights=flow.weights[:])
+
+    # Create the new Flow
+    splitFlow = Flow(flow.name + " (split)", regs,
+                     cluster=flow.cluster,
+                     costs = { 'transfer': flow.costs.get('transfer') },
+                     deps = [copy])
+
+    # Rewrite dependencies
+    for f in allFlows:
+        if flow in f.deps:
+            f.removeDepend(flow)
+            f.depend(splitFlow)
+
+    return splitFlow
 
 def flowsToDot(root, t, computeSpeed=None,
                graph_attr={}, node_attr={'shape':'box'}, edge_attr={},
@@ -1217,18 +1419,17 @@ def flowsToDot(root, t, computeSpeed=None,
                     # Calculate number of edges, and use node counts
                     # on both sides to calculate (average!) in and out
                     # degrees.
-                    edges = dep.boxes.zipSum(flow.boxes, lambda l, r: 1)
+                    edges = flow.edges(dep)
                     label = ''
                     if 'transfer' in dep.costs:
-                        def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
-                        transfer = dep.boxes.zipSum(flow.boxes, transfer_prop)
+                        transfer = flow.edgeSum(dep, dep.costs['transfer'])
                         label = '%.1g x %s' % \
                                 (edges, format_bytes(transfer/edges))
 
                     # Do in-/out-degree analysis
                     if showDegrees:
-                        depcount = dep.boxes.count()
-                        flowcount = flow.boxes.count()
+                        depcount = dep.count()
+                        flowcount = flow.count()
                         if label != '':
                             label += '\n'
                         if 'transfer' in dep.costs and transfer > 0:
@@ -1240,12 +1441,10 @@ def flowsToDot(root, t, computeSpeed=None,
 
                     # Check for box crossings
                     if crossBoxes:
-                        cross = dep.boxes.zipCrossSum(flow.boxes, crossBoxes, lambda l, r: 1)
+                        cross = flow.crossEdges(dep, crossBoxes)
                         label += '\ncrossing: %.1f%%' % (100 * cross / edges)
                         if 'transfer' in dep.costs and transfer > 0:
-                            crossTransfer = dep.boxes.zipCrossSum(
-                                flow.boxes, crossBoxes,
-                                lambda l, r: mk_lambda(dep.costs['transfer'])(l))
+                            crossTransfer = flow.crossEdgeSum(dep, crossBoxes, dep.costs['transfer'])
                             label += ' (%.2f TB/s)' % (transfer * cross / edges / t / Constants.tera)
 
                     dot.edge(flowIds[dep], flowIds[flow], label, weight=str(weight))
@@ -1651,6 +1850,192 @@ class DataFlowTestsSymbol(unittest.TestCase):
         self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p1')), size)
         self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p2')).doit(), size)
         self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p3')).doit(), size**2/2-size/2)
+
+class DataFlowTestsFlow(unittest.TestCase):
+
+    def setUp(self):
+
+        # Again, set up some domains and splits so we can build a
+        # meaningful flow network.
+        self.size1 = 12.
+        self.dom1 = Domain("Domain 1")
+        self.reg1 = self.dom1.regions(self.size1)
+        self.split1 = self.reg1.split(self.size1)
+        self.size2 = 7.
+        self.dom2 = Domain("Domain 2")
+        self.reg2 = self.dom2.regions(self.size2, props={'testCost': 100 })
+        self.split2 = self.reg2.split(self.size2, props={'testCost': 100 })
+        self.size3 = 5.
+        self.dom3 = self.dom2
+        self.reg3 = self.dom3.regions(self.size3)
+        self.split3 = self.reg3.split(self.size3)
+
+    def _makeFlows(self):
+
+        # Make some input nodes without dependencies
+        input1 = Flow('Global Input', [], cluster='input', costs = { 'transfer': 12 })
+        input2 = Flow('Input Domain 1',
+                      [self.split1], cluster='input',
+                      costs = { 'transfer': lambda rb: rb(self.dom1, 'size') })
+        input3 = Flow('Input Domain 1 + 2',
+                      [self.reg1, self.split2], cluster='input',
+                      costs = { 'transfer': lambda rb: rb(self.dom2, 'size') })
+
+        # Make some intermediate nodes
+        interg = Flow('Intermediate Global', [],
+                      costs = { 'compute': 1000, 'transfer': 1000 },
+                      deps = [input1, input3]
+        )
+        self.inter1_name = 'Intermediate Domain 1'
+        inter1 = Flow(self.inter1_name, [self.split1],
+                      costs = { 'compute': 1000, 'transfer': 1000 },
+                      deps = [interg, input2, input3]
+        )
+        self.inter2_name = 'Intermediate Domain 2'
+        inter2 = Flow(self.inter2_name, [self.split2],
+                      costs = { 'compute': 1000, 'transfer': 1000 },
+                      deps = [interg, inter1, input3]
+        )
+        self.inter3_name = 'Intermediate Domain 3'
+        inter3 = Flow(self.inter3_name, [self.split3],
+                      costs = { 'compute': 1000, 'transfer': 1000 },
+                      deps = [inter1, inter2, input3]
+        )
+        inter4 = Flow('Intermediate Domain 1+3', [self.split1, self.split3],
+                      costs = { 'compute': 1000, 'transfer': 1000 },
+                      deps = [inter1, inter2, input3]
+        )
+
+        # Tie them together
+        self.gather_name = 'Gather'
+        gather = Flow(self.gather_name, [self.reg2],
+                      costs = {
+                          'compute': 1000,
+                          'transfer': lambda rb: rb(self.dom2, 'testCost') *
+                                                 rb(self.dom2, 'size')
+                      },
+                      deps = [inter3, inter4]
+        )
+
+        # Do a loop
+        self.loop_name = 'Loop'
+        loop = Flow(self.loop_name, [self.split3],
+                    costs = { 'compute': 1000, 'transfer': 1000},
+                    deps = [gather]
+        )
+        inter2.depend(loop)
+
+        # Add an output node
+        output = Flow('Output', [self.split2],
+                      costs = {}, deps = [gather])
+        return output
+
+    def testFlows(self):
+
+        root = self._makeFlows()
+
+        # Make sure we have all flows in the recursive dependencies
+        self.assertEqual(len(root.recursiveDeps()), 11)
+
+        # Make sure all vanish if we remove the main dependency
+        dep = root.deps[0]
+        root.removeDepend(dep)
+        self.assertEqual(len(root.recursiveDeps()), 1)
+
+        # Make sure weights are consistent
+        self.assertEqual(len(root.deps), len(root.weights))
+
+    def testDot(self):
+
+        # Run GraphViz generation with all optional features
+        root = self._makeFlows()
+        dot = flowsToDot(root, t=1.0, computeSpeed=Constants.tera, showTaskRates=True)
+        self.assertGreater(len(dot.source), 3000)
+
+        # Analyse crossings for split2
+        dot = flowsToDot(root, t=1.0, cross_regs=[self.split2])
+        self.assertGreater(len(dot.source), 3000)
+
+        # We would expect a number of different crossing degrees:
+        #  '0.0'  - we have edges that stay fully inside
+        #  '80.0' - for split3->reg2 (keep in mind that split3 is the same domain)
+        #  '85.7' - for reg2->split2
+        #  '100'  - for all cases where domain 2 is not present
+        # (this check might be a bit fragile...)
+        import re
+        self.assertEqual(len(set(re.findall("crossing: ([0-9.]+)%", dot.source))), 4)
+
+    def testCost(self):
+
+        # Make sure the cost sum is what we expect
+        root = self._makeFlows()
+        self.assertEqual(root.recursiveCost('compute'), 91000)
+        self.assertEqual(root.recursiveCost('transfer'), 90731)
+
+    def testMerge(self):
+
+        root = self._makeFlows()
+        gather = root.getDep(self.gather_name)
+        loop = root.getDep(self.loop_name)
+        inter1 = root.getDep(self.inter1_name)
+        inter2 = root.getDep(self.inter2_name)
+        inter3 = root.getDep(self.inter3_name)
+        compute = root.recursiveCost('compute')
+        produce = root.recursiveCost('transfer')
+        transfer = root.recursiveEdgeCost('transfer')
+
+        # First test a No-Op (replace with a Flow of the same granularity)
+        gather_i = mergeFlows(root, [gather], [self.reg2])
+        self.assertEqual(root.recursiveCost('compute'), compute)
+        self.assertEqual(root.recursiveCost('transfer'), produce)
+        self.assertEqual(root.recursiveEdgeCost('transfer'), transfer)
+
+        # If we change to coarser granularity produced data as well as
+        # transfered data should reduce - we have removed (size3-1)
+        # tasks and their input edges from "Gather".
+        mergeFlows(root, [loop], [self.reg3])
+        produce -= (self.size3 - 1) * 1000
+        transfer -= (self.size3 - 1) * (100 * self.size2)
+        self.assertEqual(root.recursiveCost('compute'), compute)
+        self.assertEqual(root.recursiveCost('transfer'), produce)
+        self.assertEqual(root.recursiveEdgeCost('transfer'), transfer)
+
+        # Try merging something into the gather. This will remove some
+        # transfer from the overall network (working out the details
+        # takes a bit of work with pen and paper, but it checks out.)
+        gather_m = mergeFlows(root, [gather_i, inter3], [self.reg2])
+        produce -= 1000 * self.size3
+        transfer -= 1000 * (self.size1 * self.size3 + 2 * self.size3) + self.size3
+        transfer += 1000 * (self.size1 + self.size2) + self.size2
+        self.assertEqual(root.recursiveCost('compute'), compute)
+        self.assertEqual(root.recursiveCost('transfer'), produce)
+        self.assertEqual(root.recursiveEdgeCost('transfer'), transfer)
+
+        # This should be the same as if we remove the domain, in this
+        # case.
+        gather_m2 = mergeFlows(root, [gather_m], [])
+        self.assertEqual(root.recursiveCost('compute'), compute)
+        self.assertEqual(root.recursiveCost('transfer'), produce)
+        self.assertEqual(root.recursiveEdgeCost('transfer'), transfer)
+
+    def testSplit(self):
+
+        root = self._makeFlows()
+        gather = root.getDep(self.gather_name)
+        compute = root.recursiveCost('compute')
+        produce = root.recursiveCost('transfer')
+        transfer = root.recursiveEdgeCost('transfer')
+
+        # Make a splitter node after the gather flow. Total data
+        # produced will stay the same, but transfer goes down because
+        # we have stopped sending the whole task result to the "loop"
+        # and "output" nodes.
+        makeSplitFlow(root, gather, [self.split2])
+        transfer -= (self.size2 + self.size3) * self.size2 * 100
+        transfer += (self.size2 + self.size3) * 100
+        self.assertEqual(root.recursiveCost('compute'), compute)
+        self.assertEqual(root.recursiveCost('transfer'), produce)
+        self.assertEqual(root.recursiveEdgeCost('transfer'), transfer)
 
 if __name__ == '__main__':
     unittest.main()
