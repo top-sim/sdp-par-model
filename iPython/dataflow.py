@@ -1,6 +1,8 @@
 
 from __future__ import print_function
 
+from abc import ABCMeta, abstractmethod
+
 from parameter_definitions import Constants
 
 from sympy import Max, Expr, Lambda, Symbol, Sum, Mul
@@ -201,6 +203,47 @@ class NeedRegionEnumerationException(BaseException):
         self.domain = domain
 
 class RegionBoxBase:
+
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def domains(self):
+        """Returns the domains this box has regions for."""
+
+    @abstractmethod
+    def enumDomains(self):
+        """Returns currently enumerated domains. For internal use."""
+
+    @abstractmethod
+    def __call__(self, domain, prop):
+        """
+        Queries a domain property of this box. Might raise an
+        "NeedRegionEnumerationException" if the requested property is
+        not available unless the regions of this domain have to be
+        enumerated. Use _withEnums to automatically handle these
+        exceptions.
+        """
+
+    @abstractmethod
+    def regions(self, dom):
+        """
+        Generates the properties of all regions of the given domain that
+        are contained in this region box.
+        """
+
+    @abstractmethod
+    def bounds(self, dom):
+        """
+        Returns offset-size pairs for the regions of a domain. Like
+        regions(), but cheaper if we are only interested in the bounds.
+        """
+
+    @abstractmethod
+    def regionsEqual(self, rbox, dom):
+        """Check whether we have the same regions for the given domain. This
+        is a cheap heuristic: We might return False even though the
+        regions are actually equal.
+        """
 
     def count(self):
         count = 1
