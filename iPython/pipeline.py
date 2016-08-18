@@ -143,7 +143,7 @@ class Pipeline:
                         cluster = 'interface')
 
         self.uvw = Flow(
-            'UVW generation',
+            'Telescope Data',
             [self.eachBeam, self.snapTime, self.islandFreqs, self.allBaselines],
             deps = [self.tm],
             costs = {
@@ -535,10 +535,61 @@ class Pipeline:
 
         return out
 
-    def create_pipeline(self):
+    def perform_imaging_merges(self, root):
+
+        # List of changes to apply
+        merges = [
+            ([Products.ReprojectionPredict,Products.IFFT],
+             [self.eachBeam, self.eachLoop, self.xyPolar, self.snapTime, self.projPredFreqs, self.eachFacet],
+             None),
+            ([Products.Degridding_Kernel_Update, Products.Degrid],
+             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+              self.snapTime, self.granFreqs],
+             None),
+            ([Products.PhaseRotationPredict, Products.DFT, "Sum visibilities"],
+             [self.eachBeam, self.eachLoop, self.xyPolars,
+              self.snapTime, self.granFreqs, self.allBaselines],
+             None),
+            ([Products.Solve],
+             [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
+             None),
+            ([Products.Correct,Products.Subtract_Visibility,Products.Flag],
+             [self.eachBeam, self.snapTime, self.granFreqs, self.xyPolars, self.allBaselines, self.eachLoop],
+             None),
+            ([Products.Gridding_Kernel_Update,
+              Products.PhaseRotation,Products.Grid, Products.FFT, Products.Reprojection],
+             [self.eachBeam, self.eachLoop, self.xyPolar,self.snapTime, self.projBackFreqs, self.eachFacet],
+             None)
+        ]
+        for flows_to_merge, gran, split_gran in merges:
+
+            # Merge
+            merged = mergeFlows(root, root.getDeps(flows_to_merge), gran)
+
+            # Split output
+            if not split_gran is None:
+                makeSplitFlow(root, merged, split_gran)
+
+    def create_pipeline(self, performMerges=False):
+        """
+        Create the pipeline for the telescope parameters this class got
+        constructed with.
+
+        :param performMerges: Do not return individual functions,
+          instead merge and split such that the returned flows have
+          a realistic granularity.
+        """
 
         if self.tp.pipeline in Pipelines.imaging:
-            return self.create_imaging()
+
+            # Create imaging pipeline
+            root = self.create_imaging()
+
+            # Perform merges, if requested
+            if performMerges:
+                self.perform_imaging_merges(root)
+
+            return root
 
         if self.tp.pipeline == Pipelines.Ingest:
             return self.create_ingest()
@@ -608,7 +659,7 @@ class PipelineTestsBase(unittest.TestCase):
         for flow, (pname, pcosts) in zip(flowsSorted, productsSorted):
             fcost = float(flow.cost('compute')/self.df.tp.Tobs)
             pcost = float(pcosts['Rflop'])
-            costSum += pcost
+            costSum += fcost
             self.assertAlmostEqual(
                 fcost, pcost, delta=pcost/1e10,
                 msg="Flow %s cost does not match product %s (%f != %f, factor %f)!\n\n"
