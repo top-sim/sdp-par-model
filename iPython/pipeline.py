@@ -671,9 +671,16 @@ class PipelineTestsBase(unittest.TestCase):
                         list(map(lambda n_c: n_c[0], productsSorted)))
             )
 
+    def _checkPipelineCostSum(self, flow):
+
+        # Sum cost over all flows
+        fcost = 0
+        for flow in flow.recursiveDeps():
+            fcost += float(flow.cost('compute')/self.df.tp.Tobs)
+
         # Finally check sum
         self.assertAlmostEqual(
-            float(costSum),
+            float(fcost),
             float(self.df.tp.Rflop),
             delta = self.df.tp.Rflop/1e10)
 
@@ -772,6 +779,10 @@ class PipelineTestsImaging(PipelineTestsBase):
         self.assertIn(self.df.tp.pipeline, Pipelines.imaging)
         self._assertPipelineComplete(self.df.create_imaging())
 
+        # Sum should match no matter whether we merge or not
+        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=False))
+        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=True))
+
     def test_dot(self):
 
         dot = flowsToDot(self.df.create_imaging(), self.df.tp.Tobs)
@@ -829,6 +840,9 @@ class PipelineTestsIngest(PipelineTestsBase):
         # Check ingest pipeline
         self.assertEqual(self.df.tp.pipeline, Pipelines.Ingest)
         self._assertPipelineComplete(self.df.create_ingest())
+
+        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=False))
+        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=True))
 
 if __name__ == '__main__':
     unittest.main()
