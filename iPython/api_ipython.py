@@ -48,7 +48,7 @@ class SkaIPythonAPI(api):
         ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
         ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
         ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
-        ('Dump time',                  's',          False,   False, lambda tp: tp.Tdump_scaled,      ),
+        ('Dump time',                  's',          False,   False, lambda tp: tp.Tint_used,         ),
         ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
         ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
         ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
@@ -85,10 +85,10 @@ class SkaIPythonAPI(api):
         ('Frequencies backward grid',  '',           False,   False, lambda tp: tp.Nf_vis_backward,   ),
         ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
         ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
-        ('Visibilities ingest',        '1/s',        False,   False, lambda tp: tp.Nvis_ingest,       ),
-        ('Visibilities averaged',      '1/s',        False,   False, lambda tp: tp.Nvis,              ),
-        ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Nvis_predict,      ),
-        ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Nvis_backward,     ),
+        ('Visibilities ingest',        '1/s',        False,   False, lambda tp: tp.Rvis_ingest,       ),
+        ('Visibilities averaged',      '1/s',        False,   False, lambda tp: tp.Rvis,              ),
+        ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Rvis_predict,      ),
+        ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Rvis_backward,     ),
 
         ('-- Geometry --',             '',           False,   False, lambda tp: ''                    ),
         ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
@@ -105,6 +105,9 @@ class SkaIPythonAPI(api):
 
         ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
         ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
+        ('Total buffer ingest rate',   'TeraBytes/s',True,    False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
+        #('Rosies buffer size',   'PetaBytes',       True,       False, lambda tp: tp.Tobs*tp.buffer_factor*tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.peta),
+
         ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
         ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera), ),
         ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),

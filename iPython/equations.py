@@ -130,7 +130,6 @@ class Equations:
         #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
         o.Nbl_full = o.Na * (o.Na - 1) / 2.0
         o.Nbl = sum(o.frac_bins) * o.Nbl_full
-        o.Tdump_scaled = o.Tdump_ref * o.B_dump_ref / o.Bmax
 
         # Wavelengths
         o.wl_max = o.c / o.freq_min  # Maximum Wavelength
@@ -140,6 +139,7 @@ class Equations:
         # Calculate number of subbands
         o.Nsubbands = ceiling(log(o.wl_max/o.wl_min)/log(o.max_subband_freq_ratio))
         o.Qsubband = (o.wl_max/o.wl_min)**(1./o.Nsubbands)
+
 
     @staticmethod
     def _apply_image_equations(o):
@@ -182,6 +182,15 @@ class Equations:
             o.Nfacet_predict = 1
             o.Npix_linear_predict = o.Npix_linear_fov_total
 
+        # expansion of sine solves eps = arcsinc(1/amp_f_max).
+        o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
+        #Correlator dump rate set by smearing limit at field of view needed
+        #for ICAL pipeline (Assuming this is always most challenging)
+        o.Tdump_no_smear=o.epsilon_f_approx * o.wl \
+                    / (o.Omega_E * o.Bmax * 7.66 * o.wl_sb_max * o.Qfov_ICAL / (pi * o.Ds))
+        o.Tint_used = max(o.Tint_min, o.Tdump_no_smear)
+        
+
     @staticmethod
     def _apply_channel_equations(o, symbolify):
         """
@@ -195,9 +204,7 @@ class Equations:
 
         b = Symbol('b')
         log_wl_ratio = log(o.wl_max / o.wl_min)
-
-        # expansion of sine solves eps = arcsinc(1/amp_f_max).
-        o.epsilon_f_approx = sqrt(6 * (1 - (1. / o.amp_f_max)))
+  
         # See notes on https://confluence.ska-sdp.org/display/PIP/Frequency+resolution+and+smearing+effects+in+the+iPython+SDP+Parametric+model
         o.Qbw = 1.47 / o.epsilon_f_approx
 
@@ -240,11 +247,11 @@ class Equations:
         b = Symbol('b')
         o.combine_time_samples = BLDep(b,
             Max(floor(o.epsilon_f_approx * o.wl /
-                      (o.Theta_fov_total * o.Omega_E * b * o.Tdump_scaled)), 1.))
+                      (o.Theta_fov_total * o.Omega_E * b * o.Tint_used)), 1.))
 
         # coalesce visibilities in time.
         o.Tcoal_skipper = BLDep(b,
-            o.Tdump_scaled * o.combine_time_samples(b))
+            o.Tint_used * o.combine_time_samples(b))
         if symbolify == 'helper':
             o.Tcoal_skipper = Symbol(o.make_symbol_name("Tcoal_skipper"))
 
@@ -261,22 +268,23 @@ class Equations:
                 # longer than either 1.2s or Tion. ?Why 1.2s?
                 o.Tcoal_predict = BLDep(b, Min(o.Tcoal_skipper(b), 1.2, o.Tion))
         else:
-            o.Tcoal_predict = BLDep(b, o.Tdump_scaled)
-            o.Tcoal_backward = BLDep(b, o.Tdump_scaled)
+            o.Tcoal_predict = BLDep(b, o.Tint_used)
+            o.Tcoal_backward = BLDep(b, o.Tint_used)
 
-        # Visibility rate on ingest, including autocorrelations
-        o.Nvis_ingest = (o.Nbl + o.Na) * o.Nf_max / o.Tdump_ref
-        # Total visibility rate after global coalescing. This uses
-        # Tdump_scaled independent of whether BLDTA is used.  This is
-        # because BLDTA is only done for gridding, and doesn't affect
-        # the amount of data to be buffered.
-        o.Nvis = o.Nbl * o.Nf_vis / o.Tdump_scaled
+        # Visibility rate (visibilities per second) on ingest, including autocorrelations (per beam, per polarisation)
+        o.Rvis_ingest = (o.Nbl + o.Na) * o.Nf_max / o.Tint_used
+
+
+        # Total visibility rate (visibilities per second per beam, per polarisation)
+        #after frequency channels have been combined where possible.
+        #Autocorrelations included here too
+        o.Rvis = (o.Nbl + o.Na) * o.Nf_vis / o.Tint_used
 
         # Visibility rate for backward step, allow coalescing
         # in time and freq prior to gridding
-        o.Nvis_backward = blsum(b, o.Nf_vis_backward(b) / o.Tcoal_backward(b))
+        o.Rvis_backward = blsum(b, o.Nf_vis_backward(b) / o.Tcoal_backward(b))
         # Visibility rate for predict step
-        o.Nvis_predict = blsum(b, o.Nf_vis_predict(b) / o.Tcoal_predict(b))
+        o.Rvis_predict = blsum(b, o.Nf_vis_predict(b) / o.Tcoal_predict(b))
 
     @staticmethod
     def _apply_geometry_equations(o, symbolify):
@@ -335,25 +343,25 @@ class Equations:
         if o.pipeline == Pipelines.Ingest:
             o.set_product(Products.Receive,
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-                Rflop = 2 * o.Npp * o.Nvis_ingest / o.Nf_min +
-                        1000 * o.Na / o.Tdump_ref,
-                Rout = o.Mvis * o.Npp * o.Nvis_ingest)
+                Rflop = 2 * o.Npp * o.Rvis_ingest / o.Nf_min +
+                        1000 * o.Na / o.Tint_used,
+                Rout = o.Mvis * o.Npp * o.Rvis_ingest)
             o.set_product(Products.Flag,
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-                Rflop = 279 * o.Npp * o.Nvis_ingest / o.Nf_min,
-                Rout = o.Mvis * o.Npp * o.Nvis_ingest / o.Nf_min)
+                Rflop = 279 * o.Npp * o.Rvis_ingest / o.Nf_min,
+                Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
             # Ndemix is the number of time-frequency products used
             # (typically 1000) so we have to divide out the number of
             # input channels
             o.set_product(Products.Demix,
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-                Rflop = 8 * o.Npp * (o.Nvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
+                Rflop = 8 * o.Npp * (o.Rvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
                         / o.Nf_min,
-                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min)
+                Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min)
             o.set_product(Products.Average,
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-                Rflop = 8 * o.Npp * o.Nvis_ingest / o.Nf_min,
-                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min)
+                Rflop = 8 * o.Npp * o.Rvis_ingest / o.Nf_min,
+                Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min)
 
     @staticmethod
     def _apply_flag_equations(o):
@@ -362,8 +370,8 @@ class Equations:
         if not (o.pipeline == Pipelines.Ingest):
             o.set_product(Products.Flag,
                 T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
-                Rflop=279 * o.Npp * o.Nvis / o.Nf_min_gran,
-                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min_gran)
+                Rflop=279 * o.Npp * o.Rvis / o.Nf_min_gran,
+                Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_correct_equations(o):
@@ -376,8 +384,8 @@ class Equations:
         if not o.pipeline == Pipelines.Ingest:
             o.set_product(Products.Correct,
                 T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran,
-                Rflop = 8 * o.Nmm * o.Nvis * o.NIpatches / o.Nf_min_gran,
-                Rout = o.Mvis * o.Nvis / o.Nf_min_gran)
+                Rflop = 8 * o.Nmm * o.Rvis * o.NIpatches / o.Nf_min_gran,
+                Rout = o.Mvis * o.Rvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_grid_equations(o):
@@ -523,7 +531,7 @@ class Equations:
             N_Gslots = o.Tobs / o.tICAL_G
             N_Bslots = o.Tobs / o.tICAL_B
             N_Islots = o.Tobs / o.tICAL_I
-            Flop_averaging = Flop_averager * o.Nvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
+            Flop_averaging = Flop_averager * o.Rvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
             Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
             o.set_product(Products.Solve,
                 T = o.tICAL_G,
@@ -537,14 +545,14 @@ class Equations:
         if o.pipeline == Pipelines.RCAL:
             N_Gslots = o.Tobs / o.tRCAL_G
             # Need to remember to average over all frequencies because a BP may have been applied.
-            Flop_averaging = Flop_averager * o.Nvis * o.Nf_max * o.tRCAL_G
+            Flop_averaging = Flop_averager * o.Rvis * o.Nf_max * o.tRCAL_G
             Flop_solving   = Flop_solver * N_Gslots
             o.set_product(Products.Solve,
                 T = o.tRCAL_G,
                 # We need to complete one entire calculation within real time tCal_G
                 N = o.Nbeam,
                 Rflop = (Flop_solving + Flop_averaging) / o.Tobs,
-                Rout = o.Mjones * o.Na * o.Nf_max / o.Tdump_ref)
+                Rout = o.Mjones * o.Na * o.Nf_max / o.Tint_used)
 
     @staticmethod
     def _apply_dft_equations(o):
@@ -564,8 +572,8 @@ class Equations:
                 T = o.Tsnap,
                 N = o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
                 Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
-                        * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled,
-                Rout = o.Npp * o.Mvis * o.Nvis / o.Nf_min_gran)
+                        * o.Nf_vis / o.Nf_min_gran / o.Tint_used,
+                Rout = o.Npp * o.Mvis * o.Rvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_source_find_equations(o):
@@ -599,8 +607,8 @@ class Equations:
             o.set_product(Products.Subtract_Visibility,
                 T = o.Tsnap,
                 N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
-                Rflop = 8 * o.Npp * o.Nvis / o.Nf_min_gran,
-                Rout = o.Mvis * o.Npp * o.Nvis / o.Nf_min_gran)
+                Rflop = 8 * o.Npp * o.Rvis / o.Nf_min_gran,
+                Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min_gran)
 
     @staticmethod
     def _apply_kernel_equations(o):
@@ -674,16 +682,16 @@ class Equations:
                 T = o.Tsnap,
                 N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
                     o.Ntt_predict * o.Nfacet**2 ,
-                Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled),
-                Rout = blsum(b, o.Mvis * o.Nf_vis / o.Nf_min_gran / o.Tdump_scaled))
+                Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tint_used),
+                Rout = blsum(b, o.Mvis * o.Nf_vis / o.Nf_min_gran / o.Tint_used))
 
         # Backward phase rotation: Input at overall visibility
         # rate, output averaged down to backward visibility rate.
         o.set_product(Products.PhaseRotation,
             T = o.Tsnap,
             N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
-            Rflop = blsum(b, 25 * o.Nvis / o.Nbl / o.Nf_min_gran),
-            Rout = blsum(b, o.Mvis * o.Nvis_backward(b, 1) / o.Nf_min_gran))
+            Rflop = blsum(b, 25 * o.Rvis / o.Nbl / o.Nf_min_gran),
+            Rout = blsum(b, o.Mvis * o.Rvis_backward(b, 1) / o.Nf_min_gran))
 
     @staticmethod
     def _apply_flop_equations(o):
@@ -715,14 +723,14 @@ class Equations:
         # factor for double-buffering
         #
         # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-        o.Mbuf_vis = o.buffer_factor * o.Npp * o.Nvis * o.Nbeam * o.Mvis * o.Tobs
+        o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis * o.Nbeam * o.Mvis * o.Tobs
 
         # Visibility read rate
         #
         # According to SDPPROJECT-133 (JIRA) assume that we only need
         # to read all visibilities twice per major cycle and beam.
-        o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis
-        # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Nvis * o.Mvis * o.Nfacet ** 2
+        o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis
+        # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
 
         # Convolution kernel cache size
         #

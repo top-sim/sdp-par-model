@@ -522,7 +522,7 @@ class ParameterDefinitions:
         o.Omega_E = 7.292115e-5  # Rotation relative to the fixed stars in radians/second
         o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
         o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
-        o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
+        #o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
         o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
         o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
         o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
@@ -554,6 +554,7 @@ class ParameterDefinitions:
         o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
         o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
         o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
+        o.Qfov_ICAL = 2.7 #Put the Qfov factor for the ICAL pipeline in here. It is used to calculate the correlator dump rate for instances where the maximum baseline used for an experiment is smaller than the maximum possible for the array. In that case, we might be able to request a longer correlator integration time in the correlator.
 
         # From CSP we are ingesting 10 bytes per visibility (single
         # polarization) built up as follows:
@@ -613,17 +614,28 @@ class ParameterDefinitions:
         o.set_param('telescope', telescope)
 
         if telescope == Telescopes.SKA1_Low:
-            o.Bmax = 80000  # Actually constructed max baseline in *m*
+            o.Bmax = 65000  # Actually constructed max baseline in *m*
             o.Ds = 35  # station "diameter" in metres
             o.Na = 512  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
-            o.B_dump_ref = 80000  # m
-            o.Tdump_ref = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
-            o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 80000))  # m
-            o.baseline_bin_distribution = np.array(
-                (52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))
-        #            o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.B_dump_ref = 65000  # m
+            o.Tint_min = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            #o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 65000))  # m
+            #o.baseline_bin_distribution = np.array(
+                #(52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))#OLD 753 ECP Abs length only
+                #(49.79516935, 7.2018153,  6.30406311, 9.87679703, 7.89016813, 11.59539474, 6.67869761, 0.65789474))#LOW ECP 160015 Abs length only
+                #These layouts have been foreshortened with elevations of 50,60,70 degrees, and a range of azimuthal angles.
+                #(56.96094258,   8.22266894,   7.55474842,  11.56658646,   8.05191328, 5.67275575,   1.85699165,   0.11339293)) #LOW ECP 160015
+                #(60.31972106,   7.7165451,    6.92064107,  10.73309147,   7.3828517, 5.17047626,   1.6627458,    0.09392754)) #4a array
+                #(60.22065697,   7.72434788,   7.05826222,  10.72169655,   7.36441056, 5.15572168   1.66138048   0.09352366)) #OLD 753 ECP
+                
+            
+            o.baseline_bins = np.array((o.Bmax/16., o.Bmax/8., o.Bmax/4., o.Bmax/2., o.Bmax)) #neater baseline binning!
+            o.baseline_bin_distribution = np.array((49.3626883, 13.32914111, 13.65062318, 17.10107961, 6.5564678))#LOW ECP 160015 Abs length only
+                
+                
+            #o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
@@ -637,7 +649,7 @@ class ParameterDefinitions:
             o.Na = 1024  # number of antennas
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
-            o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
@@ -655,7 +667,7 @@ class ParameterDefinitions:
             o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
             o.Nbeam = 1  # number of beams
             o.Nf_max = 65536  # maximum number of channels
-            o.Tdump_ref = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 150000  # m
             # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
             o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
@@ -676,7 +688,7 @@ class ParameterDefinitions:
             o.Nbeam = 1  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 200000  # m
-            o.Tdump_ref = 0.08  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.08  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 200000))  # m
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
@@ -695,7 +707,7 @@ class ParameterDefinitions:
             o.Nbeam = 36  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 50000  # m
-            o.Tdump_ref = 0.3  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.3  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
@@ -713,7 +725,7 @@ class ParameterDefinitions:
             o.Nbeam = 200  # number of beams
             o.B_dump_ref = 180000  # m
             o.Nf_max = 256000  # maximum number of channels
-            o.Tdump_ref = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.6  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.B_dump_ref = 100000  # m
             o.baseline_bins = np.array((4400, 6700, 10300, 15700, 24000, 36700, 56000, 85600, 130800, 180000))  # m
             o.baseline_bin_distribution = np.array(
@@ -732,7 +744,7 @@ class ParameterDefinitions:
             o.Nbeam = 200  # number of beams
             o.Nf_max = 256000  # maximum number of channels
             o.B_dump_ref = 1800000  # m
-            o.Tdump_ref = 0.008  # Minimum correlator integration time (dump time) in *sec* - in reference design
+            o.Tint_min = 0.008  # Minimum correlator integration time (dump time) in *sec* - in reference design
             o.baseline_bins = np.array((44000, 67000, 103000, 157000, 240000, 367000, 560000, 856000, 1308000, 1800000))
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
@@ -879,7 +891,7 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.034
 
         elif pipeline == Pipelines.ICAL:
-            o.Qfov = 2.7  # Field of view factor
+            o.Qfov = o.Qfov_ICAL  # Field of view factor
             o.Nselfcal = 3
             o.Nmajor = 2
             o.Nminor = 10000
@@ -1038,7 +1050,7 @@ class ParameterDefinitions:
             o.Nf_out = 500  #
             o.Tobs = 6 * 3600.0
             o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 6 * 3600.0  # sec
             o.Tpoint = 6 * 3600.0  # sec
         elif  hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
@@ -1050,7 +1062,7 @@ class ParameterDefinitions:
             o.Nf_out = 65536  #
             o.Tobs = 6 * 3600.0
             o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 6 * 3600.0  # sec
             o.Tpoint = 6 * 3600.0  # sec
         elif hpso == HPSOs.hpso_max_Mid_c:
@@ -1108,8 +1120,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
             o.Qfov = 2.7
@@ -1120,8 +1132,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
         elif hpso == HPSOs.hpso01DPrepB:
@@ -1132,8 +1144,8 @@ class ParameterDefinitions:
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Nf_out = 500  #
             o.Tobs = 6 * 3600.0
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
             o.Npp=4
@@ -1145,8 +1157,8 @@ class ParameterDefinitions:
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Nf_out = 1500  # 1500 channels in output
             o.Tobs = 6 * 3600.0
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
             o.Npp=4
@@ -1157,8 +1169,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max    = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
             o.Qfov=1.8
@@ -1169,8 +1181,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max    = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
         elif hpso == HPSOs.hpso02ADPrepB:
@@ -1180,9 +1192,9 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max    = 65536
+            o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
             o.Nf_out = 500  # 500 channel pseudo continuum output
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
             o.Npp=4
@@ -1193,9 +1205,9 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max    = 65536
+            o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
             o.Nf_out = 1500  # 1500 channels in output
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
             o.Npp=4
@@ -1206,8 +1218,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
             o.Qfov = 1.8
@@ -1218,8 +1230,8 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max = 65536
-            o.Bmax = 80000  # m
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
         elif hpso == HPSOs.hpso02BDPrepB:
@@ -1229,9 +1241,9 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max = 65536
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
             o.Nf_out = 500  # 500 channel pseudo continuum
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
             o.Npp=4
@@ -1242,9 +1254,9 @@ class ParameterDefinitions:
             o.freq_max = 200e6
             o.Nbeam = 2  # using 2 beams as per HPSO request...
             o.Tobs = 6 * 3600.0  # sec
-            o.Nf_max = 65536
+            o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
             o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
-            o.Bmax = 80000  # m
+            o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
             o.Npp=4
