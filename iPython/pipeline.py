@@ -43,7 +43,7 @@ class Pipeline:
         # Make time domain
         self.time = Domain('Time', 's')
         self.obsTime = self.time.regions(tp.Tobs)
-        self.dumpTime = self.obsTime.split(tp.Tobs / tp.Tdump_ref)
+        self.dumpTime = self.obsTime.split(tp.Tobs / tp.Tint_min)
         self.snapTime = self.obsTime.split(tp.Tobs / tp.Tsnap)
         self.kernelPredTime = self.obsTime.split(
             lambda rbox: tp.Tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
@@ -151,7 +151,7 @@ class Pipeline:
                 #  3 * 8 * rbox(self.frequency, 'size')
                 #        * rbox(self.baseline, 'size')
                 #        * rbox(self.time, 'size')
-                #        / self.tp.Tdump_scaled
+                #        / self.tp.Tint_used
             })
 
         self.corr = Flow(
@@ -159,14 +159,14 @@ class Pipeline:
             [self.allBeams, self.dumpTime,
              self.eachFreq, self.xyPolar, self.allBaselines],
             cluster = 'interface',
-            costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)})
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tint_min)})
 
         # TODO - buffer contains averaged visibilities...
         self.buf = Flow(
             'Visibility Buffer',
             [self.eachBeam, self.granFreqs, self.allBaselines, self.snapTime, self.xyPolars],
             cluster = 'interface',
-            costs = {'transfer': self._transfer_cost_vis(self.tp.Tdump_ref)}
+            costs = {'transfer': self._transfer_cost_vis(self.tp.Tint_min)}
         )
 
     def _cost_from_product(self, rbox, product, cost):
@@ -262,7 +262,7 @@ class Pipeline:
                 cluster='calibrate',
                 costs = {
                     'transfer': lambda rb:
-                      self.tp.Mjones * self.tp.Na * self.tp.Nf_max * self.tp.Tsnap / self.tp.Tdump_ref
+                      self.tp.Mjones * self.tp.Na * self.tp.Nf_max * self.tp.Tsnap / self.tp.Tint_min
                 }
             )
 
@@ -300,8 +300,8 @@ class Pipeline:
              self.maybePredTaylor,
             deps = [dft, degrid], cluster='predict',
             costs = {
-                #'compute': lambda rb: 2 * (1 + self.tp.Nfacet) * self._transfer_cost_vis(self.tp.Tdump_scaled)(rb),
-                'transfer': self._transfer_cost_vis(self.tp.Tdump_scaled)
+                #'compute': lambda rb: 2 * (1 + self.tp.Nfacet) * self._transfer_cost_vis(self.tp.Tint_used)(rb),
+                'transfer': self._transfer_cost_vis(self.tp.Tint_used)
             }
         )
 
@@ -656,7 +656,7 @@ class PipelineTestsImaging(PipelineTestsBase):
 
         # Dump time and snap time
         self.assertAlmostEqual(self.df.dumpTime.max(timeSize),
-                               self.df.tp.Tdump_ref)
+                               self.df.tp.Tint_min)
         self.assertAlmostEqual(self.df.snapTime.max(timeSize),
                                self.df.tp.Tsnap)
 
