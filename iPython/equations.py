@@ -188,7 +188,7 @@ class Equations:
         #for ICAL pipeline (Assuming this is always most challenging)
         o.Tdump_no_smear=o.epsilon_f_approx * o.wl \
                     / (o.Omega_E * o.Bmax * 7.66 * o.wl_sb_max * o.Qfov_ICAL / (pi * o.Ds))
-        o.Tint_used = max(o.Tint_min, o.Tdump_no_smear)
+        o.Tint_used = Max(o.Tint_min, o.Tdump_no_smear)
         
 
     @staticmethod
