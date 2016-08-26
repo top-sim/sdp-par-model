@@ -8,6 +8,7 @@ from parameter_definitions import Constants
 from sympy import Max, Expr, Lambda, Symbol, Sum, Mul
 from graphviz import Digraph
 from math import floor
+from functools import total_ordering
 
 import unittest
 
@@ -26,17 +27,24 @@ def mk_lambda(v):
     else:
         return (lambda rbox: v)
 
+@total_ordering
 class Domain:
     """A domain is an axis that a computation can be distributed over -
     such as time or frequency.
     """
 
-    def __init__(self, name, unit = ''):
+    def __init__(self, name, unit = '', priority=0):
         self.name = name
         self.unit = unit
+        self.priority = priority
 
     def __repr__(self):
         return '<Domain %s>' % self.name
+
+    def __lt__(self, other):
+        if self.priority == other.priority:
+            return self.name < other.name
+        return self.priority > other.priority
 
     def regions(self, size, props = {}):
         """Make a new unsplit region set for the domain."""

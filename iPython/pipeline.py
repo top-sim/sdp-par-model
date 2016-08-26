@@ -41,7 +41,7 @@ class Pipeline:
             })
 
         # Make time domain
-        self.time = Domain('Time', 's')
+        self.time = Domain('Time', 's', priority=7)
         self.obsTime = self.time.regions(tp.Tobs)
         self.dumpTime = self.obsTime.split(tp.Tobs / tp.Tint_min)
         self.snapTime = self.obsTime.split(tp.Tobs / tp.Tsnap)
@@ -56,7 +56,7 @@ class Pipeline:
             self.solveTime = self.obsTime.split(tp.Tobs / tp.tRCAL_G)
 
         # Make frequency domain
-        self.frequency = Domain('Frequency', 'ch')
+        self.frequency = Domain('Frequency', 'ch', priority=8)
         self.allFreqs = self.frequency.regions(tp.Nf_max)
         self.eachFreq = self.allFreqs.split(tp.Nf_max)
         self.visFreq = self.allFreqs.split(tp.Nf_vis)
@@ -77,7 +77,7 @@ class Pipeline:
         self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward)
 
         # Make beam domain
-        self.beam = Domain('Beam')
+        self.beam = Domain('Beam', priority=10)
         self.allBeams = self.beam.regions(tp.Nbeam)
         self.eachBeam = self.allBeams.split(tp.Nbeam)
 
@@ -89,19 +89,19 @@ class Pipeline:
         self.xyPolar = self.xyPolars.split(tp.Npp)
 
         # Make (major) loop domain
-        self.loop = Domain('Major Loop')
+        self.loop = Domain('Major Loop', priority=9)
         self.allLoops = self.loop.regions(tp.Nmajortotal)
         self.eachLoop = self.allLoops.split(tp.Nmajortotal)
         self.allSelfCals = self.loop.regions(tp.Nselfcal + 1)
         self.eachSelfCal = self.allSelfCals.split(tp.Nselfcal + 1)
 
         # Make facet domain
-        self.facet = Domain('Facet')
+        self.facet = Domain('Facet', priority=6)
         self.allFacets = self.facet.regions(tp.Nfacet**2)
         self.eachFacet = self.allFacets.split(tp.Nfacet**2)
 
         # Make taylor term domain
-        self.taylor = Domain('Taylor')
+        self.taylor = Domain('Taylor', priority=5)
         self.allTaylor = self.taylor.regions(tp.Ntt)
         self.eachTaylor = self.allTaylor.split(tp.Ntt)
         self.predTaylor = self.allTaylor.split(tp.Ntt_predict)
