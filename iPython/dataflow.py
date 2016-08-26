@@ -1201,25 +1201,34 @@ class Flow:
                     cost += flow.edgeSum(dep, dep.costs[name])
         return cost
 
-def mergeFlows(root, group, regs):
-    """
-    Group given flows into a common Flow with the desired
+def mergeFlows(root, group, regs, reevalTransfer=False):
+    """Group given flows into a common Flow with the desired
     granularity.
 
     This is only allowed if there is one designated output Flow for
     the group. Or put another way: Only one Flow is allowed to have
-    outside Flows depend on it. Note that the transfer size associated
-    with this Flow is going to get recalculated depending on the new
-    granularity.
+    outside Flows depend on it.
 
-    If any domains are missing from the new granuarlity, we sum up the
-    cost contributions along that axis. This basically means that we
-    assume that the flow's result is going to be all individual flow
-    results, concatenated.
+    Normally the cost is going to be redistributed "proportionally"
+    among the tasks of the new granularity. This is only the right
+    thing to do if:
+
+    - the merged tasks have the same computational and transfer cost
+      as the original tasks (output tasks) put together, and
+    - both output and transfer cost are distributed equally for the
+      merged tasks
+
+    So basically, we can only merge if the end state is a bunch of
+    tasks that all look exactly the same. The one way to get around
+    this is to recalculate transfer costs: This makes sense if the
+    transfer formula of the output flow can simply be re-evaluated for
+    the new granularity.
 
     :param root: Root flow of the flow network
     :param group: Flows to group together
     :param regs: Granularity to use for merged flow
+    :param reevalTransfer: Recaluluate output amount for the new
+      granularity.
     """
 
     boxes = RegionBoxes(regs)
@@ -1266,25 +1275,34 @@ def mergeFlows(root, group, regs):
             assert out_transfer is None, "Cannot merge group %s with two outgoing flows!" % group
             domains = { reg.domain for reg in regs }
 
-            # Determine whether any domains got removed
-            out_transfer = flow.costs['transfer']
-            removedDoms = set(flow.domains()).difference(domains)
-            if len(removedDoms) > 0:
+            # Re-evaluate transfer amount?
+            if reevalTransfer:
 
-                # Make new regions box for the removed regions
-                remRegs = RegionBoxes([ flow.boxes.regionsMap[dom]
-                                        for dom in removedDoms ])
+                # Determine whether any domains got removed
+                out_transfer = flow.costs['transfer']
+                removedDoms = set(flow.domains()).difference(domains)
+                if len(removedDoms) > 0:
 
-                # Replace transfer property with a sum over the product
-                out_transfer_old = out_transfer # Prevent recursion
-                out_transfer = lambda rb: \
+                    # Make new regions box for the removed regions
+                    remRegs = RegionBoxes([ flow.boxes.regionsMap[dom]
+                                            for dom in removedDoms ])
+
+                    # Replace transfer property with a sum over the product
+                    out_transfer_old = out_transfer # Prevent recursion
+                    out_transfer = lambda rb: \
                     remRegs.sum(lambda rb2:
-                        out_transfer_old(rb.product(rb2)))
+                                out_transfer_old(rb.product(rb2)))
+
+            else:
+
+                # Evaluate original transfer amount, split "equally"
+                # amongst merged task
+                out_transfer = flow.cost('transfer') / count
 
     # Create new Flow
     groupFlow = Flow(' + '.join(map(lambda f: f.name, group)), regs,
                      cluster=cluster,
-                     costs = { 'compute': lambda rb: flops / count,
+                     costs = { 'compute': flops / count,
                                'transfer': out_transfer },
                      deps = list(deps)
     )
@@ -2036,7 +2054,7 @@ class DataFlowTestsFlow(unittest.TestCase):
         # If we change to coarser granularity produced data as well as
         # transfered data should reduce - we have removed (size3-1)
         # tasks and their input edges from "Gather".
-        mergeFlows(root, [loop], [self.reg3])
+        mergeFlows(root, [loop], [self.reg3], reevalTransfer=True)
         produce -= (self.size3 - 1) * 1000
         transfer -= (self.size3 - 1) * (100 * self.size2)
         self.assertEqual(root.recursiveCost('compute'), compute)
