@@ -50,11 +50,13 @@ class Pipeline:
             lambda rbox: tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
         self.kernelBackTime = self.obsTime.split(
             lambda rbox: tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
-        self.solveTime = self.snapTime
         if tp.pipeline == Pipelines.ICAL:
-            self.solveTime = self.obsTime.split(tobs / tp.tICAL_G)
+            self.Tsolve = tp.tICAL_G
         elif tp.pipeline == Pipelines.RCAL:
-            self.solveTime = self.obsTime.split(tobs / tp.tRCAL_G)
+            self.Tsolve = tp.tRCAL_G
+        else:
+            self.Tsolve = tp.Tsnap
+        self.solveTime = self.obsTime.split(tobs / self.Tsolve)
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch', priority=8)
@@ -243,12 +245,24 @@ class Pipeline:
         # No calibration?
         if Products.Solve in self.tp.products:
 
+            # Collect island-local data for a time slot together and
+            # average it before sending it off-island
+            slots = Flow(
+                "Timeslots",
+                [self.eachBeam, self.eachSelfCal, self.solveTime, self.islandFreqs, self.xyPolars,
+                 self.allBaselines],
+                # maybe twice this, because we need to transfer
+                # visibility + model...?
+                costs = { 'transfer': self._transfer_cost_vis(self.Tsolve) },
+                deps = [vis, modelVis], cluster='calibrate'
+            )
+
             # Solve
             solve = Flow(
                 Products.Solve,
                 [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
                 costs = self._costs_from_product(Products.Solve),
-                deps = [vis, modelVis], cluster='calibrate',
+                deps = [slots], cluster='calibrate',
             )
             calibration = solve
 
@@ -388,7 +402,7 @@ class Pipeline:
         if not Products.Reprojection in self.tp.products:
             return facets
 
-        return Flow(
+        reproject = Flow(
             Products.Reprojection,
             [self.eachBeam, self.eachLoop, self.xyPolar,
              self.snapTime, self.projBackFreqs, self.eachFacet],
@@ -396,6 +410,20 @@ class Pipeline:
             deps = [facets],
             cluster = 'backward'
         )
+
+        # Also sum up reprojected results across snapshots
+        summed = Flow(
+            "Sum Facets",
+            [self.eachBeam, self.eachLoop, self.xyPolar,
+             self.obsTime, self.projBackFreqs, self.eachFacet],
+            costs = {
+                'transfer': self.tp.Mpx * self.tp.Npix_linear**2
+            },
+            deps = [reproject],
+            cluster = 'backward'
+        )
+
+        return summed
 
     def create_subtract(self, vis, model_vis):
         """ Subtracts model visibilities from measured visibilities """
