@@ -541,7 +541,7 @@ class ParameterDefinitions:
         # o.grid_cell_error = 0.34 #found from tump time as given by SKAO at largest FoV (continuum).
         o.Qw = 1.0
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-        o.Qfov=1.0 # Define this in case not defined below
+        o.Qfov = 1.0 # Define this in case not defined below
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
         o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
@@ -1148,7 +1148,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso01DPrepC:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepC
@@ -1161,7 +1161,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso02AICAL:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.ICAL
@@ -1173,7 +1173,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
-            o.Qfov=1.8
+            o.Qfov = 1.8
         elif hpso == HPSOs.hpso02ADprepA:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepA_Image
@@ -1197,7 +1197,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso02ADPrepC:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepC
@@ -1210,7 +1210,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 100 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso02BICAL:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.ICAL
@@ -1246,7 +1246,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso02BDPrepC:
             o.set_param('telescope', Telescopes.SKA1_Low)
             o.pipeline = Pipelines.DPrepC
@@ -1259,7 +1259,7 @@ class ParameterDefinitions:
             o.Bmax = 65000  # m
             o.Texp = 2500 * 3600.0  # sec
             o.Tpoint = 10 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso13ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
             o.pipeline = Pipelines.ICAL
@@ -1444,7 +1444,7 @@ class ParameterDefinitions:
             o.Texp = 6000 * 3600.0  # sec
             o.Tpoint = 600 * 3600.0  # sec
             o.Tpoint = 600 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso27ICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1477,7 +1477,7 @@ class ParameterDefinitions:
             o.Bmax = 50000  # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 0.123 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         
         
         elif hpso == HPSOs.hpso32ICAL: #defintions for interferometry support for SUC 32 are work in progress...
@@ -1539,7 +1539,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso37bICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1572,7 +1572,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 2000 * 3600.0  # sec
             o.Tpoint = 2000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso37cICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1605,7 +1605,7 @@ class ParameterDefinitions:
             o.Bmax = 150000 ## m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso38aICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1638,7 +1638,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 16.4 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         elif hpso == HPSOs.hpso38bICAL:
             o.set_param('telescope', Telescopes.SKA1_Mid)
             o.pipeline = Pipelines.ICAL
@@ -1671,7 +1671,7 @@ class ParameterDefinitions:
             o.Bmax = 150000  # m
             o.Texp = 1000 * 3600.0  # sec
             o.Tpoint = 1000 * 3600.0  # sec
-            o.Npp=4
+            o.Npp = 4
         else:
             raise Exception('Unknown HPSO %s!' % hpso)
 
