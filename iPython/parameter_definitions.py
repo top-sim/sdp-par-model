@@ -580,7 +580,7 @@ class ParameterDefinitions:
         # for Flags + some small amount of overhead for other meta
         # data.
 
-        o.Nsource_find_iterations=10 # Number of iterations in source finding
+        o.Nsource_find_iterations = 10 # Number of iterations in source finding
         o.Nsource = 1000 # Number of point sources modelled TODO: Should be set per HPSO
         o.Nminor = 1000 # Average number of minor cycles per major cycle
         o.Nsolve = 10 # Number of Stefcal iterations
