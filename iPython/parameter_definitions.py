@@ -584,7 +584,7 @@ class ParameterDefinitions:
         o.Nsource = 1000 # Number of point sources modelled TODO: Should be set per HPSO
         o.Nminor = 1000 # Average number of minor cycles per major cycle
         o.Nsolve = 10 # Number of Stefcal iterations
-        o.Nscales = 5 # Number of scales in MS-MFS
+        o.Nscales = 10 # Number of scales in MS-MFS - updated to match requirement: SDP_REQ-676 (L2)
         o.Npatch = 4097 # Number of pixels in clean patch
 
         # To be overridden by the pipelines
