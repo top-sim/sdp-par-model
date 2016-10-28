@@ -884,7 +884,7 @@ class ParameterDefinitions:
             o.Nmajor = 0
             o.Nmajortotal = 0
             o.Npp = 4 # We get everything
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -901,7 +901,7 @@ class ParameterDefinitions:
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -917,7 +917,7 @@ class ParameterDefinitions:
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 4 # We get everything
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -933,7 +933,7 @@ class ParameterDefinitions:
             o.Nf_FFT_backward = o.Ntt * o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -949,7 +949,7 @@ class ParameterDefinitions:
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -965,7 +965,7 @@ class ParameterDefinitions:
             o.Nf_out = min(o.Nf_min, o.Nf_max)
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
-            o.Tobs = 6 * 3600.0  # in seconds
+            o.Tobs = 1. * 3600.0  # in seconds
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.08
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -981,7 +981,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_min
-            o.Tobs = 6 * 3600
+            o.Tobs = 1. * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -998,7 +998,7 @@ class ParameterDefinitions:
             o.Nf_out = o.Nf_max  # The same as the maximum number of channels
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Ntt * o.Nf_min
-            o.Tobs = 6 * 3600
+            o.Tobs = 1. * 3600
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
             elif o.telescope == Telescopes.SKA1_Mid:
@@ -1014,7 +1014,7 @@ class ParameterDefinitions:
             o.Nf_FFT_backward = o.Nf_out
             o.Nf_FFT_predict = o.Nf_out
             o.Npp = 2 # We only want Stokes I, V
-            o.Tobs = 1.0  # Used to be equal to Tdump but after talking to Rosie set this to 1.2 sec
+            o.Tobs = 1.0
             o.Tsnap_min = o.Tobs
             if o.telescope == Telescopes.SKA1_Low:
                 o.amp_f_max = 1.02
@@ -1048,7 +1048,7 @@ class ParameterDefinitions:
             o.freq_max = 350e6
             o.Nbeam = 1  # only 1 beam here
             o.Nf_out = 500  #
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 65000  # m
             o.Texp = 6 * 3600.0  # sec
@@ -1060,7 +1060,7 @@ class ParameterDefinitions:
             o.freq_max = 350e6
             o.Nbeam = 1  # only 1 beam here
             o.Nf_out = 65536  #
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 65000  # m
             o.Texp = 6 * 3600.0  # sec
@@ -1072,7 +1072,7 @@ class ParameterDefinitions:
             o.freq_max = 1.05e9
             o.Nbeam = 1
             o.Nf_out = 500
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6 * 3600.0  # sec
@@ -1084,7 +1084,7 @@ class ParameterDefinitions:
             o.freq_max = 1.05e9
             o.Nbeam = 1
             o.Nf_out = 65536
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6 * 3600.0  # sec
@@ -1096,7 +1096,7 @@ class ParameterDefinitions:
             o.freq_max = 13.5e9
             o.Nbeam = 1
             o.Nf_out = 500
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6 * 3600.0  # sec
@@ -1108,7 +1108,7 @@ class ParameterDefinitions:
             o.freq_max = 13.5e9
             o.Nbeam = 1
             o.Nf_out = 65536
-            o.Tobs = 6 * 3600.0
+            o.Tobs = 1.0 * 3600.0
             o.Nf_max = 65536
             o.Bmax = 150000  # m
             o.Texp = 6 * 3600.0  # sec
