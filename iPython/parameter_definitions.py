@@ -1580,7 +1580,7 @@ class ParameterDefinitions:
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536
-            o.Bmax = 150000 # m
+            o.Bmax = 95000 # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
             o.Qfov = 1.8
@@ -1591,7 +1591,7 @@ class ParameterDefinitions:
             o.freq_max = 1.7e9
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536
-            o.Bmax = 150000 # m
+            o.Bmax = 95000 # m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
         elif hpso == HPSOs.hpso37cDPrepB:
@@ -1602,7 +1602,7 @@ class ParameterDefinitions:
             o.Tobs = 6 * 3600.0  # sec
             o.Nf_max = 65536
             o.Nf_out = 700 # 700 channels in output cube
-            o.Bmax = 150000 ## m
+            o.Bmax = 95000 ## m
             o.Texp = 10000 * 3600.0  # sec
             o.Tpoint = 95 * 3600.0  # sec
             o.Npp = 4
