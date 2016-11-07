@@ -174,7 +174,11 @@ class SkaPythonAPI:
                                      'Cannot peform parameter sweep.'
                                      % (parameter_string, param_values[i], parameter_final_value))
 
-            result_expression = tp.__dict__[expression_string]
+            if expression_string.find(".") >= 0:
+                product, expr = expression_string.split(".")
+                result_expression = tp.products[product].get(expr, 0)
+            else:
+                result_expression = tp.__dict__[expression_string]
             (tsnap, nfacet) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
