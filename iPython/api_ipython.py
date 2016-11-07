@@ -1045,6 +1045,7 @@ class SkaIPythonAPI(api):
                         else:
                             s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
                             diff_total += 100
+                            total_count += 1
                     else:
                         s += '<td>%s</td>' % val
 
@@ -1067,7 +1068,7 @@ class SkaIPythonAPI(api):
             display(HTML(s))
         display(HTML('<font color="blue">Done. %.2f %% average relative difference.</font>' % (diff_total / total_count)))
 
-        return diff_total
+        return diff_total / total_count
 
     @staticmethod
     def stack_bars_pipelines(title, telescopes, bands, pipelines,
