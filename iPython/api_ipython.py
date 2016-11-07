@@ -63,6 +63,8 @@ class SkaIPythonAPI(api):
         ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
         ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
         ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_fov_total,),
+        ('Grid side dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_grid,),
+        ('Baselines dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_bl,),
         ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
         ('Qbw',                        '',           False,   False, lambda tp: tp.Qbw,               ),
         ('Max subband ratio',          '',           False,   False, lambda tp: tp.max_subband_freq_ratio,),

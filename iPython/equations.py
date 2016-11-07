@@ -172,6 +172,11 @@ class Equations:
         # Number of pixels on side of facet in subband.
         o.Npix_linear = (o.Theta_fov / o.Theta_pix)
         o.Npix_linear_fov_total = (o.Theta_fov_total / o.Theta_pix)
+
+        # grid width in wavelengths
+        o.Lambda_grid = 1 / o.Theta_pix
+        o.Lambda_bl = 2 * o.Bmax / o.wl_sb_min
+
         # Predict fov and number of pixels depends on whether we facet
         if o.scale_predict_by_facet:
             o.Theta_fov_predict = o.Theta_fov
