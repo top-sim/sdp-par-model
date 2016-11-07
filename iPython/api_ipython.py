@@ -310,6 +310,7 @@ class SkaIPythonAPI(api):
         plt.title('%s\n' % title)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
+        plt.ylim((0, max(y_values)))
         plt.show()
 
     @staticmethod
