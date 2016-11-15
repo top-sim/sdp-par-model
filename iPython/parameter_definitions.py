@@ -141,29 +141,24 @@ class ParameterContainer:
         """
 
         # Actually baseline-dependent?
-        if isinstance(bldep, BLDep):
-            b = bldep.pars['b']
-            expr = bldep.term
-        else:
+        if not isinstance(bldep, BLDep):
             return self.Nbl * bldep
+        expr = bldep.term
 
         # Small bit of ad-hoc formula optimisation: Exploit
         # independent factors. Makes for smaller terms, which is good
         # both for Sympy as well as for output.
-        if not b in expr.free_symbols:
+        pars = bldep.pars.values()
+        def independent(e):
+            return not any([s in e.free_symbols for s in pars])
+        if independent(expr):
             return self.Nbl * bldep(b=None, bcount=1)
         if isinstance(expr, Mul):
-            def indep(e): return not any([s in e.free_symbols for s in bldep.pars.values()])
-            indepFactors = list(filter(indep, expr.as_ordered_factors()))
+            indepFactors = list(filter(independent, expr.as_ordered_factors()))
             if len(indepFactors) > 0:
-                def not_indep(e): return not indep(e)
+                def not_indep(e): return not independent(e)
                 restFactors = filter(not_indep, expr.as_ordered_factors())
                 return Mul(*indepFactors) * self.sum_bl_bins(BLDep(bldep.pars, Mul(*restFactors)))
-
-        # Replace in concrete values for baseline fractions and
-        # length. Using Lambda here is a solid 25% faster than
-        # subs(). Unfortunately very slow nonetheless...
-        results = []
 
         # Symbolic? Generate actual symbolic sum expression
         if isinstance(self.Bmax_bins, Symbol):
@@ -171,8 +166,8 @@ class ParameterContainer:
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
-        for (frac_val, bmax_val) in zip(self.frac_bins, self.Bmax_bins):
-            results.append(bldep(b=bmax_val, bcount=frac_val*self.Nbl_full))
+        results = [ bldep(b=bmax_val, bcount=frac_val*self.Nbl_full)
+                    for frac_val, bmax_val in zip(self.frac_bins, self.Bmax_bins) ]
         return Add(*results, evaluate=False)
 
     def set_product(self, product, T=None, N=1, **args):
@@ -215,13 +210,15 @@ class ParameterContainer:
 class BLDep:
     """A baseline-dependent sympy expression.
 
-    Baseline length will be represented as a symbol in the
-    formula. Baseline count can also be used, however this is
-    cumbersome, so we probably don't want to use it often.
+    Named baseline properties can be used as symbols in the sympy
+    expression. Typical choices would be 'b' for the baseline length
+    or 'bcount' for the baseline count.
 
     Note that this mostly replicates functionality of numpy's own
-    Lambda expression (down to the call syntax). The difference is
-    that this class documents the semantics of the parameter.
+    Lambda expression. The main difference here are that we assign
+    semantics to the term and parameters (e.g. baseline
+    properties). Furthermore, we also lift some arithmetic operations
+    such that they can also work on baseline-dependent terms.
     """
 
     def __init__(self, pars, term):
@@ -298,12 +295,6 @@ class BLDep:
         return Lambda(list(self.pars.values()), self.term).free_symbols
     def atoms(self, typ):
         return Lambda(list(self.pars.values()), self.term).atoms(typ)
-
-def unbldep(term, b_val, bcount_val = None):
-    if isinstance(term, BLDep):
-        return term(b=b_val, bcount=bcount_val)
-    else:
-        return term
 
 def blsum(b, expr):
     """
