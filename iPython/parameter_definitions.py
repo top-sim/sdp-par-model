@@ -1005,6 +1005,8 @@ class ParameterDefinitions:
                 o.amp_f_max = 1.01
 
         elif pipeline == Pipelines.Fast_Img:
+            #TODO: check whether Naa (A kernel size) should be smaller (or zero) for fast imaging
+            #TODO: update this to cope with multiple timescales for output
             o.Qfov = 0.9  # Field of view factor
             o.Nselfcal = 0
             o.Nmajor = 10
