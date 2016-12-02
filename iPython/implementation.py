@@ -354,20 +354,26 @@ class Implementation:
         return telescope_params
 
     @staticmethod
-    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop', max_number_nfacets=20,
+    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop',
+                                  max_number_nfacets=20, min_number_nfacets=1,
                                   verbose=False):
-        """
-        Computes the optimal value for Tsnap and Nfacet that minimizes the value of an expression (typically Rflop)
-        Returns result as a 2-tuple (Tsnap_opt, Nfacet_opt)
+        """Computes the optimal value for Tsnap and Nfacet that minimizes the
+        value of an expression (typically Rflop). Returns result as a
+        2-tuple (Tsnap_opt, Nfacet_opt)
 
-        @param telescope_parameters: Contains the definition of the expression that needs to be minimzed. This should
-                                     be a symbolic expression that involves Tsnap and/or Nfacet.
-        @param expr_to_minimize_string: The expression that should be minimized. This is typically assumed to be the
-                                        computational load, but may also be, for example, buffer size.
-        @param max_number_nfacets: Provides an upper limit to Nfacet. Because we currently do a linear search for the
-                                   minimum value, using a for loop, we need to know when to quit. Max should never be
-                                   reached unless in pathological cases
+        @param telescope_parameters: Contains the definition of the
+          expression that needs to be minimzed. This should be a
+          symbolic expression that involves Tsnap and/or Nfacet.
+        @param expr_to_minimize_string: The expression that should be
+          minimized. This is typically assumed to be the computational
+          load, but may also be, for example, buffer size.
+        @param max_number_nfacets: Provides an upper limit to
+          Nfacet. Because we currently do a linear search for the
+          minimum value, using a for loop, we need to know when to
+          quit. Max should never be reached unless in pathological
+          cases
         @param verbose:
+
         """
         assert isinstance(telescope_parameters, ParameterContainer)
         assert hasattr(telescope_parameters, expr_to_minimize_string)
@@ -377,24 +383,22 @@ class Implementation:
                 print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
             return (telescope_parameters.Tobs, 1)
 
-        result_per_nfacet = {}
-        result_array = []
-        optimal_Tsnap_array = []
-        warned = False
-
         # Construct lambda from our two parameters (facet number and
         # snapshot time) to the expression to minimise
         expression_original = eval('telescope_parameters.%s' % expr_to_minimize_string)
-
+        params = []
         if isinstance(telescope_parameters.Nfacet, Symbol):
-            params = (telescope_parameters.Nfacet, telescope_parameters.Tsnap)
-            nfacet_range = range(1, max_number_nfacets+1)
+            params.append(telescope_parameters.Nfacet)
+            nfacet_range = range(min_number_nfacets, max_number_nfacets+1)
         else:
-            params = (telescope_parameters.Tsnap,)
-            nfacet_range = [1] # Note we will always return Nfacet = 1 as optimal now. Bit of a hack.
+            nfacet_range = [telescope_parameters.Nfacet]
+        if isinstance(telescope_parameters.Tsnap, Symbol):
+            params.append(telescope_parameters.Tsnap)
         expression_lam = Implementation.cheap_lambdify_curry(params, expression_original)
 
         # Loop over the different integer values of NFacet
+        results = []
+        warned = False
         for nfacets in nfacet_range:
             # Warn if large values of nfacets are reached, as it may indicate an error and take long!
             if (nfacets > 20) and not warned:
@@ -402,35 +406,37 @@ class Implementation:
                               '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
                 warned = True
 
-            i = nfacets-1  # zero-based index
             if verbose:
                 print ('Evaluating Nfacets = %d' % nfacets)
 
             # Find optimal Tsnap for this number of facets, obtaining result in "result"
             if isinstance(telescope_parameters.Nfacet, Symbol):
-                expression_lam2 = expression_lam(nfacets)
+                expr = expression_lam(nfacets)
             else:
-                expression_lam2 = expression_lam
-            result = Implementation.minimize_by_Tsnap_lambdified(expression_lam2,
-                                                                 telescope_parameters,
-                                                                 verbose=verbose)
-            result_array.append(float(result['value']))
-            optimal_Tsnap_array.append(result[telescope_parameters.Tsnap])
-            result_per_nfacet[nfacets] = result_array[i]
-            if nfacets >= 3: # Continue to at least Nfacet==3 as there can be a local increase between nfacet=1 and 2
-                if result_array[i] >= result_array[i-1]:
+                expr = expression_lam
+            if isinstance(telescope_parameters.Tsnap, Symbol):
+                result = Implementation.minimize_by_Tsnap_lambdified(expr,
+                                                                     telescope_parameters,
+                                                                     verbose=verbose)
+            else:
+                result = (telescope_parameters.Tsnap, float(expr))
+            results.append((nfacets, *result))
+
+            # Continue to at least Nfacet==3 as there can be a local
+            # increase between nfacet=1 and 2
+            if len(results) >= 3:
+                if results[-1][2] >= results[-2][2]:
                     if verbose:
                         print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
                               % nfacets)
                     break
 
-        index = np.argmin(np.array(result_array))
-        nfacets = index + 1  # Because we use zero-based indexing, starting with 1 facet
+        # Return parameters with lowest value
+        nfacets, tsnap, val = results[np.argmin(np.array(results)[:,2])]
         if verbose:
             print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
-                   % (nfacets, optimal_Tsnap_array[index], expr_to_minimize_string, result_array[index]))
-
-        return (optimal_Tsnap_array[index], nfacets)
+                   % (nfacets, tsnap, expr_to_minimize_string, val))
+        return (tsnap, nfacets)
 
     @staticmethod
     def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
@@ -439,7 +445,7 @@ class Implementation:
         @param lam: The lambda expression (a function of Tsnap)
         @param telescope_parameters: The telescope parameters
         @param verbose:
-        @return: The optimal Tsnap value, along with the optimal value (as a dict)
+        @return: The optimal Tsnap value, along with the optimal value (as a pair)
         """
         assert telescope_parameters.pipeline in Pipelines.imaging
 
@@ -453,4 +459,4 @@ class Implementation:
         if verbose:
             print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
                   (Tsnap_optimal, value_optimal / c.peta))
-        return {telescope_parameters.Tsnap : Tsnap_optimal, 'value' : value_optimal}  # Replace Tsnap with optimal value
+        return (Tsnap_optimal, value_optimal)  # Replace Tsnap with optimal value
