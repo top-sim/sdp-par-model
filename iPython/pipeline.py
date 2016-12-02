@@ -47,6 +47,13 @@ class Pipeline:
                 'bmax': lambda i: tp.Bmax_bins[i],
                 'size': lambda i: tp.Nbl_full * tp.frac_bins[i]
             })
+        if tp.NAProducts == 'all':
+            self.kernelBaselines = self.binBaselines
+        else:
+            self.kernelBaselines = self.allBaselines.split(1, props={
+                'bmax': tp.Bmax,
+                'size': tp.NAProducts
+            })
 
         # Make time domain
         tobs = tp.Tobs / nerf_time
@@ -86,6 +93,7 @@ class Pipeline:
         self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward / nerf_freq)
         self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict / nerf_freq)
         self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward / nerf_freq)
+        self.cleanFreqs = self.allFreqs.split(tp.Nf_identify / nerf_freq)
 
         # Make beam domain
         self.beam = Domain('Beam', priority=10)
@@ -370,8 +378,8 @@ class Pipeline:
         # Degrid
         gcf = Flow(
             Products.Degridding_Kernel_Update,
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.kernelPredTime, self.gcfPredFreqs, self.binBaselines],
+            [self.eachBeam, self.eachLoop, predictFacets, self.xyPolar,
+             self.kernelPredTime, self.gcfPredFreqs, self.kernelBaselines],
             costs = self._costs_from_product(Products.Degridding_Kernel_Update),
             deps = [uvw], cluster='predict'
         )
@@ -452,8 +460,8 @@ class Pipeline:
 
         gcf = Flow(
             Products.Gridding_Kernel_Update,
-            [self.eachBeam, self.eachLoop, self.xyPolar,
-             self.kernelBackTime, self.gcfBackFreqs, self.binBaselines],
+            [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+             self.kernelBackTime, self.gcfBackFreqs, self.kernelBaselines],
             costs = self._costs_from_product(Products.Gridding_Kernel_Update),
             deps = [uvw], cluster = 'backward',
         )
@@ -497,7 +505,7 @@ class Pipeline:
 
         identify =  Flow(
             Products.Identify_Component,
-            [self.eachBeam, self.eachLoop],
+            [self.eachBeam, self.eachLoop, self.cleanFreqs],
             costs = self._costs_from_product(Products.Identify_Component),
             deps = [spectral_fit],
             cluster = 'deconvolve'
@@ -505,7 +513,7 @@ class Pipeline:
 
         subtract =  Flow(
             Products.Subtract_Image_Component,
-            [self.eachBeam, self.eachLoop],
+            [self.eachBeam, self.eachLoop, self.cleanFreqs],
             costs = self._costs_from_product(Products.Subtract_Image_Component),
             deps = [identify],
             cluster = 'deconvolve'
@@ -841,11 +849,11 @@ class PipelineTestsImaging(PipelineTestsBase):
             self.assertAlmostEqual(
                 float(pip_fnerf.recursiveCost('compute')/self.df.tp.Tobs),
                 float(self.df.tp.Rflop/nerf),
-                delta=float(self.df.tp.Rflop/nerf/10))
+                delta=float(self.df.tp.Rflop/nerf/4))
 
         # However note that this can be off substantially both due to
         # "constant" costs (e.g. cleaning) as well as rounding
-        # issues. Therefore we only check that it stays within 10%,
+        # issues. Therefore we only check that it stays within 25%,
         # and explicitly disregard a few below. This might need review
         # in future.
         _test(self.df.tp.Nmajortotal, 'nerf_loop')
