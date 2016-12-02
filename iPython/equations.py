@@ -676,13 +676,13 @@ class Equations:
             # The following two equations correspond to Eq. 35
             o.set_product(Products.Gridding_Kernel_Update,
                 T = BLDep(b, o.Tkernel_backward(b)),
-                N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b)),
-                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b), 2) / o.Tkernel_backward(b)),
+                N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b) * o.Nfacet**2),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b)**2, 2) / o.Tkernel_backward(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
             o.set_product(Products.Degridding_Kernel_Update,
                 T = BLDep(b,o.Tkernel_predict(b)),
-                N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b)),
-                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b), 2) / o.Tkernel_predict(b)),
+                N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet_predict**2),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b)**2, 2) / o.Tkernel_predict(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 
     @staticmethod
@@ -761,4 +761,5 @@ class Equations:
         # TODO: re-implement this equation within a better description
         # of where kernels will be stored etc.  (allowing storage of a
         # full observation while simultaneously capturing the next)
-        o.Mw_cache = (o.Ngw_predict(o.Bmax) ** 3) * (o.Qgcf ** 3) * o.Ncbytes * o.Nbeam * o.Nf_vis_predict(o.Bmax)
+        o.Mw_cache = (o.Ngw_predict(o.Bmax) ** 3) * (o.Qgcf ** 3) * o.Mcpx * o.Nbeam * \
+                     o.Nsubbands * o.Nfacet ** 2
