@@ -9,7 +9,7 @@ import unittest
 
 class Pipeline:
 
-    def __init__(self, tp):
+    def __init__(self, tp, nerf_time=1, nerf_freq=1, nerf_loop=1):
 
         # Set telescope parameters
         self.tp = tp
@@ -18,10 +18,10 @@ class Pipeline:
         self.Mdbl = 8
         self.Mcpx = self.Mdbl * 2
 
-        self._create_domains()
+        self._create_domains(nerf_time, nerf_freq, nerf_loop)
         self._create_dataflow()
 
-    def _create_domains(self):
+    def _create_domains(self, nerf_time=1, nerf_freq=1, nerf_loop=1):
         tp = self.tp
 
         # Make baseline domain
@@ -41,40 +41,41 @@ class Pipeline:
             })
 
         # Make time domain
+        tobs = tp.Tobs / nerf_time
         self.time = Domain('Time', 's', priority=7)
-        self.obsTime = self.time.regions(tp.Tobs)
-        self.dumpTime = self.obsTime.split(tp.Tobs / tp.Tint_min)
-        self.snapTime = self.obsTime.split(tp.Tobs / tp.Tsnap)
+        self.obsTime = self.time.regions(tobs)
+        self.dumpTime = self.obsTime.split(tobs / tp.Tint_min)
+        self.snapTime = self.obsTime.split(tobs / tp.Tsnap)
         self.kernelPredTime = self.obsTime.split(
-            lambda rbox: tp.Tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
+            lambda rbox: tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
         self.kernelBackTime = self.obsTime.split(
-            lambda rbox: tp.Tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
+            lambda rbox: tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
         self.solveTime = self.snapTime
         if tp.pipeline == Pipelines.ICAL:
-            self.solveTime = self.obsTime.split(tp.Tobs / tp.tICAL_G)
+            self.solveTime = self.obsTime.split(tobs / tp.tICAL_G)
         elif tp.pipeline == Pipelines.RCAL:
-            self.solveTime = self.obsTime.split(tp.Tobs / tp.tRCAL_G)
+            self.solveTime = self.obsTime.split(tobs / tp.tRCAL_G)
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch', priority=8)
-        self.allFreqs = self.frequency.regions(tp.Nf_max)
-        self.eachFreq = self.allFreqs.split(tp.Nf_max)
-        self.visFreq = self.allFreqs.split(tp.Nf_vis)
-        self.outFreqs = self.allFreqs.split(tp.Nf_out)
-        self.islandFreqs = self.allFreqs.split(self.Nisland)
-        self.granFreqs = self.allFreqs.split(tp.Nf_min_gran)
+        self.allFreqs = self.frequency.regions(tp.Nf_max / nerf_freq)
+        self.eachFreq = self.allFreqs.split(tp.Nf_max / nerf_freq)
+        self.visFreq = self.allFreqs.split(tp.Nf_vis / nerf_freq)
+        self.outFreqs = self.allFreqs.split(tp.Nf_out / nerf_freq)
+        self.islandFreqs = self.allFreqs.split(self.Nisland / nerf_freq)
+        self.granFreqs = self.allFreqs.split(tp.Nf_min_gran / nerf_freq)
         self.predFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')))
+            lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')) / nerf_freq)
         self.backFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_vis_backward(rbox(self.baseline,'bmax')))
+            lambda rbox: tp.Nf_vis_backward(rbox(self.baseline,'bmax')) / nerf_freq)
         self.gcfPredFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_gcf_predict(rbox(self.baseline,'bmax')))
+            lambda rbox: tp.Nf_gcf_predict(rbox(self.baseline,'bmax')) / nerf_freq)
         self.gcfBackFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_gcf_backward(rbox(self.baseline,'bmax')))
-        self.fftPredFreqs = self.allFreqs.split(tp.Nf_FFT_predict)
-        self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward)
-        self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict)
-        self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward)
+            lambda rbox: tp.Nf_gcf_backward(rbox(self.baseline,'bmax')) / nerf_freq)
+        self.fftPredFreqs = self.allFreqs.split(tp.Nf_FFT_predict / nerf_freq)
+        self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward / nerf_freq)
+        self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict / nerf_freq)
+        self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward / nerf_freq)
 
         # Make beam domain
         self.beam = Domain('Beam', priority=10)
@@ -90,10 +91,10 @@ class Pipeline:
 
         # Make (major) loop domain
         self.loop = Domain('Major Loop', priority=9)
-        self.allLoops = self.loop.regions(tp.Nmajortotal)
-        self.eachLoop = self.allLoops.split(tp.Nmajortotal)
-        self.allSelfCals = self.loop.regions(tp.Nselfcal + 1)
-        self.eachSelfCal = self.allSelfCals.split(tp.Nselfcal + 1)
+        self.allLoops = self.loop.regions(tp.Nmajortotal / nerf_loop)
+        self.eachLoop = self.allLoops.split(tp.Nmajortotal / nerf_loop)
+        self.allSelfCals = self.loop.regions(Max(1, (tp.Nselfcal + 1) / nerf_loop))
+        self.eachSelfCal = self.allSelfCals.split(Max(1, (tp.Nselfcal + 1) / nerf_loop))
 
         # Make facet domain
         self.facet = Domain('Facet', priority=6)
@@ -599,13 +600,15 @@ class PipelineTestsBase(unittest.TestCase):
 
     def _loadTelParams(self, pipeline):
 
+        # A hard-coded example configuration. Testing all of them
+        # would take way too long.
         cfg = PipelineConfig(telescope=Telescopes.SKA1_Mid,
                              band=Bands.Mid1,
                              pipeline=pipeline,
                              max_baseline=150000,
                              Nf_max='default',
                              blcoal=True,
-                             on_the_fly=True,
+                             on_the_fly=False,
                              scale_predict_by_facet=True)
         adjusts = {
             'Nfacet': 8,
@@ -613,7 +616,7 @@ class PipelineTestsBase(unittest.TestCase):
         }
 
         tp = imp.calc_tel_params(cfg, adjusts=adjusts)
-        self.df = Pipeline(tp)
+        return Pipeline(tp)
 
     def _assertEqualProduct(self, flow, product):
         """Checks whether the given flow has the same compute and transfer
@@ -671,19 +674,6 @@ class PipelineTestsBase(unittest.TestCase):
                         list(map(lambda n_c: n_c[0], productsSorted)))
             )
 
-    def _checkPipelineCostSum(self, flow):
-
-        # Sum cost over all flows
-        fcost = 0
-        for flow in flow.recursiveDeps():
-            fcost += float(flow.cost('compute')/self.df.tp.Tobs)
-
-        # Finally check sum
-        self.assertAlmostEqual(
-            float(fcost),
-            float(self.df.tp.Rflop),
-            delta = self.df.tp.Rflop/1e10)
-
 class PipelineTestsImaging(PipelineTestsBase):
     """Tests the data flows constructed from the parametric model for
     consistency. This means we both sanity-check the construction as
@@ -693,7 +683,7 @@ class PipelineTestsImaging(PipelineTestsBase):
     """
 
     def setUp(self):
-        self._loadTelParams(Pipelines.ICAL)
+        self.df = self._loadTelParams(Pipelines.ICAL)
 
     def test_baseline_domain(self):
 
@@ -780,8 +770,16 @@ class PipelineTestsImaging(PipelineTestsBase):
         self._assertPipelineComplete(self.df.create_imaging())
 
         # Sum should match no matter whether we merge or not
-        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=False))
-        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=True))
+        self.assertAlmostEqual(
+            float(self.df.create_pipeline(performMerges=False)
+                  .recursiveCost('compute')/self.df.tp.Tobs),
+            float(self.df.tp.Rflop),
+            delta=float(self.df.tp.Rflop/1e10))
+        self.assertAlmostEqual(
+            float(self.df.create_pipeline(performMerges=False)
+                  .recursiveCost('compute')/self.df.tp.Tobs),
+            float(self.df.tp.Rflop),
+            delta=float(self.df.tp.Rflop/1e10))
 
     def test_dot(self):
 
@@ -805,29 +803,52 @@ class PipelineTestsImaging(PipelineTestsBase):
             self.assertEqual(dep.the(baseline_count_prop),
                              self.df.binBaselines.the(baseline_count_prop))
 
+    def test_nerf(self):
+
+        # Nerfing domains should result in a straightforward cost
+        # reduction relative to the vanilla predictions of the
+        # parametric model.
+        def _test(nerf, name):
+            pip_fnerf = Pipeline(self.df.tp, **{name:nerf}).create_pipeline()
+            self.assertAlmostEqual(
+                float(pip_fnerf.recursiveCost('compute')/self.df.tp.Tobs),
+                float(self.df.tp.Rflop/nerf),
+                delta=float(self.df.tp.Rflop/nerf/10))
+
+        # However note that this can be off substantially both due to
+        # "constant" costs (e.g. cleaning) as well as rounding
+        # issues. Therefore we only check that it stays within 10%,
+        # and explicitly disregard a few below. This might need review
+        # in future.
+        _test(self.df.tp.Nmajortotal, 'nerf_loop')
+        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.RCAL, Pipelines.DPrepC]:
+            _test(self.df.tp.Nf_min, 'nerf_freq')
+        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.DPrepC]:
+            _test(self.df.tp.Tobs / self.df.tp.Tsnap, 'nerf_time')
+
 class PipelineTestsRCAL(PipelineTestsImaging):
     def setUp(self):
-        self._loadTelParams(Pipelines.RCAL)
+        self.df = self._loadTelParams(Pipelines.RCAL)
 
 class PipelineTestsFastImg(PipelineTestsImaging):
     def setUp(self):
-        self._loadTelParams(Pipelines.Fast_Img)
+        self.df = self._loadTelParams(Pipelines.Fast_Img)
 
 class PipelineTestsDPrepA(PipelineTestsImaging):
     def setUp(self):
-        self._loadTelParams(Pipelines.DPrepA)
+        self.df = self._loadTelParams(Pipelines.DPrepA)
 
 class PipelineTestsDPrepA_Image(PipelineTestsImaging):
     def setUp(self):
-        self._loadTelParams(Pipelines.DPrepA_Image)
+        self.df = self._loadTelParams(Pipelines.DPrepA_Image)
 
 class PipelineTestsDPrepC(PipelineTestsImaging):
     def setUp(self):
-        self._loadTelParams(Pipelines.DPrepC)
+        self.df = self._loadTelParams(Pipelines.DPrepC)
 
 class PipelineTestsIngest(PipelineTestsBase):
     def setUp(self):
-        self._loadTelParams(Pipelines.Ingest)
+        self.df = self._loadTelParams(Pipelines.Ingest)
 
     def test_ingest(self):
 
@@ -841,8 +862,16 @@ class PipelineTestsIngest(PipelineTestsBase):
         self.assertEqual(self.df.tp.pipeline, Pipelines.Ingest)
         self._assertPipelineComplete(self.df.create_ingest())
 
-        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=False))
-        self._checkPipelineCostSum(self.df.create_pipeline(performMerges=True))
+        self.assertAlmostEqual(
+            float(self.df.create_pipeline(performMerges=False)
+                  .recursiveCost('compute')/self.df.tp.Tobs),
+            float(self.df.tp.Rflop),
+            delta=float(self.df.tp.Rflop/1e10))
+        self.assertAlmostEqual(
+            float(self.df.create_pipeline(performMerges=True)
+                  .recursiveCost('compute')/self.df.tp.Tobs),
+            float(self.df.tp.Rflop),
+            delta=float(self.df.tp.Rflop/1e10))
 
 if __name__ == '__main__':
     unittest.main()
