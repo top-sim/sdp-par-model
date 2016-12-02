@@ -14,6 +14,8 @@ import matplotlib.pylab as pylab
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import warnings
+import csv
+import re
 
 from parameter_definitions import *  # definitions of variables, primary telescope parameters
 from parameter_definitions import Constants as c
@@ -21,8 +23,6 @@ from equations import *  # formulae that derive secondary telescope-specific par
 from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
 from implementation import PipelineConfig
 from parameter_definitions import ParameterContainer
-
-import csv
 
 class SkaIPythonAPI(api):
     """
@@ -119,8 +119,8 @@ class SkaIPythonAPI(api):
         ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
 
         ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
-        ('Total Compute Requirement',  'PetaFLOPS',  True,    True,  lambda tp: tp.Rflop/c.peta,      ),
-        ('-> ',                        'PetaFLOPS',  True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta), ),
+        ('Total Compute Requirement',  'PetaFLOP/s', True,    True,  lambda tp: tp.Rflop/c.peta,      ),
+        ('-> ',                        'PetaFLOP/s', True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta), ),
     ]
 
     @staticmethod
@@ -958,7 +958,9 @@ class SkaIPythonAPI(api):
             return results
 
     @staticmethod
-    def compare_csv(result_file, ref_file, ignore_modifiers=True, export_html=''):
+    def compare_csv(result_file, ref_file,
+                    ignore_modifiers=True, ignore_units=True,
+                    export_html=''):
         """
         Read and compare two CSV files with telescope parameters
 
@@ -971,11 +973,13 @@ class SkaIPythonAPI(api):
         results = SkaIPythonAPI._read_csv(result_file)
         ref = dict(SkaIPythonAPI._read_csv(ref_file))
 
-        def strip_modifiers(head):
-            if ignore_modifiers:
-                p = head.find(' [')
-                if p != -1: return head[:p]
+        # Strip modifiers from rows
+        def strip_modifiers(head, do_it=True):
+            if do_it:
+                return re.sub('\[[^\]]*\]', '', head)
             return head
+        ref = { strip_modifiers(name, ignore_units): row
+                for (name, row) in ref.items() }
 
         # Headings
         s = '<table><tr><td></td>'
@@ -991,13 +995,13 @@ class SkaIPythonAPI(api):
             s += '<tr><td>%s</td>' % name
 
             # Locate reference results
-            refRow = ref.get(name, [])
-            refRow = map(lambda h_v: (strip_modifiers(h_v[0]), h_v[1]), refRow)
+            refRow = ref.get(strip_modifiers(name, ignore_units), [])
+            refRow = map(lambda h_v: (strip_modifiers(h_v[0], ignore_modifiers), h_v[1]), refRow)
             refRow = dict(refRow)
 
             # Loop through values
             for head, val in row:
-                head = strip_modifiers(head)
+                head = strip_modifiers(head, ignore_modifiers)
 
                 # Number?
                 try:
