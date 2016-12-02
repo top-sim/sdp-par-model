@@ -21,6 +21,14 @@ class Pipeline:
         self._create_domains(nerf_time, nerf_freq, nerf_loop)
         self._create_dataflow()
 
+    def _to_domainexpr(self, expr):
+        if isinstance(expr, BLDep):
+            return DomainExpr(lambda rb:
+                expr(b = rb.eval(self.baseline, 'bmax'),
+                     bcount = rb.eval(self.baseline, 'size')))
+        else:
+            return DomainExpr(expr)
+
     def _create_domains(self, nerf_time=1, nerf_freq=1, nerf_loop=1):
         tp = self.tp
 
@@ -47,9 +55,9 @@ class Pipeline:
         self.dumpTime = self.obsTime.split(tobs / tp.Tint_min)
         self.snapTime = self.obsTime.split(tobs / tp.Tsnap)
         self.kernelPredTime = self.obsTime.split(
-            lambda rbox: tobs / tp.Tkernel_predict(rbox(self.baseline,'bmax')))
+            tobs / self._to_domainexpr(tp.Tkernel_predict))
         self.kernelBackTime = self.obsTime.split(
-            lambda rbox: tobs / tp.Tkernel_backward(rbox(self.baseline,'bmax')))
+            tobs / self._to_domainexpr(tp.Tkernel_backward))
         if tp.pipeline == Pipelines.ICAL:
             self.Tsolve = tp.tICAL_G
         elif tp.pipeline == Pipelines.RCAL:
@@ -67,13 +75,13 @@ class Pipeline:
         self.islandFreqs = self.allFreqs.split(self.Nisland / nerf_freq)
         self.granFreqs = self.allFreqs.split(tp.Nf_min_gran / nerf_freq)
         self.predFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_vis_predict(rbox(self.baseline,'bmax')) / nerf_freq)
+            self._to_domainexpr(tp.Nf_vis_predict) / nerf_freq)
         self.backFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_vis_backward(rbox(self.baseline,'bmax')) / nerf_freq)
+            self._to_domainexpr(tp.Nf_vis_backward) / nerf_freq)
         self.gcfPredFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_gcf_predict(rbox(self.baseline,'bmax')) / nerf_freq)
+            self._to_domainexpr(tp.Nf_gcf_predict) / nerf_freq)
         self.gcfBackFreqs = self.allFreqs.split(
-            lambda rbox: tp.Nf_gcf_backward(rbox(self.baseline,'bmax')) / nerf_freq)
+            self._to_domainexpr(tp.Nf_gcf_backward) / nerf_freq)
         self.fftPredFreqs = self.allFreqs.split(tp.Nf_FFT_predict / nerf_freq)
         self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward / nerf_freq)
         self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict / nerf_freq)
@@ -125,17 +133,11 @@ class Pipeline:
         """Utility transfer cost function for visibility data. Multiplies out
         frequency, baselines, polarisations and time given a dump time"""
 
-        # Dump time might depend on baseline...
-        if isinstance(Tdump, Lambda):
-            Tdump_ = lambda rbox: Tdump(rbox(self.baseline, 'bmax'))
-        else:
-            Tdump_ = lambda rbox: Tdump
-        return (lambda rbox:
-          self.tp.Mvis * rbox(self.frequency, 'size')
-                       * rbox(self.baseline, 'size')
-                       * rbox(self.polar, 'size')
-                       * rbox(self.time, 'size')
-                       / Tdump_(rbox))
+        return (self.tp.Mvis * self.frequency('size')
+                             * self.baseline('size')
+                             * self.polar('size')
+                             * self.time('size')
+                             / self._to_domainexpr(Tdump))
 
     def _create_dataflow(self):
         """ Creates common data flow nodes """
@@ -172,7 +174,7 @@ class Pipeline:
             costs = {'transfer': self._transfer_cost_vis(self.tp.Tint_min)}
         )
 
-    def _cost_from_product(self, rbox, product, cost):
+    def _cost_from_product(self, product, cost):
 
         # Get time field
         product_costs = self.tp.products.get(product, {})
@@ -182,15 +184,15 @@ class Pipeline:
         if cost + "_task" in product_costs:
             task_cost = product_costs[cost + "_task"]
             # Pass baseline length, multiply by number of baselines
-            return unbldep(t * task_cost, rbox(self.baseline,'bmax'), rbox(self.baseline,SIZE_PROP))
+            return self._to_domainexpr(t * task_cost)
         else:
             # Otherwise simply return the value as-is
             return t * product_costs.get(cost, 0) / product_costs.get("N", 1)
 
     def _costs_from_product(self, product):
         return {
-            'compute': lambda rbox: self._cost_from_product(rbox, product, 'Rflop'),
-            'transfer': lambda rbox: self._cost_from_product(rbox, product, 'Rout'),
+            'compute': self._cost_from_product(product, 'Rflop'),
+            'transfer': self._cost_from_product(product, 'Rout'),
         }
 
     def create_ingest(self):
@@ -718,7 +720,7 @@ class PipelineTestsImaging(PipelineTestsBase):
         # Check that size of baseline region sets sums up to all
         # baselines. This is a fairly important requirement for the
         # math to work out...
-        def blSize(rb): return rb(self.df.baseline, 'size')
+        blSize = self.df.baseline('size')
         self.assertEqual(self.df.allBaselines.sum(blSize),
                          self.df.allBaselines.size)
         self.assertAlmostEqual(self.df.binBaselines.sum(blSize),
@@ -726,27 +728,26 @@ class PipelineTestsImaging(PipelineTestsBase):
 
     def test_time_domain(self):
 
-        def timeSize(rb): return rb(self.df.time, 'size')
-        def ntimeSize(rb): return -timeSize(rb)
+        timeSize = self.df.time('size')
         tp = self.df.tp
 
         # Dump time and snap time
-        self.assertAlmostEqual(self.df.dumpTime.max(timeSize),
-                               self.df.tp.Tint_min)
+        self.assertAlmostEqual(float(self.df.dumpTime.max(timeSize)),
+                               tp.Tint_min)
         self.assertAlmostEqual(self.df.snapTime.max(timeSize),
-                               self.df.tp.Tsnap)
+                               tp.Tsnap)
 
         # Kernel times can be BL-dependent
         rboxes = RegionBoxes([self.df.binBaselines, self.df.kernelPredTime])
         self.assertAlmostEqual(rboxes.max(timeSize),
                                tp.Tkernel_predict(tp.Bmax_bins[0]))
-        self.assertAlmostEqual(-rboxes.max(ntimeSize),
+        self.assertAlmostEqual(-rboxes.max(-timeSize),
                                tp.Tkernel_predict(tp.Bmax_bins[-1]))
 
         rboxes = RegionBoxes([self.df.binBaselines, self.df.kernelBackTime])
         self.assertAlmostEqual(rboxes.max(timeSize),
                                tp.Tkernel_backward(tp.Bmax_bins[0]))
-        self.assertAlmostEqual(-rboxes.max(ntimeSize),
+        self.assertAlmostEqual(-rboxes.max(-timeSize),
                                tp.Tkernel_backward(tp.Bmax_bins[-1]))
 
     def test_flag(self):
@@ -826,8 +827,7 @@ class PipelineTestsImaging(PipelineTestsBase):
         imaging = self.df.create_imaging()
         for product in [Products.Grid, Products.Degrid]:
             dep = imaging.getDep(product)
-            def baseline_count_prop(rb):
-                return rb(self.df.baseline, 'count')
+            baseline_count_prop = self.df.baseline('count')
             self.assertEqual(dep.the(baseline_count_prop),
                              self.df.binBaselines.the(baseline_count_prop))
 

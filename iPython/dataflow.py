@@ -50,6 +50,39 @@ class Domain:
         """Make a new unsplit region set for the domain."""
         return Regions(self, size, 1, props)
 
+    def __call__(self, prop):
+        return DomainExpr(lambda rb: rb.eval(self, prop))
+
+class DomainExpr:
+    """ An expression depending on domain properties. """
+
+    def __init__(self, expr):
+        if isinstance(expr, DomainExpr):
+            self.expr = expr.expr
+        elif callable(expr) and not isinstance(expr, Expr):
+            self.expr = expr
+        else:
+            self.expr = lambda rb: expr
+
+    def eval(self, rb):
+        return self.expr(rb)
+
+    # DomainExpr objects can be combined using simple arithmetic
+    def __mul__(self, other):
+        return DomainExpr(lambda rb: self.eval(rb) * DomainExpr(other).eval(rb))
+    def __rmul__(self, other):
+        return DomainExpr(lambda rb: DomainExpr(other).eval(rb) * self.eval(rb))
+    def __truediv__(self, other):
+        return DomainExpr(lambda rb: self.eval(rb) / DomainExpr(other).eval(rb))
+    def __rtruediv__(self, other):
+        return DomainExpr(lambda rb: DomainExpr(other).eval(rb) / self.eval(rb))
+    def __add__(self, other):
+        return DomainExpr(lambda rb: self.eval(rb) + DomainExpr(other).eval(rb))
+    def __radd__(self, other):
+        return DomainExpr(lambda rb: DomainExpr(other).eval(rb) + self.eval(rb))
+    def __neg__(self):
+        return DomainExpr(lambda rb: -self.eval(rb))
+
 class Regions:
     """A set of regions of a domain."""
 
@@ -59,7 +92,7 @@ class Regions:
 
         self.domain = domain
         self.size = size
-        self.count = mk_lambda(count)
+        self._count = DomainExpr(count)
         self.props = props
 
     def __repr__(self):
@@ -67,8 +100,11 @@ class Regions:
 
     def split(self, split, props = {}):
         return Regions(self.domain, self.size,
-                       lambda rb: self.count(rb) * mk_lambda(split)(rb),
+                       self._count * DomainExpr(split),
                        props)
+
+    def count(self, rb):
+        return self._count.eval(rb)
 
     def constantSpacing(self):
         """Returns whether the regions have constant spacing. This allows us
@@ -94,7 +130,7 @@ class Regions:
         reg = {
             k: v
             for k, v in self.props.items()
-            if not callable(v) or isinstance(v, Lambda)
+            if not (callable(v) or isinstance(v, DomainExpr)) or isinstance(v, Lambda)
         }
 
         # The split degree is one of the few things we know about
@@ -120,7 +156,7 @@ class Regions:
         # enumerated - they are allowed to depend on the concrete
         # region..
         reg = {
-            k: mk_lambda(v)(index)
+            k: DomainExpr(mk_lambda(v)(index)).eval(rb)
             for k, v in self.props.items()
         }
 
@@ -223,7 +259,7 @@ class RegionBoxBase:
         """Returns currently enumerated domains. For internal use."""
 
     @abstractmethod
-    def __call__(self, domain, prop):
+    def eval(self, domain, prop):
         """
         Queries a domain property of this box. Might raise an
         "NeedRegionEnumerationException" if the requested property is
@@ -253,17 +289,17 @@ class RegionBoxBase:
         regions are actually equal.
         """
 
+    def the(self, prop):
+        """Return the value of the given property for this region box"""
+        return DomainExpr(prop).eval(self)
+
     def count(self):
         count = 1
         # Multiply out all non-enumerated (!) regions
         for dom in self.domains():
             if not dom in self.enumDomains():
-                count *= self(dom, COUNT_PROP)
+                count *= self.eval(dom,COUNT_PROP)
         return count
-
-    def the(self, prop):
-        """Return the value of the given property for this region box"""
-        return mk_lambda(prop)(self)
 
     def mults(lbox, rbox, verbose):
         """Determines multiplicity of region overlaps between two boxes. This
@@ -282,8 +318,8 @@ class RegionBoxBase:
         for dom in lbox.domains():
 
             # Get left box properties
-            lsize = lbox(dom, SIZE_PROP)
-            lix, loff, lcount = lbox(dom, SPLIT_PROP)
+            lsize = lbox.eval(dom, SIZE_PROP)
+            lix, loff, lcount = lbox.eval(dom, SPLIT_PROP)
 
             # Domain not existent on the right? Then we assume that
             # all from the left apply.
@@ -292,8 +328,8 @@ class RegionBoxBase:
                 continue
 
             # Get box properties
-            rsize = rbox(dom, SIZE_PROP)
-            rix, roff, rcount = rbox(dom, SPLIT_PROP)
+            rsize = rbox.eval(dom, SIZE_PROP)
+            rix, roff, rcount = rbox.eval(dom, SPLIT_PROP)
 
             if verbose:
                 print('%s Left off=%d size=%d index=%d count=%d' %
@@ -334,7 +370,7 @@ class RegionBoxBase:
 
         # Apply property to this region box, collect symbols
         self.symbols = {}
-        expr = prop(self)
+        expr = DomainExpr(prop).eval(self)
 
         # Now multiply out regions where we don't care about the
         # index, but generate a sympy Sum term for when we are
@@ -348,14 +384,14 @@ class RegionBoxBase:
         # symbols here...
         for dom in self.domains():
             if not dom in self.symbols and not dom in self.enumDomains():
-                expr = self(dom, COUNT_PROP) * expr
+                expr = self.eval(dom, COUNT_PROP) * expr
         sums = []
         sumSymbols = []
         for dom in self.domains():
             if dom in self.symbols:
                 sumSymbols.append(self.symbols[dom])
                 sums.append((self.symbols[dom],
-                             0, self(dom, COUNT_PROP) - 1))
+                             0, self.eval(dom, COUNT_PROP) - 1))
 
         # Do we need to formulate a sum? If not (common case), we can
         # just return "expr" here.
@@ -399,40 +435,40 @@ class RegionBoxBase:
             # all-to-all. If we find that the two boxes don't
             # match, we conclude that this box combination is
             # invalid and bail out completely.
-            loff = lbox(dom, OFFSET_PROP)
-            roff = rbox(dom, OFFSET_PROP)
+            loff = lbox.eval(dom, OFFSET_PROP)
+            roff = rbox.eval(dom, OFFSET_PROP)
             if loff < roff:
-                if roff >= loff + lbox(dom, SIZE_PROP):
+                if roff >= loff + lbox.eval(dom, SIZE_PROP):
                     return 0
             else:
-                if loff >= roff + rbox(dom, SIZE_PROP):
+                if loff >= roff + rbox.eval(dom, SIZE_PROP):
                     return 0
             return 1
         # Enumerated on just one side? Assuming equal spacing
         # on the other side, calculate how many region starts
         # on the other side fall into the current region.
         if dom in lbox.enumDomains():
-            loff = lbox(dom, OFFSET_PROP)
-            lsize = lbox(dom, SIZE_PROP)
-            rsize = rbox(dom, SIZE_PROP)
-            rcount = rbox(dom, COUNT_PROP)
+            loff = lbox.eval(dom, OFFSET_PROP)
+            lsize = lbox.eval(dom, SIZE_PROP)
+            rsize = rbox.eval(dom, SIZE_PROP)
+            rcount = rbox.eval(dom, COUNT_PROP)
             if loff >= rsize * rcount: return 0
             def bound(x): return min(rcount-1, max(0, int(x)))
             return 1 + bound((loff + lsize - 1) / rsize) - bound(loff / rsize)
         if dom in rbox.enumDomains():
-            lsize = lbox(dom, SIZE_PROP)
-            lcount = lbox(dom, COUNT_PROP)
-            roff = rbox(dom, OFFSET_PROP)
-            rsize = rbox(dom, SIZE_PROP)
+            lsize = lbox.eval(dom, SIZE_PROP)
+            lcount = lbox.eval(dom, COUNT_PROP)
+            roff = rbox.eval(dom, OFFSET_PROP)
+            rsize = rbox.eval(dom, SIZE_PROP)
             if roff >= lsize * lcount: return 0
             def bound(x): return min(lcount-1, max(0, int(x)))
             return 1 + bound((roff + rsize - 1) / lsize) - bound(roff / lsize)
         # Otherwise, the higher granularity gives the number
         # of edges.
-        lcount = lbox(dom, COUNT_PROP)
-        rcount = rbox(dom, COUNT_PROP)
-        lsize = lbox(dom, SIZE_PROP)
-        rsize = rbox(dom, SIZE_PROP)
+        lcount = lbox.eval(dom, COUNT_PROP)
+        rcount = rbox.eval(dom, COUNT_PROP)
+        lsize = lbox.eval(dom, SIZE_PROP)
+        rsize = rbox.eval(dom, SIZE_PROP)
         import math
         if lcount * lsize > rcount * rsize:
             lcount = int((rcount * rsize + lsize - 1) / lsize)
@@ -460,12 +496,12 @@ class RegionBoxBase:
         # un-enumerated)
         for dom in leftDoms:
             if not dom in lbox.enumDomains():
-                mult *= lbox(dom, COUNT_PROP)
-                if verbose: print("left", dom, lbox(dom, COUNT_PROP))
+                mult *= lbox.eval(dom, COUNT_PROP)
+                if verbose: print("left", dom, lbox.eval(dom, COUNT_PROP))
         for dom in rightDoms:
             if not dom in rbox.enumDomains():
-                mult *= rbox(dom, COUNT_PROP)
-                if verbose: print("right", dom, rbox(dom, COUNT_PROP))
+                mult *= rbox.eval(dom, COUNT_PROP)
+                if verbose: print("right", dom, rbox.eval(dom, COUNT_PROP))
 
         if verbose: print("-> mult:", mult)
 
@@ -638,7 +674,7 @@ class RegionBoxBase:
                 if dom in lbox.regionBoxes.enumDomains:
                     m = 1
                 else:
-                    m = lbox(dom, COUNT_PROP)
+                    m = lbox.eval(dom, COUNT_PROP)
                 cm = 0
                 if verbose: print("Left non-cross ", dom, ":", (m, cm))
             mults.append((m,cm))
@@ -650,7 +686,7 @@ class RegionBoxBase:
                 if dom in rbox.regionBoxes.enumDomains:
                     m = 1
                 else:
-                    m = rbox(dom, COUNT_PROP)
+                    m = rbox.eval(dom, COUNT_PROP)
                 cm = 0
                 if verbose: print("Right non-cross ", dom, ":", (m, cm))
             mults.append((m,cm))
@@ -692,7 +728,7 @@ class RegionBox(RegionBoxBase):
             ','.join(map(lambda d:d.name, self.regionBoxes.regionsMap.keys())),
             repr(self.domainProps))
 
-    def __call__(self, domain, prop):
+    def eval(self, domain, prop):
 
         # Must be a domain of our regions box
         assert domain in self.regionBoxes.domains()
@@ -1115,7 +1151,7 @@ class Flow:
         """
         if not dep in self.deps:
             return 0
-        return dep.boxes.zipSum(self.boxes, lambda l, r: mk_lambda(prop)(l))
+        return dep.boxes.zipSum(self.boxes, lambda l, r: DomainExpr(prop).eval(l))
 
     def crossEdges(self, dep, crossBoxes):
         """
@@ -1135,11 +1171,11 @@ class Flow:
         """
         if not dep in self.deps:
             return 0
-        return dep.boxes.zipCrossSum(self.boxes, crossBoxes, lambda l, r: mk_lambda(prop)(l))
+        return dep.boxes.zipCrossSum(self.boxes, crossBoxes, lambda l, r: DomainExpr(prop).eval(l))
 
     def cost(self, name):
         if name in self.costs:
-            return self.sum(mk_lambda(self.costs[name]))
+            return self.sum(DomainExpr(self.costs[name]))
         else:
             return 0
 
@@ -1415,14 +1451,14 @@ def flowsToDot(root, t, computeSpeed=None,
             def regName(r): return r.domain.name
             if showRegions:
                 for region in sorted(flow.regions(), key=regName):
-                    count = flow.max(lambda rb: rb(region.domain, 'count'))
-                    size = flow.max(lambda rb: rb(region.domain, 'size'))
+                    count = flow.max(region.domain('count'))
+                    size = flow.max(region.domain('size'))
                     if count == 1 and size == 1:
                         continue
                     text += "\n%s: %d x %g %s" % \
                             (region.domain.name,
-                             flow.max(lambda rb: rb(region.domain, 'count')),
-                             flow.max(lambda rb: rb(region.domain, 'size')),
+                             flow.max(region.domain('count')),
+                             flow.max(region.domain('size')),
                              region.domain.unit)
 
             # Add compute count
@@ -1458,7 +1494,7 @@ def flowsToDot(root, t, computeSpeed=None,
                 for dep in flow.deps:
                     in_count += dep.boxes.zipSum(flow.boxes, lambda l,r: 1)
                     if 'transfer' in dep.costs:
-                        def transfer_prop(l,r): return mk_lambda(dep.costs['transfer'])(l)
+                        def transfer_prop(l,r): return DomainExpr(dep.costs['transfer']).eval(l)
                         in_transfer += dep.boxes.zipSum(flow.boxes, transfer_prop)
 
                 if compute > 0:
@@ -1472,7 +1508,7 @@ def flowsToDot(root, t, computeSpeed=None,
                                  format_bytes(transfer / flow.boxes.count() / compute*count*computeSpeed))
                 else:
                     if in_transfer > 0:
-                        text += "\nTask Input: %s\n" % \
+                        text += "\nTask Input: %s" % \
                                 format_bytes(in_transfer / flow.boxes.count())
                     if transfer > 0:
                         text += "\nTask Output: %s" % \
@@ -1564,7 +1600,7 @@ class DataFlowTests(unittest.TestCase):
         self.assertEqual(self.split1.size, self.size1)
         self.assertEqual(self.split1a.size, self.size1)
         self.assertEqual(self.split1b.size, self.size1)
-        def countProp(rb): return rb(self.dom1, COUNT_PROP)
+        countProp = self.dom1(COUNT_PROP)
         self.assertEqual(self.reg1.the(countProp), 1)
         self.assertEqual(self.split1.the(countProp), self.size1)
         self.assertEqual(self.split1a.the(countProp), self.size1a)
@@ -1582,17 +1618,17 @@ class DataFlowTests(unittest.TestCase):
 
         # Summing up a value of one per box should yield the box count
         self.assertEqual(rboxes.sum(lambda rb: 1), count)
-        def countProp(rb): return rb(self.dom1, COUNT_PROP)
+        countProp = self.dom1(COUNT_PROP)
         self.assertEqual(rboxes.the(countProp), count)
 
         # Summing up the box sizes should give us the region size
-        def sizeProp(rb): return rb(self.dom1, SIZE_PROP)
+        sizeProp = self.dom1(SIZE_PROP)
         self.assertEqual(rboxes.the(sizeProp), boxSize)
         self.assertEqual(rboxes.sum(sizeProp), self.size1)
 
         # Should all still work when we force the boxes to be
         # enumerated by depending on the dummy property
-        def dummySizeProp(rb): return rb(self.dom1, 'dummy') + rb(self.dom1, SIZE_PROP)
+        dummySizeProp = self.dom1('dummy') + self.dom1(SIZE_PROP)
         self.assertFalse(self.dom1 in rboxes.enumDomains)
         self.assertEqual(rboxes.the(dummySizeProp), boxSize)
         self.assertEqual(rboxes.sum(dummySizeProp), self.size1)
@@ -1600,10 +1636,10 @@ class DataFlowTests(unittest.TestCase):
         self.assertEqual(rboxes.the(countProp), count)
 
         # Summing up indices should work as expected
-        def indexProp(rb): return rb(self.dom1, INDEX_PROP)
+        indexProp = self.dom1(INDEX_PROP)
         self.assertEqual(rboxes.max(indexProp), count-1)
         self.assertEqual(rboxes.sum(indexProp), count * (count-1) // 2)
-        def offsetProp(rb): return rb(self.dom1, OFFSET_PROP)
+        offsetProp = self.dom1(OFFSET_PROP)
         self.assertEqual(rboxes.max(offsetProp), (count-1) * boxSize)
         self.assertEqual(rboxes.sum(offsetProp), (count * (count-1) // 2) * boxSize)
 
@@ -1632,18 +1668,18 @@ class DataFlowTests(unittest.TestCase):
         rboxes = RegionBoxes(regss)
         self.assertEqual(rboxes.count(), count)
         self.assertEqual(rboxes.sum(lambda rb: 1), count)
-        def sizeProp(rb): return rb(self.dom1, SIZE_PROP) * rb(self.dom2, SIZE_PROP)
+        sizeProp = self.dom1(SIZE_PROP) * self.dom2(SIZE_PROP)
         self.assertEqual(rboxes.the(sizeProp), boxSize)
         self.assertEqual(rboxes.sum(sizeProp), self.size1*self.size2)
-        def dummySizeProp1(rb): return rb(self.dom1, 'dummy') + sizeProp(rb)
+        dummySizeProp1 = self.dom1('dummy') + sizeProp
         self.assertEqual(rboxes.the(dummySizeProp1), boxSize)
         self.assertEqual(rboxes.sum(dummySizeProp1), self.size1*self.size2)
         rboxes = RegionBoxes(regss)
-        def dummySizeProp2(rb): return rb(self.dom2, 'dummy') + sizeProp(rb)
+        dummySizeProp2 = self.dom2('dummy') + sizeProp
         self.assertEqual(rboxes.the(dummySizeProp2), boxSize)
         self.assertEqual(rboxes.sum(dummySizeProp2), self.size1*self.size2)
         rboxes = RegionBoxes(regss)
-        def dummySizeProp12(rb): return rb(self.dom1, 'dummy') + rb(self.dom2, 'dummy') + sizeProp(rb)
+        dummySizeProp12 = self.dom1('dummy') + self.dom2('dummy') + sizeProp
         self.assertEqual(rboxes.the(dummySizeProp12), boxSize)
         self.assertEqual(rboxes.sum(dummySizeProp12), self.size1*self.size2)
         self.assertTrue(self.dom1 in rboxes.enumDomains)
@@ -1737,17 +1773,17 @@ class DataFlowTests(unittest.TestCase):
         # edges. Enumerating shouldn't make a difference, as before.
         def oneProp(rbA, rbB): return 1
         self.assertEqual(rboxesA.zipSum(rboxesB, oneProp), edges)
-        def onePropA(rbA, rbB): return 1 + rbA(domA, 'dummy')
+        def onePropA(rbA, rbB): return 1 + rbA.eval(domA, 'dummy')
         self.assertEqual(rboxesA.zipSum(rboxesB, onePropA), edges)
         self.assertTrue(domA in rboxesA.enumDomains)
         self.assertFalse(domA in rboxesB.enumDomains)
         rboxesA = RegionBoxes(regsA)
         rboxesB = RegionBoxes(regsB)
-        def onePropB(rbA, rbB): return 1 + rbB(domB, 'dummy')
+        def onePropB(rbA, rbB): return 1 + rbB.eval(domB, 'dummy')
         self.assertEqual(rboxesA.zipSum(rboxesB, onePropB), edges)
         self.assertFalse(domB in rboxesA.enumDomains)
         self.assertTrue(domB in rboxesB.enumDomains)
-        def onePropAB(rbA, rbB): return 1 + rbA(domA, 'dummy') + rbB(domB, 'dummy')
+        def onePropAB(rbA, rbB): return 1 + rbA.eval(domA, 'dummy') + rbB.eval(domB, 'dummy')
         self.assertEqual(rboxesA.zipSum(rboxesB, onePropAB), edges)
 
     def test_rboxes_cross_zip_simple(self):
@@ -1874,10 +1910,9 @@ class DataFlowTests(unittest.TestCase):
             rboxesC = RegionBoxes(regsC)
 
             # Make sure the right domains end up enumerated
-            def oneProp(dom): return lambda rb: 1 + rb(dom, 'dummy')
-            if enumA: rboxesA.sum(oneProp(domA))
-            if enumB: rboxesB.sum(oneProp(domB))
-            if enumC: rboxesC.sum(oneProp(domC))
+            if enumA: rboxesA.sum(1 + domA('dummy'))
+            if enumB: rboxesB.sum(1 + domB('dummy'))
+            if enumC: rboxesC.sum(1 + domC('dummy'))
 
             # Check that bounds is consistent, as
             # zipCrossSum will depend on it heavily
@@ -1916,9 +1951,9 @@ class DataFlowTestsSymbol(unittest.TestCase):
         # Check size
         rbox = RegionBoxes([split])
         self.assertEqual(rbox.count(), size)
-        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p1')), size)
-        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p2')).doit(), size)
-        self.assertEqual(rbox.sum(lambda rb: rb(dom, 'p3')).doit(), size**2/2-size/2)
+        self.assertEqual(rbox.sum(dom('p1')), size)
+        self.assertEqual(rbox.sum(dom('p2')).doit(), size)
+        self.assertEqual(rbox.sum(dom('p3')).doit(), size**2/2-size/2)
 
 class DataFlowTestsFlow(unittest.TestCase):
 
@@ -1945,10 +1980,10 @@ class DataFlowTestsFlow(unittest.TestCase):
         input1 = Flow('Global Input', [], cluster='input', costs = { 'transfer': 12 })
         input2 = Flow('Input Domain 1',
                       [self.split1], cluster='input',
-                      costs = { 'transfer': lambda rb: rb(self.dom1, 'size') })
+                      costs = { 'transfer': self.dom1('size') })
         input3 = Flow('Input Domain 1 + 2',
                       [self.reg1, self.split2], cluster='input',
-                      costs = { 'transfer': lambda rb: rb(self.dom2, 'size') })
+                      costs = { 'transfer': self.dom2('size') })
 
         # Make some intermediate nodes
         interg = Flow('Intermediate Global', [],
@@ -1980,8 +2015,7 @@ class DataFlowTestsFlow(unittest.TestCase):
         gather = Flow(self.gather_name, [self.reg2],
                       costs = {
                           'compute': 1000,
-                          'transfer': lambda rb: rb(self.dom2, 'testCost') *
-                                                 rb(self.dom2, 'size')
+                          'transfer': self.dom2('testCost') * self.dom2('size')
                       },
                       deps = [inter3, inter4]
         )

@@ -102,8 +102,12 @@ class ParameterContainer:
 
         # Replace all values and expressions with symbols
         for name, v in self.__dict__.items():
-            if isinstance(v, int) or isinstance(v, float) or self.is_expr(v):
-                self.__dict__[name] = Symbol(self.make_symbol_name(name))
+            sym = Symbol(self.make_symbol_name(name), real=True, positive=True)
+            if isinstance(v, int) or isinstance(v, float) or isinstance(v, Expr):
+                self.__dict__[name] = sym
+            elif isinstance(v, BLDep):
+                # SymPy cannot pass parameters by dictionary, so make a list instead
+                self.__dict__[name] = BLDep(v.pars, sym(*v.pars.values()))
 
         # For products too
         for product, rates in self.products:
@@ -138,8 +142,7 @@ class ParameterContainer:
 
         # Actually baseline-dependent?
         if isinstance(bldep, BLDep):
-            b = bldep.b
-            bcount = bldep.bcount
+            b = bldep.pars['b']
             expr = bldep.term
         else:
             return self.Nbl * bldep
@@ -148,14 +151,14 @@ class ParameterContainer:
         # independent factors. Makes for smaller terms, which is good
         # both for Sympy as well as for output.
         if not b in expr.free_symbols:
-            return self.Nbl * expr.subs(bcount, 1)
+            return self.Nbl * bldep(b=None, bcount=1)
         if isinstance(expr, Mul):
-            def indep(e): return not (b in e.free_symbols or bcount in e.free_symbols)
+            def indep(e): return not any([s in e.free_symbols for s in bldep.pars.values()])
             indepFactors = list(filter(indep, expr.as_ordered_factors()))
             if len(indepFactors) > 0:
                 def not_indep(e): return not indep(e)
                 restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * self.sum_bl_bins(BLDep((b, bcount), Mul(*restFactors)))
+                return Mul(*indepFactors) * self.sum_bl_bins(BLDep(bldep.pars, Mul(*restFactors)))
 
         # Replace in concrete values for baseline fractions and
         # length. Using Lambda here is a solid 25% faster than
@@ -164,12 +167,12 @@ class ParameterContainer:
 
         # Symbolic? Generate actual symbolic sum expression
         if isinstance(self.Bmax_bins, Symbol):
-            return Sum(bldep(self.Bmax_bins(b), 1), (b, 1, self.Nbl))
+            return Sum(bldep(b=self.Bmax_bins(b), bcount=1), (b, 1, self.Nbl))
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
         for (frac_val, bmax_val) in zip(self.frac_bins, self.Bmax_bins):
-            results.append(bldep(bmax_val, frac_val*self.Nbl_full))
+            results.append(bldep(b=bmax_val, bcount=frac_val*self.Nbl_full))
         return Add(*results, evaluate=False)
 
     def set_product(self, product, T=None, N=1, **args):
@@ -221,47 +224,84 @@ class BLDep:
     that this class documents the semantics of the parameter.
     """
 
-    def __init__(self, b, term):
-        if isinstance(b, tuple):
-            self.b = b[0]
-            self.bcount = b[1]
-        else:
-            self.b = b
-            self.bcount = Symbol('bcount')
-        assert isinstance(self.b, Symbol)
+    def __init__(self, pars, term):
+        """
+        Creates baseline-dependent term.
+        :param pars: List of baseline-dependent parameters as
+          dictionary of Symbols. If only a single symbol is given, it
+          will stand for baseline length.
+        :param term: Dependent term, in which "pars" symbols can appear
+          free and will be substituted later.
+        """
         self.term = term
+        # Collect formal parameters. We default to parameter name 'b'
+        if not isinstance(pars, dict):
+            self.pars = { 'b': pars }
+        else:
+            self.pars = pars
+        non_symbols = [p for p in self.pars.values() if not isinstance(p, Symbol)]
+        assert len(non_symbols) == 0, "Formal parameters %s are not a symbol!" % non_symbols
 
-    def __call__(self, b_val, bcount_val = None):
+    def __call__(self, vals=None, **kwargs):
+        """
+        Evaluates baseline-dependent term. If only a single parameter is
+        given, it is assumed to be baseline length. Additional parameters
+        can be passed as dictionary or keyword arguments. The following is
+        equivalent:
+
+           bldep(x)
+           bldep({'b': x})
+           bldep(b=x)
+        """
         if not isinstance(self.term, Expr):
             return self.term
-        if bcount_val is None:
-            assert not self.bcount in self.term.free_symbols
-            return self.term.subs(self.b, b_val)
-        else:
-            return self.term.subs([(self.b, b_val),
-                                   (self.bcount, bcount_val)])
+        # Check that all parameters were passed
+        if vals is None:
+            vals = {}
+        elif not isinstance(vals, dict):
+            vals = { 'b': vals }
+        vals.update(kwargs)
+        assert set(self.pars.keys()).issubset(vals.keys()), \
+            "Parameter %s not passed to baseline-dependent term %s! %s" % (
+                set(self.pars.keys()).difference(vals.keys()), self.term, vals)
+        # Do substitutions
+        to_substitute = [(p, vals[p]) for p in self.pars.keys()]
+        return self.term.subs(to_substitute)
 
     def __mul__(self, other):
-        if isinstance(other, BLDep):
-            return BLDep((other.b, other.bcount),
-                         self(other.b, other.bcount) * other.term)
-        else:
-            return BLDep((self.b, self.bcount), self.term * other)
+        # Other term not baseline-dependent?
+        if not isinstance(other, BLDep):
+            return BLDep(self.pars, self.term * other)
+        if not isinstance(self.term, Expr):
+            return other * self.term
+        # Determine required renamings
+        renamings = {
+            pold : other.pars[name]
+            for name, pold in self.pars.items()
+            if name in other.pars
+        }
+        # Adapt new parameters & term
+        newpars = self.pars.copy()
+        newpars.update(other.pars)
+        newterm = self.term.subs(renamings.items())
+        return BLDep(newpars, newterm * other.term)
     def __rmul__(self, other):
         return self.__mul__(other)
 
     def subs(self, *args, **kwargs):
-        return BLDep((self.b, self.bcount), self.term.subs(*args, **kwargs))
+        if not isinstance(self.term, Expr):
+            return self
+        return BLDep(self.pars, self.term.subs(*args, **kwargs))
 
     @property
     def free_symbols(self):
-        return Lambda((self.b, self.bcount), self.term).free_symbols
+        return Lambda(list(self.pars.values()), self.term).free_symbols
     def atoms(self, typ):
-        return Lambda((self.b, self.bcount), self.term).atoms(typ)
+        return Lambda(list(self.pars.values()), self.term).atoms(typ)
 
 def unbldep(term, b_val, bcount_val = None):
     if isinstance(term, BLDep):
-        return term(b_val, bcount_val)
+        return term(b=b_val, bcount=bcount_val)
     else:
         return term
 
@@ -272,7 +312,7 @@ def blsum(b, expr):
     Returns a BLDep object of the expression multiplied with the baseline count.
     """
     bcount = Symbol('bcount')
-    return BLDep((b, bcount), bcount * expr)
+    return BLDep({'b': b, 'bcount': bcount}, bcount * expr)
 
 class Constants:
     """

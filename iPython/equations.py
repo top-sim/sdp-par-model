@@ -700,7 +700,7 @@ class Equations:
             T = o.Tsnap,
             N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
             Rflop = blsum(b, 25 * o.Rvis / o.Nbl / o.Nf_min_gran),
-            Rout = blsum(b, o.Mvis * o.Rvis_backward(b, 1) / o.Nf_min_gran))
+            Rout = blsum(b, o.Mvis * o.Rvis_backward(b=b, bcount=1) / o.Nf_min_gran))
 
     @staticmethod
     def _apply_flop_equations(o):
