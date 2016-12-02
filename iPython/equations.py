@@ -346,7 +346,7 @@ class Equations:
         """
         Ingest equations
 
-        References: SKA-TEL-SDP-0000040 01D section 3.3 - The Fast and Buffered pre-processing pipelines1
+        References: SKA-TEL-SDP-0000040 01D section 3.3 - The Fast and Buffered pre-processing pipelines
         """
 
         if o.pipeline == Pipelines.Ingest:
@@ -354,7 +354,7 @@ class Equations:
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
                 Rflop = 2 * o.Npp * o.Rvis_ingest / o.Nf_min +
                         1000 * o.Na / o.Tint_used,
-                Rout = o.Mvis * o.Npp * o.Rvis_ingest)
+                Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
             o.set_product(Products.Flag,
                 T = o.Tsnap, N = o.Nbeam * o.Nf_min,
                 Rflop = 279 * o.Npp * o.Rvis_ingest / o.Nf_min,
