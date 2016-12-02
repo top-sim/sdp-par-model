@@ -243,11 +243,20 @@ class Equations:
          * SKA-TEL-SDP-0000040 01D section D - Visibility Averaging and Coalescing
         """
 
-        # correlator output averaging time scaled for max baseline.
+        # Time averaging scaled for max baseline. Note that we have
+        # two averaging steps to consider - one in ingest and then one
+        # after phase rotation. We assume that "global" averaging must
+        # retain enough information to prevent smearing for a
+        # hypothetical imaging process using the full field of view,
+        # but reduce that requirement to the actual facet field of
+        # view later. We also assume that we can chose these two
+        # averaging degrees independently without any ill effects.
         b = Symbol('b')
-        o.combine_time_samples = BLDep(b,
+        combine_samples = lambda theta: BLDep(b,
             Max(floor(o.epsilon_f_approx * o.wl /
-                      (o.Theta_fov_total * o.Omega_E * b * o.Tint_used)), 1.))
+                      (theta * o.Omega_E * b * o.Tint_used)), 1.))
+        o.combine_time_samples = combine_samples(o.Theta_fov_total)
+        o.combine_time_samples_facet = combine_samples(o.Theta_fov)
 
         # coalesce visibilities in time.
         o.Tcoal_skipper = BLDep(b,
@@ -260,7 +269,7 @@ class Equations:
             # visibility points at Facet FoV smearing limit only for
             # bl-dep averaging case.
             o.Tcoal_backward = BLDep(b,
-                Min(o.Tcoal_skipper(b) * o.Nfacet/(1+o.r_facet), o.Tion))
+                Min(o.Tint_used * o.combine_time_samples_facet(b), o.Tion))
             if o.scale_predict_by_facet:
                 o.Tcoal_predict = BLDep(b, o.Tcoal_backward(b))
             else:

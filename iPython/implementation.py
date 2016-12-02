@@ -229,6 +229,7 @@ class Implementation:
             'atan2': 'math.atan2',
             'atanh': 'math.atanh',
             'ceiling': 'math.ceil',
+            'floor': 'math.floor'
         }
         expr_body = str(expression)
         for (sympy_name, numpy_name) in module.items():
