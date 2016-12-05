@@ -1058,7 +1058,7 @@ class ParameterDefinitions:
             #TODO: update this to cope with multiple timescales for output
             o.Qfov = 0.9  # Field of view factor
             o.Nselfcal = 0
-            o.Nmajor = 10
+            o.Nmajor = 0
             o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
             o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
             o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
