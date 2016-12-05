@@ -497,34 +497,44 @@ class Equations:
         """
         Minor Cycles implementing deconvolution / cleaning
 
-        References: SKA-TEL-SDP-0000040 01D section 3.6.16 - Subtract Image Component
+        References:
+          * SKA-TEL-SDP-0000040 01D section 3.6.16 - Subtract Image Component
+          * TCC-SDP-151123-2 - Recommendations
         """
 
+        o.Nf_identify = 0
         if not o.pipeline in Pipelines.imaging: return
 
         if o.pipeline in (Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepA_Image):
-            # Search only on I_0
-            Nf_identify = 1
+            # Search for every sub-band independently
+            o.Nf_identify = o.Nsubbands
         elif o.pipeline in (Pipelines.DPrepB, Pipelines.DPrepC):
             # Always search in all frequency space
-            Nf_identify = o.Nf_out
+            o.Nf_identify = o.Nf_out
         else:
             # No cleaning - e.g. fast imaging
             return
 
-        # Create products
+        # Identification is assumed to only use I_0, but this still
+        # requires multiplication of one row of the Hessian matrix. We
+        # assume that this is done indepedently per facet (with or
+        # without consolidation), therefore we use Npix*Nfacet
+        # including overlap
         o.set_product(Products.Identify_Component,
             T = o.Tobs,
-            N = o.Nmajortotal * o.Nbeam,
-            Rflop = 2 * o.Npp * o.Nminor * Nf_identify * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
-            Rout = o.Mcpx / o.Tobs)
+            N = o.Nmajortotal * o.Nbeam * o.Nf_identify,
+            Rflop = 2 * o.Nminor * o.Ntt * o.Nscales * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
+            Rout = o.Nminor * o.Mcpx / o.Tobs)
 
-        # Subtract on all scales and only one frequency
+        # Subtract on all scales, polarisations and taylor terms
         o.set_product(Products.Subtract_Image_Component,
             T = o.Tobs,
-            N = o.Nmajortotal * o.Nbeam,
-            Rflop = 2 * o.Npp * o.Nminor * o.Nscales * o.Npatch**2 / o.Tobs,
+            N = o.Nmajortotal * o.Nbeam * o.Nf_identify,
+            Rflop = 2 * o.Npp * o.Nminor * o.Ntt * o.Nscales * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
             Rout = o.Nscales * o.Npatch**2 / o.Tobs)
+
+        # Working memory requirements according to TCC-SDP-151123-2
+        o.M_MSMFS = o.Mpx * o.Nf_identify * (o.Ntt * (o.Nscales + 1) + o.Nscales) * (o.Npix_linear * o.Nfacet)**2
 
     @staticmethod
     def _apply_calibration_equations(o):
