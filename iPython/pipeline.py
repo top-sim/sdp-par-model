@@ -849,7 +849,7 @@ class PipelineTestsImaging(PipelineTestsBase):
             self.assertAlmostEqual(
                 float(pip_fnerf.recursiveCost('compute')/self.df.tp.Tobs),
                 float(self.df.tp.Rflop/nerf),
-                delta=float(self.df.tp.Rflop/nerf/4))
+                delta=float(self.df.tp.Rflop/nerf/10))
 
         # However note that this can be off substantially both due to
         # "constant" costs (e.g. cleaning) as well as rounding
@@ -857,9 +857,9 @@ class PipelineTestsImaging(PipelineTestsBase):
         # and explicitly disregard a few below. This might need review
         # in future.
         _test(self.df.tp.Nmajortotal, 'nerf_loop')
-        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.RCAL, Pipelines.DPrepC]:
+        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.RCAL]:
             _test(self.df.tp.Nf_min, 'nerf_freq')
-        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.DPrepC]:
+        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.DPrepC, Pipelines.DPrepA, Pipelines.DPrepA_Image]:
             _test(self.df.tp.Tobs / self.df.tp.Tsnap, 'nerf_time')
 
 class PipelineTestsRCAL(PipelineTestsImaging):

@@ -420,7 +420,7 @@ class Implementation:
                                                                      verbose=verbose)
             else:
                 result = (telescope_parameters.Tsnap, float(expr))
-            results.append((nfacets, *result))
+            results.append((nfacets, result[0], result[1]))
 
             # Continue to at least Nfacet==3 as there can be a local
             # increase between nfacet=1 and 2
