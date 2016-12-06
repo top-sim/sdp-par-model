@@ -658,6 +658,8 @@ class Equations:
             Min(log(o.wl_max / o.wl_min) /
                 log(o.dfonF_predict(b) + 1.), o.Nf_max))
 
+        bmax_bins = o.Bmax_bins
+        bcount_bins = [ frac * o.Nbl_full for frac in o.frac_bins ]
         if o.on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
             o.Nf_gcf_predict  = o.Nf_vis_predict
@@ -671,17 +673,27 @@ class Equations:
             o.Tkernel_backward = BLDep(b, o.Tion)
             o.Tkernel_predict  = BLDep(b, o.Tion)
 
+            # If we do not need a separate A^A-kernel per baseline,
+            # just make the appropriate number of A-kernels at a
+            # resolution appropriate for the longest baseline, and
+            # assume that all other baselines can use it
+            if o.NAProducts != 'all':
+                bmax_bins = [ o.Bmax ]
+                bcount_bins = [ o.NAProducts ]
+
         if o.pipeline in Pipelines.imaging:
 
             # The following two equations correspond to Eq. 35
             o.set_product(Products.Gridding_Kernel_Update,
                 T = BLDep(b, o.Tkernel_backward(b)),
                 N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b) * o.Nfacet**2),
+                bmax_bins=bmax_bins, bcount_bins=bcount_bins,
                 Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b)**2, 2) / o.Tkernel_backward(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
             o.set_product(Products.Degridding_Kernel_Update,
                 T = BLDep(b,o.Tkernel_predict(b)),
                 N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet_predict**2),
+                bmax_bins=bmax_bins, bcount_bins=bcount_bins,
                 Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b)**2, 2) / o.Tkernel_predict(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 

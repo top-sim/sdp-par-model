@@ -129,21 +129,28 @@ class ParameterContainer:
                 results[product] = exprs[expression] / scale
         return results
 
-    def sum_bl_bins(self, bldep):
+    def sum_bl_bins(self, bldep, bmax_bins=None, bcount_bins=None):
         """
         Converts a possibly baseline-dependent terms (e.g. constructed
         using "BLDep" or "blsum") into a formula by summing over
         baselines.
 
-        This relies on the "nbaselines", "frac_bins" and "Bmax_bins"
-        fields to be set. If "Bmax_bins" is a symbol, we will generate
-        a symbolic sum term utilising "Bmax_bins" as a function.
+        If "bmax_bins" and/or "bcount_bins" parameters are not set we
+        default on "Nbl_full", "frac_bins" and "Bmax_bins" fields to
+        be set. If "bmax_bins" is a symbol, we will generate a
+        symbolic sum term utilising "bmax_bins" as a function.
         """
 
         # Actually baseline-dependent?
         if not isinstance(bldep, BLDep):
             return self.Nbl * bldep
         expr = bldep.term
+
+        # Bin defaults
+        if bmax_bins is None:
+            bmax_bins = self.Bmax_bins
+        if bcount_bins is None:
+            bcount_bins = [ frac * self.Nbl_full for frac in self.frac_bins ]
 
         # Small bit of ad-hoc formula optimisation: Exploit
         # independent factors. Makes for smaller terms, which is good
@@ -158,19 +165,21 @@ class ParameterContainer:
             if len(indepFactors) > 0:
                 def not_indep(e): return not independent(e)
                 restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * self.sum_bl_bins(BLDep(bldep.pars, Mul(*restFactors)))
+                return Mul(*indepFactors) * self.sum_bl_bins(BLDep(bldep.pars, Mul(*restFactors)),
+                                                             bmax_bins=bmax_bins, bcount_bins=bcount_bins)
 
         # Symbolic? Generate actual symbolic sum expression
-        if isinstance(self.Bmax_bins, Symbol):
-            return Sum(bldep(b=self.Bmax_bins(b), bcount=1), (b, 1, self.Nbl))
+        if isinstance(bmax_bins, Symbol):
+            b = Symbol('b')
+            return Sum(bldep(b=bmax_bins(b), bcount=1), (b, 1, self.Nbl))
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
-        results = [ bldep(b=bmax_val, bcount=frac_val*self.Nbl_full)
-                    for frac_val, bmax_val in zip(self.frac_bins, self.Bmax_bins) ]
+        results = [ bldep(b=bmax_val, bcount=bcount_val)
+                    for bmax_val, bcount_val in zip(bmax_bins, bcount_bins) ]
         return Add(*results, evaluate=False)
 
-    def set_product(self, product, T=None, N=1, **args):
+    def set_product(self, product, T=None, N=1, bmax_bins=None, bcount_bins=None, **args):
         """Sets product properties using a task abstraction. Each property is
         expressed as a sum over baselines.
 
@@ -180,6 +189,8 @@ class ParameterContainer:
         @param N: Task parallelism / rate multiplier. The number of
            tasks that work on the data in parallel. Can be
            baseline-dependent.
+        @param bmax_bins: Maximum lengths of baseline bins to use
+        @param bcount_bins: Size of baseline bins to use
         @param args: Task properties as rates. Will be multiplied by
            N.  If it is baseline-dependent, it will be summed over all
            baselines to yield the final rate.
@@ -197,7 +208,7 @@ class ParameterContainer:
 
             # Baseline-dependent? Generate a sum term, otherwise just say as-is
             if isinstance(total, BLDep):
-                props[k] = self.sum_bl_bins(total)
+                props[k] = self.sum_bl_bins(total, bmax_bins, bcount_bins)
                 props[k+"_task"] = expr
             else:
                 props[k] = total
@@ -622,7 +633,7 @@ class ParameterDefinitions:
         o.Nmajor = 2
         o.Nselfcal = 3
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
-        o.NAProducts = 1  # Number of A^A terms to be modelled
+        o.NAProducts = 'all'  # Number of A^A terms to be modelled
         o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
         o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -666,6 +677,7 @@ class ParameterDefinitions:
                 
             #o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
             # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            o.NAProducts = 'all' # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -683,7 +695,7 @@ class ParameterDefinitions:
             o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 68500, 100000))  # m
             o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
+            o.NAProducts = 'all' # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -703,12 +715,13 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
             #o.baseline_bins = np.array((150000,)) #single bin
             #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
-            # o.NAProducts = 1 # Each antenna can be modelled as the same.
+            #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
             o.tICAL_I = 1.0 # Solution interval for Ionosphere
             o.NIpatches = 1 # Number of ionospheric patches to solve
+            #o.Tion = 3600
 
         elif telescope == Telescopes.SKA1_Mid_old:
             o.Bmax = 200000  # Actually constructed max baseline, in *m*
@@ -722,7 +735,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            # o.NAProducts = 1 # Each antenna can be modelled as the same.
+            #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -740,7 +753,7 @@ class ParameterDefinitions:
             o.baseline_bins = np.array((3800, 5500, 8000, 11500, 16600, 24000, 34600, 50000))  # m
             o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            # o.NAProducts = 1 # Each antenna can be modelled as the same.
+            #o.NAProducts = 1 # Each antenna can be modelled as the same. [deactivated for now]
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -760,6 +773,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
+            o.NAProducts = 'all' # We must model the ionosphere for each station
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
@@ -778,7 +792,7 @@ class ParameterDefinitions:
             o.baseline_bin_distribution = np.array(
                 (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
             o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
-            # o.NAProducts = 1 # Each antenna can be modelled as the same.
+            #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
             o.tRCAL_G = 180.0
             o.tICAL_G = 10.0 # Solution interval for Antenna gains
             o.tICAL_B = 3600.0  # Solution interval for Bandpass
