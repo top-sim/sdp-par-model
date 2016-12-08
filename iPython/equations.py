@@ -25,10 +25,7 @@ class Equations:
         pass
 
     @staticmethod
-    def apply_imaging_equations(telescope_parameters, pipeline,
-                                blcoal, bins, binfracs,
-                                on_the_fly=False, scale_predict_by_facet=True,
-                                verbose=False, symbolify=''):
+    def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verbose, symbolify=''):
         """
         (Symbolically) computes a set of derived parameters using imaging
         equations described in PDR05 (version 1.85).
@@ -45,10 +42,6 @@ class Equations:
             ParameterContainer object is modified in-place by
             appending / overwriting the relevant fields
         @param pipeline: The pipeline
-        @param blcoal: True iff baseline dependent coalescing should be used.
-        @param on_the_fly: True iff using on-the-fly kernels
-        @param scale_predict_by_facet: True iif the predict phase
-            scale as the facet FOV (as for backward)
         @param verbose: displays verbose command-line output
 
         """
@@ -58,11 +51,8 @@ class Equations:
 
         # Store parameters
         o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
-        o.blcoal = blcoal
         o.Bmax_bins = list(bins)
         o.frac_bins = list(binfracs)
-        o.on_the_fly = on_the_fly
-        o.scale_predict_by_facet = scale_predict_by_facet
 
         # Check parameters
         if hasattr(o, 'Tobs') and (o.Tobs < 10.0):

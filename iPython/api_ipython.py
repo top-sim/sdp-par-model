@@ -556,11 +556,8 @@ class SkaIPythonAPI(api):
         return okay
 
     @staticmethod
-    def compare_telescopes_default(telescope_1, band_1, pipeline_1,
-                                   telescope_2, band_2, pipeline_2,
-                                   tel1_blcoal=True, tel2_blcoal=True,
-                                   tel1_otf=False, tel2_otf=False,
-                                   scale_predict_by_facet=True,
+    def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
+                                   telescope_2, band_2, pipeline_2, adjusts_2,
                                    verbosity='Overview'):
         """
         Evaluates two telescopes, both operating in a given band and pipeline, using their default parameters.
@@ -572,23 +569,17 @@ class SkaIPythonAPI(api):
         @param band_2:
         @param pipeline_1:
         @param pipeline_2:
-        @param tel1_otf: On the fly kernels for telescope 1
-        @param tel2_otf: On the fly kernels for telescope 2
-        @param tel1_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope1
-        @param tel2_blcoal: Use Baseline dependent coalescing (before gridding) for Telescope2
+        @param adjusts_1: Configuration adjustments for telescope 1. See PipelineConfig.
+        @param adjusts_2: Configuration adjustments for telescope 2. See PipelineConfig.
         @param verbosity: amount of output to generate
         @return:
         """
 
         # Make configurations and check
         cfg_1 = PipelineConfig(telescope=telescope_1, band=band_1,
-                               pipeline=pipeline_1, blcoal=tel1_blcoal,
-                               on_the_fly=tel1_otf,
-                               scale_predict_by_facet=scale_predict_by_facet)
+                               pipeline=pipeline_1, adjusts=adjusts_1)
         cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
-                               pipeline=pipeline_2, blcoal=tel2_blcoal,
-                               on_the_fly=tel2_otf,
-                               scale_predict_by_facet=scale_predict_by_facet)
+                               pipeline=pipeline_2, adjusts=adjusts_2)
         if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_pipelines=True) or \
            not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_pipelines=True):
             return
@@ -655,7 +646,7 @@ class SkaIPythonAPI(api):
 
         # Make configuration
         cfg = PipelineConfig(telescope=telescope, pipeline=pipeline, band=band,
-                             max_baseline=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
+                             Bmax=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly,
                              scale_predict_by_facet=scale_predict_by_facet)
         if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
@@ -752,7 +743,7 @@ class SkaIPythonAPI(api):
 
         # Make configuration
         cfg = PipelineConfig(telescope=telescope, pipeline=pipeline,
-                             band=band, max_baseline=max_baseline,
+                             band=band, Bmax=max_baseline,
                              Nf_max=Nf_max, blcoal=blcoal,
                              on_the_fly=on_the_fly,
                              scale_predict_by_facet=scale_predict_by_facet)
@@ -1006,7 +997,7 @@ class SkaIPythonAPI(api):
         # Strip modifiers from rows
         def strip_modifiers(head, do_it=True):
             if do_it:
-                return re.sub('\[[^\]]*\]', '', head)
+                return re.sub('\[[^\]]*\]', '', head).strip(' ')
             return head
         ref = { strip_modifiers(name, ignore_units): row
                 for (name, row) in ref.items() }

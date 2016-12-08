@@ -642,12 +642,7 @@ class PipelineTestsBase(unittest.TestCase):
         # would take way too long.
         cfg = PipelineConfig(telescope=Telescopes.SKA1_Mid,
                              band=Bands.Mid1,
-                             pipeline=pipeline,
-                             max_baseline=150000,
-                             Nf_max='default',
-                             blcoal=True,
-                             on_the_fly=False,
-                             scale_predict_by_facet=True)
+                             pipeline=pipeline)
         adjusts = {
             'Nfacet': 8,
             'Tsnap': 40

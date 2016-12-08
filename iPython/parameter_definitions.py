@@ -640,6 +640,11 @@ class ParameterDefinitions:
         o.tICAL_I = 1.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
 
+        # Pipeline variants
+        o.on_the_fly = False
+        o.blcoal = True
+        o.scale_predict_by_facet = True
+
         return o
 
     @staticmethod

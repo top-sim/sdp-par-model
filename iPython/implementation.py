@@ -32,18 +32,16 @@ class PipelineConfig:
 
 
     def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
-                 max_baseline="default", Nf_max="default", blcoal=True,
-                 on_the_fly=False, scale_predict_by_facet=True):
+                 adjusts={}, **kwargs):
         """
         @param telescope: Telescope to use (can be omitted if HPSO specified)
         @param pipeline: Pipeline mode (can be omitted if HPSO specified)
         @param band: Frequency band (can be omitted if HPSO specified)
         @param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
-        @param max_baseline: Maximum baseline length
-        @param Nf_max: Number of frequency channels
-        @param blcoal: Baseline dependent time averaging
-        @param otfk: On the fly kernels (True or False)
-        @param scale_predict_by_facet: Assume faceting in predict?
+        @param adjusts: Values that should be adjusted in the
+          telescope parameters. Keyword arguments get added to the
+          adjustments automatically. Can be a string of the the form
+          "name=val name2=val flag".
         """
 
         # Load HPSO parameters
@@ -63,9 +61,20 @@ class PipelineConfig:
         self.hpso = hpso
         self.band = band
         self.pipeline = pipeline
-        self.blcoal = blcoal
-        self.on_the_fly = on_the_fly
-        self.scale_predict_by_facet = scale_predict_by_facet
+
+        # Adjustments from keyword arguments
+        if type(adjusts) == str:
+            def mk_adjust(adjust):
+                # Setting a field?
+                fields = adjust.split('=')
+                if len(fields) == 2:
+                    return (fields[0], eval(fields[1]))
+                # Otherwise assume that it's a flag
+                return (adjust, True)
+            adjusts = dict(map(mk_adjust, adjusts.split(' ')))
+        self.adjusts = dict(adjusts)
+        self.adjusts.update(**kwargs)
+        assert 'max_baseline' not in self.adjusts, 'Please use Bmax for consistency!'
 
         # Determine relevant pipelines
         if isinstance(pipeline, list):
@@ -81,15 +90,11 @@ class PipelineConfig:
 
         # Store max allowed baseline length, load default parameters
         self.max_allowed_baseline = tp_default.baseline_bins[-1]
-        if max_baseline == 'default':
-            self.max_baseline = tp_default.Bmax
-        else:
-            self.max_baseline = max_baseline
+        if 'Bmax' not in self.adjusts:
+            self.adjusts['Bmax'] = tp_default.Bmax
         self.default_frequencies = tp_default.Nf_max
-        if Nf_max == 'default':
-            self.Nf_max = tp_default.Nf_max
-        else:
-            self.Nf_max = Nf_max
+        if 'Nf_max' not in self.adjusts:
+            self.adjusts['Nf_max'] = tp_default.Nf_max
 
     def describe(self):
         """ Returns a name that identifies this configuration. """
@@ -101,16 +106,21 @@ class PipelineConfig:
             name = self.pipeline + ' (' + self.band + ')'
 
         # Add modifiers
-        if self.Nf_max != self.default_frequencies:
-            name += ' [Nfmax=%d]' % self.Nf_max
-        if self.max_baseline != self.max_allowed_baseline:
-            name += ' [Bmax=%d]' % self.max_baseline
-        if self.blcoal:
-            name += ' [blcoal]'
-        if self.on_the_fly:
-            name += ' [otf]'
-        if self.scale_predict_by_facet:
-            name += ' [spbf]'
+        for n, val in self.adjusts.items():
+            if n == 'Nf_max' and self.adjusts[n] == self.default_frequencies:
+                continue
+            if n == 'Bmax' and self.adjusts[n] == self.max_allowed_baseline:
+                continue
+            if n == 'on_the_fly':
+                n = 'otf'
+            if n == 'scale_predict_by_facet':
+                n = 'spbf'
+            if val == True:
+                name += ' [%s]' % n
+            elif val == False:
+                name += ' [!%s]' % n
+            else:
+                name += ' [%s=%s]' % (n, val)
 
         return name
 
@@ -148,10 +158,10 @@ class PipelineConfig:
         okay = True
 
         # Maximum baseline
-        if self.max_baseline > self.max_allowed_baseline:
-            messages.append('WARNING: max_baseline (%g m) exceeds the maximum ' \
+        if self.adjusts['Bmax'] > self.max_allowed_baseline:
+            messages.append('WARNING: Bmax (%g m) exceeds the maximum ' \
                             'allowed baseline of %g m for telescope \'%s\'.' \
-                % (self.max_baseline, self.max_allowed_baseline, self.telescope))
+                % (self.adjusts['Bmax'], self.max_allowed_baseline, self.telescope))
 
         # Only pure pipelines supported?
         if pure_pipelines:
@@ -300,21 +310,16 @@ class Implementation:
             p.apply_hpso_parameters(telescope_params, cfg.hpso)
         else:
             raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
-            
-        # Artificially limit max_baseline or nr_frequency_channels,
-        # deviating from the default for this Band or HPSO
-        if cfg.max_baseline is not None:
-            telescope_params.Bmax = min(telescope_params.Bmax, cfg.max_baseline)
-        assert telescope_params.Bmax is not None
-        if cfg.Nf_max is not None:
-            telescope_params.Nf_max = min(telescope_params.Nf_max, cfg.Nf_max)
 
-        # Apply parameter adjustments. Needs to be done before bin calculation in case Bmax gets changed.
-        # Note that an overwrite is required, i.e. the parameter must exist.
+        # Apply parameter adjustments. Needs to be done before bin
+        # calculation in case Bmax gets changed.  Note that an
+        # overwrite is required, i.e. the parameter must exist.
+        for par, value in cfg.adjusts.items():
+            telescope_params.__dict__[par] = value
         for par, value in adjusts.items():
             telescope_params.__dict__[par] = value
 
-        if cfg.blcoal:
+        if telescope_params.blcoal:
             # Limit bins to those shorter than Bmax
             bins = telescope_params.baseline_bins
             nbins_used = min(bins.searchsorted(telescope_params.Bmax) + 1, len(bins))
@@ -348,8 +353,7 @@ class Implementation:
 
         # Apply imaging equations
         f.apply_imaging_equations(telescope_params, cfg.pipeline,
-                                  cfg.blcoal, bins, binfracs,
-                                  cfg.on_the_fly, cfg.scale_predict_by_facet,
+                                  bins, binfracs,
                                   verbose, symbolify)
         return telescope_params
 
