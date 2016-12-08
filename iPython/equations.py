@@ -402,15 +402,22 @@ class Equations:
             o.Ntt_predict = o.Ntt
 
         if not o.pipeline in Pipelines.imaging: return
+
+        # Assume 8 flops per default. For image-domain gridding we
+        # need 6 flops additionally.
+        Rflop_per_vis = 8
+        if o.image_gridding > 0:
+            Rflop_per_vis = 8 + 6
+
         o.set_product(Products.Grid, T=o.Tsnap,
             N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_backward *
                          o.Nfacet**2 * o.Nf_vis_backward(b)),
-            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
+            Rflop = blsum(b, Rflop_per_vis * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
             Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap)
         o.set_product(Products.Degrid, T = o.Tsnap,
             N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_predict *
                          o.Nfacet_predict**2 * o.Nf_vis_predict(b)),
-            Rflop = blsum(b, 8 * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
+            Rflop = blsum(b, Rflop_per_vis * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
             Rout = blsum(b, o.Mvis / o.Tcoal_predict(b)))
 
     @staticmethod
@@ -656,6 +663,23 @@ class Equations:
             o.Nf_gcf_predict  = o.Nf_vis_predict
             o.Tkernel_backward = o.Tcoal_backward
             o.Tkernel_predict  = o.Tcoal_predict
+        elif o.image_gridding > 0:
+            # For image-domain gridding, we multiply kernels that get
+            # applied closely together by the visibilities in image
+            # space, apply phase ramps to account for their shift
+            # relative to each other, FFT the result once, then add to
+            # the grid. So w need larger kernels, gridding is more
+            # expensive, but we need less "kernels" (which are now
+            # "sub-grids"). Note that sub-grid convolution now happens
+            # *after* gridding!
+            o.Nf_gcf_backward = BLDep(b, o.Theta_fov * b / o.wl_sb_min / o.image_gridding
+                                      * (1 - 1 / o.Qsubband))
+            o.Nf_gcf_predict = BLDep(b, o.Theta_fov_predict * b / o.wl_sb_min / o.image_gridding
+                                     * (1 - 1 / o.Qsubband))
+            o.Tkernel_backward = BLDep(b, Max(o.Tcoal_backward(b), Min(o.Tsnap,
+                24 * 3600 * o.image_gridding / 2 / pi / o.Theta_fov / b * o.wl_sb_min)))
+            o.Tkernel_predict = BLDep(b, Max(o.Tcoal_backward(b), Min(o.Tsnap,
+                24 * 3600 * o.image_gridding / 2 / pi / o.Theta_fov_predict / b * o.wl_sb_min)))
         else:
             # For both of the following, maintain distributability;
             # need at least Nf_min kernels.
