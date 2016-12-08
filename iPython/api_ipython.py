@@ -189,9 +189,9 @@ class SkaIPythonAPI(api):
         accuracy by default.
         """
 
-        # Floating point values up to 3 digits
+        # Floating point values up to 4 digits
         if isinstance(value, float):
-            return '%.3g' % value
+            return min(['%.3g' % value, '%.4g' % value, '%.5g' % value], key=len)
         # Lists: Apply formating recursively
         if isinstance(value, list):
             s = '['
@@ -201,6 +201,31 @@ class SkaIPythonAPI(api):
             return s + ']'
         # Otherwise: Trust default formatting
         return '%s' % value
+
+    @staticmethod
+    def format_result_cell(val, color='black', colspan=1, typ='td'):
+        """
+        Format a result value for inclusing in a table.
+        """
+        return '<%s colspan="%d"><font color="%s">%s</font></%s>' % (
+            typ, colspan, color, SkaIPythonAPI.format_result(val), typ)
+
+    @staticmethod
+    def format_result_cells(val, color='black', max_cols=1):
+        """
+        Format a result value for inclusing in a table. If the value is a
+        list, we genrate multiple cells up to "max_cells".
+        """
+
+        row_html = ''
+        if type(val) == list and len(val) <= max_cols:
+            for v in val:
+                row_html += SkaIPythonAPI.format_result_cell(v, color, 1)
+            if len(val) < max_cols:
+                row_html += SkaIPythonAPI.format_result_cell('', color, max_cols-len(val))
+        else:
+            row_html += SkaIPythonAPI.format_result_cell(val, color, max_cols)
+        return row_html
 
     @staticmethod
     def show_table(title, labels, values, units):
@@ -215,13 +240,16 @@ class SkaIPythonAPI(api):
         s = '<h3>%s:</h3><table>\n' % title
         assert len(labels) == len(values)
         assert len(labels) == len(units)
+        max_cols = max([1] + [len(v) for v in values if type(v) == list])
         for i in range(len(labels)):
             if labels[i].startswith('--'):
-                s += '<tr><th colspan="2">{0}</th></tr>'.format(labels[i])
+                s += '<tr>%s</tr>' % SkaIPythonAPI.format_result_cell(labels[i], colspan=max_cols+2, typ='th')
                 continue
             def row(label, val):
-                return '<tr><td>{0}</td><td><font color="blue">{1}</font> {2}</td></tr>\n'.format(
-                         label, SkaIPythonAPI.format_result(val), units[i])
+                row_html = '<tr><td>%s</td>' % label
+                row_html += SkaIPythonAPI.format_result_cells(val, color='blue', max_cols=max_cols)
+                row_html += '<td>%s</td></tr>\n' % units[i]
+                return row_html
             if not isinstance(values[i], dict):
                 s += row(labels[i], values[i])
             else:
@@ -245,17 +273,19 @@ class SkaIPythonAPI(api):
         assert len(labels) == len(values_1)
         assert len(labels) == len(values_2)
         assert len(labels) == len(units)
+
+        max_cols = max([1] + [len(v) for v in values_1+values_2 if type(v) == list])
+
         for i in range(len(labels)):
             if labels[i].startswith('--'):
-                s += '<tr><th colspan="4">{0}</th></tr>'.format(labels[i])
+                s += '<tr>%s</tr>' % SkaIPythonAPI.format_result_cell(labels[i], colspan=2*max_cols+2, typ='th')
                 continue
             def row(label, val1, val2):
-                return '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
-                       '</td><td>{3}</td></tr>\n'.format(
-                         label,
-                         SkaIPythonAPI.format_result(val1),
-                         SkaIPythonAPI.format_result(val2),
-                         units[i])
+                row_html = '<tr><td>%s</td>' % label
+                row_html += SkaIPythonAPI.format_result_cells(val1, color='darkcyan', max_cols=max_cols)
+                row_html += SkaIPythonAPI.format_result_cells(val2, color='blue', max_cols=max_cols)
+                row_html += '<td>%s</td></tr>\n' % units[i]
+                return row_html
             if not isinstance(values_1[i], dict) and not isinstance(values_2[i], dict):
                 s += row(labels[i], values_1[i], values_2[i])
             else:
