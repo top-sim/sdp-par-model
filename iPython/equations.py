@@ -184,7 +184,6 @@ class Equations:
         o.Tdump_no_smear=o.epsilon_f_approx * o.wl \
                     / (o.Omega_E * o.Bmax * 7.66 * o.wl_sb_max * o.Qfov_ICAL / (pi * o.Ds))
         o.Tint_used = Max(o.Tint_min, o.Tdump_no_smear)
-        
 
     @staticmethod
     def _apply_channel_equations(o, symbolify):
@@ -324,17 +323,11 @@ class Equations:
 
         # TODO: Check split of kernel size for backward and predict steps.
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_backward = BLDep(b, o.Ngw_backward(b) ** 2 + o.Naa ** 2)
         o.Nkernel_AW_backward = BLDep(b, (o.Ngw_backward(b) ** 2 + o.Naa ** 2)**0.5)
+        o.Nkernel2_backward = BLDep(b, o.Nkernel_AW_backward(b)**2)
         # squared linear size of combined W and A kernels; used in eqs 23 and 32
-        o.Nkernel2_predict = BLDep(b, o.Ngw_predict(b) ** 2 + o.Naa ** 2)
         o.Nkernel_AW_predict = BLDep(b, (o.Ngw_predict(b) ** 2 + o.Naa ** 2)**0.5)
-
-        # Combined kernel support size and oversampling
-        if o.on_the_fly:
-            o.Qgcf = 1.0
-        o.Ncvff_backward = BLDep(b, sqrt(o.Nkernel2_backward(b))*o.Qgcf)
-        o.Ncvff_predict = BLDep(b, sqrt(o.Nkernel2_predict(b))*o.Qgcf)
+        o.Nkernel2_predict = BLDep(b, o.Nkernel_AW_predict(b)**2)
 
     @staticmethod
     def _apply_ingest_equations(o):
@@ -648,8 +641,16 @@ class Equations:
             Min(log(o.wl_max / o.wl_min) /
                 log(o.dfonF_predict(b) + 1.), o.Nf_max))
 
+        # Baselines to cover with kernels. If baselines can be treated
+        # the same, this will get overwritten below.
         bmax_bins = o.Bmax_bins
         bcount_bins = [ frac * o.Nbl_full for frac in o.frac_bins ]
+
+        # Number of times kernel convolution needs to be repeated to
+        # generate all oversampling values used in gridding.
+        o.Ngcf_used_backward = BLDep(b, 1)
+        o.Ngcf_used_predict = BLDep(b, 1)
+
         if o.on_the_fly:
             o.Nf_gcf_backward = o.Nf_vis_backward
             o.Nf_gcf_predict  = o.Nf_vis_predict
@@ -671,6 +672,15 @@ class Equations:
                 bmax_bins = [ o.Bmax ]
                 bcount_bins = [ o.NAProducts ]
 
+            # Determine number of visibilities per kernel, approximate
+            # number of oversampling values used.
+            o.Nvis_gcf_backward = BLDep(b,
+                o.Nf_vis_backward(b) / o.Nf_gcf_backward(b) * o.Tkernel_backward(b) / o.Tcoal_backward(b))
+            o.Nvis_gcf_predict = BLDep(b,
+                o.Nf_vis_predict(b) / o.Nf_gcf_predict(b) * o.Tkernel_predict(b) / o.Tcoal_predict(b))
+            o.Ngcf_used_backward = BLDep(b, o.Qgcf**2 * (1 - (1 - 1 / o.Qgcf**2)**o.Nvis_gcf_backward(b)))
+            o.Ngcf_used_predict = BLDep(b, o.Qgcf**2 * (1 - (1 - 1 / o.Qgcf**2)**o.Nvis_gcf_predict(b)))
+
         if o.pipeline in Pipelines.imaging:
 
             # The following two equations correspond to Eq. 35
@@ -678,13 +688,13 @@ class Equations:
                 T = BLDep(b, o.Tkernel_backward(b)),
                 N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b) * o.Nfacet**2),
                 bmax_bins=bmax_bins, bcount_bins=bcount_bins,
-                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_backward(b)**2 * log(o.Ncvff_backward(b)**2, 2) / o.Tkernel_backward(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_backward(b) * o.Nkernel_AW_backward(b)**2 * log(o.Nkernel_AW_backward(b)**2, 2) / o.Tkernel_backward(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
             o.set_product(Products.Degridding_Kernel_Update,
                 T = BLDep(b,o.Tkernel_predict(b)),
                 N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet_predict**2),
                 bmax_bins=bmax_bins, bcount_bins=bcount_bins,
-                Rflop = blsum(b, 5. * o.Nmm * o.Ncvff_predict(b)**2 * log(o.Ncvff_predict(b)**2, 2) / o.Tkernel_predict(b)),
+                Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_predict(b) * o.Nkernel_AW_predict(b)**2 * log(o.Nkernel_AW_predict(b)**2, 2) / o.Tkernel_predict(b)),
                 Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 
     @staticmethod
