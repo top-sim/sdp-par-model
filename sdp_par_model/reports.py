@@ -682,6 +682,17 @@ class SkaIPythonAPI(api):
         SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
     @staticmethod
+    def seconds_to_hms(seconds):
+        """
+        Converts a given number of seconds into hours, minutes and seconds, returned as a tuple. Useful for display output
+        @param seconds:
+        @return: (hours, minutes, seconds)
+        """
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        return (h, m, s)
+
+    @staticmethod
     def evaluate_hpso_optimized(hpso_key, blcoal=True,
                                 on_the_fly=False,
                                 scale_predict_by_facet=True,

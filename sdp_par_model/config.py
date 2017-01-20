@@ -185,25 +185,6 @@ class Implementation:
         pass
 
     @staticmethod
-    def is_literal(expression):
-        """
-        Returns true iff the expression is already a literal (e.g. float or integer) value that cannot be substituted
-        or evaluated further. Used to halt attempts at further evaluating symbolic expressions
-        """
-        return isinstance(expression, (str, float, int, np.ndarray, list))
-
-    @staticmethod
-    def seconds_to_hms(seconds):
-        """
-        Converts a given number of seconds into hours, minutes and seconds, returned as a tuple. Useful for display output
-        @param seconds:
-        @return: (hours, minutes, seconds)
-        """
-        m, s = divmod(seconds, 60)
-        h, m = divmod(m, 60)
-        return (h, m, s)
-
-    @staticmethod
     def cheap_lambdify_curry(free_vars, expression):
         """Translate sympy expression to an actual Python expression that can
         be evaluated quickly. This is roughly the same as sympy's

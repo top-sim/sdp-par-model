@@ -21,6 +21,14 @@ class SkaPythonAPI:
         pass
 
     @staticmethod
+    def is_literal(expression):
+        """
+        Returns true iff the expression is already a literal (e.g. float or integer) value that cannot be substituted
+        or evaluated further. Used to halt attempts at further evaluating symbolic expressions
+        """
+        return isinstance(expression, (str, float, int, np.ndarray, list))
+
+    @staticmethod
     def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
         # TODO check all calls ans see whether "key" can be added, or whether it should be removed altogether
         """Evaluate an expression by substituting the telescopec parameters
