@@ -18,8 +18,15 @@ from .container import ParameterContainer, BLDep, blsum
 
 # Check sympy compatibility
 if sympy.__version__ == "1.0":
-    raise Exception("SymPy version 1.0 is broken. Please either upgrade or downgrade your version!")
 
+    # There seems to be a bug that leads sympy 1.0.0 into an infinite
+    # loop when using non-natural logarithms. Thanks to Juande
+    # Santander-Vela for discovering the workaround.
+    def log(v, b=None):
+        if b is None:
+            return sympy.log(v)
+        else:
+            return sympy.log(v) / math.log(b)
 
 def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verbose, symbolify=''):
     """
