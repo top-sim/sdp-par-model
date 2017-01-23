@@ -6,15 +6,17 @@ the supplied basic parameters defined in ParameterDefinitions.
 
 from __future__ import print_function
 
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
-from numpy import pi, round
 import math
-from .definitions import Pipelines, Products
-from .container import ParameterContainer, BLDep, blsum
 import warnings
 
-# Check sympy compatibility
+from numpy import pi, round
 import sympy
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
+
+from .definitions import Pipelines, Products
+from .container import ParameterContainer, BLDep, blsum
+
+# Check sympy compatibility
 if sympy.__version__ == "1.0":
     raise Exception("SymPy version 1.0 is broken. Please either upgrade or downgrade your version!")
 
@@ -25,20 +27,18 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     equations described in PDR05 (version 1.85).
 
     The derived parameters are added to the supplied
-    telescope_parameter object (locally referred to as o).  Where
+    `telescope_parameters` object (locally referred to as `o`).  Where
     parameters are only described symbolically (using sympy) they
     can be numerically evaluated at a later stage, when unknown
-    symbolic variables are suitably substituted. This is typically
-    done in external code contained, e.g. in implementation.py.
+    symbolic variables are suitably substituted.
 
-    @param telescope_parameters: ParameterContainer object
-        containing the telescope parameters.  This
-        ParameterContainer object is modified in-place by
+    :param telescope_parameters: :class:`.container.ParameterContainer` object
+        containing the telescope parameters. Will be modified in-place by
         appending / overwriting the relevant fields
-    @param pipeline: The pipeline
-    @param verbose: displays verbose command-line output
-
+    :param pipeline: The pipeline
+    :param verbose: displays verbose command-line output
     """
+
     o = telescope_parameters  # Used for shorthand in the equations below
     assert isinstance(o, ParameterContainer)
     assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined

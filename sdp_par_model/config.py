@@ -23,11 +23,11 @@ class PipelineConfig:
     def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
                  adjusts={}, **kwargs):
         """
-        @param telescope: Telescope to use (can be omitted if HPSO specified)
-        @param pipeline: Pipeline mode (can be omitted if HPSO specified)
-        @param band: Frequency band (can be omitted if HPSO specified)
-        @param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
-        @param adjusts: Values that should be adjusted in the
+        :param telescope: Telescope to use (can be omitted if HPSO specified)
+        :param pipeline: Pipeline mode (can be omitted if HPSO specified)
+        :param band: Frequency band (can be omitted if HPSO specified)
+        :param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
+        :param adjusts: Values that should be adjusted in the
           telescope parameters. Keyword arguments get added to the
           adjustments automatically. Can be a string of the the form
           "name=val name2=val flag".
@@ -115,10 +115,8 @@ class PipelineConfig:
 
     def telescope_and_band_are_compatible(self):
         """
-        Checks whether the supplied telescope and band are compatible with each other
-        @param telescope:
-        @param band:
-        @return:
+        Checks whether the supplied telescope and band are compatible with
+        each other.
         """
         is_compatible = False
         telescope = self.telescope
@@ -141,7 +139,7 @@ class PipelineConfig:
     def is_valid(self, pure_pipelines=True):
         """Checks integrity of the pipeline configuration.
 
-        @return: (okay?, list of errors/warnings)
+        :return: (okay?, list of errors/warnings)
         """
         messages = []
         okay = True
@@ -170,11 +168,13 @@ class PipelineConfig:
 
     def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify=''):
         """
-        This is a very important method - Calculates telescope parameters for a supplied band, pipeline or HPSO.
-        Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
-        @param cfg: Valid pipeline configuration
-        @param verbose:
-        @param adjusts: Dictionary of telescope parameters to adjust
+        Calculates telescope parameters for this configuration.  Some
+        values may (optionally) be overwritten, e.g. the
+        maximum baseline or number of frequency channels.
+
+        :param cfg: Valid pipeline configuration
+        :param verbose:
+        :param adjusts: Dictionary of telescope parameters to adjust
         """
 
         assert cfg.is_valid()[0], "calc_tel_params must be called for a valid pipeline configuration!"
@@ -250,9 +250,10 @@ class PipelineConfig:
     def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
-        @param pipelineConfig:
-        @param expression_string:
-        @param verbose:
+
+        :param pipelineConfig:
+        :param expression_string:
+        :param verbose:
         """
 
         result = 0
@@ -270,9 +271,10 @@ class PipelineConfig:
     def eval_product(pipelineConfig, product, expression='Rflop', verbose=False):
         """
         Evaluating a product parameter for its default parameter value
-        @param pipelineConfig:
-        @param expression:
-        @param verbose:
+
+        :param pipelineConfig:
+        :param expression:
+        :param verbose:
         """
 
         result = 0
@@ -290,9 +292,10 @@ class PipelineConfig:
     def eval_expression_products(pipelineConfig, expression='Rflop', verbose=False):
         """
         Evaluating a parameter for its default parameter value
-        @param pipelineConfig:
-        @param expression:
-        @param verbose:
+
+        :param pipelineConfig:
+        :param expression:
+        :param verbose:
         """
 
         values={}
@@ -318,15 +321,16 @@ class PipelineConfig:
         Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
         a specified range in a number of steps
 
-        @param pipelineConfig:
-        @param expression_string: The expression that needs to be evaluated, as string (e.g. "Rflop")
-        @param parameter_string: the parameter that will be swept - written as text (e.g. "Bmax")
-        @param param_val_min: minimum value for the parameter's value sweep
-        @param param_val_max: maximum value for the parameter's value sweep
-        @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+        :param pipelineConfig:
+        :param expression_string: The expression that needs to be evaluated, as string (e.g. "Rflop")
+        :param parameter_string: the parameter that will be swept - written as text (e.g. "Bmax")
+        :param param_val_min: minimum value for the parameter's value sweep
+        :param param_val_max: maximum value for the parameter's value sweep
+        :param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
 
-        @param verbose:
-        @return: @raise AssertionError:
+        :param verbose:
+        :return:
+        :raise AssertionError:
         """
         assert param_val_max > param_val_min
 
@@ -371,17 +375,19 @@ class PipelineConfig:
     def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop', parameters=None, params_ranges=None,
                             number_steps=2, verbose=False):
         """
-        Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
-        linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
-        a 2D parameter space, returning a matrix of values.
+        Evaluates an expression for a 2D grid of different values for
+        two parameters, by varying each parameter linearly in a
+        specified range in a number of steps. Similar to
+        :meth:`eval_param_sweep_1d`, except that it sweeps a 2D
+        parameter space, returning a matrix of values.
 
-        @param pipelineConfig
-        @param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
-        @param parameters:
-        @param params_ranges:
-        @param number_steps:
-        @param verbose:
-        @return:
+        :param pipelineConfig:
+        :param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
+        :param parameters:
+        :param params_ranges:
+        :param number_steps:
+        :param verbose:
+        :returns:
         """
         assert (parameters is not None) and (len(parameters) == 2)
         assert (params_ranges is not None) and (len(params_ranges) == 2)

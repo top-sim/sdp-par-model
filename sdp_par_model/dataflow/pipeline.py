@@ -9,6 +9,7 @@ from ..config import PipelineConfig
 from .dataflow import *
 
 class Pipeline:
+    """Dataflow generator for a SDP pipeline configuration."""
 
     def __init__(self, tp, nerf_time=1, nerf_freq=1, nerf_loop=1):
 

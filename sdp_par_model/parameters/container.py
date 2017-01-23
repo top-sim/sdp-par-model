@@ -35,9 +35,10 @@ class ParameterContainer(object):
       parameters were left open, such as if the number of facets was
       not decided yet, or we are evaluating the model symbolically.
 
-    * Baseline-dependent expressions (BLDep, see below). Expressions
+    * Baseline-dependent expressions (see :class:`BLDep`). Expressions
       that have a different value depending on the considered
       baseline.
+
     """
     def __init__(self):
         pass
@@ -57,10 +58,10 @@ class ParameterContainer(object):
         """
         Provides a method for setting a parameter. By default first checks that the value has not already been defined.
         Useful for preventing situations where values may inadvertently be overwritten.
-        @param param_name: The name of the parameter/field that needs to be assigned - provided as text
-        @param value: the value. Need not be text.
-        @param prevent_overwrite: Disallows this value to be overwritten once defined. Default = True.
-        @return: Nothing
+
+        :param param_name: The name of the parameter/field that needs to be assigned - provided as text
+        :param value: the value. Need not be text.
+        :param prevent_overwrite: Disallows this value to be overwritten once defined. Default = True.
         """
         assert isinstance(param_name, str)
         if prevent_overwrite:
@@ -84,10 +85,13 @@ class ParameterContainer(object):
 
     def get_param(self, param_name):
         """
-        Provides a method for reading a parameter that won't necessarily crash the program if the parameter has not yet
-        been defined. A nice-to-have robustness-enhancing feature but not really necessary to get a working implementation.
-        @param param_name: The name of the parameter/field that needs to be read - provided as text
-        @return: The parameter value.
+        Provides a method for reading a parameter that won't
+        necessarily crash the program if the parameter has not yet
+        been defined. A nice-to-have robustness-enhancing feature but
+        not really necessary to get a working implementation.
+
+        :param param_name: The name of the parameter/field that needs to be read - provided as text
+        :return: The parameter value.
         """
         assert isinstance(param_name, str)
         return_value = None
@@ -194,18 +198,19 @@ class ParameterContainer(object):
         return Add(*results, evaluate=False)
 
     def set_product(self, product, T=None, N=1, bmax_bins=None, bcount_bins=None, **args):
-        """Sets product properties using a task abstraction. Each property is
+        """
+        Sets product properties using a task abstraction. Each property is
         expressed as a sum over baselines.
 
-        @param product: Product to set.
-        @param T: Observation time covered by this task. Default is the
+        :param product: Product to set.
+        :param T: Observation time covered by this task. Default is the
           entire observation (Tobs). Can be baseline-dependent.
-        @param N: Task parallelism / rate multiplier. The number of
+        :param N: Task parallelism / rate multiplier. The number of
            tasks that work on the data in parallel. Can be
            baseline-dependent.
-        @param bmax_bins: Maximum lengths of baseline bins to use
-        @param bcount_bins: Size of baseline bins to use
-        @param args: Task properties as rates. Will be multiplied by
+        :param bmax_bins: Maximum lengths of baseline bins to use
+        :param bcount_bins: Size of baseline bins to use
+        :param args: Task properties as rates. Will be multiplied by
            N.  If it is baseline-dependent, it will be summed over all
            baselines to yield the final rate.
         """

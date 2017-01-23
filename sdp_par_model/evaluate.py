@@ -13,25 +13,28 @@ import warnings
 
 def is_literal(expression):
     """
-    Returns true iff the expression is already a literal (e.g. float or integer) value that cannot be substituted
-    or evaluated further. Used to halt attempts at further evaluating symbolic expressions
+    Returns true iff the expression is already a literal (e.g. float
+    or integer) value that cannot be substituted or evaluated
+    further. Used to halt attempts at further evaluating symbolic
+    expressions
     """
     return isinstance(expression, (str, float, int, np.ndarray, list))
 
 
 def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
     # TODO check all calls ans see whether "key" can be added, or whether it should be removed altogether
-    """Evaluate an expression by substituting the telescopec parameters
-    into them. Depending on the type of expression, the result
-    might be a value, a list of values (in case it is baseline-dependent) or a string (if evaluation failed).
+    """
+    Evaluate an expression by substituting the telescopec parameters
+    into them. Depending on the type of expression, the result might
+    be a value, a list of values (in case it is baseline-dependent) or
+    a string (if evaluation failed).
 
-    @param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
-    @param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
-    @param tsnap: The snapshot time to use
-    @param nfacet: The number of facets to use
-    @param key: (optional) the string name of the expression that is being evaluated. Used in error reporting.
-    @return:
-
+    :param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
+    :param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
+    :param tsnap: The snapshot time to use
+    :param nfacet: The number of facets to use
+    :param key: (optional) the string name of the expression that is being evaluated. Used in error reporting.
+    :return:
     """
 
     # Already a plain value?
@@ -86,7 +89,8 @@ def optimize_lambdified_expr(lam, bound_lower, bound_upper):
         raise Exception("Computer says no.")  # This should be impossible
 
 def cheap_lambdify_curry(free_vars, expression):
-    """Translate sympy expression to an actual Python expression that can
+    """
+    Translate sympy expression to an actual Python expression that can
     be evaluated quickly. This is roughly the same as sympy's
     lambdify, with a number of differences:
 
@@ -138,23 +142,23 @@ def cheap_lambdify_curry(free_vars, expression):
 def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop',
                               max_number_nfacets=20, min_number_nfacets=1,
                               verbose=False):
-    """Computes the optimal value for Tsnap and Nfacet that minimizes the
+    """
+    Computes the optimal value for Tsnap and Nfacet that minimizes the
     value of an expression (typically Rflop). Returns result as a
     2-tuple (Tsnap_opt, Nfacet_opt)
 
-    @param telescope_parameters: Contains the definition of the
+    :param telescope_parameters: Contains the definition of the
       expression that needs to be minimzed. This should be a
       symbolic expression that involves Tsnap and/or Nfacet.
-    @param expr_to_minimize_string: The expression that should be
+    :param expr_to_minimize_string: The expression that should be
       minimized. This is typically assumed to be the computational
       load, but may also be, for example, buffer size.
-    @param max_number_nfacets: Provides an upper limit to
+    :param max_number_nfacets: Provides an upper limit to
       Nfacet. Because we currently do a linear search for the
       minimum value, using a for loop, we need to know when to
       quit. Max should never be reached unless in pathological
       cases
-    @param verbose:
-
+    :param verbose:
     """
     assert isinstance(telescope_parameters, ParameterContainer)
     assert hasattr(telescope_parameters, expr_to_minimize_string)
@@ -223,10 +227,11 @@ def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rfl
 def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
     """
     The supplied lambda expression (a function of Tnsap) is minimized.
-    @param lam: The lambda expression (a function of Tsnap)
-    @param telescope_parameters: The telescope parameters
-    @param verbose:
-    @return: The optimal Tsnap value, along with the optimal value (as a pair)
+
+    :param lam: The lambda expression (a function of Tsnap)
+    :param telescope_parameters: The telescope parameters
+    :param verbose:
+    :return: The optimal Tsnap value, along with the optimal value (as a pair)
     """
     assert telescope_parameters.pipeline in Pipelines.imaging
 
@@ -245,11 +250,12 @@ def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
 
 def evaluate_expressions(expressions, tp, tsnap, nfacet):
     """
-    Evaluate a sequence of expressions by substituting the telescope_parameters into them. Returns the result
-    @param expressions: An array of expressions to be evaluated
-    @param tp: The set of telescope parameters that should be used to evaluate each expression
-    @param tsnap: The relevant (typically optimal) snapshot time
-    @param nfacet: The relevant (typically optimal) number of facets to use
+    Evaluate a sequence of expressions by substituting the telescope_parameters into them.
+
+    :param expressions: An array of expressions to be evaluated
+    :param tp: The set of telescope parameters that should be used to evaluate each expression
+    :param tsnap: The relevant (typically optimal) snapshot time
+    :param nfacet: The relevant (typically optimal) number of facets to use
     """
     results = []
     for i in range(len(expressions)):
@@ -262,9 +268,10 @@ def evaluate_expressions(expressions, tp, tsnap, nfacet):
 def eval_products_symbolic(pipelineConfig, expression='Rflop', symbolify='product'):
     """
     Returns formulas for the given product property.
-    @param pipelineConfig: Pipeline configuration to use.
-    @param expression: Product property to query. FLOP rate by default.
-    @param symbolify: How aggressively sub-formulas should be replaced by symbols.
+
+    :param pipelineConfig: Pipeline configuration to use.
+    :param expression: Product property to query. FLOP rate by default.
+    :param symbolify: How aggressively sub-formulas should be replaced by symbols.
     """
 
     # Create symbol-ified telescope model
@@ -288,10 +295,10 @@ def eval_symbols(pipelineConfig, symbols,
     are not defined or have only a tautological definition ("sym =
     sym").
 
-    @param pipelineConfig: Pipeline configuration to use.
-    @param symbols: Symbols to query
-    @param recursive: Look up free symbols in symbol definitions?
-    @param symbolify: How aggressively sub-formulas should be replaced by symbols.
+    :param pipelineConfig: Pipeline configuration to use.
+    :param symbols: Symbols to query
+    :param recursive: Look up free symbols in symbol definitions?
+    :param symbolify: How aggressively sub-formulas should be replaced by symbols.
     """
 
     # Create possibly symbol-ified telescope model
@@ -334,7 +341,7 @@ def collect_free_symbols(formulas):
     Returns the names of all free symbol in the given formulas. We
     always count all functions as free.
 
-    @param formulas: Formulas to search for free symbols.
+    :param formulas: Formulas to search for free symbols.
     """
 
     def free_f(expr):

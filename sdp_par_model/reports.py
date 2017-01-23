@@ -1,33 +1,25 @@
 """
 This file contains methods for generating reports for SKA SDP
-parametric model data using matplotlib. 
-
-interacting with the SKA SDP
-Parametric model using Python from the IPython Notebook (Jupyter)
-environment. It extends the methods defined in API.py The reason the
-code is implemented here is to keep notebooks themselves free from
-clutter, and to make using the notebooks easier.
-
+parametric model data using especially matplotlib and Jupyter. Having
+these functions separate allows us to keep notebooks free of clutter.
 """
 from __future__ import print_function
-from api import SkaPythonAPI as api  # This class' (SkaIPythonAPI's) parent class
 
-from IPython.display import clear_output, display, HTML, FileLink
+import re
+import warnings
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
-import warnings
 import csv
-import re
+from IPython.display import clear_output, display, HTML, FileLink
 
-from parameter_definitions import *  # definitions of variables, primary telescope parameters
-from parameter_definitions import Constants as c
-from equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
-from implementation import Implementation as imp  # methods for performing computations (i.e. crunching the numbers)
-from implementation import PipelineConfig
-from parameter_definitions import ParameterContainer
+from .parameters.definitions import Constants as c
+from .parameters.container import ParameterContainer
+#from .parameters.equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
+from . import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
+from .config import PipelineConfig
 
 # Possible calculated results to display in the notebook
 RESULT_MAP = [
@@ -133,8 +125,9 @@ RESULT_MAP = [
 def get_result_sum(resultMap):
     """
     Returns the corresponding entries of whether expressions should be summed or concatenated in a list.
-    @param resultMap:
-    @return:
+
+    :param resultMap:
+    :returns:
     """
     return list(map(lambda row: row[3], resultMap))
 
@@ -142,9 +135,10 @@ def get_result_sum(resultMap):
 def get_result_expressions(resultMap,tp):
     """
     Returns the expression that needs to be evaluated
-    @param resultMap:
-    @param tp:
-    @return:
+
+    :param resultMap:
+    :param tp:
+    :returns:
     """
     def expr(row):
         try:
@@ -158,11 +152,13 @@ GRAPH_ROWS = list(map(lambda row: row[0], RESULT_MAP[-9:]))
 
 
 def mk_result_map_rows(verbosity = 'Overview'):
-    '''Collects result map information for a given row set
-    @rows: Row set to show. If None, we will use default rows.
-    @return: A tuple of the result map, the sorted list of the row
-    names and a list of the row units.
-    '''
+    """
+    Collects result map information for a given row set
+
+    :param verbosity: Row set to show. If None, we will use default rows.
+    :returns: A tuple of the result map, the sorted list of the row
+       names and a list of the row units.
+    """
 
     if verbosity == 'Overview':
         result_map = list(filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP))
@@ -177,7 +173,8 @@ def mk_result_map_rows(verbosity = 'Overview'):
 def default_rflop_plotting_colours(rows):
     """
     Defines a default colour order used in plotting Rflop components
-    @return:
+
+    :returns: List of HTML colour codes as string
     """
 
     # Stolen from D3's category20
@@ -237,11 +234,12 @@ def format_result_cells(val, color='black', max_cols=1):
 def show_table(title, labels, values, units):
     """
     Plots a table of label-value pairs
-    @param title: string
-    @param labels: string list / tuple
-    @param values: string list / tuple
-    @param units: string list / tuple
-    @return:
+
+    :param title: string
+    :param labels: string list / tuple
+    :param values: string list / tuple
+    :param units: string list / tuple
+    :returns:
     """
     s = '<h3>%s:</h3><table>\n' % title
     assert len(labels) == len(values)
@@ -268,12 +266,13 @@ def show_table(title, labels, values, units):
 def show_table_compare(title, labels, values_1, values_2, units):
     """
     Plots a table that for a set of labels, compares each' value with the other
-    @param title:
-    @param labels:
-    @param values_1:
-    @param values_2:
-    @param units:
-    @return:
+
+    :param title:
+    :param labels:
+    :param values_1:
+    :param values_2:
+    :param units:
+    :returns:
     """
     s = '<h4>%s:</h4><table>\n' % title
     assert len(labels) == len(values_1)
@@ -305,13 +304,14 @@ def show_table_compare(title, labels, values_1, values_2, units):
 def show_table_compare3(title, labels, values_1, values_2, values_3, units):
     """
     Plots a table that for a set of 3 values pe label compares each' value with the other
-    @param title:
-    @param labels:
-    @param values_1:
-    @param values_2:
-    @param values_3:
-    @param units:
-    @return:
+
+    :param title:
+    :param labels:
+    :param values_1:
+    :param values_2:
+    :param values_3:
+    :param units:
+    :returns:
     """
     s = '<h5>%s:</h5><table>\n' % title
     assert len(labels) == len(values_1)
@@ -336,10 +336,11 @@ def show_table_compare3(title, labels, values_1, values_2, values_3, units):
 def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
     """
     Plots a series of (x,y) values using a line and data-point visualization.
-    @param title:
-    @param x_values:
-    @param y_values:
-    @return:
+
+    :param title:
+    :param x_values:
+    :param y_values:
+    :returns:
     """
     pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
     assert len(x_values) == len(y_values)
@@ -354,21 +355,22 @@ def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
 def plot_2D_surface(title, x_values, y_values, z_values, contours=None, xlabel=None, ylabel=None, zlabel=None, nlevels=15):
     """
     Plots a series of (x,y) values using a line and data-point visualization.
-    @param title: The plot's title
-    @param x_values: a 1D numpy array
-    @param y_values: a 1D numpy array
-    @param z_values: a 2D numpy array, indexed as (x,y)
-    @param contours: optional array of values at which contours should be drawn
-    @param zlabel:
-    @param ylabel:
-    @param xlabel:
-    @return:
+
+    :param title: The plot's title
+    :param x_values: a 1D numpy array
+    :param y_values: a 1D numpy array
+    :param z_values: a 2D numpy array, indexed as (x,y)
+    :param contours: optional array of values at which contours should be drawn
+    :param zlabel:
+    :param ylabel:
+    :param xlabel:
+    :returns:
     """
     colourmap = 'coolwarm'  # options include: 'afmhot', 'coolwarm'
     contour_colour = [(1., 0., 0., 1.)]  # red
 
     pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-     assert len(x_values) == len(y_values)
+    assert len(x_values) == len(y_values)
 
     sizex = len(x_values)
     sizey = len(y_values)
@@ -394,21 +396,22 @@ def plot_3D_surface(title, x_values, y_values, z_values,
                     contours=None, xlabel=None, ylabel=None, zlabel=None, nlevels=15):
     """
     Plots a series of (x,y) values using a line and data-point visualization.
-    @param title: The plot's title
-    @param x_values: a 1D numpy array
-    @param y_values: a 1D numpy array
-    @param z_values: a 2D numpy array, indexed as (x,y)
-    @param contours: optional array of values at which contours should be drawn
-    @param zlabel:
-    @param ylabel:
-    @param xlabel:
-    @return:
+
+    :param title: The plot's title
+    :param x_values: a 1D numpy array
+    :param y_values: a 1D numpy array
+    :param z_values: a 2D numpy array, indexed as (x,y)
+    :param contours: optional array of values at which contours should be drawn
+    :param zlabel:
+    :param ylabel:
+    :param xlabel:
+    :returns:
     """
     colourmap = cm.coolwarm  # options include: 'afmhot', 'coolwarm'
     contour_colour = [(1., 0., 0., 1.)]  # red
 
     pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-     assert len(x_values) == len(y_values)
+    assert len(x_values) == len(y_values)
 
     sizex = len(x_values)
     sizey = len(y_values)
@@ -437,10 +440,11 @@ def plot_3D_surface(title, x_values, y_values, z_values,
 def plot_pie(title, labels, values, colours=None):
     """
     Plots a pie chart
-    @param title:
-    @param labels:
-    @param values: a numpy array
-    @param colours:
+
+    :param title:
+    :param labels:
+    :param values: a numpy array
+    :param colours:
     """
     assert len(labels) == len(values)
     if colours is not None:
@@ -466,13 +470,15 @@ def plot_pie(title, labels, values, colours=None):
 
 def save_pie(title, labels, values, filename, colours=None):
     """
-    Works exactly same way as plot_pie(), but instead of plotting, saves a pie chart to SVG output file.
-    Useful for exporting results to documents and such
-    @param title:
-    @param labels:
-    @param values: a numpy array
-    @param filename
-    @param colours:
+    Works exactly same way as plot_pie(), but instead of plotting,
+    saves a pie chart to SVG output file.  Useful for exporting
+    results to documents and such
+
+    :param title:
+    :param labels:
+    :param values: a numpy array
+    :param filename:
+    :param colours:
     """
 
     assert len(labels) == len(values)
@@ -501,12 +507,14 @@ def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays,
                       colours=None, width=0.35,
                       save=None):
     """
-    Plots a stacked bar chart, with any number of columns and components per stack (must be equal for all bars)
-    @param title:
-    @param labels: The label belonging to each bar
-    @param dictionary_of_value_arrays: A dictionary that maps each label to an array of values (to be stacked).
-    @param colours:
-    @return:
+    Plots a stacked bar chart, with any number of columns and
+    components per stack (must be equal for all bars)
+
+    :param title:
+    :param labels: The label belonging to each bar
+    :param dictionary_of_value_arrays: A dictionary that maps each label to an array of values (to be stacked).
+    :param colours:
+    :returns:
     """
     # Do some sanity checks
     number_of_elements = len(dictionary_of_value_arrays)
@@ -566,19 +574,21 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
                                telescope_2, band_2, pipeline_2, adjusts_2,
                                verbosity='Overview'):
     """
-    Evaluates two telescopes, both operating in a given band and pipeline, using their default parameters.
-    A bit of an ugly bit of code, because it contains both computations and display code. But it does make for
-    pretty interactive results. Plots the results side by side.
-    @param telescope_1:
-    @param telescope_2:
-    @param band_1:
-    @param band_2:
-    @param pipeline_1:
-    @param pipeline_2:
-    @param adjusts_1: Configuration adjustments for telescope 1. See PipelineConfig.
-    @param adjusts_2: Configuration adjustments for telescope 2. See PipelineConfig.
-    @param verbosity: amount of output to generate
-    @return:
+    Evaluates two telescopes, both operating in a given band and
+    pipeline, using their default parameters.  A bit of an ugly bit of
+    code, because it contains both computations and display code. But
+    it does make for pretty interactive results. Plots the results
+    side by side.
+
+    :param telescope_1:
+    :param telescope_2:
+    :param band_1:
+    :param band_2:
+    :param pipeline_1:
+    :param pipeline_2:
+    :param adjusts_1: Configuration adjustments for telescope 1. See PipelineConfig.
+    :param adjusts_2: Configuration adjustments for telescope 2. See PipelineConfig.
+    :param verbosity: amount of output to generate
     """
 
     # Make configurations and check
@@ -631,20 +641,19 @@ def evaluate_telescope_manual(telescope, band, pipeline,
     Evaluates a telescope with manually supplied parameters.
     These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
     optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
-    @param telescope:
-    @param band:
-    @param pipeline:
-    @param Nfacet:
-    @param Tsnap:
-    @param max_baseline:
-    @param Nf_max:
-    @param Nfacet:
-    @param Tsnap:
-    @param blcoal: Baseline dependent coalescing (before gridding)
-    @param on_the_fly:
-    @param verbosity:
-    @param rows:
-    @return:
+
+    :param telescope:
+    :param band:
+    :param pipeline:
+    :param Nfacet:
+    :param Tsnap:
+    :param max_baseline:
+    :param Nf_max:
+    :param Nfacet:
+    :param Tsnap:
+    :param blcoal: Baseline dependent coalescing (before gridding)
+    :param on_the_fly:
+    :param verbosity:
     """
 
     assert Nfacet > 0
@@ -679,9 +688,11 @@ def evaluate_telescope_manual(telescope, band, pipeline,
 
 def seconds_to_hms(seconds):
     """
-    Converts a given number of seconds into hours, minutes and seconds, returned as a tuple. Useful for display output
-    @param seconds:
-    @return: (hours, minutes, seconds)
+    Converts a given number of seconds into hours, minutes and
+    seconds, returned as a tuple. Useful for display output
+
+    :param seconds:
+    :returns: (hours, minutes, seconds)
     """
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
@@ -694,11 +705,11 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
                             verbosity='Overview'):
     """
     Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
-    @param hpso:
-    @param blcoal: Baseline dependent coalescing (before gridding)
-    @param on_the_fly:
-    @param verbosity:
-    @return:
+
+    :param hpso:
+    :param blcoal: Baseline dependent coalescing (before gridding)
+    :param on_the_fly:
+    :param verbosity:
     """
 
     tp_default = ParameterContainer()
@@ -747,15 +758,15 @@ def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="defaul
     """
     Evaluates a telescope with manually supplied parameters, but then automatically optimizes NFacet and Tsnap
     to minimize the total FLOP rate for the supplied parameters
-    @param telescope:
-    @param band:
-    @param pipeline:
-    @param max_baseline:
-    @param Nf_max:
-    @param blcoal: Baseline dependent coalescing (before gridding)
-    @param on_the_fly:
-    @param verbosity:
-    @return:
+
+    :param telescope:
+    :param band:
+    :param pipeline:
+    :param max_baseline:
+    :param Nf_max:
+    :param blcoal: Baseline dependent coalescing (before gridding)
+    :param on_the_fly:
+    :param verbosity:
     """
 
     # Make configuration
@@ -851,12 +862,12 @@ def write_csv_hpsos(filename, hpsos,
 def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
     """A private method for computing a set of results.
 
-    @param pipelineConfig: Complete pipeline configuration
-    @param verbose:
-    @param result_map: results to produce
-    @param Tsnap: Snapshot time. If None it will get determined by optimisation.
-    @param Nfacet: Facet count. If None it will get determined by optimisation.
-    @return: result value array
+    :param pipelineConfig: Complete pipeline configuration
+    :param verbose:
+    :param result_map: results to produce
+    :param Tsnap: Snapshot time. If None it will get determined by optimisation.
+    :param Nfacet: Facet count. If None it will get determined by optimisation.
+    :returns: result value array
     """
 
     # Loop through pipeliness to collect result values
@@ -1002,9 +1013,9 @@ def compare_csv(result_file, ref_file,
     """
     Read and compare two CSV files with telescope parameters
 
-    @param result_file: CVS file with telescope parameters
-    @param ref_file: CVS file with reference parameters
-    @param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
+    :param result_file: CVS file with telescope parameters
+    :param ref_file: CVS file with reference parameters
+    :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
     """
 
     # Read results and reference. Make lookup dictionary for the latter.

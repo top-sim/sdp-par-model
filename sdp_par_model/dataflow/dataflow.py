@@ -1,3 +1,26 @@
+"""Dataflow representations for reasoning about very large data flow
+graphs.
+
+What makes SDP graphs so large is mostly that they are split across
+multiple distribution axes at the same time. This means that we end up
+with huge numbers of nodes and connections even though the actual
+structure is often highly regular and can easily be reasoned about.
+
+Therefore here we use :class:`Domain` to refer to such a distribution
+axis, :class:`Regions` a split of this domain, and
+:class:`RegionBoxes` the cartesian product of such a split. This
+allows us now to evaluate -- say -- a :meth:`.RegionBoxes.sum` of an
+expression that depends on domain properties (see :class:`DomainExpr`)
+while only enumerating as few region boxes as possible.
+
+This works by passing a :class:`RegionBox` to the expression, which
+conceptually stands for any single possible cartesian product element
+of the ones we are currently considering. Whenever the expression asks
+for a domain property that would allow it to actually distinguish
+the different elements currently under consideration, an exception
+gets thrown, we enumerate that domain, and try evaluating again. This
+is repeated until expression evaluation succeeds.
+"""
 
 from __future__ import print_function
 
@@ -57,14 +80,11 @@ class DomainExpr:
 
     def __init__(self, expr):
         if isinstance(expr, DomainExpr):
-            self.expr = expr.expr
+            self.eval = expr.eval
         elif callable(expr) and not isinstance(expr, Expr):
-            self.expr = expr
+            self.eval = expr
         else:
-            self.expr = lambda rb: expr
-
-    def eval(self, rb):
-        return self.expr(rb)
+            self.eval = lambda rb: expr
 
     # DomainExpr objects can be combined using simple arithmetic
     def __mul__(self, other):
@@ -1162,6 +1182,7 @@ class Flow:
     def crossEdgeSum(self, dep, crossBoxes, prop):
         """
         Sums up a property over all crossing edges from a dependency.
+
         :param dep: Dependency to formulate edge cross sum for
         :param crossBoxes: Granularity for cross check. An edge counts
           as crossing if it starts in a different box than it ends in.

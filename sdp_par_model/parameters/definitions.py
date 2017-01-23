@@ -237,8 +237,9 @@ def define_symbolic_variables(o):
     This method defines the *symbolic* variables that we will use during computations
     and that need to be kept symbolic during evaluation of formulae. One reason to do this would be to allow
     the output formula to be optimized by varying this variable (such as with Tsnap and Nfacet)
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @rtype : ParameterContainer
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     o.Tsnap = symbols("Tsnap", positive=True)  # Snapshot timescale implemented
@@ -247,13 +248,14 @@ def define_symbolic_variables(o):
     return o
 
 
-def define_symbolic_variables_design_equations(o):
+def define_design_equations_variables(o):
     """
     This method defines the *symbolic* variables that we will use during computations
     and that may need to be kept symbolic during evaluation. One reason to do this would be to allow
     the output formula to be optimized by varying these variables
-    @param o: A supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @rtype : ParameterContainer
+
+    :param o: A supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
 
@@ -288,8 +290,9 @@ def define_symbolic_variables_design_equations(o):
 def apply_global_parameters(o):
     """
     Applies the global parameters to the parameter container object o.
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @rtype : ParameterContainer
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     o.c = 299792458  # The speed of light, in m/s (from sympy.physics.units.c)
@@ -384,9 +387,10 @@ def apply_global_parameters(o):
 def apply_telescope_parameters(o, telescope):
     """
     Applies the parameters that apply to the supplied telescope to the parameter container object o
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @param telescope:
-    @rtype : ParameterContainer
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :param telescope:
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     o.set_param('telescope', telescope)
@@ -548,9 +552,10 @@ def get_telescope_from_hpso(hpso):
     """
     Returns the telescope that is associated with the provided HPSO. Not really necessary any more, as the HPSO
     definitions now contain the relevant telescope.
-    @param hpso:
-    @return: the telescope corresponding to this HPSO
-    @raise Exception:
+
+    :param hpso:
+    :return: the telescope corresponding to this HPSO
+    :raise Exception:
     """
     if hpso in HPSOs.hpsos_using_SKA1Low:
         telescope = Telescopes.SKA1_Low
@@ -567,9 +572,10 @@ def get_telescope_from_hpso(hpso):
 def apply_band_parameters(o, band):
     """
     Applies the parameters that apply to the band to the parameter container object o
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @param band:
-    @rtype : ParameterContainer
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :param band:
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     o.band = band
@@ -651,10 +657,11 @@ def define_pipeline_products(o, pipeline, named_pipeline_products=[]):
 def apply_pipeline_parameters(o, pipeline):
     """
     Applies the parameters that apply to the pipeline to the parameter container object o
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @param pipeline: Type of pipeline
-    @raise Exception:
-    @rtype : ParameterContainer
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :param pipeline: Type of pipeline
+    :raise Exception:
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     define_pipeline_products(o, pipeline)
@@ -816,10 +823,11 @@ def apply_pipeline_parameters(o, pipeline):
 def apply_hpso_parameters(o, hpso):
     """
     Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
-    serves only one specialised pipeline and one hpso
-    @param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
-    @param hpso:
-    @rtype : ParameterContainer
+    serves only one specialised pipeline and one HPSO
+
+    :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
+    :param hpso:
+    :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     o.band = 'HPSO ' + str(hpso)

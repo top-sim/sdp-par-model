@@ -15,6 +15,7 @@
 *.stackdump
 /.eggs
 /*.egg-info
+/docs/_build
 
 .ipynb_checkpoints
 iPython/.ipynb_checkpoints
