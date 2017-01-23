@@ -1,22 +1,12 @@
-"""
-This Python file contains two classes.
-
-ParameterContainer is centrally important and used throughout the iPython model, but essentially is only a container
-class that is passed around between modules, and contains a set of parameters, values and variables that constitute
-the inputs and outputs of computations.
-
-Implementation contains a collection of methods for performing computations, but do not define the equations
-themselves. Instead, it specifies how values are substituted, optimized, and summed across bins.
-"""
 
 from __future__ import print_function
 from builtins import int
 
-from parameter_definitions import ParameterContainer
-from parameter_definitions import Telescopes, Pipelines, Bands
-from parameter_definitions import ParameterDefinitions as p
-from parameter_definitions import Constants as c
-from equations import Equations as f
+from .parameters import definitions as p
+from .parameters.container import ParameterContainer
+from .parameters.definitions import (Telescopes, Pipelines, Bands)
+from .parameters.definitions import Constants as c
+from .parameters import equations as f
 from sympy import simplify, lambdify, Max, Symbol
 from scipy import optimize as opt
 import numpy as np
@@ -29,7 +19,6 @@ class PipelineConfig:
     A full SDP pipeline configuration. This collects all data required
     to parameterise a pipeline.
     """
-
 
     def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
                  adjusts={}, **kwargs):
@@ -179,96 +168,16 @@ class PipelineConfig:
 
         return (okay, messages)
 
-class Implementation:
-
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def cheap_lambdify_curry(free_vars, expression):
-        """Translate sympy expression to an actual Python expression that can
-        be evaluated quickly. This is roughly the same as sympy's
-        lambdify, with a number of differences:
-
-        1. We only support a subset of functions. Note that sympy's
-           list is incomplete as well, and actually has a wrong
-           translation rule for "Max".
-
-        2. The return is curried, so for multiple "free_vars" (x, y)
-           you will have to call the result as "f(x)(y)" instead of
-           "f(x,y)". This means we can easily obtain a function that
-           is specialised for a certain value of the outer variable.
-
-        """
-
-        # Do "quick & dirty" translation. This map might need updating
-        # when new functions get used in equations.py
-        module = {
-            'Max': 'max',
-            'Min': 'min',
-            'ln': 'math.log',
-            'log': 'math.log',
-            'sqrt': 'math.sqrt',
-            'sign': 'np.sign', # No sign in math, apparently
-            'Abs': 'abs',
-            'acos': 'math.acos',
-            'acosh': 'math.acosh',
-            'arg': 'np.angle',
-            'asin': 'math.asin',
-            'asinh': 'math.asinh',
-            'atan': 'math.atan',
-            'atan2': 'math.atan2',
-            'atanh': 'math.atanh',
-            'ceiling': 'math.ceil',
-            'floor': 'math.floor'
-        }
-        expr_body = str(expression)
-        for (sympy_name, numpy_name) in module.items():
-            expr_body = expr_body.replace(sympy_name + '(', numpy_name + '(')
-
-        # Create head of lambda expression
-        expr_head = ''
-        for free_var in free_vars:
-            expr_head += 'lambda ' + str(free_var) + ':'
-
-        # Evaluate in order to build lambda
-        return eval(expr_head + expr_body)
-
-    @staticmethod
-    def optimize_lambdified_expr(lam, bound_lower, bound_upper):
-
-        # Lower bound cannot be higher than the uppper bound.
-        if bound_lower < bound_upper:
-            result = opt.minimize_scalar(lam,
-                                         bounds=(bound_lower, bound_upper),
-                                         method='bounded')
-            if not result.success:
-                warnings.warn('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
-            # else:
-            #     print ('Optimized free variable = %f' % result.x)
-            #     pass
-            return result.x
-        elif bound_lower > bound_upper:
-            warnings.warn('Unable to optimize free variable as upper bound %g is lower than lower bound %g.'
-                          'Adhering to lower bound.' % (bound_upper, bound_lower))
-
-            return bound_lower
-        elif bound_lower == bound_upper:
-            return bound_lower
-        else:
-            raise Exception("Computer says no.")  # This should be impossible
-
-    @staticmethod
-    def calc_tel_params(pipelineConfig, verbose=False, adjusts={}, symbolify=''):
+    def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify=''):
         """
         This is a very important method - Calculates telescope parameters for a supplied band, pipeline or HPSO.
         Some default values may (optionally) be overwritten, e.g. the maximum baseline or nr of frequency channels.
-        @param pipelineConfig: Valid pipeline configuration
+        @param cfg: Valid pipeline configuration
         @param verbose:
         @param adjusts: Dictionary of telescope parameters to adjust
         """
 
-        cfg = pipelineConfig
+        assert cfg.is_valid()[0], "calc_tel_params must be called for a valid pipeline configuration!"
 
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
@@ -338,110 +247,244 @@ class Implementation:
                                   verbose, symbolify)
         return telescope_params
 
-    @staticmethod
-    def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop',
-                                  max_number_nfacets=20, min_number_nfacets=1,
-                                  verbose=False):
-        """Computes the optimal value for Tsnap and Nfacet that minimizes the
-        value of an expression (typically Rflop). Returns result as a
-        2-tuple (Tsnap_opt, Nfacet_opt)
-
-        @param telescope_parameters: Contains the definition of the
-          expression that needs to be minimzed. This should be a
-          symbolic expression that involves Tsnap and/or Nfacet.
-        @param expr_to_minimize_string: The expression that should be
-          minimized. This is typically assumed to be the computational
-          load, but may also be, for example, buffer size.
-        @param max_number_nfacets: Provides an upper limit to
-          Nfacet. Because we currently do a linear search for the
-          minimum value, using a for loop, we need to know when to
-          quit. Max should never be reached unless in pathological
-          cases
-        @param verbose:
-
+    def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
         """
-        assert isinstance(telescope_parameters, ParameterContainer)
-        assert hasattr(telescope_parameters, expr_to_minimize_string)
+        Evaluating a parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression_string:
+        @param verbose:
+        """
 
-        if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
-            if verbose:
-                print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
-            return (telescope_parameters.Tobs, 1)
+        result = 0
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = pipelineConfig.calc_tel_params(verbose)
 
-        # Construct lambda from our two parameters (facet number and
-        # snapshot time) to the expression to minimise
-        expression_original = eval('telescope_parameters.%s' % expr_to_minimize_string)
-        params = []
-        if isinstance(telescope_parameters.Nfacet, Symbol):
-            params.append(telescope_parameters.Nfacet)
-            nfacet_range = range(min_number_nfacets, max_number_nfacets+1)
-        else:
-            nfacet_range = [telescope_parameters.Nfacet]
-        if isinstance(telescope_parameters.Tsnap, Symbol):
-            params.append(telescope_parameters.Tsnap)
-        expression_lam = Implementation.cheap_lambdify_curry(params, expression_original)
+            result_expression = tp.__dict__[expression_string]
+            (tsnap_opt, nfacet_opt) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
-        # Loop over the different integer values of NFacet
+        return result
+
+
+    def eval_product(pipelineConfig, product, expression='Rflop', verbose=False):
+        """
+        Evaluating a product parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        result = 0
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = pipelineConfig.calc_tel_params(verbose)
+
+            result_expression = tp.products.get(product, {}).get(expression, 0)
+            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        return result
+
+
+    def eval_expression_products(pipelineConfig, expression='Rflop', verbose=False):
+        """
+        Evaluating a parameter for its default parameter value
+        @param pipelineConfig:
+        @param expression:
+        @param verbose:
+        """
+
+        values={}
+        for pipeline in pipelineConfig.relevant_pipelines:
+            pipelineConfig.pipeline = pipeline
+            tp = pipelineConfig.calc_tel_params(verbose)
+            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+
+            # Loop through defined products, add to result
+            for name, product in tp.products.items():
+                if expression in product:
+                    values[name] = values.get(name, 0) + \
+                        SkaPythonAPI.evaluate_expression(product[expression], tp, tsnap, nfacet)
+
+        return values
+
+
+    def eval_param_sweep_1d(pipelineConfig, expression_string='Rflop',
+                            parameter_string='Rccf', param_val_min=10,
+                            param_val_max=10, number_steps=1,
+                            verbose=False):
+        """
+        Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
+        a specified range in a number of steps
+
+        @param pipelineConfig:
+        @param expression_string: The expression that needs to be evaluated, as string (e.g. "Rflop")
+        @param parameter_string: the parameter that will be swept - written as text (e.g. "Bmax")
+        @param param_val_min: minimum value for the parameter's value sweep
+        @param param_val_max: maximum value for the parameter's value sweep
+        @param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+
+        @param verbose:
+        @return: @raise AssertionError:
+        """
+        assert param_val_max > param_val_min
+
+        print("Starting sweep of parameter %s, evaluating expression %s over range (%s, %s) in %d steps "
+              "(i.e. %d data points)" %
+              (parameter_string, expression_string, str(param_val_min), str(param_val_max), number_steps, number_steps + 1))
+
+        param_values = np.linspace(param_val_min, param_val_max, num=number_steps + 1)
+
         results = []
-        warned = False
-        for nfacets in nfacet_range:
-            # Warn if large values of nfacets are reached, as it may indicate an error and take long!
-            if (nfacets > 20) and not warned:
-                warnings.warn('Searching minimum value by incrementing Nfacet; value of 20 exceeded... this is odd '
-                              '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
-                warned = True
+        for i in range(len(param_values)):
+            # Calculate telescope parameter with adjusted parameter
+            adjusts = {parameter_string: param_values[i]}
+            tp = pipelineConfig.calc_tel_params(verbose, adjusts=adjusts)
 
-            if verbose:
-                print ('Evaluating Nfacets = %d' % nfacets)
+            percentage_done = i * 100.0 / len(param_values)
+            print("> %.1f%% done: Evaluating %s for %s = %g" % (percentage_done, expression_string,
+                                                                parameter_string, param_values[i]))
 
-            # Find optimal Tsnap for this number of facets, obtaining result in "result"
-            if isinstance(telescope_parameters.Nfacet, Symbol):
-                expr = expression_lam(nfacets)
+            # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
+            # otherwise the assigned value would have been lost (i.e. not a free parameter)
+            parameter_final_value = tp.__dict__[parameter_string]
+            eta = 1e-10
+            if abs((parameter_final_value - param_values[i])/param_values[i]) > eta:
+                raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                     'by the method compute_derived_parameters(). (%g -> %g). '
+                                     'Cannot peform parameter sweep.'
+                                     % (parameter_string, param_values[i], parameter_final_value))
+
+            if expression_string.find(".") >= 0:
+                product, expr = expression_string.split(".")
+                result_expression = tp.products[product].get(expr, 0)
             else:
-                expr = expression_lam
-            if isinstance(telescope_parameters.Tsnap, Symbol):
-                result = Implementation.minimize_by_Tsnap_lambdified(expr,
-                                                                     telescope_parameters,
-                                                                     verbose=verbose)
-            else:
-                result = (telescope_parameters.Tsnap, float(expr))
-            results.append((nfacets, result[0], result[1]))
+                result_expression = tp.__dict__[expression_string]
+            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
-            # Continue to at least Nfacet==3 as there can be a local
-            # increase between nfacet=1 and 2
-            if len(results) >= 3:
-                if results[-1][2] >= results[-2][2]:
-                    if verbose:
-                        print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
-                              % nfacets)
-                    break
+        print('done with parameter sweep!')
+        return (param_values, results)
 
-        # Return parameters with lowest value
-        nfacets, tsnap, val = results[np.argmin(np.array(results)[:,2])]
-        if verbose:
-            print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
-                   % (nfacets, tsnap, expr_to_minimize_string, val))
-        return (tsnap, nfacets)
 
-    @staticmethod
-    def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
+    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop', parameters=None, params_ranges=None,
+                            number_steps=2, verbose=False):
         """
-        The supplied lambda expression (a function of Tnsap) is minimized.
-        @param lam: The lambda expression (a function of Tsnap)
-        @param telescope_parameters: The telescope parameters
+        Evaluates an expression for a 2D grid of different values for two parameters, by varying each parameter
+        linearly in a specified range in a number of steps. Similar to eval_param_sweep_1d, except that it sweeps
+        a 2D parameter space, returning a matrix of values.
+
+        @param pipelineConfig
+        @param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
+        @param parameters:
+        @param params_ranges:
+        @param number_steps:
         @param verbose:
-        @return: The optimal Tsnap value, along with the optimal value (as a pair)
+        @return:
         """
-        assert telescope_parameters.pipeline in Pipelines.imaging
+        assert (parameters is not None) and (len(parameters) == 2)
+        assert (params_ranges is not None) and (len(params_ranges) == 2)
+        for prange in params_ranges:
+            assert len(prange) == 2
+            assert prange[1] > prange[0]
 
-        # Compute lower & upper bounds
-        bound_lower = telescope_parameters.Tsnap_min
-        bound_upper = max(bound_lower, 0.5 * telescope_parameters.Tobs)
+        n_param_x_values = number_steps + 1
+        n_param_y_values = number_steps + 1
+        nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
 
-        # Do optimisation
-        Tsnap_optimal = Implementation.optimize_lambdified_expr(lam, bound_lower, bound_upper)
-        value_optimal = lam(Tsnap_optimal)
-        if verbose:
-            print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
-                  (Tsnap_optimal, value_optimal / c.peta))
-        return (Tsnap_optimal, value_optimal)  # Replace Tsnap with optimal value
+        print("Evaluating expression %s while\nsweeping parameters %s and %s over 2D domain [%s, %s] x [%s, %s] in %d "
+              "steps each,\nfor a total of %d data evaluation points" %
+              (expression_string, parameters[0], parameters[1], str(params_ranges[0][0]), str(params_ranges[0][1]),
+               str(params_ranges[1][0]), str(params_ranges[1][1]), number_steps, nr_evaluations))
+
+        param_x_values = np.linspace(params_ranges[0][0], params_ranges[0][1], num=n_param_x_values)
+        param_y_values = np.linspace(params_ranges[1][0], params_ranges[1][1], num=n_param_y_values)
+        results = np.zeros((n_param_x_values, n_param_y_values))  # Create an empty numpy matrix to hold results
+
+        # Nested 2D loop over all values for param1 and param2. Indexes iterate over y (inner loop), then x (outer loop)
+        for ix in range(n_param_x_values):
+            param_x_value = param_x_values[ix]
+            for iy in range(n_param_y_values):
+                param_y_value = param_y_values[iy]
+
+                # Overwrite the corresponding fields of tp with the to-be-evaluated values
+                adjusts = {
+                    parameters[0]: param_x_value,
+                    parameters[1]: param_y_value,
+                }
+                tp = pipelineConfig.calc_tel_params(verbose, adjusts=adjusts)
+
+                percentage_done = (ix * n_param_y_values + iy) * 100.0 / nr_evaluations
+                print("> %.1f%% done: Evaluating %s for (%s, %s) = (%s, %s)" % (percentage_done, expression_string,
+                                                                                parameters[0], parameters[1],
+                                                                                str(param_x_value), str(param_y_value)))
+
+                # Perform a check to see that the value of the assigned parameters weren't changed by the imaging
+                # equations, otherwise the assigned values would have been lost (i.e. not free parameters)
+                parameter1_final_value = eval('tp.%s' % parameters[0])
+                parameter2_final_value = eval('tp.%s' % parameters[1])
+                eta = 1e-10
+                if abs((parameter1_final_value - param_x_value) / param_x_value) > eta:
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[0])
+                if abs((parameter2_final_value - param_y_value) / param_y_value) > eta:
+                    print(parameter2_final_value)
+                    print(param_y_value)
+                    raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
+                                         'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
+                                         % parameters[1])
+
+                result_expression = tp.__dict__[expression_string]
+                (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+
+        print('done with parameter sweep!')
+        return (param_x_values, param_y_values, results)
+
+
+    def eval_param_sweep_2d_noopt(pipelineConfig, expression='Rflop',
+                                  tsnaps=[100.0], nfacets=[1], verbose=False):
+        """Evaluates an expression for a 2D grid of different values for
+        snapshot time and facet number, by varying each parameter
+        linearly in a specified range in a number of steps.
+
+        """
+        n_param_y_values = len(tsnaps)
+        n_param_x_values = len(nfacets)
+        nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
+
+        print("Evaluating expression %s while\nsweeping parameters tsnap and nfacet over 2D domain %s x %s " %
+              (expression, str(tsnaps), str(nfacets)))
+
+        # Generate telescope parameters, lambdify target expression
+        telescope_params = pipelineConfig.calc_tel_params(verbose=verbose)
+        result_expression = telescope_params.__dict__[expression]
+        expression_lam = cheap_lambdify_curry((telescope_params.Nfacet,
+                                               telescope_params.Tsnap),
+                                              result_expression)
+
+        # Create an empty numpy matrix to hold results
+        results = np.zeros((n_param_y_values, n_param_x_values))
+
+
+        # Nested 2D loop over all values for param1 and
+        # param2. Indexes iterate over y (inner loop), then x (outer
+        # loop)
+        for iy in range(len(tsnaps)):
+            tsnap = tsnaps[iy]
+            for ix in range(len(nfacets)):
+                nfacet = nfacets[ix]
+
+                if verbose:
+                    percentage_done = (ix + iy * n_param_x_values) * 100.0 / nr_evaluations
+                    print("> %.1f%% done: Evaluating %s for (tsnap, nfacet) = (%s, %s)" % (percentage_done, expression,
+                                                                                 str(tsnap), str(nfacet)))
+
+                results[iy, ix] = expression_lam(nfacet)(tsnap)
+
+        print('Done with parameter sweep!')
+        return (tsnaps, nfacets, results)
+
+

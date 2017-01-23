@@ -1,11 +1,12 @@
 
-from parameter_definitions import *
-from implementation import Implementation as imp, PipelineConfig
+import unittest
 
-from dataflow import *
 from sympy import Lambda, Symbol
 
-import unittest
+from ..parameters.definitions import Pipelines, Products
+from ..parameters.container import BLDep
+from ..config import PipelineConfig
+from .dataflow import *
 
 class Pipeline:
 

@@ -1,7 +1,9 @@
 
 import unittest
 
+from sdp_par_model.config import PipelineConfig
 from sdp_par_model.dataflow.pipeline import *
+from sdp_par_model.parameters.definitions import Telescopes, Bands
 
 class PipelineTestsBase(unittest.TestCase):
     """ Common helpers for pipeline test cases """
@@ -18,7 +20,7 @@ class PipelineTestsBase(unittest.TestCase):
             'Tsnap': 40
         }
 
-        tp = imp.calc_tel_params(cfg, adjusts=adjusts)
+        tp = cfg.calc_tel_params(adjusts=adjusts)
         return Pipeline(tp)
 
     def _assertEqualProduct(self, flow, product):

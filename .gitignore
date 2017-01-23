@@ -13,6 +13,8 @@
 *.orig
 *.rej
 *.stackdump
+/.eggs
+/*.egg-info
 
 .ipynb_checkpoints
 iPython/.ipynb_checkpoints

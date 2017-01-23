@@ -1,16 +1,15 @@
 
 from __future__ import print_function
 
-from abc import ABCMeta, abstractmethod
-
-from parameter_definitions import Constants
-
-from sympy import Max, Expr, Lambda, Symbol, Sum, Mul
-from graphviz import Digraph
-from math import floor
 from functools import total_ordering
-
+from math import floor
 import unittest
+
+from abc import ABCMeta, abstractmethod
+from graphviz import Digraph
+from sympy import Max, Expr, Lambda, Symbol, Sum, Mul
+
+from ..parameters.definitions import Constants
 
 # Special region properties
 INDEX_PROP = 'index'

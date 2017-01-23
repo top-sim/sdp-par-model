@@ -1,9 +1,15 @@
 """
 Handles collections of telescope parameters. This module contains
 all the necessary plumbing to make the parameter definitions work.
+
+:class:`ParameterContainer` is centrally important and used throughout
+the model, but essentially is only a container class that is
+passed around between modules, and contains a set of parameters,
+values and variables that constitute the inputs and outputs of
+computations.
 """
 
-from sympy import symbols, Symbol, Expr, Lambda, Mul, Add, Sum
+from sympy import Symbol, Expr, Lambda, Mul, Add, Sum
 import warnings
 import string
 
