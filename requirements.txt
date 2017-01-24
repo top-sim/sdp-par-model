@@ -1,0 +1,7 @@
+numpy
+scipy
+sympy<1.0.0 # Sympy 1.0 works with a workaround, but is fairly slow unfortunately
+matplotlib
+notebook
+ipywidgets
+graphviz
