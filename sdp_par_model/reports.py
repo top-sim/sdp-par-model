@@ -8,16 +8,18 @@ from __future__ import print_function
 import re
 import warnings
 
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
+import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
+from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
 from .parameters.container import ParameterContainer
-#from .parameters.equations import *  # formulae that derive secondary telescope-specific parameters from input parameters
+#from .parameters import equations as ParameterEquations # formulae that derive secondary telescope-specific parameters from input parameters
 from . import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
 from .config import PipelineConfig
 
@@ -161,9 +163,9 @@ def mk_result_map_rows(verbosity = 'Overview'):
     """
 
     if verbosity == 'Overview':
-        result_map = list(filter(lambda row: row[2], SkaIPythonAPI.RESULT_MAP))
+        result_map = list(filter(lambda row: row[2], RESULT_MAP))
     else:
-        result_map = SkaIPythonAPI.RESULT_MAP
+        result_map = RESULT_MAP
 
     return (result_map,
             list(map(lambda row: row[0], result_map)),
@@ -200,7 +202,7 @@ def format_result(value):
         s = '['
         for v in value:
             if len(s) > 1: s += ', '
-            s += SkaIPythonAPI.format_result(v)
+            s += format_result(v)
         return s + ']'
     # Otherwise: Trust default formatting
     return '%s' % value
@@ -211,7 +213,7 @@ def format_result_cell(val, color='black', colspan=1, typ='td'):
     Format a result value for inclusing in a table.
     """
     return '<%s colspan="%d"><font color="%s">%s</font></%s>' % (
-        typ, colspan, color, SkaIPythonAPI.format_result(val), typ)
+        typ, colspan, color, format_result(val), typ)
 
 
 def format_result_cells(val, color='black', max_cols=1):
@@ -223,11 +225,11 @@ def format_result_cells(val, color='black', max_cols=1):
     row_html = ''
     if type(val) == list and len(val) <= max_cols:
         for v in val:
-            row_html += SkaIPythonAPI.format_result_cell(v, color, 1)
+            row_html += format_result_cell(v, color, 1)
         if len(val) < max_cols:
-            row_html += SkaIPythonAPI.format_result_cell('', color, max_cols-len(val))
+            row_html += format_result_cell('', color, max_cols-len(val))
     else:
-        row_html += SkaIPythonAPI.format_result_cell(val, color, max_cols)
+        row_html += format_result_cell(val, color, max_cols)
     return row_html
 
 
@@ -247,11 +249,11 @@ def show_table(title, labels, values, units):
     max_cols = max([1] + [len(v) for v in values if type(v) == list])
     for i in range(len(labels)):
         if labels[i].startswith('--'):
-            s += '<tr>%s</tr>' % SkaIPythonAPI.format_result_cell(labels[i], colspan=max_cols+2, typ='th')
+            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=max_cols+2, typ='th')
             continue
         def row(label, val):
             row_html = '<tr><td>%s</td>' % label
-            row_html += SkaIPythonAPI.format_result_cells(val, color='blue', max_cols=max_cols)
+            row_html += format_result_cells(val, color='blue', max_cols=max_cols)
             row_html += '<td>%s</td></tr>\n' % units[i]
             return row_html
         if not isinstance(values[i], dict):
@@ -283,12 +285,12 @@ def show_table_compare(title, labels, values_1, values_2, units):
 
     for i in range(len(labels)):
         if labels[i].startswith('--'):
-            s += '<tr>%s</tr>' % SkaIPythonAPI.format_result_cell(labels[i], colspan=2*max_cols+2, typ='th')
+            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=2*max_cols+2, typ='th')
             continue
         def row(label, val1, val2):
             row_html = '<tr><td>%s</td>' % label
-            row_html += SkaIPythonAPI.format_result_cells(val1, color='darkcyan', max_cols=max_cols)
-            row_html += SkaIPythonAPI.format_result_cells(val2, color='blue', max_cols=max_cols)
+            row_html += format_result_cells(val1, color='darkcyan', max_cols=max_cols)
+            row_html += format_result_cells(val2, color='blue', max_cols=max_cols)
             row_html += '<td>%s</td></tr>\n' % units[i]
             return row_html
         if not isinstance(values_1[i], dict) and not isinstance(values_2[i], dict):
@@ -325,9 +327,9 @@ def show_table_compare3(title, labels, values_1, values_2, values_3, units):
         s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
              '</td><td><font color="purple">{3}</font>''</td><td>{4}</td></tr>\n'.format(
                  labels[i],
-                 SkaIPythonAPI.format_result(values_1[i]),
-                 SkaIPythonAPI.format_result(values_2[i]),
-                 SkaIPythonAPI.format_result(values_3[i]),
+                 format_result(values_1[i]),
+                 format_result(values_2[i]),
+                 format_result(values_3[i]),
                  units[i])
     s += '</table>'
     display(HTML(s))
@@ -370,7 +372,6 @@ def plot_2D_surface(title, x_values, y_values, z_values, contours=None, xlabel=N
     contour_colour = [(1., 0., 0., 1.)]  # red
 
     pylab.rcParams['figure.figsize'] = 8, 6  # that's default image size for this interactive session
-    assert len(x_values) == len(y_values)
 
     sizex = len(x_values)
     sizey = len(y_values)
@@ -596,30 +597,30 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
                            pipeline=pipeline_1, adjusts=adjusts_1)
     cfg_2 = PipelineConfig(telescope=telescope_2, band=band_2,
                            pipeline=pipeline_2, adjusts=adjusts_2)
-    if not SkaIPythonAPI.check_pipeline_config(cfg_1, pure_pipelines=True) or \
-       not SkaIPythonAPI.check_pipeline_config(cfg_2, pure_pipelines=True):
+    if not check_pipeline_config(cfg_1, pure_pipelines=True) or \
+       not check_pipeline_config(cfg_2, pure_pipelines=True):
         return
 
     # Determine which rows to show
-    (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+    (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Loop through telescope configurations, collect results
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
     tels_result_values = [
-        SkaIPythonAPI._compute_results(cfg_1, verbosity=='Debug', result_map),
-        SkaIPythonAPI._compute_results(cfg_2, verbosity=='Debug', result_map),
+        _compute_results(cfg_1, verbosity=='Debug', result_map),
+        _compute_results(cfg_2, verbosity=='Debug', result_map),
     ]
     display(HTML('<font color="blue">Done computing.</font>'))
 
     # Show comparison table
-    SkaIPythonAPI.show_table_compare('Computed Values', result_titles, tels_result_values[0],
+    show_table_compare('Computed Values', result_titles, tels_result_values[0],
                                      tels_result_values[1], result_units)
 
     # Show comparison stacked bars
     products_1 = tels_result_values[0][-1]
     products_2 = tels_result_values[1][-1]
     labels = sorted(set(products_1).union(products_2))
-    colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
+    colours = default_rflop_plotting_colours(labels)
     telescope_labels = (cfg_1.describe(), cfg_2.describe())
 
     values = {
@@ -627,7 +628,7 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
         for label in labels
     }
 
-    SkaIPythonAPI.plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
+    plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
                                     colours)
 
 
@@ -664,26 +665,26 @@ def evaluate_telescope_manual(telescope, band, pipeline,
                          Bmax=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
                          on_the_fly=on_the_fly,
                          scale_predict_by_facet=scale_predict_by_facet)
-    if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
+    if not check_pipeline_config(cfg, pure_pipelines=True): return
 
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                  '</font>'))
 
     # Determine which rows to calculate & show
-    (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+    (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Loop through pipelines
-    result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map,
+    result_values = _compute_results(cfg, verbosity=='Debug', result_map,
                                                    Tsnap=Tsnap, Nfacet=Nfacet)
 
     # Show table of results
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
-    SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
+    show_table('Computed Values', result_titles, result_values, result_units)
 
     # Show pie graph of FLOP counts
     values = result_values[-1]  # the last value
-    colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-    SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
+    colours = default_rflop_plotting_colours(set(values))
+    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
 
 def seconds_to_hms(seconds):
@@ -721,36 +722,36 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
     # First we plot a table with all the provided parameters
     param_titles = ('HPSO Number', 'Telescope', 'Pipeline', 'Max Baseline', 'Max # of channels', 'Observation time',
                     'Texp (not used in calc)', 'Tpoint (not used in calc)')
-    (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tobs)
+    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tobs)
     Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Texp)
+    (hours, minutes, seconds) = seconds_to_hms(tp_default.Texp)
     Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = imp.seconds_to_hms(tp_default.Tpoint)
+    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tpoint)
     Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
     param_values = (hpso_key, telescope, hpso_pipeline, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
                     Tpoint_string)
     param_units = ('', '', '', 'm', '', '', '', '')
-    SkaIPythonAPI.show_table('Parameters', param_titles, param_values, param_units)
+    show_table('Parameters', param_titles, param_values, param_units)
 
     # Make and check pipeline configuration
     cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly,
                          scale_predict_by_facet=scale_predict_by_facet)
-    if not SkaIPythonAPI.check_pipeline_config(cfg, pure_pipelines=True): return
+    if not check_pipeline_config(cfg, pure_pipelines=True): return
 
     # Determine which rows to calculate & show
-    (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+    (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Compute
-    result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map)
+    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Show table of results
-    SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
+    show_table('Computed Values', result_titles, result_values, result_units)
 
     # Show pie graph of FLOP counts
     values = result_values[-1]  # the last value
-    colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-    SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
+    colours = default_rflop_plotting_colours(set(values))
+    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
 
 def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
@@ -775,24 +776,24 @@ def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="defaul
                          Nf_max=Nf_max, blcoal=blcoal,
                          on_the_fly=on_the_fly,
                          scale_predict_by_facet=scale_predict_by_facet)
-    if not SkaIPythonAPI.pipeline_is_valid(cfg, pure_pipelines=True): return
+    if not cfg.is_valid(pure_pipelines=True)[0]: return
 
     # Determine rows to show
-    (result_map, result_titles, result_units) = SkaIPythonAPI.mk_result_map_rows(verbosity)
+    (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Compute
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                  '</font>'))
-    result_values = SkaIPythonAPI._compute_results(cfg, verbosity=='Debug', result_map)
+    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Make table
-    SkaIPythonAPI.show_table('Computed Values', result_titles, result_values, result_units)
+    show_table('Computed Values', result_titles, result_values, result_units)
 
     # Make pie plot
     values = result_values[-1]  # the last value
-    colours = SkaIPythonAPI.default_rflop_plotting_colours(set(values))
-    SkaIPythonAPI.plot_pie('FLOP breakdown for %s' % telescope, values.keys(), values.values(), colours)
+    colours = default_rflop_plotting_colours(set(values))
+    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
 
 def _pipeline_configurations(telescopes, bands, pipelines,
@@ -825,15 +826,15 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines,
     """
 
     # Make configuration list
-    configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+    configs = _pipeline_configurations(telescopes, bands, pipelines,
                                                      blcoal, on_the_fly, scale_predict_by_facet)
 
     # Calculate
-    rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-    results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
+    rows = RESULT_MAP # Everything - hardcoded for now
+    results = _batch_compute_results(configs, verbose, rows)
 
     # Write CSV
-    SkaIPythonAPI._write_csv(filename, results, rows)
+    _write_csv(filename, results, rows)
 
 
 def write_csv_hpsos(filename, hpsos,
@@ -852,11 +853,11 @@ def write_csv_hpsos(filename, hpsos,
         configs.append(cfg)
 
     # Calculate
-    rows = SkaIPythonAPI.RESULT_MAP # Everything - hardcoded for now
-    results = SkaIPythonAPI._batch_compute_results(configs, verbose, rows)
+    rows = RESULT_MAP # Everything - hardcoded for now
+    results = _batch_compute_results(configs, verbose, rows)
 
     # Write CSV
-    SkaIPythonAPI._write_csv(filename, results, rows)
+    _write_csv(filename, results, rows)
 
 
 def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
@@ -876,7 +877,7 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
 
         # Calculate the telescope parameters
         pipelineConfig.pipeline = pipeline
-        tp = imp.calc_tel_params(pipelineConfig, verbose=verbose)
+        tp = pipelineConfig.calc_tel_params(verbose=verbose)
 
         # Optimise Tsnap & Nfacet
         tsnap_opt = Tsnap
@@ -887,14 +888,14 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
             raise Exception("We can only optimise Tsnap and Nfacet together so far!")
 
         # Evaluate expressions from map
-        result_expressions = SkaIPythonAPI.get_result_expressions(result_map, tp)
-        results_for_pipeline = api.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+        result_expressions = get_result_expressions(result_map, tp)
+        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
         result_value_array.append(results_for_pipeline)
 
     # Now transpose, then sum up results from pipelines per row
     result_values = []
     transposed_results = zip(*result_value_array)
-    sum_results = SkaIPythonAPI.get_result_sum(result_map)
+    sum_results = get_result_sum(result_map)
     for (row_values, sum_it) in zip(transposed_results, sum_results):
         if sum_it:
             try:
@@ -925,7 +926,7 @@ def _batch_compute_results(configs, verbose, result_map):
         # Compute, add to results
         if verbose:
             display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
-        results.append((cfg, SkaIPythonAPI._compute_results(cfg, verbose, result_map)))
+        results.append((cfg, _compute_results(cfg, verbose, result_map)))
     return results
 
 
@@ -1019,8 +1020,8 @@ def compare_csv(result_file, ref_file,
     """
 
     # Read results and reference. Make lookup dictionary for the latter.
-    results = SkaIPythonAPI._read_csv(result_file)
-    ref = dict(SkaIPythonAPI._read_csv(ref_file))
+    results = _read_csv(result_file)
+    ref = dict(_read_csv(ref_file))
 
     # Strip modifiers from rows
     def strip_modifiers(head, do_it=True):
@@ -1081,10 +1082,10 @@ def compare_csv(result_file, ref_file,
                     s += '<td bgcolor="#%2x%2x00">%s (%+d%%)</td>' % (
                         int(min(diff_rel/50*255, 255)),
                         int(255-min(max(0, diff_rel-50)/50*255, 255)),
-                        SkaIPythonAPI.format_result(num),
+                        format_result(num),
                         diff)
                 else:
-                    s += '<td>%s</td>' % SkaIPythonAPI.format_result(num)
+                    s += '<td>%s</td>' % format_result(num)
 
             except ValueError:
 
@@ -1137,16 +1138,16 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
     """
 
     # Make configurations
-    configs = SkaIPythonAPI._pipeline_configurations(telescopes, bands, pipelines,
+    configs = _pipeline_configurations(telescopes, bands, pipelines,
                                                      blcoal, on_the_fly, scale_predict_by_facet)
 
     # Calculate
-    rows = [SkaIPythonAPI.RESULT_MAP[-1]] # Products only
-    results = SkaIPythonAPI._batch_compute_results(configs, False, rows)
+    rows = [RESULT_MAP[-1]] # Products only
+    results = _batch_compute_results(configs, False, rows)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
-    colours = SkaIPythonAPI.default_rflop_plotting_colours(labels)
+    colours = default_rflop_plotting_colours(labels)
     tel_labels = list(map(lambda cfg: cfg.describe().replace(" ", "\n"), configs))
     values = {
         label: list(map(lambda p: p.get(label, 0), products))
@@ -1154,5 +1155,5 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
     }
 
     # Show stacked bar graph
-    SkaIPythonAPI.plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7, save=save)
+    plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7, save=save)
 

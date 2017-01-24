@@ -1,18 +1,18 @@
 
 from __future__ import print_function
-from builtins import int
 
+from builtins import int
+import warnings
+
+import numpy as np
+import sympy
+
+from .parameters.container import ParameterContainer, BLDep
 from .parameters import definitions as p
-from .parameters.container import ParameterContainer
 from .parameters.definitions import (Telescopes, Pipelines, Bands)
 from .parameters.definitions import Constants as c
 from .parameters import equations as f
-from sympy import simplify, lambdify, Max, Symbol
-from scipy import optimize as opt
-import numpy as np
-import math
-import warnings
-
+from . import evaluate
 
 class PipelineConfig:
     """
@@ -262,8 +262,8 @@ class PipelineConfig:
             tp = pipelineConfig.calc_tel_params(verbose)
 
             result_expression = tp.__dict__[expression_string]
-            (tsnap_opt, nfacet_opt) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
+            (tsnap_opt, nfacet_opt) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += evaluate.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
         return result
 
@@ -283,8 +283,8 @@ class PipelineConfig:
             tp = pipelineConfig.calc_tel_params(verbose)
 
             result_expression = tp.products.get(product, {}).get(expression, 0)
-            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            result += evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         return result
 
@@ -302,13 +302,13 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
             # Loop through defined products, add to result
             for name, product in tp.products.items():
                 if expression in product:
                     values[name] = values.get(name, 0) + \
-                        SkaPythonAPI.evaluate_expression(product[expression], tp, tsnap, nfacet)
+                        evaluate.evaluate_expression(product[expression], tp, tsnap, nfacet)
 
         return values
 
@@ -365,8 +365,8 @@ class PipelineConfig:
                 result_expression = tp.products[product].get(expr, 0)
             else:
                 result_expression = tp.__dict__[expression_string]
-            (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            results.append(SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet))
+            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+            results.append(evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
         print('done with parameter sweep!')
         return (param_values, results)
@@ -443,8 +443,8 @@ class PipelineConfig:
                                          % parameters[1])
 
                 result_expression = tp.__dict__[expression_string]
-                (tsnap, nfacet) = find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                results[iy, ix] = SkaPythonAPI.evaluate_expression(result_expression, tp, tsnap, nfacet)
+                (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
+                results[iy, ix] = evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
         print('done with parameter sweep!')
         return (param_x_values, param_y_values, results)
@@ -467,7 +467,7 @@ class PipelineConfig:
         # Generate telescope parameters, lambdify target expression
         telescope_params = pipelineConfig.calc_tel_params(verbose=verbose)
         result_expression = telescope_params.__dict__[expression]
-        expression_lam = cheap_lambdify_curry((telescope_params.Nfacet,
+        expression_lam = evaluate.cheap_lambdify_curry((telescope_params.Nfacet,
                                                telescope_params.Tsnap),
                                               result_expression)
 
@@ -493,4 +493,72 @@ class PipelineConfig:
         print('Done with parameter sweep!')
         return (tsnaps, nfacets, results)
 
+    def eval_products_symbolic(pipelineConfig, expression='Rflop', symbolify='product'):
+        """
+        Returns formulas for the given product property.
 
+        :param pipelineConfig: Pipeline configuration to use.
+        :param expression: Product property to query. FLOP rate by default.
+        :param symbolify: How aggressively sub-formulas should be replaced by symbols.
+        """
+
+        # Create symbol-ified telescope model
+        tp = pipelineConfig.calc_tel_params(symbolify=symbolify)
+
+        # Collect equations and free variables
+        eqs = {}
+        for product in tp.products:
+            eqs[product] = tp.products[product].get(expression, 0)
+        return eqs
+
+
+    def eval_symbols(pipelineConfig, symbols,
+                     recursive=False, symbolify='', optimize_expression=None):
+        """Returns formulas for the given symbol names. This can be used to
+        look up the definitions behind sympy Symbols returned by
+        eval_products_symbolic or this function.
+
+        The returned dictionary will contain an entry for all symbols
+        that we could look up sucessfully - this excludes symbols that
+        are not defined or have only a tautological definition ("sym =
+        sym").
+
+        :param pipelineConfig: Pipeline configuration to use.
+        :param symbols: Symbols to query
+        :param recursive: Look up free symbols in symbol definitions?
+        :param symbolify: How aggressively sub-formulas should be replaced by symbols.
+        """
+
+        # Create possibly symbol-ified telescope model
+        tp = pipelineConfig.calc_tel_params(symbolify=symbolify)
+
+        # Optimise to settle Tsnap and Nfacet
+        if not optimize_expression is None:
+            assert(symbolify == '') # Will likely fail otherwise
+            (tsnap_opt, nfacet_opt) = evaluate.find_optimal_Tsnap_Nfacet(tp, expr_to_minimize_string=optimize_expression)
+            tp = pipelineConfig.calc_tel_params(adjusts={'Tsnap': tsnap_opt, 'Nfacet': nfacet_opt})
+
+        # Create lookup map for symbols
+        symMap = {}
+        for name, v in tp.__dict__.items():
+            symMap[tp.make_symbol_name(name)] = v
+
+        # Start collecting equations
+        eqs = {}
+        while len(symbols) > 0:
+            new_symbols = set()
+            for sym in symbols:
+                if sym in eqs: continue
+
+                # Look up
+                if not sym in symMap: continue
+                v = symMap[str(sym)]
+
+                # If the equation is "name = name", it is not defined at this level. Push back to next level
+                if isinstance(v, sympy.Symbol) and str(v) == sym:
+                    continue
+                eqs[str(sym)] = v
+                if isinstance(v, sympy.Expr) or isinstance(v, BLDep):
+                    new_symbols = new_symbols.union(evaluate.collect_free_symbols([v]))
+            symbols = new_symbols
+        return eqs

@@ -1,27 +1,12 @@
-/*.aux
-/*.dvi
-/*.log
-/*.out
-/*.tmp
-/*.toc
-/*.bbl
-/*.blg
-/*.pdf
-/*.wxm
 
 *.pyc
 *.orig
 *.rej
 *.stackdump
+
 /.eggs
 /*.egg-info
 /docs/_build
 
-.ipynb_checkpoints
-iPython/.ipynb_checkpoints
-iPython/.idea
-Google_Data
-
-iPython/graphs
-iPython/current*.csv
-iPython/compare*.html
+/iPython/.ipynb_checkpoints
+/iPython/out

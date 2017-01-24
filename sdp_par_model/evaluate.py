@@ -4,12 +4,15 @@ parametric model.
 
 from __future__ import print_function
 
-from .parameters.definitions import Telescopes, Pipelines, Bands
-from .parameters.container import BLDep
-import numpy as np
-from sympy import Lambda, FiniteSet, Function, Expr, Symbol
 import warnings
 
+import math
+import numpy as np
+from scipy import optimize as opt
+from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Symbol
+
+from .parameters.definitions import Telescopes, Pipelines, Bands
+from .parameters.container import ParameterContainer, BLDep
 
 def is_literal(expression):
     """
@@ -263,78 +266,6 @@ def evaluate_expressions(expressions, tp, tsnap, nfacet):
         result = evaluate_expression(expression, tp, tsnap, nfacet)
         results.append(result)
     return results
-
-
-def eval_products_symbolic(pipelineConfig, expression='Rflop', symbolify='product'):
-    """
-    Returns formulas for the given product property.
-
-    :param pipelineConfig: Pipeline configuration to use.
-    :param expression: Product property to query. FLOP rate by default.
-    :param symbolify: How aggressively sub-formulas should be replaced by symbols.
-    """
-
-    # Create symbol-ified telescope model
-    tp = pipelineConfig.calc_tel_params(symbolify=symbolify)
-
-    # Collect equations and free variables
-    eqs = {}
-    for product in tp.products:
-        eqs[product] = tp.products[product].get(expression, 0)
-    return eqs
-
-
-def eval_symbols(pipelineConfig, symbols,
-                 recursive=False, symbolify='', optimize_expression=None):
-    """Returns formulas for the given symbol names. This can be used to
-    look up the definitions behind sympy Symbols returned by
-    eval_products_symbolic or this function.
-
-    The returned dictionary will contain an entry for all symbols
-    that we could look up sucessfully - this excludes symbols that
-    are not defined or have only a tautological definition ("sym =
-    sym").
-
-    :param pipelineConfig: Pipeline configuration to use.
-    :param symbols: Symbols to query
-    :param recursive: Look up free symbols in symbol definitions?
-    :param symbolify: How aggressively sub-formulas should be replaced by symbols.
-    """
-
-    # Create possibly symbol-ified telescope model
-    tp = pipelineConfig.calc_tel_params(symbolify=symbolify)
-
-    # Optimise to settle Tsnap and Nfacet
-    if not optimize_expression is None:
-        assert(symbolify == '') # Will likely fail otherwise
-        (tsnap_opt, nfacet_opt) = find_optimal_Tsnap_Nfacet(tp, expr_to_minimize_string=optimize_expression)
-        tp = pipelineConfig.calc_tel_params(adjusts={'Tsnap': tsnap_opt, 'Nfacet': nfacet_opt})
-
-    # Create lookup map for symbols
-    symMap = {}
-    for name, v in tp.__dict__.items():
-        symMap[tp.make_symbol_name(name)] = v
-
-    # Start collecting equations
-    eqs = {}
-    while len(symbols) > 0:
-        new_symbols = set()
-        for sym in symbols:
-            if sym in eqs: continue
-
-            # Look up
-            if not sym in symMap: continue
-            v = symMap[str(sym)]
-
-            # If the equation is "name = name", it is not defined at this level. Push back to next level
-            if isinstance(v, Symbol) and str(v) == sym:
-                continue
-            eqs[str(sym)] = v
-            if isinstance(v, Expr) or isinstance(v, BLDep):
-                new_symbols = new_symbols.union(collect_free_symbols([v]))
-        symbols = new_symbols
-    return eqs
-
 
 def collect_free_symbols(formulas):
     """
