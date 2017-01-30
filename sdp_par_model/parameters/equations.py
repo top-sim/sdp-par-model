@@ -228,6 +228,22 @@ def _apply_channel_equations(o, symbolify):
         Min(Max(o.Nf_out, o.Nf_no_smear_predict(b if o.scale_predict_by_facet else o.Bmax)),
             o.Nf_max))
 
+    # Determine frequency buckets we need to do FFT for
+    o.Nf_FFT_backward = o.Nf_out
+    o.Nf_FFT_predict = Min(o.Nf_max, o.Ntt * o.Nf_out)
+    if o.pipeline == Pipelines.DPrepA:
+        o.Nf_FFT_backward = o.Ntt * o.Nf_out
+        o.Nf_FFT_predict = o.Ntt * o.Nf_out
+    if o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC, Pipelines.Fast_Img]:
+        o.Nf_FFT_backward = o.Nf_out
+        o.Nf_FFT_predict = Min(o.Ntt * o.Nf_min, o.Nf_out)
+
+    # Determine frequency buckets we need to reproject
+    o.Nf_proj_predict = o.Nf_FFT_predict
+    o.Nf_proj_backward = o.Nf_FFT_backward
+    if o.pipeline == Pipelines.DPrepA_Image:
+        o.Nf_proj_predict = o.Ntt
+        o.Nf_proj_backward = o.Ntt
 
 def _apply_coalesce_equations(o, symbolify):
     """
@@ -448,12 +464,6 @@ def _apply_reprojection_equations(o):
 
     References: SKA-TEL-SDP-0000040 01D section 3.6.14 - Reprojection
     """
-
-    o.Nf_proj_predict = o.Nf_FFT_predict
-    o.Nf_proj_backward = o.Nf_FFT_backward
-    if o.pipeline == Pipelines.DPrepA_Image:
-        o.Nf_proj_predict = o.Ntt
-        o.Nf_proj_backward = o.Ntt
 
     if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
         o.set_product(Products.Reprojection,

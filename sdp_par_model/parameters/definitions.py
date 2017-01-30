@@ -363,8 +363,6 @@ def apply_global_parameters(o):
     o.Npatch = 4097 # Number of pixels in clean patch
 
     # To be overridden by the pipelines
-    o.Nf_FFT_backward = 0
-    o.Nf_FFT_predict = 0
     o.Nmajor = 2
     o.Nselfcal = 3
     o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
@@ -686,8 +684,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = min(o.Nf_min, o.Nf_max)
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_out
         o.Npp = 4 # We get everything
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
@@ -702,8 +698,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = min(o.Nf_min, o.Nf_max)
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_out
         o.Npp = 4 # We get everything
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
@@ -718,8 +712,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = min(o.Nf_min, o.Nf_max)
-        o.Nf_FFT_backward = o.Ntt * o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_out
         o.Npp = 2 # We only want Stokes I, V
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
@@ -734,8 +726,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = min(o.Nf_min, o.Nf_max)
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_out
         o.Npp = 2 # We only want Stokes I, V
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
@@ -751,8 +741,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Npp = 4 # We want Stokes I, Q, U, V
         o.Nf_out = min(o.Nf_min, o.Nf_max)
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Nf_out
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.08
@@ -767,8 +755,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_min
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
@@ -784,8 +770,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Ntt * o.Nf_min
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
@@ -801,8 +785,6 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
         o.Qpix = 1.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
-        o.Nf_FFT_backward = o.Nf_out
-        o.Nf_FFT_predict = o.Nf_out
         o.Npp = 2 # We only want Stokes I, V
         o.Tobs = 1.0
         o.Tsnap_min = o.Tobs
