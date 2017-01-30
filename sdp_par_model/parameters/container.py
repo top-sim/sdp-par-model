@@ -119,7 +119,7 @@ class ParameterContainer(object):
             return 'Theta_' + name[6:].replace('_', ',')
         if name.startswith("Omega_"):
             return name
-        if name[0].isupper():
+        if name[0].isupper() or (len(name) > 1 and name[1].isupper()):
             i0 = 2 if name[1] == '_' else 1
             return name[0] + "_" + name[i0:].replace('_', ',')
         return name
@@ -129,7 +129,8 @@ class ParameterContainer(object):
         # Replace all values and expressions with symbols
         for name, v in self.__dict__.items():
             sym = Symbol(self.make_symbol_name(name), real=True, positive=True)
-            if isinstance(v, int) or isinstance(v, float) or isinstance(v, Expr):
+            # Do not use isinstance, as otherwise bool will get symbolised
+            if type(v) == int or isinstance(v, float) or isinstance(v, Expr):
                 self.__dict__[name] = sym
             elif isinstance(v, BLDep):
                 # SymPy cannot pass parameters by dictionary, so make a list instead
@@ -174,10 +175,11 @@ class ParameterContainer(object):
         # independent factors. Makes for smaller terms, which is good
         # both for Sympy as well as for output.
         pars = bldep.pars.values()
-        def independent(e):
-            return not any([s in e.free_symbols for s in pars])
-        if independent(expr):
-            return self.Nbl * bldep(b=None, bcount=1)
+        def independent(e, ignoring=[]):
+            return not any([s in e.free_symbols for s in pars
+                            if s not in ignoring])
+        if independent(expr, ignoring=[Symbol('bcount')]):
+            return self.Nbl * bldep(b=None,bcount=1)
         if isinstance(expr, Mul):
             indepFactors = list(filter(independent, expr.as_ordered_factors()))
             if len(indepFactors) > 0:

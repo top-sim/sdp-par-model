@@ -81,6 +81,7 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     _apply_channel_equations(o, symbolify)
     _apply_coalesce_equations(o, symbolify)
     _apply_geometry_equations(o, symbolify)
+    _apply_kernel_equations(o)
 
     # If requested, we replace all parameters so far with symbols,
     # so product equations are purely symbolic.
@@ -100,7 +101,7 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     _apply_reprojection_equations(o)
     _apply_spectral_fitting_equations(o)
     _apply_source_find_equations(o)
-    _apply_kernel_equations(o)
+    _apply_kernel_product_equations(o)
     _apply_phrot_equations(o)
     _apply_minor_cycle_equations(o)
 
@@ -423,7 +424,7 @@ def _apply_grid_equations(o):
     # Assume 8 flops per default. For image-domain gridding we
     # need 6 flops additionally.
     Rflop_per_vis = 8
-    if o.image_gridding > 0:
+    if not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
         Rflop_per_vis = 8 + 6
 
     o.set_product(Products.Grid, T=o.Tsnap,
@@ -546,18 +547,18 @@ def _apply_calibration_equations(o):
     """
 
     # Number of flops needed per solution interval
-    Flop_solver = 12 * o.Npp * o.Nsolve * o.Na**2
+    o.NFlop_solver = 12 * o.Npp * o.Nsolve * o.Na**2
     # Number of flops required for averaging one vis. The steps are evaluate the complex phasor for 
     # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
-    Flop_averager = 40 * o.Npp
+    o.NFlop_averager = 40 * o.Npp
 
     # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
     if o.pipeline == Pipelines.ICAL:
         N_Gslots = o.Tobs / o.tICAL_G
         N_Bslots = o.Tobs / o.tICAL_B
         N_Islots = o.Tobs / o.tICAL_I
-        Flop_averaging = Flop_averager * o.Rvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
-        Flop_solving   = Flop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
+        Flop_averaging = o.NFlop_averager * o.Rvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
+        Flop_solving   = o.NFlop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
         o.set_product(Products.Solve,
             T = o.tICAL_G,
             # We do one calibration to start with (using the original
@@ -570,8 +571,8 @@ def _apply_calibration_equations(o):
     if o.pipeline == Pipelines.RCAL:
         N_Gslots = o.Tobs / o.tRCAL_G
         # Need to remember to average over all frequencies because a BP may have been applied.
-        Flop_averaging = Flop_averager * o.Rvis * o.Nf_max * o.tRCAL_G
-        Flop_solving   = Flop_solver * N_Gslots
+        Flop_averaging = o.NFlop_averager * o.Rvis * o.Nf_max * o.tRCAL_G
+        Flop_solving   = o.NFlop_solver * N_Gslots
         o.set_product(Products.Solve,
             T = o.tRCAL_G,
             # We need to complete one entire calculation within real time tCal_G
@@ -638,7 +639,7 @@ def _apply_major_cycle_equations(o):
 
 def _apply_kernel_equations(o):
     """
-    Generate Convolution kernels
+    Generate parameters for Convolution kernels
 
     References:
      * SKA-TEL-SDP-0000040 01D section 3.6.12 - Gridding Kernel Update
@@ -659,11 +660,6 @@ def _apply_kernel_equations(o):
         Min(log(o.wl_max / o.wl_min) /
             log(o.dfonF_predict(b) + 1.), o.Nf_max))
 
-    # Baselines to cover with kernels. If baselines can be treated
-    # the same, this will get overwritten below.
-    bmax_bins = o.Bmax_bins
-    bcount_bins = [ frac * o.Nbl_full for frac in o.frac_bins ]
-
     # Number of times kernel convolution needs to be repeated to
     # generate all oversampling values used in gridding.
     o.Ngcf_used_backward = BLDep(b, 1)
@@ -674,7 +670,7 @@ def _apply_kernel_equations(o):
         o.Nf_gcf_predict  = o.Nf_vis_predict
         o.Tkernel_backward = o.Tcoal_backward
         o.Tkernel_predict  = o.Tcoal_predict
-    elif o.image_gridding > 0:
+    elif not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
         # For image-domain gridding, we multiply kernels that get
         # applied closely together by the visibilities in image
         # space, apply phase ramps to account for their shift
@@ -699,14 +695,6 @@ def _apply_kernel_equations(o):
         o.Tkernel_backward = BLDep(b, o.Tion)
         o.Tkernel_predict  = BLDep(b, o.Tion)
 
-        # If we do not need a separate A^A-kernel per baseline,
-        # just make the appropriate number of A-kernels at a
-        # resolution appropriate for the longest baseline, and
-        # assume that all other baselines can use it
-        if o.NAProducts != 'all':
-            bmax_bins = [ o.Bmax ]
-            bcount_bins = [ o.NAProducts ]
-
         # Determine number of visibilities per kernel, approximate
         # number of oversampling values used.
         o.Nvis_gcf_backward = BLDep(b,
@@ -715,6 +703,30 @@ def _apply_kernel_equations(o):
             o.Nf_vis_predict(b) / o.Nf_gcf_predict(b) * o.Tkernel_predict(b) / o.Tcoal_predict(b))
         o.Ngcf_used_backward = BLDep(b, o.Qgcf**2 * (1 - (1 - 1 / o.Qgcf**2)**o.Nvis_gcf_backward(b)))
         o.Ngcf_used_predict = BLDep(b, o.Qgcf**2 * (1 - (1 - 1 / o.Qgcf**2)**o.Nvis_gcf_predict(b)))
+
+
+def _apply_kernel_product_equations(o):
+    """
+    Generate parameters for Convolution kernels
+
+    References:
+     * SKA-TEL-SDP-0000040 01D section E - Re-use of Convolution Kernels
+    """
+
+    b = Symbol('b')
+
+    # Baselines to cover with kernels.
+    if o.NAProducts == 'all' or o.on_the_fly or not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
+        bmax_bins = o.Bmax_bins
+        bcount_bins = [ frac * o.Nbl_full for frac in o.frac_bins ]
+
+    else:
+        # If we do not need a separate A^A-kernel per baseline,
+        # just make the appropriate number of A-kernels at a
+        # resolution appropriate for the longest baseline, and
+        # assume that all other baselines can use it
+        bmax_bins = [ o.Bmax ]
+        bcount_bins = [ o.NAProducts ]
 
     if o.pipeline in Pipelines.imaging:
 
