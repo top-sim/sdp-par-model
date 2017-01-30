@@ -761,7 +761,7 @@ def _apply_phrot_equations(o):
     o.set_product(Products.PhaseRotation,
         T = o.Tsnap,
         N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
-        Rflop = blsum(b, 25 * o.Rvis / o.Nbl / o.Nf_min_gran),
+        Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tint_used),
         Rout = blsum(b, o.Mvis * o.Rvis_backward(b=b, bcount=1) / o.Nf_min_gran))
 
 
