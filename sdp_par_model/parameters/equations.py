@@ -532,8 +532,8 @@ def _apply_minor_cycle_equations(o):
     o.set_product(Products.Subtract_Image_Component,
         T = o.Tobs,
         N = o.Nmajortotal * o.Nbeam * o.Nf_identify,
-        Rflop = 2 * o.Npp * o.Nminor * o.Ntt * o.Nscales * (o.Npix_linear * o.Nfacet)**2 / o.Tobs,
-        Rout = o.Nscales * o.Npatch**2 / o.Tobs)
+        Rflop = 2 * o.Npp * o.Nminor * o.Ntt * o.Nscales * o.Npatch**2 / o.Tobs,
+        Rout = o.Ntt * o.Nscales * (o.Npix_linear * o.Nfacet)**2 / o.Tobs)
 
     # Working memory requirements according to TCC-SDP-151123-2
     o.M_MSMFS = o.Mpx * o.Nf_identify * (o.Ntt * (o.Nscales + 1) + o.Nscales) * (o.Npix_linear * o.Nfacet)**2
