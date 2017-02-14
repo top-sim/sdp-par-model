@@ -1009,6 +1009,7 @@ def _read_csv(filename):
 
 
 def compare_csv(result_file, ref_file,
+                diff_rows=['Total Compute'],
                 ignore_modifiers=True, ignore_units=True,
                 export_html=''):
     """
@@ -1016,7 +1017,9 @@ def compare_csv(result_file, ref_file,
 
     :param result_file: CVS file with telescope parameters
     :param ref_file: CVS file with reference parameters
+    :param diff_rows: Rows to use to calculate returned difference sum
     :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
+    :returns: Sum of differences found in specified rows
     """
 
     # Read results and reference. Make lookup dictionary for the latter.
@@ -1037,15 +1040,17 @@ def compare_csv(result_file, ref_file,
         s += '<th>%s</th>' % head
     s += '</tr>\n'
 
-    # Sum up differences
-    diff_total = 0
-    total_count = 0
+    # Loop through rows
+    all_diffs = {}
+    for row_name, row in results:
+        s += '<tr><td>%s</td>' % row_name
 
-    for name, row in results:
-        s += '<tr><td>%s</td>' % name
+        # Accumulate difference?
+        do_diff = any([re.match(diff_row, row_name) for diff_row in diff_rows])
+        diffs = []
 
         # Locate reference results
-        refRow = ref.get(strip_modifiers(name, ignore_units), [])
+        refRow = ref.get(strip_modifiers(row_name, ignore_units), [])
         refRow = map(lambda h_v: (strip_modifiers(h_v[0], ignore_modifiers), h_v[1]), refRow)
         refRow = dict(refRow)
 
@@ -1074,8 +1079,8 @@ def compare_csv(result_file, ref_file,
                     # reference for negative changes, as -50% is
                     # about as bad as +200%.
                     diff_rel = max(diff, 100*(ref_num-num)/num)
-                    diff_total += abs(diff_rel)
-                    total_count += 1
+                    if do_diff:
+                        diffs.append(diff)
 
                 # Output
                 if not diff is None:
@@ -1094,7 +1099,6 @@ def compare_csv(result_file, ref_file,
 
                 # No number, output as is
                 if not ref_str is None:
-                    total_count += 1
                     if val == ref_str:
                         if val == '':
                             s += '<td></td>'
@@ -1102,14 +1106,25 @@ def compare_csv(result_file, ref_file,
                             s += '<td bgcolor="#00ff00">%s (same)</td>' % val
                     else:
                         s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
-                        diff_total += 100
-                        total_count += 1
+                        if do_diff:
+                            diffs.append(100)
                 else:
                     s += '<td>%s</td>' % val
 
+        all_diffs[row_name] = diffs
         s += '</tr>\n'
     s += '</table>'
 
+    diff_sum = 0
+    for row_name, diffs in all_diffs.items():
+        if len(diffs) > 0:
+            display(HTML('<font color="blue">Difference %s: </font> min %+.3g%%, max %+.3g%%, '
+                         'Mean %+.3g%%, Median %+.3g%%, Std %.3g%%' % (
+                             row_name, np.min(diffs), np.max(diffs),
+                             np.mean(diffs), np.median(diffs), np.std(diffs))))
+            diff_sum += np.sum(np.abs(diffs)) / len(diffs)
+
+    # Write HTML report to file - or display
     if export_html != '':
         f = open(export_html, 'w')
         print("<!doctype html>", file=f)
@@ -1124,9 +1139,8 @@ def compare_csv(result_file, ref_file,
     else:
         display(HTML('<h3>Comparison:</h3>'))
         display(HTML(s))
-    display(HTML('<font color="blue">Done. %.2f %% average relative difference.</font>' % (diff_total / total_count)))
 
-    return diff_total / total_count
+    return diff_sum
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
