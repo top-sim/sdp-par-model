@@ -11,7 +11,7 @@ import numpy as np
 from scipy import optimize as opt
 from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Symbol
 
-from .parameters.definitions import Telescopes, Pipelines, Bands
+from .parameters.definitions import Telescopes, Pipelines, Bands, Constants as c
 from .parameters.container import ParameterContainer, BLDep
 
 def is_literal(expression):
