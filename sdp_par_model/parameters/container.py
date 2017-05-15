@@ -135,6 +135,10 @@ class ParameterContainer(object):
         return name
 
     def symbolify(self):
+        """
+        Replace all parameters so far with symbols, so equations composed
+        after this point are symbolic with respect to earlier results.
+        """
 
         # Replace all values and expressions with symbols
         for name, v in self.__dict__.items():
@@ -151,6 +155,11 @@ class ParameterContainer(object):
             for rname in rates:
                 rates[rname] = Symbol(self.make_symbol_name(rname + "_" + product))
 
+        # Replace baseline bins with symbolic expression as well (see
+        # BLDep#eval_sum for what the tuple means)
+        ib = Symbol('i')
+        o.bl_bins = (i, 1, self.Nbl, { 'b': Symbol('B_max')(i), 'bcount': 1 })
+
     def get_products(self, expression='Rflop', scale=1):
         results = {}
         for product, exprs in self.products.items():
@@ -158,58 +167,30 @@ class ParameterContainer(object):
                 results[product] = exprs[expression] / scale
         return results
 
-    def _sum_bl_bins(self, bldep, bmax_bins=None, bcount_bins=None):
+
+    def _sum_bl_bins(self, bldep, bins=None):
         """
         Converts a possibly baseline-dependent terms (e.g. constructed
         using "BLDep" or "blsum") into a formula by summing over
         baselines.
 
-        If "bmax_bins" and/or "bcount_bins" parameters are not set we
-        default on "Nbl_full", "frac_bins" and "Bmax_bins" fields to
-        be set. If "bmax_bins" is a symbol, we will generate a
-        symbolic sum term utilising "bmax_bins" as a function.
+        :param bldep: Baseline-dependent term
+        :param bins:  Baseline bins
         """
 
         # Actually baseline-dependent?
         if not isinstance(bldep, BLDep):
             return self.Nbl * bldep
-        expr = bldep.term
 
         # Bin defaults
-        if bmax_bins is None:
-            bmax_bins = self.Bmax_bins
-        if bcount_bins is None:
-            bcount_bins = [ frac * self.Nbl_full for frac in self.frac_bins ]
+        if bins is None:
+            bins = self.bl_bins
+        known_sums = {}
+        if 'bcount' in bldep.pars:
+            known_sums[bldep.pars['bcount']] = self.Nbl
+        return bldep.eval_sum(bins, known_sums)
 
-        # Small bit of ad-hoc formula optimisation: Exploit
-        # independent factors. Makes for smaller terms, which is good
-        # both for Sympy as well as for output.
-        pars = bldep.pars.values()
-        def independent(e, ignoring=[]):
-            return not any([s in e.free_symbols for s in pars
-                            if s not in ignoring])
-        if independent(expr, ignoring=[Symbol('bcount')]):
-            return self.Nbl * bldep(b=None,bcount=1)
-        if isinstance(expr, Mul):
-            indepFactors = list(filter(independent, expr.as_ordered_factors()))
-            if len(indepFactors) > 0:
-                def not_indep(e): return not independent(e)
-                restFactors = filter(not_indep, expr.as_ordered_factors())
-                return Mul(*indepFactors) * self._sum_bl_bins(BLDep(bldep.pars, Mul(*restFactors)),
-                                                              bmax_bins=bmax_bins, bcount_bins=bcount_bins)
-
-        # Symbolic? Generate actual symbolic sum expression
-        if isinstance(bmax_bins, Symbol):
-            b = Symbol('b')
-            return Sum(bldep(b=bmax_bins(b), bcount=1), (b, 1, self.Nbl))
-
-        # Otherwise generate sum term manually that approximates the
-        # full sum using baseline bins
-        results = [ bldep(b=bmax_val, bcount=bcount_val)
-                    for bmax_val, bcount_val in zip(bmax_bins, bcount_bins) ]
-        return Add(*results, evaluate=False)
-
-    def set_product(self, product, T=None, N=1, bmax_bins=None, bcount_bins=None, **args):
+    def set_product(self, product, T=None, N=1, bins=None, **args):
         """
         Sets product properties using a task abstraction. Each property is
         expressed as a sum over baselines.
@@ -239,7 +220,7 @@ class ParameterContainer(object):
 
             # Baseline-dependent? Generate a sum term, otherwise just say as-is
             if isinstance(total, BLDep):
-                props[k] = self._sum_bl_bins(total, bmax_bins, bcount_bins)
+                props[k] = self._sum_bl_bins(total, bins)
                 props[k+"_task"] = expr
             else:
                 props[k] = total
@@ -307,12 +288,12 @@ class BLDep(object):
         to_substitute = [(p, vals[p]) for p in self.pars.keys()]
         return self.term.subs(to_substitute)
 
-    def __mul__(self, other):
+    def _oper(self, other, op):
         # Other term not baseline-dependent?
         if not isinstance(other, BLDep):
-            return BLDep(self.pars, self.term * other)
+            return BLDep(self.pars, op(self.term, other))
         if not isinstance(self.term, Expr):
-            return other * self.term
+            return op(other, self.term)
         # Determine required renamings
         renamings = {
             pold : other.pars[name]
@@ -323,9 +304,15 @@ class BLDep(object):
         newpars = self.pars.copy()
         newpars.update(other.pars)
         newterm = self.term.subs(renamings.items())
-        return BLDep(newpars, newterm * other.term)
+        return BLDep(newpars, op(newterm, other.term))
+    def __mul__(self, other):
+        return self._oper(other, lambda a,b: a*b)
     def __rmul__(self, other):
-        return self.__mul__(other)
+        return self._oper(other, lambda a,b: b*a)
+    def __truediv__(self, other):
+        return self._oper(other, lambda a,b: a/b)
+    def __rtruediv__(self, other):
+        return self._oper(other, lambda a,b: b/a)
 
     def subs(self, *args, **kwargs):
         if not isinstance(self.term, Expr):
@@ -338,11 +325,59 @@ class BLDep(object):
     def atoms(self, typ):
         return Lambda(list(self.pars.values()), self.term).atoms(typ)
 
+    def eval_sum(self, bins, known_sums = {}):
+        """
+        Converts a possibly baseline-dependent terms (e.g. constructed
+        using "BLDep" or "blsum") into a formula by summing over
+        baselines.
+
+        :param bins: List of dictionaries with baseline properties.
+
+           If it is a tuple with layout
+              (symbol, lower limit, upper limit, terms)
+           We are going to generate a symbolic sum where the symbol
+           runs from the lower to the upper limit.
+
+        :param known_sums: List of terms that we know the sum of
+        :return: Sum term
+        """
+
+        # Known sum?
+        expr = self.term
+        for p, result in known_sums.items():
+            if p == expr:
+                return result
+
+        # Small bit of ad-hoc formula optimisation: Exploit
+        # independent factors. Makes for smaller terms, which is good
+        # both for Sympy as well as for output.
+        if isinstance(expr, Mul):
+            def independent(e):
+                return not any([s in e.free_symbols for s in self.pars.values()])
+            indepFactors = list(filter(independent, expr.as_ordered_factors()))
+            if len(indepFactors) > 0:
+                def not_indep(e): return not independent(e)
+                restFactors = filter(not_indep, expr.as_ordered_factors())
+                bldep = BLDep(self.pars, Mul(*restFactors))
+                return Mul(*indepFactors) * bldep.eval_sum(bins, known_sums)
+
+        # Symbolic? Generate actual symbolic sum expression
+        if isinstance(bins, tuple) and len(bins) == 4 and isinstance(bins[0], Symbol):
+            return Sum(self(bins[3]), (bins[0], bins[1], bins[2]))
+
+        # Otherwise generate sum term manually that approximates the
+        # full sum using baseline bins
+        results = [ self(vals) for vals in bins ]
+        return Add(*results, evaluate=False)
+
 def blsum(b, expr):
     """
-    A baseline sum of an expression.
+    A baseline sum of an expression
 
-    Returns a BLDep object of the expression multiplied with the baseline count.
+    Implemented as a weighted sum over baseline bins. Returns a BLDep
+    object of the expression multiplied with the bin baseline count.
     """
     bcount = Symbol('bcount')
-    return BLDep({'b': b, 'bcount': bcount}, bcount * expr)
+    pars = {'b': b } if isinstance(b, Symbol) else dict(b)
+    pars['bcount'] = bcount
+    return BLDep(pars, bcount * expr)

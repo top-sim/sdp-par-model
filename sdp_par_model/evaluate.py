@@ -10,6 +10,7 @@ import math
 import numpy as np
 from scipy import optimize as opt
 from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Symbol
+import traceback
 
 from .parameters.definitions import Telescopes, Pipelines, Bands, Constants as c
 from .parameters.container import ParameterContainer, BLDep
@@ -57,13 +58,13 @@ def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
 
         # Baseline dependent?
         if isinstance(expression_subst, BLDep):
-            result = [ float(expression_subst(b=bmax, bcount=tp.Nbl_full*frac_val))
-                       for frac_val,bmax in zip(tp.frac_bins, tp.Bmax_bins) ]
+            result = [ float(expression_subst(**subs)) for subs in tp.bl_bins ]
         else:
             # Otherwise just evaluate directly
             result = float(expression_subst)
 
     except Exception as e:
+        traceback.print_exc()
         result = "Failed to evaluate (%s): %s" % (e, str(expression))
 
     return result

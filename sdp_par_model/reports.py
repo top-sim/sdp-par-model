@@ -42,8 +42,8 @@ RESULT_MAP = [
     ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
     ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
     ('Stations/antennas',          '',           False,   False, lambda tp: tp.Na,                ),
-    ('Max Baseline [per bin]',     'm',          False,   False, lambda tp: tp.Bmax_bins,         ),
-    ('Baseline fraction [per bin]','',           False,   False, lambda tp: tp.frac_bins,         ),
+    ('Max Baseline [per bin]',     'm',          False,   False, lambda tp: [ bin['b'] for  bin in tp.bl_bins ] ),
+    ('Baseline fraction [per bin]','',           False,   False, lambda tp: [ bin['bfrac'] for  bin in tp.bl_bins ]  ),
 
     ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
     ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),

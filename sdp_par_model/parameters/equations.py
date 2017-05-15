@@ -52,8 +52,6 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
 
     # Store parameters
     o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
-    o.Bmax_bins = list(bins)
-    o.frac_bins = list(binfracs)
 
     # Check parameters
     if hasattr(o, 'Tobs') and (o.Tobs < 10.0):
@@ -62,13 +60,12 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
             print('Warning: Tsnap_min overwritten in equations.py file because observation was shorter than 10s')
 
     # Load common equations.
-    _apply_common_equations(o)
+    _apply_common_equations(o, bins, binfracs)
 
     # If requested, we replace all parameters so far with symbols,
     # so product equations are purely symbolic.
     if symbolify == 'all':
         o.symbolify()
-        o.Bmax_bins = Symbol("B_max")
 
     # This set of methods must be executed in the defined sequence since
     # some values in sequence. This is ugly and we should fix it one day.
@@ -77,7 +74,6 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     _apply_image_equations(o)
     if symbolify == 'helper':
         o.symbolify()
-        o.Bmax_bins = Symbol("B_max")
     _apply_channel_equations(o, symbolify)
     _apply_coalesce_equations(o, symbolify)
     _apply_geometry_equations(o, symbolify)
@@ -87,7 +83,6 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     # so product equations are purely symbolic.
     if symbolify == 'product':
         o.symbolify()
-        o.Bmax_bins = Symbol("B_max")
 
     # Apply product equations to fill in the Rflop estimates (and others when they arrive).
     _apply_ingest_equations(o)
@@ -112,7 +107,7 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     return o
 
 
-def _apply_common_equations(o):
+def _apply_common_equations(o, bins, binfracs):
     """
     Calculate simple derived values that are going to get used fairly often.
     """
@@ -121,7 +116,14 @@ def _apply_common_equations(o):
     # when Bmax is lower than the telescope's maximum.
     #o.Na = 512 * (35.0/o.Ds)**2 #Hack to make station diameter and station number inter-related...comment it out after use
     o.Nbl_full = o.Na * (o.Na - 1) / 2.0
-    o.Nbl = sum(o.frac_bins) * o.Nbl_full
+    o.Nbl = sum(binfracs) * o.Nbl_full
+
+    # Build baseline bins
+    o.bl_bins = list([
+        { 'b': bmax,
+          'bfrac': frac,
+          'bcount': frac * o.Nbl_full
+        } for bmax, frac in zip(bins, binfracs)])
 
     # Wavelengths
     o.wl_max = o.c / o.freq_min  # Maximum Wavelength
@@ -717,16 +719,14 @@ def _apply_kernel_product_equations(o):
 
     # Baselines to cover with kernels.
     if o.NAProducts == 'all' or o.on_the_fly or not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
-        bmax_bins = o.Bmax_bins
-        bcount_bins = [ frac * o.Nbl_full for frac in o.frac_bins ]
+        bins = o.bl_bins
 
     else:
         # If we do not need a separate A^A-kernel per baseline,
         # just make the appropriate number of A-kernels at a
         # resolution appropriate for the longest baseline, and
         # assume that all other baselines can use it
-        bmax_bins = [ o.Bmax ]
-        bcount_bins = [ o.NAProducts ]
+        bins = [ { 'b': o.Bmax, 'bcount': o.NAProducts } ]
 
     if o.pipeline in Pipelines.imaging:
 
@@ -734,13 +734,13 @@ def _apply_kernel_product_equations(o):
         o.set_product(Products.Gridding_Kernel_Update,
             T = BLDep(b, o.Tkernel_backward(b)),
             N = BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b) * o.Nfacet**2),
-            bmax_bins=bmax_bins, bcount_bins=bcount_bins,
+            bins = bins,
             Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_backward(b) * o.Nkernel_AW_backward(b)**2 * log(o.Nkernel_AW_backward(b)**2, 2) / o.Tkernel_backward(b)),
             Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)))
         o.set_product(Products.Degridding_Kernel_Update,
             T = BLDep(b,o.Tkernel_predict(b)),
             N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet_predict**2),
-            bmax_bins=bmax_bins, bcount_bins=bcount_bins,
+            bins = bins,
             Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_predict(b) * o.Nkernel_AW_predict(b)**2 * log(o.Nkernel_AW_predict(b)**2, 2) / o.Tkernel_predict(b)),
             Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)))
 

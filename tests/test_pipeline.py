@@ -115,15 +115,15 @@ class PipelineTestsImaging(PipelineTestsBase):
         # Kernel times can be BL-dependent
         rboxes = RegionBoxes([self.df.binBaselines, self.df.kernelPredTime])
         self.assertAlmostEqual(rboxes.max(timeSize),
-                               tp.Tkernel_predict(tp.Bmax_bins[0]))
+                               tp.Tkernel_predict(tp.bl_bins[0]['b']))
         self.assertAlmostEqual(-rboxes.max(-timeSize),
-                               tp.Tkernel_predict(tp.Bmax_bins[-1]))
+                               tp.Tkernel_predict(tp.bl_bins[-1]['b']))
 
         rboxes = RegionBoxes([self.df.binBaselines, self.df.kernelBackTime])
         self.assertAlmostEqual(rboxes.max(timeSize),
-                               tp.Tkernel_backward(tp.Bmax_bins[0]))
+                               tp.Tkernel_backward(tp.bl_bins[0]['b']))
         self.assertAlmostEqual(-rboxes.max(-timeSize),
-                               tp.Tkernel_backward(tp.Bmax_bins[-1]))
+                               tp.Tkernel_backward(tp.bl_bins[-1]['b']))
 
     def test_flag(self):
         if self.df.tp.pipeline == Pipelines.Ingest: return
