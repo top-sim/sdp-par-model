@@ -17,7 +17,7 @@ class PipelineTestsBase(unittest.TestCase):
                              pipeline=pipeline)
         adjusts = {
             'Nfacet': 8,
-            'Tsnap': 40
+            'Tsnap': 40 if pipeline not in [Pipelines.Fast_Img, Pipelines.RCAL] else 1
         }
 
         tp = cfg.calc_tel_params(adjusts=adjusts)
@@ -226,7 +226,8 @@ class PipelineTestsImaging(PipelineTestsBase):
         _test(self.df.tp.Nmajortotal, 'nerf_loop')
         if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.RCAL]:
             _test(self.df.tp.Nf_min, 'nerf_freq')
-        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.DPrepC, Pipelines.DPrepA, Pipelines.DPrepA_Image]:
+        if not self.df.tp.pipeline in [Pipelines.ICAL, Pipelines.RCAL,
+                                       Pipelines.DPrepC, Pipelines.DPrepA, Pipelines.DPrepA_Image]:
             _test(self.df.tp.Tobs / self.df.tp.Tsnap, 'nerf_time')
 
 class PipelineTestsRCAL(PipelineTestsImaging):

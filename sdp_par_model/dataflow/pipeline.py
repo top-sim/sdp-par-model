@@ -61,8 +61,8 @@ class Pipeline:
         tobs = tp.Tobs / nerf_time
         self.time = Domain('Time', 's', priority=7)
         self.obsTime = self.time.regions(tobs)
-        self.dumpTime = self.obsTime.split(tobs / tp.Tint_min)
-        self.snapTime = self.obsTime.split(tobs / tp.Tsnap)
+        self.dumpTime = self.obsTime.split(max(1, tobs / tp.Tint_min))
+        self.snapTime = self.obsTime.split(max(1, tobs / tp.Tsnap))
         self.kernelPredTime = self.obsTime.split(
             tobs / self._to_domainexpr(tp.Tkernel_predict))
         self.kernelBackTime = self.obsTime.split(
@@ -73,7 +73,7 @@ class Pipeline:
             self.Tsolve = tp.tRCAL_G
         else:
             self.Tsolve = tp.Tsnap
-        self.solveTime = self.obsTime.split(tobs / self.Tsolve)
+        self.solveTime = self.obsTime.split(max(1, tobs / self.Tsolve))
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch', priority=8)
@@ -95,7 +95,7 @@ class Pipeline:
         self.fftBackFreqs = self.allFreqs.split(tp.Nf_FFT_backward / nerf_freq)
         self.projPredFreqs = self.allFreqs.split(tp.Nf_proj_predict / nerf_freq)
         self.projBackFreqs = self.allFreqs.split(tp.Nf_proj_backward / nerf_freq)
-        self.cleanFreqs = self.allFreqs.split(tp.Nf_identify / nerf_freq)
+        self.cleanFreqs = self.allFreqs.split(max(1, tp.Nf_identify / nerf_freq))
 
         # Make beam domain
         self.beam = Domain('Beam', priority=10)
@@ -112,7 +112,7 @@ class Pipeline:
         # Make (major) loop domain
         self.loop = Domain('Major Loop', priority=9)
         self.allLoops = self.loop.regions(tp.Nmajortotal / nerf_loop)
-        self.eachLoop = self.allLoops.split(tp.Nmajortotal / nerf_loop)
+        self.eachLoop = self.allLoops.split(Max(1, tp.Nmajortotal / nerf_loop))
         self.allSelfCals = self.loop.regions(Max(1, (tp.Nselfcal + 1) / nerf_loop))
         self.eachSelfCal = self.allSelfCals.split(Max(1, (tp.Nselfcal + 1) / nerf_loop))
 
