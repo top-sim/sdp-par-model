@@ -52,6 +52,8 @@ RESULT_MAP = [
     ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
     ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
     ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_fov_total,),
+    ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mcpx * tp.Npix_linear**2 / c.giga,),
+    ('Image size',                 'GB',         True,    False, lambda tp: tp.Mcpx * tp.Npix_linear_fov_total**2 / c.giga,),
     ('Grid side dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_grid,),
     ('Baselines dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_bl,),
     ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
