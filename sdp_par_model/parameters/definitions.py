@@ -136,6 +136,7 @@ class Pipelines:
     Fast_Img = 'Fast_Img' # Produce continuum subtracted residual image every 1s or so
 
     input = [Ingest]
+    realtime = [Ingest, RCAL, Fast_Img]
     imaging = [RCAL, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     output = [DPrepA, DPrepA_Image, DPrepB, DPrepC, Fast_Img]
     all = [Ingest, ICAL, RCAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD, Fast_Img]
