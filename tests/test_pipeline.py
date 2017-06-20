@@ -40,14 +40,18 @@ class PipelineTestsBase(unittest.TestCase):
         else:
             self.assertIsNotNone(flow, msg="Product %s exists, but no associated Flow defined!" % product)
             # Otherwise match compute & transfer cost
+            expected = float(self.df.tp.products[product]['Rflop'] * self.df.tp.Tobs)
+            actual = float(flow.cost('compute'))
             self.assertAlmostEqual(
-                float(flow.cost('compute')/self.df.tp.Tobs),
-                float(self.df.tp.products[product]['Rflop']),
-                delta = self.df.tp.products[product]['Rflop'] / 1e10)
+                actual, expected,
+                delta = self.df.tp.products[product]['Rflop'] / 1e10,
+                msg = "%s compute (factor %.2f)" % (product, actual/expected))
+            expected = float(self.df.tp.products[product]['Rout'] * self.df.tp.Tobs)
+            actual = float(flow.cost('transfer'))
             self.assertAlmostEqual(
-                float(flow.cost('transfer')/self.df.tp.Tobs),
-                float(self.df.tp.products[product]['Rout']),
-                delta = self.df.tp.products[product]['Rout'] / 1e10)
+                actual, expected,
+                delta = self.df.tp.products[product]['Rout'] / 1e10,
+                msg = "%s transfer (factor %.2f)" % (product, actual/expected))
 
     def _assertPipelineComplete(self, flow):
         """Checks whether the given flow has the same compute and transfer
