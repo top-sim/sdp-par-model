@@ -43,6 +43,8 @@ RESULT_MAP = [
     ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
     ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
     ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
+    ('w-stacking planes',          '',           True,    False, lambda tp: tp.Nwstack,           ),
+    ('w-stacking planes predict',  '',           True,    False, lambda tp: tp.Nwstack_predict,   ),
     ('Stations/antennas',          '',           False,   False, lambda tp: tp.Na,                ),
     ('Max Baseline [per bin]',     'km',         False,   False, lambda tp: [ bin['b'] / c.kilo for  bin in tp.bl_bins ] ),
     ('Baseline fraction [per bin]','%',          False,   False, lambda tp: [ 100*bin['bfrac'] for  bin in tp.bl_bins ]  ),
@@ -98,6 +100,9 @@ RESULT_MAP = [
     ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
     ('Delta W snapshot',           'lambda',     False,   False, lambda tp: tp.DeltaW_SShot,      ),
     ('Delta W max',                'lambda',     False,   False, lambda tp: tp.DeltaW_max,        ),
+    ('Delta W projection',         'lambda',     False,   False, lambda tp: tp.Qmax_wproject / tp.Theta_fov**2,),
+
+    ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
     ('W kernel support pred',      'uv-pixels',  False,   False, lambda tp: tp.Ngw_predict,       ),
     ('AW kernel support pred',     'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_predict,),
     ('W kernel support bw',        'uv-pixels',  False,   False, lambda tp: tp.Ngw_backward,      ),

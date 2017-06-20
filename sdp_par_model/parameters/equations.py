@@ -11,7 +11,7 @@ import warnings
 
 from numpy import pi, round
 import sympy
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin
 
 from .definitions import Pipelines, Products
 from .container import ParameterContainer, BLDep, blsum
@@ -332,20 +332,22 @@ def _apply_geometry_equations(o, symbolify):
     # Contribution of earth curvature to w-term
     o.DeltaW_Earth = BLDep(b, b ** 2 / (8. * o.R_Earth * o.wl))
     # Contribution of earth movement to w-term
-    o.DeltaW_SShot = BLDep(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
+    o.DeltaW_SShot = BLDep(b, b * sin(o.Omega_E * o.Tsnap) / (2. * o.wl))
     o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
     if symbolify == 'helper':
         o.DeltaW_Earth = Symbol(o.make_symbol_name('DeltaW_Earth'))
         o.DeltaW_SShot = Symbol(o.make_symbol_name('DeltaW_SShot'))
         o.DeltaW_max = Symbol(o.make_symbol_name('DeltaW_max'))
+    o.DeltaW_wproj = BLDep(b, Min(o.DeltaW_stack, o.DeltaW_max(b)))
 
     # Eq. 25, w-kernel support size. Note possible difference in
     # cellsize assumption!
     def Ngw(deltaw, fov):
         return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                               (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
-    o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
-    o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
+    o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_wproj(b), o.Theta_fov))
+    o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_wproj(b), o.Theta_fov_predict))
+
 
     # TODO: Check split of kernel size for backward and predict steps.
     # squared linear size of combined W and A kernels; used in eqs 23 and 32
@@ -462,14 +464,18 @@ def _apply_fft_equations(o):
 
     if not o.pipeline in Pipelines.imaging: return
 
+    # Determine number of w-stacks we need
+    o.Nwstack = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
+    o.Nwstack_predict = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
+
     # These are real-to-complex for which the prefactor in the FFT is 2.5
     o.set_product(Products.FFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
-        Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
+        Rflop = 2.5 * o.Nwstack * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
         Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
     o.set_product(Products.IFFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
-        Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
+        Rflop = 2.5 * o.Nwstack_predict * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
         Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
 
 

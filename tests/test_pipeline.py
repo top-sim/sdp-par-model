@@ -17,7 +17,7 @@ class PipelineTestsBase(unittest.TestCase):
                              pipeline=pipeline)
         adjusts = {
             'Nfacet': 8,
-            'Tsnap': 40 if pipeline not in [Pipelines.Fast_Img, Pipelines.RCAL] else 1
+            'DeltaW_stack': 20
         }
 
         tp = cfg.calc_tel_params(adjusts=adjusts)
@@ -40,6 +40,7 @@ class PipelineTestsBase(unittest.TestCase):
         else:
             self.assertIsNotNone(flow, msg="Product %s exists, but no associated Flow defined!" % product)
             # Otherwise match compute & transfer cost
+            print(self.df.tp.products[product]['Rflop'] )
             expected = float(self.df.tp.products[product]['Rflop'] * self.df.tp.Tobs)
             actual = float(flow.cost('compute'))
             self.assertAlmostEqual(

@@ -111,6 +111,8 @@ def cheap_lambdify_curry(free_vars, expression):
         'sqrt': 'math.sqrt',
         'sign': 'np.sign', # No sign in math, apparently
         'Abs': 'abs',
+        'sin': 'math.sin',
+        'cos': 'math.cos',
         'acos': 'math.acos',
         'acosh': 'math.acosh',
         'arg': 'np.angle',
