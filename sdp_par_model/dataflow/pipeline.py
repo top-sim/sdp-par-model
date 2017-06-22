@@ -507,7 +507,7 @@ class Pipeline:
 
         identify =  Flow(
             Products.Identify_Component,
-            [self.eachBeam, self.eachLoop, self.cleanFreqs],
+            [self.eachBeam, self.eachLoop, self.cleanFreqs, self.eachFacet],
             costs = self._costs_from_product(Products.Identify_Component),
             deps = [spectral_fit],
             cluster = 'deconvolve'
@@ -515,9 +515,9 @@ class Pipeline:
 
         subtract =  Flow(
             Products.Subtract_Image_Component,
-            [self.eachBeam, self.eachLoop, self.cleanFreqs],
+            [self.eachBeam, self.eachLoop, self.cleanFreqs, self.eachFacet],
             costs = self._costs_from_product(Products.Subtract_Image_Component),
-            deps = [identify],
+            deps = [identify, spectral_fit],
             cluster = 'deconvolve'
         )
         identify.depend(subtract)
