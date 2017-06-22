@@ -83,25 +83,35 @@ class ParameterContainer(object):
 
         exec('self.%s = value' % param_name)  # Write the value
 
-    def get_param(self, param_name):
+    def get(self, param_name, default=None, warn=True):
         """
-        Provides a method for reading a parameter that won't
-        necessarily crash the program if the parameter has not yet
-        been defined. A nice-to-have robustness-enhancing feature but
-        not really necessary to get a working implementation.
+        Provides a method for reading a parameter by string.
 
-        :param param_name: The name of the parameter/field that needs to be read - provided as text
+        :param param_name: The name of the parameter/field that needs
+           to be read - provided as text. If the parameter contains a
+           ".", it is interpreted as a product property.
+        :param default: Default value to return if the parameter or
+           product does not exist
+        :param warn: Output a warning if parameter does not exist
         :return: The parameter value.
         """
         assert isinstance(param_name, str)
-        return_value = None
-        try:
-            assert hasattr(self, param_name)
-            exec('return_value = self.%s' % param_name)  # Write the value to the return_value variable
-        except AssertionError:
-            warnings.warn("Parameter %s hasn't been defined (returning 'None')." % param_name)
 
-        return return_value
+        # Product? Look up in product array
+        if '.' in param_name:
+            product_name, cost_name = param_name.split('.')
+            if not product_name in self.products:
+                if warn:
+                    warnings.warn("Product %s hasn't been defined (returning 'None')." % product_name)
+                return default
+            # Not having the cost is okay
+            return self.products[product_name].get(cost_name, default)
+
+        # Otherwise assume it is a direct member
+        if not hasattr(self, param_name):
+            warnings.warn("Parameter %s hasn't been defined (returning 'None')." % param_name)
+            return default
+        return self.__dict__[param_name]
 
     def make_symbol_name(self, name):
         """Make names used in our code into something more suitable to be used

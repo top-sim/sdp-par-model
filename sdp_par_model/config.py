@@ -261,7 +261,7 @@ class PipelineConfig:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
 
-            result_expression = tp.__dict__[expression_string]
+            result_expression = tp.get(expression_string)
             (tsnap_opt, nfacet_opt) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             result += evaluate.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
 
@@ -352,7 +352,7 @@ class PipelineConfig:
 
             # Perform a check to see that the value of the assigned parameter wasn't changed by the imaging equations,
             # otherwise the assigned value would have been lost (i.e. not a free parameter)
-            parameter_final_value = tp.__dict__[parameter_string]
+            parameter_final_value = tp.get(parameter_string)
             eta = 1e-10
             if abs((parameter_final_value - param_values[i])/param_values[i]) > eta:
                 raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
@@ -364,7 +364,7 @@ class PipelineConfig:
                 product, expr = expression_string.split(".")
                 result_expression = tp.products[product].get(expr, 0)
             else:
-                result_expression = tp.__dict__[expression_string]
+                result_expression = tp.get(expression_string)
             (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
             results.append(evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet))
 
@@ -428,8 +428,8 @@ class PipelineConfig:
 
                 # Perform a check to see that the value of the assigned parameters weren't changed by the imaging
                 # equations, otherwise the assigned values would have been lost (i.e. not free parameters)
-                parameter1_final_value = eval('tp.%s' % parameters[0])
-                parameter2_final_value = eval('tp.%s' % parameters[1])
+                parameter1_final_value = tp.get(parameters[0])
+                parameter2_final_value = tp.get(parameters[1])
                 eta = 1e-10
                 if abs((parameter1_final_value - param_x_value) / param_x_value) > eta:
                     raise AssertionError('Value assigned to %s seems to be overwritten after assignment '
@@ -442,7 +442,7 @@ class PipelineConfig:
                                          'by the method compute_derived_parameters(). Cannot peform parameter sweep.'
                                          % parameters[1])
 
-                result_expression = tp.__dict__[expression_string]
+                result_expression = tp.get(expression_string)
                 (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
                 results[iy, ix] = evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet)
 
@@ -466,7 +466,7 @@ class PipelineConfig:
 
         # Generate telescope parameters, lambdify target expression
         telescope_params = pipelineConfig.calc_tel_params(verbose=verbose)
-        result_expression = telescope_params.__dict__[expression]
+        result_expression = telescope_params.get(expression)
         expression_lam = evaluate.cheap_lambdify_curry((telescope_params.Nfacet,
                                                telescope_params.Tsnap),
                                               result_expression)

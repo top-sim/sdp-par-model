@@ -173,7 +173,7 @@ def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rfl
 
     # Construct lambda from our two parameters (facet number and
     # snapshot time) to the expression to minimise
-    expression_original = eval('telescope_parameters.%s' % expr_to_minimize_string)
+    expression_original = telescope_parameters.get(expr_to_minimize_string)
     params = []
     if isinstance(telescope_parameters.Nfacet, Symbol):
         params.append(telescope_parameters.Nfacet)
