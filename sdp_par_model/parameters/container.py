@@ -244,7 +244,7 @@ class BLDep(object):
     such that they can also work on baseline-dependent terms.
     """
 
-    def __init__(self, pars, term):
+    def __init__(self, pars, term, defaults={}):
         """
         Creates baseline-dependent term.
         :param pars: List of baseline-dependent parameters as
@@ -252,8 +252,10 @@ class BLDep(object):
           will stand for baseline length.
         :param term: Dependent term, in which "pars" symbols can appear
           free and will be substituted later.
+        :param defaults: Optional default values for parameters
         """
         self.term = term
+        self.defaults = defaults
         # Collect formal parameters. We default to parameter name 'b'
         if not isinstance(pars, dict):
             self.pars = { 'b': pars }
@@ -275,17 +277,19 @@ class BLDep(object):
         """
         if not isinstance(self.term, Expr):
             return self.term
-        # Check that all parameters were passed
-        if vals is None:
-            vals = {}
-        elif not isinstance(vals, dict):
-            vals = { 'b': vals }
-        vals.update(kwargs)
-        assert set(self.pars.keys()).issubset(vals.keys()), \
+        # Collect parameters from defaults, "vals" parameter and keyword parameters
+        pvals = dict(self.defaults)
+        if isinstance(vals, dict):
+            pvals.update(vals)
+        elif vals is not None:
+            pvals['b'] = vals
+        pvals.update(kwargs)
+        # Check that all enough parameters were passed
+        assert set(self.pars.keys()).issubset(pvals.keys()), \
             "Parameter %s not passed to baseline-dependent term %s! %s" % (
-                set(self.pars.keys()).difference(vals.keys()), self.term, vals)
+                set(self.pars.keys()).difference(pvals.keys()), self.term, pvals)
         # Do substitutions
-        to_substitute = [(psym, vals[p]) for p, psym in self.pars.items()]
+        to_substitute = [(psym, pvals[p]) for p, psym in self.pars.items()]
         return self.term.subs(to_substitute)
 
     def _oper(self, other, op):
@@ -375,9 +379,17 @@ def blsum(b, expr):
     A baseline sum of an expression
 
     Implemented as a weighted sum over baseline bins. Returns a BLDep
-    object of the expression multiplied with the bin baseline count.
+    object of the expression multiplied with the bin baseline
+    count.
+
+    The baseline count parameter defaults to 1, so the following works
+    as expected:
+
+       expr = blsum(b, ...)
+       expr2 = blsum(b, expr(b) * ...)
     """
     bcount = Symbol('bcount')
     pars = {'b': b } if isinstance(b, Symbol) else dict(b)
     pars['bcount'] = bcount
-    return BLDep(pars, bcount * expr)
+    defaults = {'bcount': 1}
+    return BLDep(pars, bcount * expr, defaults={'bcount':1})
