@@ -285,7 +285,7 @@ class BLDep(object):
             "Parameter %s not passed to baseline-dependent term %s! %s" % (
                 set(self.pars.keys()).difference(vals.keys()), self.term, vals)
         # Do substitutions
-        to_substitute = [(p, vals[p]) for p in self.pars.keys()]
+        to_substitute = [(psym, vals[p]) for p, psym in self.pars.items()]
         return self.term.subs(to_substitute)
 
     def _oper(self, other, op):

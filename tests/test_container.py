@@ -8,18 +8,21 @@ class ContainerTests(unittest.TestCase):
 
     def test_bldep(self):
 
-        b = Symbol('b')
+        b = Symbol('_b')
+        b2 = Symbol('_b2')
         bcount = Symbol('bcount')
 
         bb = BLDep(b, b)
         self.assertEqual(bb(1000), 1000)
         self.assertEqual(BLDep({'b': b}, b)(2000), 2000)
+        self.assertEqual(BLDep(b2, b2)(2000), 2000)
 
         # Sum should multiply in baseline count
         bs = blsum(b, b)
         self.assertEqual(bs(2000, bcount=1), 2000)
         self.assertEqual(bs(2000, bcount=2), 4000)
         self.assertEqual(bs(1000, bcount=10), 10000)
+        self.assertEqual(blsum(b, b)(1000, bcount=10), 10000)
         self.assertEqual(blsum({'b':b}, b)(1000, bcount=10), 10000)
 
         # Check operators
@@ -46,6 +49,7 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual(bb.eval_sum(bins).doit(), 130000)
         self.assertEqual(bs.eval_sum(bins).doit(), 1200000)
         self.assertEqual(blsum(b, 1).eval_sum(bins).doit(), 45)
+        self.assertEqual(blsum(b, free).eval_sum(bins).doit(), free*45)
         self.assertEqual(blsum(b, free).eval_sum(bins).doit(), free*45)
         # Make sure it moved the free variable outside
         self.assertTrue(isinstance(blsum(b, free).eval_sum(bins), Mul))
