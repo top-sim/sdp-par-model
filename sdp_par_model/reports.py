@@ -1011,15 +1011,14 @@ def _read_csv(filename):
 
 
 def compare_csv(result_file, ref_file,
-                diff_rows=['Total Compute'],
                 ignore_modifiers=True, ignore_units=True,
+                row_threshold=0.01,
                 export_html=''):
     """
     Read and compare two CSV files with telescope parameters
 
     :param result_file: CVS file with telescope parameters
     :param ref_file: CVS file with reference parameters
-    :param diff_rows: Rows to use to calculate returned difference sum
     :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
     :returns: Sum of differences found in specified rows
     """
@@ -1037,18 +1036,18 @@ def compare_csv(result_file, ref_file,
             for (name, row) in ref.items() }
 
     # Headings
-    s = '<table><tr><td></td>'
+    stbl = '<table><tr><th></th><th>Mean</th><th>Min</th><th>Max</th>'
     for head, _ in results[0][1]:
-        s += '<th>%s</th>' % head
-    s += '</tr>\n'
+        stbl += '<th>%s</th>' % head
+    stbl += '</tr>\n'
 
     # Loop through rows
-    all_diffs = {}
+    all_diffs = []
+    diff_sum = 0
     for row_name, row in results:
-        s += '<tr><td>%s</td>' % row_name
+        shead = '<tr><td>%s</td>' % row_name
 
         # Accumulate difference?
-        do_diff = any([re.match(diff_row, row_name) for diff_row in diff_rows])
         diffs = []
 
         # Locate reference results
@@ -1057,6 +1056,7 @@ def compare_csv(result_file, ref_file,
         refRow = dict(refRow)
 
         # Loop through values
+        s = ""
         for head, val in row:
             head = strip_modifiers(head, ignore_modifiers)
 
@@ -1081,8 +1081,7 @@ def compare_csv(result_file, ref_file,
                     # reference for negative changes, as -50% is
                     # about as bad as +200%.
                     diff_rel = max(diff, 100*(ref_num-num)/num)
-                    if do_diff:
-                        diffs.append(diff)
+                    diffs.append(diff)
 
                 # Output
                 if not diff is None:
@@ -1108,23 +1107,22 @@ def compare_csv(result_file, ref_file,
                             s += '<td bgcolor="#00ff00">%s (same)</td>' % val
                     else:
                         s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
-                        if do_diff:
-                            diffs.append(100)
+                        diffs.append(100)
                 else:
                     s += '<td>%s</td>' % val
 
-        all_diffs[row_name] = diffs
+        all_diffs.append((row_name, diffs))
         s += '</tr>\n'
-    s += '</table>'
-
-    diff_sum = 0
-    for row_name, diffs in all_diffs.items():
-        if len(diffs) > 0:
-            display(HTML('<font color="blue">Difference %s: </font> min %+.3g%%, max %+.3g%%, '
-                         'Mean %+.3g%%, Median %+.3g%%, Std %.3g%%' % (
-                             row_name, np.min(diffs), np.max(diffs),
-                             np.mean(diffs), np.median(diffs), np.std(diffs))))
+        if len(diffs) != 0:
+            sdiff = '<td>%+.3g%%</td><td>%+.3g%%</td><td>%+.3g%%</td>' % (
+                np.mean(diffs), np.min(diffs), np.max(diffs))
             diff_sum += np.sum(np.abs(diffs)) / len(diffs)
+        else:
+            sdiff = '<td colspan=3></td>'
+        if len(diffs) == 0 or np.max(np.abs(diffs)) >= row_threshold:
+            stbl += shead + sdiff + s
+
+    stbl += '</table>'
 
     # Write HTML report to file - or display
     if export_html != '':
@@ -1133,14 +1131,14 @@ def compare_csv(result_file, ref_file,
         print("<html>", file=f)
         print("  <title>SDP Parametric Model Result Comparison</title>", file=f)
         print("  <body><p>Comparing %s against %s</p>" % (result_file, ref_file), file=f)
-        print(s, file=f)
+        print(stbl, file=f)
         print("  </body>", file=f)
         print("</html>", file=f)
         f.close()
         display(FileLink(export_html))
     else:
         display(HTML('<h3>Comparison:</h3>'))
-        display(HTML(s))
+        display(HTML(stbl))
 
     return diff_sum
 
