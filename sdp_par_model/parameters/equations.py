@@ -298,10 +298,13 @@ def _apply_coalesce_equations(o, symbolify):
     o.Rvis_ingest = (o.Nbl + o.Na) * o.Nf_max / o.Tint_used
 
 
-    # Total visibility rate (visibilities per second per beam, per polarisation)
-    #after frequency channels have been combined where possible.
-    #Autocorrelations included here too
-    o.Rvis = (o.Nbl + o.Na) * o.Nf_vis / o.Tint_used
+    # Total visibility rate (visibilities per second per beam, per
+    # polarisation) after frequency channels have been combined where
+    # possible. We focus on imaging pipelines here, so we remove
+    # auto-correlations. If they are required by science pipelines, we
+    # assume that they are tracked separately as a data product not
+    # covered by the parametric model.
+    o.Rvis = o.Nbl * o.Nf_vis / o.Tint_used
 
     # Visibility rate for backward step, allow coalescing
     # in time and freq prior to gridding
