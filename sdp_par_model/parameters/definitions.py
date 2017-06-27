@@ -377,6 +377,7 @@ def apply_global_parameters(o):
     # Pipeline variants
     o.on_the_fly = False
     o.blcoal = True
+    o.global_blcoal = False
     o.scale_predict_by_facet = True
     o.image_gridding = 0  # Pixels to pad to allow image-plane gridding
 

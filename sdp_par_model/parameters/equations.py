@@ -223,8 +223,8 @@ def _apply_channel_equations(o, symbolify):
     # The number of visibility channels used in each direction
     # (includes effects of averaging). Bound by minimum parallism
     # and input channel count.
-    o.Nf_vis = \
-        Min(Max(o.Nf_out, o.Nf_no_smear),o.Nf_max)
+    o.Nf_vis = BLDep(b,
+        Min(Max(o.Nf_out, o.Nf_no_smear),o.Nf_max))
     o.Nf_vis_backward = BLDep(b,
         Min(Max(o.Nf_out, o.Nf_no_smear_backward(b)),o.Nf_max))
     o.Nf_vis_predict = BLDep(b,
@@ -304,7 +304,10 @@ def _apply_coalesce_equations(o, symbolify):
     # auto-correlations. If they are required by science pipelines, we
     # assume that they are tracked separately as a data product not
     # covered by the parametric model.
-    o.Rvis = o.Nbl * o.Nf_vis / o.Tint_used
+    if o.global_blcoal:
+        o.Rvis = blsum(b, o.Nf_vis(b) / Min(o.Tcoal_skipper(b), 1.2, o.Tion))
+    else:
+        o.Rvis = blsum(b, o.Nf_vis(b) / o.Tint_used)
 
     # Visibility rate for backward step, allow coalescing
     # in time and freq prior to gridding
@@ -377,10 +380,11 @@ def _apply_ingest_equations(o):
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
             Rflop = 8 * o.Npp * (o.Rvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
                     / o.Nf_min,
-            Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min)
+            Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
         o.set_product(Products.Average,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-            Rflop = 8 * o.Npp * o.Rvis_ingest / o.Nf_min,
+            # Slight overestimation, as Rvis_ingest includes autocorrelations
+            Rflop = blsum(Symbol('b'), 8 * o.Npp * o.Rvis_ingest / o.Nf_min / o.Nbl),
             Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min)
 
 
@@ -556,13 +560,15 @@ def _apply_calibration_equations(o):
     # Number of flops required for averaging one vis. The steps are evaluate the complex phasor for 
     # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
     o.NFlop_averager = 40 * o.Npp
+    b = Symbol('b')
 
     # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
     if o.pipeline == Pipelines.ICAL:
         N_Gslots = o.Tobs / o.tICAL_G
         N_Bslots = o.Tobs / o.tICAL_B
         N_Islots = o.Tobs / o.tICAL_I
-        Flop_averaging = o.NFlop_averager * o.Rvis * (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
+        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins) * \
+                         (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
         Flop_solving   = o.NFlop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
         o.set_product(Products.Solve,
             T = o.tICAL_G,
@@ -576,7 +582,7 @@ def _apply_calibration_equations(o):
     if o.pipeline == Pipelines.RCAL:
         N_Gslots = o.Tobs / o.tRCAL_G
         # Need to remember to average over all frequencies because a BP may have been applied.
-        Flop_averaging = o.NFlop_averager * o.Rvis * o.Nf_max * o.tRCAL_G
+        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins) * o.Nf_max * o.tRCAL_G
         Flop_solving   = o.NFlop_solver * N_Gslots
         o.set_product(Products.Solve,
             T = o.tRCAL_G,
@@ -602,9 +608,10 @@ def _apply_dft_equations(o):
         o.set_product(Products.DFT,
             T = o.Tsnap,
             N = o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
-            Rflop = (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
-                    * o.Nf_vis / o.Nf_min_gran / o.Tint_used,
-            Rout = o.Npp * o.Mvis * o.Rvis / o.Nf_min_gran)
+            Rflop = blsum(b,
+                    (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
+                          * o.Rvis(b) / o.Nf_min_gran / o.Nbl),
+            Rout = blsum(b, o.Npp * o.Mvis * o.Rvis(b) / o.Nf_min_gran))
 
 
 def _apply_source_find_equations(o):
@@ -635,11 +642,12 @@ def _apply_major_cycle_equations(o):
 
     # Note that we assume this is done for every Selfcal and Major Cycle
     if o.pipeline in Pipelines.imaging:
+        b = Symbol('b')
         o.set_product(Products.Subtract_Visibility,
             T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
-            Rflop = 8 * o.Npp * o.Rvis / o.Nf_min_gran,
-            Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min_gran)
+            Rflop = blsum(b, 8 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
+            Rout = blsum(b, o.Mvis * o.Npp * o.Rvis(b) / o.Nf_min_gran))
 
 
 def _apply_kernel_equations(o):
@@ -768,16 +776,16 @@ def _apply_phrot_equations(o):
             T = o.Tsnap,
             N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
                 o.Ntt_predict * o.Nfacet**2 ,
-            Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tint_used),
-            Rout = blsum(b, o.Mvis * o.Nf_vis / o.Nf_min_gran / o.Tint_used))
+            Rflop = blsum(b, 25 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
+            Rout = blsum(b, o.Mvis * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used))
 
     # Backward phase rotation: Input at overall visibility
     # rate, output averaged down to backward visibility rate.
     o.set_product(Products.PhaseRotation,
         T = o.Tsnap,
         N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
-        Rflop = blsum(b, 25 * o.Nf_vis / o.Nf_min_gran / o.Tint_used),
-        Rout = blsum(b, o.Mvis * o.Rvis_backward(b=b, bcount=1) / o.Nf_min_gran))
+        Rflop = blsum(b, 25 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
+        Rout = blsum(b, o.Mvis * o.Rvis_backward(b) / o.Nf_min_gran))
 
 
 def _apply_flop_equations(o):
@@ -809,13 +817,13 @@ def _apply_io_equations(o):
     # factor for double-buffering
     #
     # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-    o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis * o.Nbeam * o.Mvis * o.Tobs
+    o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis.eval_sum(o.bl_bins) * o.Nbeam * o.Mvis * o.Tobs
 
     # Visibility read rate
     #
     # According to SDPPROJECT-133 (JIRA) assume that we only need
     # to read all visibilities twice per major cycle and beam.
-    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis
+    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.bl_bins) * o.Mvis
     # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
 
     # Convolution kernel cache size

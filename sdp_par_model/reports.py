@@ -798,8 +798,7 @@ def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="defaul
     plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
 
 
-def _pipeline_configurations(telescopes, bands, pipelines,
-                             blcoal=True, on_the_fly=False, scale_predict_by_facet=True):
+def _pipeline_configurations(telescopes, bands, pipelines, adjusts={}):
     """Make a list of all valid configuration combinations in the list."""
 
     configs = []
@@ -807,9 +806,8 @@ def _pipeline_configurations(telescopes, bands, pipelines,
         for band in bands:
             for pipeline in pipelines:
                 cfg = PipelineConfig(telescope=telescope, band=band,
-                                     pipeline=pipeline, blcoal=blcoal,
-                                     on_the_fly=on_the_fly,
-                                     scale_predict_by_facet=scale_predict_by_facet)
+                                     pipeline=pipeline,
+                                     adjusts=adjusts)
 
                 # Check whether the configuration is valid
                 (okay, msgs) = cfg.is_valid()
@@ -819,8 +817,7 @@ def _pipeline_configurations(telescopes, bands, pipelines,
     return configs
 
 
-def write_csv_pipelines(filename, telescopes, bands, pipelines,
-                        blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
                         verbose=False):
     """
     Evaluates all valid configurations of this telescope and dumps the
@@ -828,8 +825,7 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines,
     """
 
     # Make configuration list
-    configs = _pipeline_configurations(telescopes, bands, pipelines,
-                                                     blcoal, on_the_fly, scale_predict_by_facet)
+    configs = _pipeline_configurations(telescopes, bands, pipelines, adjusts)
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
@@ -839,9 +835,7 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines,
     _write_csv(filename, results, rows)
 
 
-def write_csv_hpsos(filename, hpsos,
-                    blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
-                    verbose=False):
+def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False):
     """
     Evaluates all valid configurations of this telescope and dumps the
     result as a CSV file.
@@ -850,8 +844,7 @@ def write_csv_hpsos(filename, hpsos,
     # Make configuration list
     configs = []
     for hpso in hpsos:
-        cfg = PipelineConfig(hpso=hpso, blcoal=blcoal, on_the_fly=on_the_fly,
-                             scale_predict_by_facet=scale_predict_by_facet)
+        cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
         configs.append(cfg)
 
     # Calculate
@@ -1144,7 +1137,7 @@ def compare_csv(result_file, ref_file,
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
-                         blcoal=True, on_the_fly=False, scale_predict_by_facet=True,
+                         adjusts={},
                          save=None):
     """
     Evaluates all valid configurations of this telescope and shows
@@ -1152,8 +1145,7 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
     """
 
     # Make configurations
-    configs = _pipeline_configurations(telescopes, bands, pipelines,
-                                                     blcoal, on_the_fly, scale_predict_by_facet)
+    configs = _pipeline_configurations(telescopes, bands, pipelines, adjusts)
 
     # Calculate
     rows = [RESULT_MAP[-1]] # Products only
