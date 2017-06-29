@@ -79,7 +79,8 @@ class Pipeline:
         self.frequency = Domain('Frequency', 'ch', priority=8)
         self.allFreqs = self.frequency.regions(tp.Nf_max / nerf_freq)
         self.eachFreq = self.allFreqs.split(tp.Nf_max / nerf_freq)
-        self.visFreq = self.allFreqs.split(tp.Nf_vis / nerf_freq)
+        self.visFreq = self.allFreqs.split(
+            self._to_domainexpr(tp.Nf_vis) / nerf_freq)
         self.outFreqs = self.allFreqs.split(tp.Nf_out / nerf_freq)
         self.islandFreqs = self.allFreqs.split(self.Nisland / nerf_freq)
         self.granFreqs = self.allFreqs.split(tp.Nf_min_gran / nerf_freq)
@@ -218,28 +219,28 @@ class Pipeline:
         demix = Flow(
             Products.Demix,
             [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars],
+             self.xyPolars, self.allBaselines],
             deps = [ingest],
             cluster='ingest',
             costs = self._costs_from_product(Products.Demix))
-
-        average = Flow(
-            Products.Average,
-            [self.eachBeam, self.snapTime, self.islandFreqs,
-             self.xyPolars, self.allBaselines],
-            deps = [demix],
-            cluster='ingest',
-            costs = self._costs_from_product(Products.Average))
 
         rfi = Flow(
             Products.Flag,
             [self.eachBeam, self.snapTime, self.islandFreqs,
              self.xyPolars, self.allBaselines],
-            deps = [average],
+            deps = [demix],
             cluster='ingest',
             costs = self._costs_from_product(Products.Flag))
 
-        buf = Flow('Buffer', [self.eachBeam, self.islandFreqs], deps=[rfi])
+        average = Flow(
+            Products.Average,
+            [self.eachBeam, self.snapTime, self.islandFreqs,
+             self.xyPolars, self.binBaselines],
+            deps = [rfi],
+            cluster='ingest',
+            costs = self._costs_from_product(Products.Average))
+
+        buf = Flow('Buffer', [self.eachBeam, self.islandFreqs], deps=[average])
 
         return buf
 
@@ -248,7 +249,7 @@ class Pipeline:
         return Flow(
             Products.Flag,
             [self.eachBeam, self.snapTime, self.granFreqs,
-             self.xyPolars, self.allBaselines, self.eachLoop],
+             self.xyPolars, self.binBaselines, self.eachLoop],
             deps = [vis], cluster='calibrate',
             costs = self._costs_from_product(Products.Flag))
 
@@ -262,7 +263,7 @@ class Pipeline:
             slots = Flow(
                 "Timeslots",
                 [self.eachBeam, self.eachSelfCal, self.solveTime, self.islandFreqs, self.xyPolars,
-                 self.allBaselines],
+                 self.binBaselines],
                 # maybe twice this, because we need to transfer
                 # visibility + model...?
                 costs = { 'transfer': self._transfer_cost_vis(self.Tsolve) },
@@ -272,7 +273,8 @@ class Pipeline:
             # Solve
             solve = Flow(
                 Products.Solve,
-                [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
+                [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars,
+                 self.allBaselines],
                 costs = self._costs_from_product(Products.Solve),
                 deps = [slots], cluster='calibrate',
             )
@@ -297,7 +299,7 @@ class Pipeline:
         app = Flow(
             Products.Correct,
             [self.snapTime, self.granFreqs, self.eachBeam,
-             self.eachLoop, self.xyPolar],
+             self.eachLoop, self.xyPolar, self.binBaselines],
             deps = [vis, calibration], cluster='calibrate',
             costs = self._costs_from_product(Products.Correct)
         )
@@ -323,7 +325,7 @@ class Pipeline:
         add = Flow(
             "Sum visibilities",
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.granFreqs, self.allBaselines] +
+             self.snapTime, self.granFreqs, self.binBaselines] +
              self.maybePredTaylor,
             deps = [dft, degrid], cluster='predict',
             costs = {
@@ -340,7 +342,7 @@ class Pipeline:
         return Flow(
             Products.DFT,
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.granFreqs, self.allBaselines],
+             self.snapTime, self.granFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.DFT),
             deps = [sources], cluster='predict',
         )
@@ -443,7 +445,7 @@ class Pipeline:
         return Flow(
             Products.Subtract_Visibility,
             [self.eachBeam, self.eachLoop, self.xyPolars,
-             self.snapTime, self.granFreqs, self.allBaselines],
+             self.snapTime, self.granFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.Subtract_Visibility),
             deps = [vis, model_vis], cluster='calibrate'
         )
@@ -591,8 +593,11 @@ class Pipeline:
              [self.eachBeam, self.eachLoop, self.xyPolars,
               self.snapTime, self.granFreqs, self.allBaselines],
              None),
+            (["Timeslots"],
+             [self.eachBeam, self.eachSelfCal, self.solveTime, self.islandFreqs, self.xyPolars, self.allBaselines],
+             None),
             ([Products.Solve],
-             [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars],
+             [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars, self.allBaselines],
              None),
             ([Products.Correct,Products.Subtract_Visibility,Products.Flag],
              [self.eachBeam, self.snapTime, self.granFreqs, self.xyPolars, self.allBaselines, self.eachLoop],
