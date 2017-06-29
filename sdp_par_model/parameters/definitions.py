@@ -215,9 +215,7 @@ class HPSOs:
     # The High Priority Science Objective list below includes the
     # HPSOs that were originally intended for The Survey
     # telescope. These have since been reassigned to Mid.
-    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
-                       hpso_max_band5_Mid_c, hpso_max_band5_Mid_s,
-                       hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
+    hpsos = [          hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
                        hpso02AICAL, hpso02ADprepA, hpso02ADPrepB, hpso02ADPrepC,
                        hpso02BICAL, hpso02BDPrepA, hpso02BDPrepB, hpso02BDPrepC,
                        hpso13ICAL, hpso13DPrepA, hpso13DPrepB, hpso13DPrepC,
@@ -231,6 +229,8 @@ class HPSOs:
                        hpso37cICAL, hpso37cDPrepA, hpso37cDPrepB,
                        hpso38aICAL, hpso38aDPrepA, hpso38aDPrepB,
                        hpso38bICAL, hpso38bDPrepA, hpso38bDPrepB]
+    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
+                       hpso_max_band5_Mid_c, hpso_max_band5_Mid_s] + hpsos
 
 
 def define_symbolic_variables(o):

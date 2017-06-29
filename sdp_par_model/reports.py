@@ -510,7 +510,7 @@ def save_pie(title, labels, values, filename, colours=None):
 
 def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays,
                       colours=None, width=0.35,
-                      save=None):
+                      save=None, xticks_rot='horizontal'):
     """
     Plots a stacked bar chart, with any number of columns and
     components per stack (must be equal for all bars)
@@ -551,7 +551,7 @@ def plot_stacked_bars(title, labels, value_labels, dictionary_of_value_arrays,
                 plt.text(x+width/2, b+v/2, "%.1f%%" % (100 * v / valueSum[x]),
                          horizontalalignment='center', verticalalignment='center')
 
-    plt.xticks(indices+width/2., labels)
+    plt.xticks(indices+width/2., labels, rotation=xticks_rot)
     plt.title(title)
     plt.legend(value_labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     #plt.legend(dictionary_of_value_arrays.keys(), loc=1) # loc=2 -> legend upper-left
@@ -1160,7 +1160,7 @@ def compare_csv(result_file, ref_file,
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
-                         adjusts={},
+                         adjusts={}, parallel=0,
                          save=None):
     """
     Evaluates all valid configurations of this telescope and shows
@@ -1172,7 +1172,7 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
 
     # Calculate
     rows = [RESULT_MAP[-1]] # Products only
-    results = _batch_compute_results(configs, False, rows)
+    results = _batch_compute_results(configs, False, rows, parallel)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
@@ -1186,3 +1186,31 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
     # Show stacked bar graph
     plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7, save=save)
 
+def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
+    """
+    Evaluates all valid configurations of this telescope and dumps the
+    result as a CSV file.
+    """
+
+    # Make configuration list
+    configs = []
+    for hpso in hpsos:
+        cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
+        configs.append(cfg)
+
+    rows = [RESULT_MAP[-1]] # Products only
+    results = _batch_compute_results(configs, False, rows, parallel)
+
+    products = list(map(lambda r: r[1][-1], results))
+    labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
+    colours = default_rflop_plotting_colours(labels)
+    tel_labels = list(map(lambda cfg: cfg.describe(), configs))
+    values = {
+        label: list(map(lambda p: p.get(label, 0), products))
+        for label in labels
+    }
+
+    # Show stacked bar graph
+    plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7,
+                      xticks_rot='vertical',
+                      save=save)
