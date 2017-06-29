@@ -366,12 +366,12 @@ def _apply_ingest_equations(o):
     if o.pipeline == Pipelines.Ingest:
         o.set_product(Products.Receive,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-            Rflop = 2 * o.Npp * o.Rvis_ingest / o.Nf_min +
+            Rflop = 4 * o.Npp * o.Rvis_ingest / o.Nf_min +
                     1000 * o.Na / o.Tint_used,
             Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
         o.set_product(Products.Flag,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-            Rflop = 279 * o.Npp * o.Rvis_ingest / o.Nf_min,
+            Rflop = 278 * o.Npp * o.Rvis_ingest / o.Nf_min,
             Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
         # Ndemix is the number of time-frequency products used
         # (typically 1000) so we have to divide out the number of
