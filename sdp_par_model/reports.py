@@ -10,11 +10,13 @@ import warnings
 
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
+from ipywidgets import FloatProgress
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import pymp
 
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
@@ -818,7 +820,7 @@ def _pipeline_configurations(telescopes, bands, pipelines, adjusts={}):
 
 
 def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
-                        verbose=False):
+                        verbose=False, parallel=0):
     """
     Evaluates all valid configurations of this telescope and dumps the
     result as a CSV file.
@@ -829,13 +831,13 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows)
+    results = _batch_compute_results(configs, verbose, rows, parallel)
 
     # Write CSV
     _write_csv(filename, results, rows)
 
 
-def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False):
+def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
     """
     Evaluates all valid configurations of this telescope and dumps the
     result as a CSV file.
@@ -849,7 +851,7 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False):
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows)
+    results = _batch_compute_results(configs, verbose, rows, parallel)
 
     # Write CSV
     _write_csv(filename, results, rows)
@@ -905,10 +907,31 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     return result_values
 
 
-def _batch_compute_results(configs, verbose, result_map):
+def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False):
     """Calculate a whole bunch of pipeline configurations. """
 
-    display(HTML('<font color="blue">Calculating pipelines -- this may take quite a while.</font>'))
+    if not quiet:
+        display(HTML('<font color="blue">Calculating %d configurations -- this may take quite a while.</font>' %
+                     len(configs)))
+
+    # Parallelise if requested
+    if parallel > 0:
+        configQueue = pymp.shared.list(configs)
+        results = pymp.shared.dict()
+        f = FloatProgress(min=0, max=len(configs))
+        display(f)
+        with pymp.Parallel(parallel) as p:
+            try:
+                while True:
+                    if p.thread_num == 0:
+                        f.value = len(configs) - len(configQueue)
+                        f.description = "%d/%d" % (f.value, len(configs))
+                    config = configQueue.pop()
+                    results[config.describe()] = _batch_compute_results([config], verbose, result_map, quiet=True)
+            except IndexError:
+                pass
+        return list([res for cfg in configs for res in results[cfg.describe()]])
+
     results = []
     for cfg in configs:
 
