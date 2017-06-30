@@ -555,7 +555,7 @@ def _apply_calibration_equations(o):
     """
 
     # Number of flops needed per solution interval
-    o.NFlop_solver = 12 * o.Npp * o.Nsolve * o.Na**2
+    o.NFlop_solver = 48 * o.Npp * o.Nsolve * o.Na**2
     # Number of flops required for averaging one vis. The steps are evaluate the complex phasor for 
     # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
     o.NFlop_averager = 40 * o.Npp
@@ -566,8 +566,8 @@ def _apply_calibration_equations(o):
         N_Gslots = o.Tobs / o.tICAL_G
         N_Bslots = o.Tobs / o.tICAL_B
         N_Islots = o.Tobs / o.tICAL_I
-        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins) * \
-                         (o.Nf_max * o.tICAL_G + o.tICAL_B + o.Nf_max * o.tICAL_I * o.NIpatches)
+        # Averaging needs to be done for 3 calibration methods
+        Flop_averaging = o.NFlop_averager * 3 * o.Rvis.eval_sum(o.bl_bins) * o.Tobs
         Flop_solving   = o.NFlop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
         o.set_product(Products.Solve,
             T = o.tICAL_G,
@@ -581,7 +581,7 @@ def _apply_calibration_equations(o):
     if o.pipeline == Pipelines.RCAL:
         N_Gslots = o.Tobs / o.tRCAL_G
         # Need to remember to average over all frequencies because a BP may have been applied.
-        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins) * o.Nf_max * o.tRCAL_G
+        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins)
         Flop_solving   = o.NFlop_solver * N_Gslots
         o.set_product(Products.Solve,
             T = o.tRCAL_G,
