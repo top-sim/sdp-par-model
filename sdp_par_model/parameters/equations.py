@@ -373,13 +373,12 @@ def _apply_ingest_equations(o):
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
             Rflop = 278 * o.Npp * o.Rvis_ingest / o.Nf_min,
             Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
-        # Ndemix is the number of time-frequency products used
-        # (typically 1000) so we have to divide out the number of
-        # input channels
         o.set_product(Products.Demix,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
-            Rflop = 8 * o.Npp * (o.Rvis_ingest * o.Ndemix / o.Nf_max) * (o.NA * (o.NA + 1) / 2.0)
-                    / o.Nf_min,
+            Rflop = o.Rvis_ingest *
+                      (154 * o.NAteam + 84 +
+                       (o.NAteam**2 + o.NAteam * (33 + 24 * o.Nsolve) + 64)
+                       / (o.Tion / o.Tint_used) / (o.Nf_max / o.Nf_min)),
             Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
         o.set_product(Products.Average,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
