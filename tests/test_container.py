@@ -95,5 +95,34 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual(blsum(b, free*b).eval_sum(symbins).doit(), free * Sum(Bcount(i) * B(i), (i, 1, n)))
         self.assertEqual(BLDep(b, free).subs({free: b}).eval_sum(symbins).doit(), Sum(B(i), (i, 1, n)))
 
+    def test_symbolify(self):
+
+        tp = ParameterContainer()
+
+        b = Symbol('b')
+        tp.Nbl = 5
+        tp.Ntest = 5
+        tp.Nbldep = BLDep(b, b)
+        tp.Nblsum = blsum(b, b)
+        tp.products['Test'] = { 'Rflop': 20 }
+
+        tp.symbolify()
+        ib = tp.bl_bins[0]
+        Nbl = tp.Nbl
+
+        # Everything should be replaced by symbolified versions now
+        self.assertEqual(str(tp.Ntest), "N_test")
+        self.assertEqual(str(tp.products['Test']['Rflop']), "R_flop,Test")
+        self.assertEqual(tp.bl_bins[:3], (ib, 1, Nbl))
+        self.assertEqual(str(tp.Nbldep(1)), "N_bldep(1)")
+        self.assertEqual(str(tp.Nblsum(2)), "N_blsum(2, 1)")
+
+        # Evaluating a new baseline-dependent sum should yield a sympy expression
+        Bmax = tp.bl_bins[3]['b']
+        self.assertEqual(BLDep(b,b).eval_sum(tp.bl_bins),
+                         Sum(Bmax, (ib, 1, Nbl)))
+        self.assertEqual(blsum(b,3*b).eval_sum(tp.bl_bins),
+                         3*Sum(Bmax, (ib, 1, Nbl)))
+
 if __name__ == '__main__':
     unittest.main()

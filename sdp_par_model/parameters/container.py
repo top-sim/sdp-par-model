@@ -41,6 +41,9 @@ class ParameterContainer(object):
 
     """
     def __init__(self):
+        self.products = {}
+        self.bl_bins = []
+        self.Nbl = 0
         pass
 
     def __str__(self):
@@ -148,17 +151,18 @@ class ParameterContainer(object):
                 self.__dict__[name] = sym
             elif isinstance(v, BLDep):
                 # SymPy cannot pass parameters by dictionary, so make a list instead
-                self.__dict__[name] = BLDep(v.pars, sym(*v.pars.values()))
+                pars = [ v.pars[n] for n in sorted(v.pars.keys())]
+                self.__dict__[name] = BLDep(v.pars, sym(*pars), defaults=v.defaults)
 
         # For products too
-        for product, rates in self.products:
+        for product, rates in self.products.items():
             for rname in rates:
                 rates[rname] = Symbol(self.make_symbol_name(rname + "_" + product))
 
         # Replace baseline bins with symbolic expression as well (see
         # BLDep#eval_sum for what the tuple means)
         ib = Symbol('i')
-        o.bl_bins = (i, 1, self.Nbl, { 'b': Symbol('B_max')(i), 'bcount': 1 })
+        self.bl_bins = (ib, 1, self.Nbl, { 'b': Symbol('B_max')(ib), 'bcount': 1 })
 
     def get_products(self, expression='Rflop', scale=1):
         results = {}
