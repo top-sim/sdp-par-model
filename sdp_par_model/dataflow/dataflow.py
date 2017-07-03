@@ -118,7 +118,7 @@ class Regions:
         return '<Regions %d x %s>' % (self.size, self.domain.name)
 
     def split(self, split, props = {}):
-        if not (isinstance(split, DomainExpr) or isinstance(split, Symbol)):
+        if not (isinstance(split, DomainExpr) or isinstance(split, Expr)):
             assert split > 0
         return Regions(self.domain, self.size,
                        self._count * DomainExpr(split),
