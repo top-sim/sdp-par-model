@@ -645,7 +645,7 @@ def _apply_major_cycle_equations(o):
         o.set_product(Products.Subtract_Visibility,
             T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
-            Rflop = blsum(b, 8 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
+            Rflop = blsum(b, 2 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
             Rout = blsum(b, o.Mvis * o.Npp * o.Rvis(b) / o.Nf_min_gran))
 
 
