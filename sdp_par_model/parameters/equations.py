@@ -766,7 +766,7 @@ def _apply_phrot_equations(o):
 
     b = Symbol("b")
 
-    # 25 FLOPS per visiblity. Only do it if we need to facet.
+    # 28 FLOPS per visiblity. Only do it if we need to facet.
 
     # Predict phase rotation: Input from facets at predict
     # visibility rate, output at same rate.
@@ -775,7 +775,7 @@ def _apply_phrot_equations(o):
             T = o.Tsnap,
             N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
                 o.Ntt_predict * o.Nfacet**2 ,
-            Rflop = blsum(b, 25 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
+            Rflop = blsum(b, 28 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
             Rout = blsum(b, o.Mvis * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used))
 
     # Backward phase rotation: Input at overall visibility
@@ -783,7 +783,7 @@ def _apply_phrot_equations(o):
     o.set_product(Products.PhaseRotation,
         T = o.Tsnap,
         N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
-        Rflop = blsum(b, 25 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
+        Rflop = blsum(b, 28 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
         Rout = blsum(b, o.Mvis * o.Rvis_backward(b) / o.Nf_min_gran))
 
 
