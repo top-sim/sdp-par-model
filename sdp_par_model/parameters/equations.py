@@ -429,6 +429,12 @@ def _apply_grid_equations(o):
 
     if not o.pipeline in Pipelines.imaging: return
 
+    o.set_product(Products.Visibility_Weighting, T=o.Tsnap,
+        N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp *
+                     o.Nfacet**2 * o.Nf_min_gran),
+        Rflop = blsum(b, 2 * 8 * o.Nf_vis_backward(b) / o.Nf_min_gran / o.Tcoal_backward(b)),
+        Rout = blsum(b, o.Mvis / o.Tcoal_backward(b)))
+
     # Assume 8 flops per default. For image-domain gridding we
     # need 6 flops additionally.
     Rflop_per_vis = 8

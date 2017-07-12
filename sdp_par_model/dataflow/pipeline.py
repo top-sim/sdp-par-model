@@ -453,13 +453,20 @@ class Pipeline:
     def create_backward(self, vis, uvw):
         """ Creates dirty image from visibilities """
 
-        # TODO: This product is for backward *and* forward!
         rotate = Flow(
             Products.PhaseRotation,
             [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
              self.snapTime, self.granFreqs, self.binBaselines],
             costs = self._costs_from_product(Products.PhaseRotation),
             deps = [vis], cluster = 'backward'
+        )
+
+        weighted = Flow(
+            Products.Visibility_Weighting,
+            [self.eachBeam, self.eachLoop, self.eachFacet, self.xyPolar,
+             self.snapTime, self.granFreqs, self.binBaselines],
+            costs = self._costs_from_product(Products.Visibility_Weighting),
+            deps = [rotate], cluster = 'backward'
         )
 
         gcf = Flow(
@@ -476,7 +483,7 @@ class Pipeline:
              self.snapTime, self.backFreqs, self.binBaselines] +
              self.maybeBackTaylor,
             costs = self._costs_from_product(Products.Grid),
-            deps = [rotate, gcf], cluster = 'backward',
+            deps = [weighted, gcf], cluster = 'backward',
         )
 
         fft = Flow(
@@ -603,7 +610,8 @@ class Pipeline:
              [self.eachBeam, self.snapTime, self.granFreqs, self.xyPolars, self.allBaselines, self.eachLoop],
              None),
             ([Products.Gridding_Kernel_Update,
-              Products.PhaseRotation,Products.Grid, Products.FFT, Products.Reprojection],
+              Products.PhaseRotation,Products.Visibility_Weighting,
+              Products.Grid, Products.FFT, Products.Reprojection],
              [self.eachBeam, self.eachLoop, self.xyPolar,self.snapTime, self.projBackFreqs, self.eachFacet],
              None)
         ]
