@@ -1061,7 +1061,13 @@ def compare_csv(result_file, ref_file,
     all_diffs = []
     diff_sum = 0
     for row_name, row in results:
-        shead = '<tr><td>%s</td>' % row_name
+
+        # Heading?
+        if row_name.startswith('--'):
+            stbl += '<tr><th colspan=%d>%s</th></tr>' % (len(row), row_name)
+            continue
+        else:
+            shead = '<tr><td>%s</td>' % row_name
 
         # Accumulate difference?
         diffs = []
@@ -1101,7 +1107,7 @@ def compare_csv(result_file, ref_file,
 
                 # Output
                 if not diff is None:
-                    s += '<td bgcolor="#%2x%2x00">%s (%+d%%)</td>' % (
+                    s += '<td bgcolor="#%2x%2x00">%s&nbsp;<small>(%+d%%)</small></td>' % (
                         int(min(diff_rel/50*255, 255)),
                         int(255-min(max(0, diff_rel-50)/50*255, 255)),
                         format_result(num),
@@ -1120,9 +1126,10 @@ def compare_csv(result_file, ref_file,
                         if val == '':
                             s += '<td></td>'
                         else:
-                            s += '<td bgcolor="#00ff00">%s (same)</td>' % val
+                            s += '<td bgcolor="#00ff00">%s&nbsp;<small>(same)</small></td>' % val
+                            diffs.append(0)
                     else:
-                        s += '<td bgcolor="#ffff00">%s (!= %s)</td>' % (val, ref_str)
+                        s += '<td bgcolor="#ffff00">%s&nbsp;<small>(!= %s)</small></td>' % (val, ref_str)
                         diffs.append(100)
                 else:
                     s += '<td>%s</td>' % val
