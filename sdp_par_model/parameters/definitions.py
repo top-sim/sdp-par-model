@@ -302,7 +302,7 @@ def apply_global_parameters(o):
     o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
     #o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
     o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
-    o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
+    o.Naa = 9  # Support Size of the A Kernel, in (linear) Pixels.
     o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
     o.Npp = 4  # Number of polarization products
     o.Nw = 2  # Bytes per value
