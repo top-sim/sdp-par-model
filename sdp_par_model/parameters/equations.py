@@ -565,37 +565,35 @@ def _apply_calibration_equations(o):
     # Number of flops required for averaging one vis. The steps are evaluate the complex phasor for 
     # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
     o.NFlop_averager = 40 * o.Npp
+
     b = Symbol('b')
 
-    # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
+    # Determine number of calibration solutions we need to solve
+    N_solve = 0
+    o.R_G_sols = 0
+    o.R_B_sols = 0
+    o.R_I_sols = 0
     if o.pipeline == Pipelines.ICAL:
-        N_Gslots = o.Tobs / o.tICAL_G
-        N_Bslots = o.Tobs / o.tICAL_B
-        N_Islots = o.Tobs / o.tICAL_I
-        # Averaging needs to be done for 3 calibration methods
-        Flop_averaging = o.NFlop_averager * 3 * o.Rvis.eval_sum(o.bl_bins) * o.Tobs
-        Flop_solving   = o.NFlop_solver * (N_Gslots + o.NB_parameters * N_Bslots + o.NIpatches * N_Islots)
+        # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
+        N_solve = 3
+        o.R_G_sols = 1 / o.tICAL_G
+        o.R_B_sols = o.NB_parameters / o.tICAL_B
+        o.R_I_sols = o.NIpatches / o.tICAL_I
+    elif o.pipeline == Pipelines.RCAL:
+        N_solve = 1
+        o.R_G_sols = 1 / o.tRCAL_G
+
+    if N_solve > 0:
+        # Averaging needs to be done for each calibration method
+        Rflop_averaging = o.NFlop_averager * N_solve * o.Rvis.eval_sum(o.bl_bins)
+        Rflop_solving   = o.NFlop_solver * (o.R_G_sols + o.R_B_sols + o.R_I_sols)
         o.set_product(Products.Solve,
-            T = o.tICAL_G,
+            T = o.Tsolve,
             # We do one calibration to start with (using the original
             # LSM from the GSM and then we do Nselfcal more.
-            N = (o.Nselfcal + 1) * o.Nbeam,
-            Rflop = (Flop_solving + Flop_averaging) / o.Tobs,
-            Rout = o.Mjones * o.Na * o.Nf_max)
-
-    # RCAL solves for G only
-    if o.pipeline == Pipelines.RCAL:
-        N_Gslots = o.Tobs / o.tRCAL_G
-        # Need to remember to average over all frequencies because a BP may have been applied.
-        Flop_averaging = o.NFlop_averager * o.Rvis.eval_sum(o.bl_bins)
-        Flop_solving   = o.NFlop_solver * N_Gslots
-        o.set_product(Products.Solve,
-            T = o.tRCAL_G,
-            # We need to complete one entire calculation within real time tCal_G
-            N = o.Nbeam,
-            Rflop = (Flop_solving + Flop_averaging) / o.Tobs,
-            Rout = o.Mjones * o.Na * o.Nf_max / o.Tint_used)
-
+            N = (o.Nselfcal + 1) * o.Nsubbands * o.Nbeam,
+            Rflop = Rflop_solving + Rflop_averaging / o.Nsubbands,
+            Rout = o.Mjones * o.Na * (o.R_G_sols + o.R_B_sols + o.R_I_sols))
 
 def _apply_dft_equations(o):
     """
