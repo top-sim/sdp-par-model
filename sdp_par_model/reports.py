@@ -38,14 +38,14 @@ RESULT_MAP = [
     ('On-the-fly kernels',         '',           True,    False, lambda tp: tp.on_the_fly         ),
     ('Scale predict by facet',     '',           True,    False, lambda tp: tp.scale_predict_by_facet),
     ('Max # of channels',          '',           True,    False, lambda tp: tp.Nf_max             ),
-    ('Max Baseline',               'm',          True,    False, lambda tp: tp.Bmax               ),
+    ('Max Baseline',               'km',         True,    False, lambda tp: tp.Bmax / c.kilo      ),
     ('Dump time',                  's',          False,   False, lambda tp: tp.Tint_used,         ),
     ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
     ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
     ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
     ('Stations/antennas',          '',           False,   False, lambda tp: tp.Na,                ),
-    ('Max Baseline [per bin]',     'm',          False,   False, lambda tp: [ bin['b'] for  bin in tp.bl_bins ] ),
-    ('Baseline fraction [per bin]','',           False,   False, lambda tp: [ bin['bfrac'] for  bin in tp.bl_bins ]  ),
+    ('Max Baseline [per bin]',     'km',         False,   False, lambda tp: [ bin['b'] / c.kilo for  bin in tp.bl_bins ] ),
+    ('Baseline fraction [per bin]','%',          False,   False, lambda tp: [ 100*bin['bfrac'] for  bin in tp.bl_bins ]  ),
 
     ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
     ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),
@@ -54,8 +54,6 @@ RESULT_MAP = [
     ('Pixel size',                 'arcs',       False,   False, lambda tp: tp.Theta_pix/c.arcsecond,),
     ('Facet side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear,       ),
     ('Image side length',          'pixels',     True,    False, lambda tp: tp.Npix_linear_fov_total,),
-    ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mcpx * tp.Npix_linear**2 / c.giga,),
-    ('Image size',                 'GB',         True,    False, lambda tp: tp.Mcpx * tp.Npix_linear_fov_total**2 / c.giga,),
     ('Grid side dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_grid,),
     ('Baselines dimension',        'lambda',     True,    False, lambda tp: tp.Lambda_bl,),
     ('Epsilon (approx)',           '',           False,   False, lambda tp: tp.epsilon_f_approx,  ),
@@ -90,24 +88,33 @@ RESULT_MAP = [
     ('Frequencies backward fft',   '',           False,   False, lambda tp: tp.Nf_FFT_backward,   ),
     ('Channels out',               '',           False,   False, lambda tp: tp.Nf_out,            ),
 
-    ('-- Visibilities --',         '',           False,   False, lambda tp: ''                    ),
-    ('Visibilities ingest',        '1/s',        False,   False, lambda tp: tp.Rvis_ingest,       ),
-    ('Visibilities averaged',      '1/s',        False,   False, lambda tp: tp.Rvis,              ),
-    ('Visibilities pred',          '1/s',        False,   False, lambda tp: tp.Rvis_predict,      ),
-    ('Visibilities bw',            '1/s',        False,   False, lambda tp: tp.Rvis_backward,     ),
+    ('-- Visibility --',           '',           False,   False, lambda tp: ''                    ),
+    ('Ingest rate',                'M/s',        False,   False, lambda tp: tp.Rvis_ingest / c.mega,),
+    ('Averaged rate',              'M/s',        False,   False, lambda tp: tp.Rvis / c.mega,     ),
+    ('Predict rate',               'M/s',        False,   False, lambda tp: tp.Rvis_predict  / c.mega, ),
+    ('Backward rate',              'M/s',        False,   False, lambda tp: tp.Rvis_backward  / c.mega,),
 
-    ('-- Geometry --',             '',           False,   False, lambda tp: ''                    ),
+    ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
     ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
     ('Delta W snapshot',           'lambda',     False,   False, lambda tp: tp.DeltaW_SShot,      ),
     ('Delta W max',                'lambda',     False,   False, lambda tp: tp.DeltaW_max,        ),
-
-    ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
     ('W kernel support pred',      'uv-pixels',  False,   False, lambda tp: tp.Ngw_predict,       ),
     ('AW kernel support pred',     'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_predict,),
-    ('W kernel support pred, ff',  'pixels',     False,   False, lambda tp: tp.Ncvff_predict,     ),
     ('W kernel support bw',        'uv-pixels',  False,   False, lambda tp: tp.Ngw_backward,      ),
     ('AW kernel support bw',       'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_backward,),
-    # ('W kernel support bw, ff',    'pixels',     False,   False, lambda tp: tp.Ncvff_backward,  ),
+
+    ('-- Data --',                 '',           True,    False, lambda tp: ''                    ),
+    ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear**2 / c.giga ),
+    ('Facet size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear**2 / c.giga ),
+    ('Image size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
+    ('Image size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear_fov_total**2 / c.giga ),
+    ('Image cube size',            'GB',         True,    False, lambda tp: tp.Nf_out * tp.Npp * tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
+
+    ('Gain calibration',           'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_G_sols * tp.Tsolve / c.mega ),
+    ('Ionospheric calibration',    'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_I_sols * tp.Tsolve / c.mega ),
+    ('Calibration process interval','s',         True,    False, lambda tp: tp.Tsolve ),
+    ('Bandpass calibration',       'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_B_sols * max(tp.Tsolve, tp.tICAL_B) / c.mega ),
+    ('Bandpass process interval',  's',          True,    False, lambda tp: max(tp.Tsolve, tp.tICAL_B) ),
 
     ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
     ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
@@ -119,8 +126,9 @@ RESULT_MAP = [
     ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera), ),
     ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
     ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rio', scale=c.tera), ),
-    ('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
-    ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
+
+    #('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
+    #('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
 
     ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
     ('Total Compute Requirement',  'PetaFLOP/s', True,    True,  lambda tp: tp.Rflop/c.peta,      ),
@@ -1064,7 +1072,7 @@ def compare_csv(result_file, ref_file,
 
         # Heading?
         if row_name.startswith('--'):
-            stbl += '<tr><th colspan=%d>%s</th></tr>' % (len(row), row_name)
+            stbl += '<tr><th colspan="%d" style="text-align:left">%s</th></tr>' % (len(row)+4, row_name)
             continue
         else:
             shead = '<tr><td>%s</td>' % row_name
