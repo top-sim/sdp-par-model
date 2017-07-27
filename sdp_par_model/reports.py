@@ -16,7 +16,7 @@ import matplotlib.pylab as pylab
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import pymp
+#import pymp
 
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
@@ -916,6 +916,8 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
 
     # Parallelise if requested
     if parallel > 0:
+        raise Exception("Cannot run PyMP on Windows")
+    '''
         configQueue = pymp.shared.list(configs)
         results = pymp.shared.dict()
         f = FloatProgress(min=0, max=len(configs))
@@ -931,6 +933,7 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
             except IndexError:
                 pass
         return list([res for cfg in configs for res in results[cfg.describe()]])
+    '''
 
     results = []
     for cfg in configs:
