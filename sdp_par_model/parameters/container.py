@@ -65,6 +65,7 @@ class ParameterContainer(object):
         :param param_name: The name of the parameter/field that needs to be assigned - provided as text
         :param value: the value. Need not be text.
         :param prevent_overwrite: Disallows this value to be overwritten once defined. Default = True.
+        :param require_overwrite: Only allows value to be changed if it already exists. Default = False.
         """
         assert isinstance(param_name, str)
         if prevent_overwrite:
@@ -73,8 +74,7 @@ class ParameterContainer(object):
 
             if hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
-                    # warnings.warn('Inefficiency Warning: reassigning already-defined parameter "%s" with an identical value.' % param_name)
-                    pass
+                    warnings.warn('Inefficiency : reassigning parameter "%s" with same value as before.' % param_name)
                 else:
                     try:
                         assert eval('self.%s == None' % param_name)

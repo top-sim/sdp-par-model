@@ -167,6 +167,7 @@ class HPSOs:
     hpso02BDPrepA = '02BDPrepA'
     hpso02BDPrepB = '02BDPrepB'
     hpso02BDPrepC = '02BDPrepC'
+    hpso04c = 'hpso04c'
     hpso13ICAL = '13ICAL'
     hpso13DPrepA = '13DPrepA'
     hpso13DPrepB = '13DPrepB'
@@ -202,14 +203,6 @@ class HPSOs:
     hpso38bICAL = '38bICAL'
     hpso38bDPrepA = '38bDPrepA'
     hpso38bDPrepB = '38bDPrepB'
-
-    # group the HPSOs according to which telescope they refer to
-    #    hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B}
-    #hpsos_using_SKA1Mid = {hpso19, hpso22, hpso37a, hpso37b, hpso38a,
-#hpso38b, hpso14c, hpso14s, hpso14sfull}
-    #hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27c, hpso27s, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
-    # Because we are no longer building Survey, assume that the HPSOs intended for Survey will run on Mid?
-#hpsos_using_SKA1Mid = hpsos_using_SKA1Mid | hpsos_originally_for_SKA1Sur
 
     # HPSOs that are currently supported (will show up in notebooks).
     # The High Priority Science Objective list below includes the
@@ -545,28 +538,6 @@ def apply_telescope_parameters(o, telescope):
 
     o.telescope = telescope
     return o
-
-
-def get_telescope_from_hpso(hpso):
-    """
-    Returns the telescope that is associated with the provided HPSO. Not really necessary any more, as the HPSO
-    definitions now contain the relevant telescope.
-
-    :param hpso:
-    :return: the telescope corresponding to this HPSO
-    :raise Exception:
-    """
-    if hpso in HPSOs.hpsos_using_SKA1Low:
-        telescope = Telescopes.SKA1_Low
-    elif hpso in HPSOs.hpsos_using_SKA1Mid:
-        telescope = Telescopes.SKA1_Mid
-    elif hpso in HPSOs.hpsos_originally_for_SKA1Sur:
-        telescope = Telescopes.SKA1_Sur_old
-    else:
-        raise Exception('HPSO not associated with a telescope')
-
-    return telescope
-
 
 def apply_band_parameters(o, band):
     """
@@ -1034,6 +1005,10 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
         o.Npp = 4
+    elif hpso == HPSOs.hpso04c:  # Pulsar Search. #TODO: confirm the values in tis parameter list is correct
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.Tobs = 612  # seconds
+        # TODO: add missing parameters
     elif hpso == HPSOs.hpso13ICAL:
         o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
         o.pipeline = Pipelines.ICAL
