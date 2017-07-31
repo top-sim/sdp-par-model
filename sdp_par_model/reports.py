@@ -71,10 +71,10 @@ RESULT_MAP = [
     ('Combined samples facet',     '',           False,   False, lambda tp: tp.combine_time_samples_facet,),
     ('Kernel time pred',           's',          False,   False, lambda tp: tp.Tkernel_predict,   ),
     ('Kernel time backward',       's',          False,   False, lambda tp: tp.Tkernel_backward,  ),
-    ('Visibilities kernel pred',   '1',          False,   False, lambda tp: tp.Nvis_gcf_predict,  ),
-    ('Visibilities kernel bw',     '1',          False,   False, lambda tp: tp.Nvis_gcf_backward, ),
-    ('Oversampling used pred',     '1',          False,   False, lambda tp: tp.Ngcf_used_predict,  ),
-    ('Oversampling used bw',       '1',          False,   False, lambda tp: tp.Ngcf_used_backward, ),
+    ('Visibilities kernel pred',   '',           False,   False, lambda tp: tp.Nvis_gcf_predict,  ),
+    ('Visibilities kernel bw',     '',           False,   False, lambda tp: tp.Nvis_gcf_backward, ),
+    ('Oversampling used pred',     '',           False,   False, lambda tp: tp.Ngcf_used_predict,  ),
+    ('Oversampling used bw',       '',           False,   False, lambda tp: tp.Ngcf_used_backward, ),
 
     ('-- Channelization --',       '',           False,   False, lambda tp: ''                    ),
     ('Channels predict, no-smear', '',           False,   False, lambda tp: tp.Nf_no_smear_predict,),
@@ -104,6 +104,8 @@ RESULT_MAP = [
     ('AW kernel support bw',       'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_backward,),
 
     ('-- Data --',                 '',           True,    False, lambda tp: ''                    ),
+    ('Snapshot vis size',          'GB',         True,    True,  lambda tp: tp.Mvis * tp.Rvis * tp.Npp * tp.Tsnap / tp.Nf_FFT_backward / c.giga ),
+    ('Facet vis size predict',     'GB',         True,    True,  lambda tp: tp.Mvis * tp.Rvis_predict * tp.Npp * tp.Tsnap / tp.Nf_FFT_predict / c.giga ),
     ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear**2 / c.giga ),
     ('Facet size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear**2 / c.giga ),
     ('Image size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
@@ -160,10 +162,6 @@ def get_result_expressions(resultMap,tp):
         except AttributeError:
             return "(undefined)"
     return list(map(expr, resultMap))
-
-# Rows needed for graphs
-GRAPH_ROWS = list(map(lambda row: row[0], RESULT_MAP[-9:]))
-
 
 def mk_result_map_rows(verbosity = 'Overview'):
     """
@@ -224,7 +222,7 @@ def format_result_cell(val, color='black', colspan=1, typ='td'):
     """
     Format a result value for inclusing in a table.
     """
-    return '<%s colspan="%d"><font color="%s">%s</font></%s>' % (
+    return '<%s colspan="%d" style="text-align:left"><font color="%s">%s</font></%s>' % (
         typ, colspan, color, format_result(val), typ)
 
 
@@ -303,7 +301,7 @@ def show_table_compare(title, labels, values_1, values_2, units):
             row_html = '<tr><td>%s</td>' % label
             row_html += format_result_cells(val1, color='darkcyan', max_cols=max_cols)
             row_html += format_result_cells(val2, color='blue', max_cols=max_cols)
-            row_html += '<td>%s</td></tr>\n' % units[i]
+            row_html += '<td style="text-align:left">%s</td></tr>\n' % units[i]
             return row_html
         if not isinstance(values_1[i], dict) and not isinstance(values_2[i], dict):
             s += row(labels[i], values_1[i], values_2[i])
@@ -334,7 +332,7 @@ def show_table_compare3(title, labels, values_1, values_2, values_3, units):
     assert len(labels) == len(units)
     for i in range(len(labels)):
         if labels[i].startswith('--'):
-            s += '<tr><th colspan="5">{0}</th></tr>'.format(labels[i])
+            s += '<tr><th colspan="5" style="text-align:left">{0}</th></tr>'.format(labels[i])
             continue
         s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
              '</td><td><font color="purple">{3}</font>''</td><td>{4}</td></tr>\n'.format(
@@ -902,6 +900,13 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     transposed_results = zip(*result_value_array)
     sum_results = get_result_sum(result_map)
     for (row_values, sum_it) in zip(transposed_results, sum_results):
+        # Sum up baseline dependency unless in verbose mode
+        if not verbose and all([isinstance(vals, list) for vals in row_values]):
+            if sum_it:
+                row_values = [ sum(vals) for vals in row_values ]
+            else:
+                row_values = [ [vals[0],"..",vals[-1]] for vals in row_values ]
+        # Then also try to sum up pipeline results, if possible
         if sum_it:
             try:
                 result_values.append(sum(row_values))
