@@ -539,7 +539,7 @@ def _apply_minor_cycle_equations(o):
     o.set_product(Products.Identify_Component,
         T = o.Tobs,
         N = o.Nmajortotal * o.Nbeam * o.Nf_identify * o.Nfacet**2,
-        Rflop = 2 * o.Nminor * o.Ntt * o.Nscales * o.Npix_linear**2 / o.Tobs,
+        Rflop = 2 * (o.Npix_linear**2  + o.Nminor * o.Npatch**2) * o.Ntt * o.Nscales/ o.Tobs,
         Rout = o.Nminor * o.Mcpx / o.Tobs)
 
     # Subtract on all scales, polarisations and taylor terms
