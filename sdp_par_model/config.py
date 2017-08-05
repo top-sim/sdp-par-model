@@ -20,7 +20,7 @@ class PipelineConfig:
     to parameterise a pipeline.
     """
 
-    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None,
+    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None, hpso_subtask=None,
                  adjusts={}, **kwargs):
         """
         :param telescope: Telescope to use (can be omitted if HPSO specified)
@@ -38,9 +38,10 @@ class PipelineConfig:
             if not (telescope is None and band is None and pipeline is None):
                 raise Exception("Either telescope/band/pipeline or an HPSO needs to be set, not both!")
             tp_default = ParameterContainer()
-            p.apply_hpso_parameters(tp_default, hpso)
+            p.apply_hpso_parameters(tp_default, hpso, hpso_subtask)
             telescope = tp_default.telescope
-            pipeline = tp_default.pipeline
+            if hasattr(tp_default, 'pipeline'):
+                pipeline = tp_default.pipeline
         else:
             if telescope is None or band is None or pipeline is None:
                 raise Exception("Either telescope/band/pipeline or an HPSO needs to be set!")

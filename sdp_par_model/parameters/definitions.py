@@ -896,80 +896,7 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         else:
             raise AssertionError("Unknown HPSO subtask")
 
-    if  hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
-        o.set_param('telescope', Telescopes.SKA1_Low)
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 50e6
-        o.freq_max = 350e6
-        o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 500  #
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 65000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif  hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
-        o.set_param('telescope', Telescopes.SKA1_Low)
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 50e6
-        o.freq_max = 350e6
-        o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 65536  #
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 65000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_Mid_c:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 350e6
-        o.freq_max = 1.05e9
-        o.Nbeam = 1
-        o.Nf_out = 500
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_Mid_s:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 350e6
-        o.freq_max = 1.05e9
-        o.Nbeam = 1
-        o.Nf_out = 65536
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_band5_Mid_c:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 8.5e9
-        o.freq_max = 13.5e9
-        o.Nbeam = 1
-        o.Nf_out = 500
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_band5_Mid_s:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 8.5e9
-        o.freq_max = 13.5e9
-        o.Nbeam = 1
-        o.Nf_out = 65536
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso01:
+    if hpso == HPSOs.hpso01:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.freq_min = 50e6
         o.freq_max = 200e6
@@ -1233,6 +1160,84 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
             elif hpso_subtask == HPSOs.hpso38bDPrepB:
                 o.Nf_out = 1000 #
                 o.Npp = 4
+
+    elif hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepA
+        o.freq_min = 50e6
+        o.freq_max = 350e6
+        o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 500  #
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 65000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepC
+        o.freq_min = 50e6
+        o.freq_max = 350e6
+        o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 65536  #
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 65000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_Mid_c:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepA
+        o.freq_min = 350e6
+        o.freq_max = 1.05e9
+        o.Nbeam = 1
+        o.Nf_out = 500
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_Mid_s:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepC
+        o.freq_min = 350e6
+        o.freq_max = 1.05e9
+        o.Nbeam = 1
+        o.Nf_out = 65536
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_band5_Mid_c:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepA
+        o.freq_min = 8.5e9
+        o.freq_max = 13.5e9
+        o.Nbeam = 1
+        o.Nf_out = 500
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_band5_Mid_s:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepC
+        o.freq_min = 8.5e9
+        o.freq_max = 13.5e9
+        o.Nbeam = 1
+        o.Nf_out = 65536
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
 
     else:
         raise Exception('Unknown HPSO %s!' % hpso)
