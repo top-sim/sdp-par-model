@@ -612,7 +612,7 @@ def _apply_dft_equations(o):
             T = o.Tsnap,
             N = o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
             Rflop = blsum(b,
-                    (64 * o.Na * o.Na * o.Nsource + 242 * o.Na * o.Nsource + 128 * o.Na * o.Na)
+                    (32 * o.Na**2 * o.Nsource + (10 + 224 + 32) * o.Na * o.Nsource + 128 * o.Na * o.Na)
                           * o.Rvis(b) / o.Nf_min_gran / o.Nbl),
             Rout = blsum(b, o.Npp * o.Mvis * o.Rvis(b) / o.Nf_min_gran))
 
