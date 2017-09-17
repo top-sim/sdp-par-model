@@ -161,7 +161,7 @@ class HPSOs:
     hpso01  = 'hpso01'
     hpso02a = 'hpso02a'
     hpso02b = 'hpso02b'
-    hpso04c = 'hpso04c'
+    hpso04c = 'hpso04c'  # TODO - define this HPSO properly
     hpso13  = 'hpso13'
     hpso14  = 'hpso14'
     hpso15  = 'hpso15'
@@ -173,6 +173,28 @@ class HPSOs:
     hpso37c = 'hpso37c'
     hpso38a = 'hpso38a'
     hpso38b = 'hpso38b'
+
+    hpso_telescopes = {hpso01  : Telescopes.SKA1_Low,
+                       hpso02a : Telescopes.SKA1_Low,
+                       hpso02b : Telescopes.SKA1_Low,
+                       hpso04c : Telescopes.SKA1_Low,
+                       hpso13  : Telescopes.SKA1_Mid,   # originally Survey
+                       hpso14  : Telescopes.SKA1_Mid,
+                       hpso15  : Telescopes.SKA1_Mid,   # originally Survey, 'HI, limited spatial resolution'
+                       hpso22  : Telescopes.SKA1_Mid,   # Cradle of Life
+                       hpso27  : Telescopes.SKA1_Mid,
+                       hpso32  : Telescopes.SKA1_Mid,
+                       hpso37a : Telescopes.SKA1_Mid,
+                       hpso37b : Telescopes.SKA1_Mid,
+                       hpso37c : Telescopes.SKA1_Mid,
+                       hpso38a : Telescopes.SKA1_Mid,
+                       hpso38b : Telescopes.SKA1_Mid,
+                       hpso_max_Low_c : Telescopes.SKA1_Low,
+                       hpso_max_Low_s : Telescopes.SKA1_Low,
+                       hpso_max_Mid_c : Telescopes.SKA1_Mid,
+                       hpso_max_Mid_s : Telescopes.SKA1_Mid,
+                       hpso_max_band5_Mid_s : Telescopes.SKA1_Mid
+                       }
 
     # HPSO subtasks
     hpso01Ingest  = 'hpso01Ingest'
@@ -298,19 +320,19 @@ class HPSOs:
     dprepC_subtasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
                         hpso14DPrepC, hpso15DPrepC}
 
-    grouped_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks,
-                                 dprepA_subtasks, dprepB_subtasks, dprepC_subtasks)
+    all_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks,
+                             dprepA_subtasks, dprepB_subtasks, dprepC_subtasks)
 
     # Assert that we didn't forget to group subtasks to the relevant type
     for hpso in hpso_subtasks.keys():
         for subtask in hpso_subtasks[hpso]:
-            assert subtask in grouped_subtasks
+            assert subtask in all_subtasks
 
     # HPSOs that are currently supported (will show up in notebooks).
     # The High Priority Science Objective list below includes the
     # HPSOs that were originally intended for The Survey
     # telescope. These have since been reassigned to Mid.
-    hpsos = {hpso01, hpso02a, hpso02b,hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b, hpso37c,
+    hpsos = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b, hpso37c,
              hpso38a, hpso38b}
     available_hpsos = hpsos.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
                                    hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
@@ -863,24 +885,25 @@ def apply_pipeline_parameters(o, pipeline):
     return o
 
 
-def apply_hpso_parameters(o, hpso, hpso_subtask=None):
+def apply_hpso_parameters(o, hpso, hpso_subtask):
     """
     Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
     serves only one specialised pipeline and one HPSO
 
     :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
     :param hpso: The HPSO
-    :param hpso_subtask: optional subtask
+    :param hpso_subtask: subtask (can be None)
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
     assert hpso in HPSOs.available_hpsos
 
-    # o.band = 'HPSO ' + str(hpso)  # TODO remove this line as it is not used and incorrect?
     o.hpso = hpso
+    assert hpso in HPSOs.hpso_telescopes
+    o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
 
     if hpso_subtask is not None:
-        assert hpso_subtask in HPSOs.grouped_subtasks
+        assert hpso_subtask in HPSOs.all_subtasks
         if hpso_subtask in HPSOs.ingest_subtasks:
             o.pipeline = Pipelines.Ingest
         elif hpso_subtask in HPSOs.rcal_subtasks:
@@ -897,7 +920,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
             raise AssertionError("Unknown HPSO subtask")
 
     if hpso == HPSOs.hpso01:
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -917,7 +939,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso02a:
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -937,7 +958,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso02b:
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -957,12 +977,17 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso04c:  # Pulsar Search. #TODO: confirm the values in tis parameter list is correct
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.Tobs = 612  # seconds
-        # TODO: add missing parameters
+
+        # TODO: add missing parameters. The values below are copied from HPSO02b and are just placeholders
+
+        o.Nbeam = 2  # using 2 beams as per HPSO request...
+        o.Nf_max = 65536 / o.Nbeam  # only half the number of channels when Nbeam is doubled
+        o.Bmax = 65000  # m # TODO:
+        o.freq_min = 50e6  # TODO: placeholder value; please update
+        o.freq_max = 200e6 # TODO: placeholder value; please update
 
     elif hpso == HPSOs.hpso13:
-        o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
         o.comment = 'HI, limited BW'
         o.freq_min = 790e6
         o.freq_max = 950e6
@@ -984,7 +1009,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 2
 
     elif hpso == HPSOs.hpso14:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.comment = 'HI'
         o.freq_min = 1.2e9
         o.freq_max = 1.5e9 #Increase freq range to give >1.2 ratio for continuum
@@ -1009,7 +1033,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 2
 
     elif hpso == HPSOs.hpso15:
-        o.set_param('telescope', Telescopes.SKA1_Mid)  #WAS SURVEY: UPDATED
         o.comment = 'HI, limited spatial resolution'
         o.freq_min = 1.30e9 # was 1.415e9 #change this to give larger frac BW for continuum accuracy
         o.freq_max = 1.56e9 # was 1.425e9 #increased to give 20% frac BW in continuum
@@ -1030,8 +1053,8 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.freq_max = 1.425e9
                 o.Nf_max = 2500  # Only 2,500 spectral line channels.
                 o.Npp = 2
+
     elif hpso == HPSOs.hpso22:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.comment = 'Cradle of life'
         o.freq_min = 10e9
         o.freq_max = 12e9
@@ -1047,6 +1070,7 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Nf_out = 500  # 500 channel continuum observation - band 5.
                 o.Tpoint = 600 * 3600.0  # sec
                 o.Npp = 4
+
     elif hpso == HPSOs.hpso27:
         o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 1.0e9
@@ -1064,7 +1088,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso32: #defintions for interferometry support for SUC 32 are work in progress...
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 350e6
         o.freq_max = 1050e6
         o.Tobs = 2.2 * 3600.0  # sec
@@ -1081,7 +1104,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 2
 
     elif hpso == HPSOs.hpso37a:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 1e9
         o.freq_max = 1.7e9
         o.Tobs = 6 * 3600.0  # sec
@@ -1098,7 +1120,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso37b:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 1e9
         o.freq_max = 1.7e9
         o.Tobs = 6 * 3600.0  # sec
@@ -1114,7 +1135,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso37c:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 1e9
         o.freq_max = 1.7e9
         o.Tobs = 6 * 3600.0  # sec
@@ -1130,7 +1150,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso38a:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 7e9
         o.freq_max = 11e9
         o.Tobs = 6 * 3600.0  # sec
@@ -1146,7 +1165,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso38b:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 7e9
         o.freq_max = 11e9
         o.Tobs = 6 * 3600.0  # sec
@@ -1162,7 +1180,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
                 o.Npp = 4
 
     elif hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 50e6
         o.freq_max = 350e6
@@ -1175,7 +1192,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         o.Tpoint = 6 * 3600.0  # sec
 
     elif hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 50e6
         o.freq_max = 350e6
@@ -1188,7 +1204,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         o.Tpoint = 6 * 3600.0  # sec
 
     elif hpso == HPSOs.hpso_max_Mid_c:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 350e6
         o.freq_max = 1.05e9
@@ -1201,7 +1216,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         o.Tpoint = 6 * 3600.0  # sec
 
     elif hpso == HPSOs.hpso_max_Mid_s:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 350e6
         o.freq_max = 1.05e9
@@ -1214,7 +1228,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         o.Tpoint = 6 * 3600.0  # sec
 
     elif hpso == HPSOs.hpso_max_band5_Mid_c:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9
@@ -1227,7 +1240,6 @@ def apply_hpso_parameters(o, hpso, hpso_subtask=None):
         o.Tpoint = 6 * 3600.0  # sec
 
     elif hpso == HPSOs.hpso_max_band5_Mid_s:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9

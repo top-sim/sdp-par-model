@@ -27,30 +27,43 @@ class PipelineConfig:
         :param pipeline: Pipeline mode (can be omitted if HPSO specified)
         :param band: Frequency band (can be omitted if HPSO specified)
         :param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
+        :param hpso_subtask: The specific subtask of the HPSO for which results are to be calculated
         :param adjusts: Values that should be adjusted in the
           telescope parameters. Keyword arguments get added to the
           adjustments automatically. Can be a string of the the form
           "name=val name2=val flag".
         """
+        params = ParameterContainer()
 
         # Load HPSO parameters
         if hpso is not None:
-            if not (telescope is None and band is None and pipeline is None):
-                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set, not both!")
-            tp_default = ParameterContainer()
-            p.apply_hpso_parameters(tp_default, hpso, hpso_subtask)
-            telescope = tp_default.telescope
-            if hasattr(tp_default, 'pipeline'):
-                pipeline = tp_default.pipeline
-        else:
-            if telescope is None or band is None or pipeline is None:
-                raise Exception("Either telescope/band/pipeline or an HPSO needs to be set!")
+            assert hpso in p.HPSOs.hpso_telescopes
+            if hpso_subtask is None:
+                warnings.warn("HPSO == %s but HPSO subtask is 'None'." % str(hpso))
+            if not ((telescope is None) and (band is None) and (pipeline is None)):
+                raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
 
-        # Save parameters
-        self.telescope = telescope
-        self.hpso = hpso
-        self.band = band
-        self.pipeline = pipeline
+            self.hpso = hpso
+            self.hpso_subtask = hpso_subtask
+            self.telescope = p.HPSOs.hpso_telescopes[hpso]
+
+            p.apply_telescope_parameters(params, self.telescope)
+            p.apply_hpso_parameters(params, hpso, hpso_subtask)
+            if hasattr(params, 'pipeline'):
+                pipeline = params.pipeline
+        else:
+            # This may be a bit of an outdated case; we mainly work in terms of HPSOs
+            if (telescope is None) or (band is None) or (pipeline is None):
+                raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
+            self.band = band
+            self.telescope = telescope
+
+        # Determine relevant pipelines
+        if isinstance(pipeline, list):
+            self.relevant_pipelines = pipeline
+        else:
+            self.relevant_pipelines = [pipeline]
+        self.pipeline = pipeline  # Only relevant_pipelines is used (?), so this may probably be omitted
 
         # Adjustments from keyword arguments
         if type(adjusts) == str:
@@ -66,25 +79,13 @@ class PipelineConfig:
         self.adjusts.update(**kwargs)
         assert 'max_baseline' not in self.adjusts, 'Please use Bmax for consistency!'
 
-        # Determine relevant pipelines
-        if isinstance(pipeline, list):
-            self.relevant_pipelines = pipeline
-        else:
-            self.relevant_pipelines = [pipeline]
-
-        # Load telescope parameters from apply_telescope_parameters.
-        tp_default = ParameterContainer()
-        p.apply_telescope_parameters(tp_default, telescope)
-        if not hpso is None:
-            p.apply_hpso_parameters(tp_default, hpso)
-
         # Store max allowed baseline length, load default parameters
-        self.max_allowed_baseline = tp_default.baseline_bins[-1]
+        self.max_allowed_baseline = params.baseline_bins[-1]
         if 'Bmax' not in self.adjusts:
-            self.adjusts['Bmax'] = tp_default.Bmax
-        self.default_frequencies = tp_default.Nf_max
+            self.adjusts['Bmax'] = params.Bmax
+        self.default_frequencies = params.Nf_max
         if 'Nf_max' not in self.adjusts:
-            self.adjusts['Nf_max'] = tp_default.Nf_max
+            self.adjusts['Nf_max'] = params.Nf_max
 
     def describe(self):
         """ Returns a name that identifies this configuration. """
@@ -165,6 +166,13 @@ class PipelineConfig:
                               (str(self.telescope), str(self.band)))
             okay = False
 
+        if not hasattr(self, "pipeline"):
+            messages.append("ERROR: Configuration has no defined pipeline")
+            okay = False
+
+        if (hasattr(self, "hpso") and hasattr(self, "band")) or (not (hasattr(self, "hpso") or hasattr(self, "band"))):
+                messages.append("ERROR: Either the Imaging Band or an HPSO needs to be defined (and not both).")
+                okay = False
         return (okay, messages)
 
     def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify=''):
@@ -192,15 +200,17 @@ class PipelineConfig:
         p.apply_telescope_parameters(telescope_params, cfg.telescope)
         # Then define pipeline and frequency-band
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
-        if (cfg.hpso is None) and (cfg.band is not None):
-            p.apply_band_parameters(telescope_params, cfg.band)
-            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
-        elif (cfg.hpso is not None) and (cfg.band is None):
+
+        if hasattr(cfg, "hpso"):
+            hpso_subtask = None
+            if hasattr(cfg, "hpso_subtask"):
+                hpso_subtask = cfg.hpso_subtask
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
             p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
-            p.apply_hpso_parameters(telescope_params, cfg.hpso)
-        else:
-            raise Exception("Either the Imaging Band or an HPSO needs to be defined (either or; not both).")
+            p.apply_hpso_parameters(telescope_params, cfg.hpso, hpso_subtask)
+        elif hasattr(cfg, "band"):
+            p.apply_band_parameters(telescope_params, cfg.band)
+            p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
 
         # Apply parameter adjustments. Needs to be done before bin
         # calculation in case Bmax gets changed.  Note that an

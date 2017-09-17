@@ -138,7 +138,7 @@ def get_result_sum(resultMap):
     return list(map(lambda row: row[3], resultMap))
 
 
-def get_result_expressions(resultMap,tp):
+def get_result_expressions(resultMap, tp):
     """
     Returns the expression that needs to be evaluated
 
@@ -857,7 +857,7 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
     _write_csv(filename, results, rows)
 
 
-def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
+def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):  # TODO: make verbose default False
     """A private method for computing a set of results.
 
     :param pipelineConfig: Complete pipeline configuration
