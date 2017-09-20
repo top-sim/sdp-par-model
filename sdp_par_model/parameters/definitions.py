@@ -332,11 +332,10 @@ class HPSOs:
     # The High Priority Science Objective list below includes the
     # HPSOs that were originally intended for The Survey
     # telescope. These have since been reassigned to Mid.
-    hpsos = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b, hpso37c,
-             hpso38a, hpso38b}
-    available_hpsos = hpsos.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
-                                   hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
-
+    hpsos = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b,
+             hpso37c, hpso38a, hpso38b}
+    available_hpsos = hpsos.union(
+        {hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
 
 def define_symbolic_variables(o):
     """
@@ -884,7 +883,6 @@ def apply_pipeline_parameters(o, pipeline):
 
     return o
 
-
 def apply_hpso_parameters(o, hpso, hpso_subtask):
     """
     Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
@@ -892,18 +890,20 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
 
     :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
     :param hpso: The HPSO
-    :param hpso_subtask: subtask (can be None)
+    :param hpso_subtask: subtask (can be None?)
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
-    assert hpso in HPSOs.available_hpsos
+    assert hpso in HPSOs.available_hpsos  # Check that the HPSO is listed as being available for calculation
+    assert hpso in HPSOs.hpso_telescopes.keys()  # Check that this lookup has been defined
 
-    o.hpso = hpso
-    assert hpso in HPSOs.hpso_telescopes
+    o.set_param('hpso', hpso)
     o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
 
     if hpso_subtask is not None:
         assert hpso_subtask in HPSOs.all_subtasks
+        assert hpso_subtask in HPSOs.hpso_subtasks[hpso]  # make sure a valid subtask has been defined for this HPSO
+
         if hpso_subtask in HPSOs.ingest_subtasks:
             o.pipeline = Pipelines.Ingest
         elif hpso_subtask in HPSOs.rcal_subtasks:
@@ -916,8 +916,8 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
             o.pipeline = Pipelines.DPrepA
         elif hpso_subtask in HPSOs.dprepC_subtasks:
             o.pipeline = Pipelines.DPrepA
-        else:
-            raise AssertionError("Unknown HPSO subtask")
+    else:
+        o.pipeline = Pipelines.all  # TODO: this is probably incorrect, but what else do we assume?
 
     if hpso == HPSOs.hpso01:
         o.freq_min = 50e6
