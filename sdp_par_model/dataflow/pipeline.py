@@ -67,18 +67,13 @@ class Pipeline:
             tobs / self._to_domainexpr(tp.Tkernel_predict))
         self.kernelBackTime = self.obsTime.split(
             tobs / self._to_domainexpr(tp.Tkernel_backward))
-        if tp.pipeline == Pipelines.ICAL:
-            self.Tsolve = tp.tICAL_G
-        elif tp.pipeline == Pipelines.RCAL:
-            self.Tsolve = tp.tRCAL_G
-        else:
-            self.Tsolve = tp.Tsnap
-        self.solveTime = self.obsTime.split(Max(1, tobs / self.Tsolve))
+        self.solveTime = self.obsTime.split(Max(1, tobs / tp.Tsolve))
 
         # Make frequency domain
         self.frequency = Domain('Frequency', 'ch', priority=8)
         self.allFreqs = self.frequency.regions(tp.Nf_max / nerf_freq)
         self.eachFreq = self.allFreqs.split(tp.Nf_max / nerf_freq)
+        self.subbandFreqs = self.allFreqs.split(tp.Nsubbands / nerf_freq)
         self.visFreq = self.allFreqs.split(
             self._to_domainexpr(tp.Nf_vis) / nerf_freq)
         self.outFreqs = self.allFreqs.split(tp.Nf_out / nerf_freq)
@@ -266,14 +261,14 @@ class Pipeline:
                  self.binBaselines],
                 # maybe twice this, because we need to transfer
                 # visibility + model...?
-                costs = { 'transfer': self._transfer_cost_vis(self.Tsolve) },
+                costs = { 'transfer': self._transfer_cost_vis(self.tp.Tsolve) },
                 deps = [vis, modelVis], cluster='calibrate'
             )
 
             # Solve
             solve = Flow(
                 Products.Solve,
-                [self.eachBeam, self.eachSelfCal, self.solveTime, self.allFreqs, self.xyPolars,
+                [self.eachBeam, self.eachSelfCal, self.solveTime, self.subbandFreqs, self.xyPolars,
                  self.allBaselines],
                 costs = self._costs_from_product(Products.Solve),
                 deps = [slots], cluster='calibrate',
