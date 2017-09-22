@@ -1072,7 +1072,7 @@ def compare_csv(result_file, ref_file,
 
     # Loop through rows
     all_diffs = []
-    diff_sum = 0
+    all_diff_sums = []
     for row_name, row in results:
 
         # Heading?
@@ -1152,7 +1152,7 @@ def compare_csv(result_file, ref_file,
         if len(diffs) != 0:
             sdiff = '<td>%+.3g%%</td><td>%+.3g%%</td><td>%+.3g%%</td>' % (
                 np.mean(diffs), np.min(diffs), np.max(diffs))
-            diff_sum += np.sum(np.abs(diffs)) / len(diffs)
+            all_diff_sums.append((row_name, np.mean(diffs), np.min(diffs), np.max(diffs)))
         else:
             sdiff = '<td colspan=3></td>'
         if len(diffs) == 0 or np.max(np.abs(diffs)) >= row_threshold:
@@ -1176,7 +1176,7 @@ def compare_csv(result_file, ref_file,
         display(HTML('<h3>Comparison:</h3>'))
         display(HTML(stbl))
 
-    return diff_sum
+    return all_diff_sums
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
