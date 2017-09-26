@@ -882,17 +882,9 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
         pipelineConfig.pipeline = pipeline
         tp = pipelineConfig.calc_tel_params(verbose=verbose)
 
-        # Optimise Tsnap & Nfacet
-        tsnap_opt = Tsnap
-        nfacet_opt = Nfacet
-        if tsnap_opt is None and nfacet_opt is None:
-            (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-        elif tsnap_opt is None or nfacet_opt is None:
-            raise Exception("We can only optimise Tsnap and Nfacet together so far!")
-
         # Evaluate expressions from map
         result_expressions = get_result_expressions(result_map, tp)
-        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
         result_value_array.append(results_for_pipeline)
 
     # Now transpose, then sum up results from pipelines per row

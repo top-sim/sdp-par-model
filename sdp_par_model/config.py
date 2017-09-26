@@ -166,15 +166,22 @@ class PipelineConfig:
 
         return (okay, messages)
 
-    def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify=''):
+    def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify='',
+                        optimize_expression='Rflop',
+                        clear_symbolised=True):
         """
         Calculates telescope parameters for this configuration.  Some
         values may (optionally) be overwritten, e.g. the
         maximum baseline or number of frequency channels.
 
         :param cfg: Valid pipeline configuration
-        :param verbose:
+        :param verbose: How chatty we are supposed to be
         :param adjusts: Dictionary of telescope parameters to adjust
+        :param symbolify: Generate symbolified telescope parameters
+        :param optimize_expression: Set free symbols in a way that minimises given telescope parameter
+           (only if symbolify is not set)
+        :param clear_symbolised: Whether to clear parameters with free symbols after optimisation.
+           (only if symbolify is not set)
         """
 
         assert cfg.is_valid()[0], "calc_tel_params must be called for a valid pipeline configuration!"
@@ -245,6 +252,20 @@ class PipelineConfig:
         f.apply_imaging_equations(telescope_params, cfg.pipeline,
                                   bins, binfracs,
                                   verbose, symbolify)
+
+        # Free symbols to minimise?
+        if symbolify == '' and optimize_expression is not None and \
+           telescope_params.get(optimize_expression) is not None and \
+           len(telescope_params.get(optimize_expression).free_symbols) > 0:
+
+            # Minimise
+            substs = evaluate.minimise_parameters(telescope_params, optimize_expression, verbose=verbose)
+            telescope_params = telescope_params.subs(substs)
+
+        # Clear unoptimised values?
+        if symbolify == '' and clear_symbolised:
+            telescope_params.clear_symbolised()
+
         return telescope_params
 
     def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
@@ -260,10 +281,7 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-
-            result_expression = tp.get(expression_string)
-            (tsnap_opt, nfacet_opt) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += evaluate.evaluate_expression(result_expression, tp, tsnap_opt, nfacet_opt)
+            result += evaluate.evaluate_expression(result_expression, tp)
 
         return result
 
@@ -281,10 +299,7 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-
-            result_expression = tp.products.get(product, {}).get(expression, 0)
-            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            result += evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet)
+            result += evaluate.evaluate_expression(result_expression, tp)
 
         return result
 
@@ -302,13 +317,12 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
 
             # Loop through defined products, add to result
             for name, product in tp.products.items():
                 if expression in product:
                     values[name] = values.get(name, 0) + \
-                        evaluate.evaluate_expression(product[expression], tp, tsnap, nfacet)
+                        evaluate.evaluate_expression(product[expression], tp)
 
         return values
 
@@ -365,8 +379,7 @@ class PipelineConfig:
                 result_expression = tp.products[product].get(expr, 0)
             else:
                 result_expression = tp.get(expression_string)
-            (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-            results.append(evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet))
+            results.append(evaluate.evaluate_expression(result_expression, tp))
 
         print('done with parameter sweep!')
         return (param_values, results)
@@ -443,8 +456,7 @@ class PipelineConfig:
                                          % parameters[1])
 
                 result_expression = tp.get(expression_string)
-                (tsnap, nfacet) = evaluate.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-                results[iy, ix] = evaluate.evaluate_expression(result_expression, tp, tsnap, nfacet)
+                results[iy, ix] = evaluate.evaluate_expression(result_expression, tp)
 
         print('done with parameter sweep!')
         return (param_x_values, param_y_values, results)
@@ -535,8 +547,7 @@ class PipelineConfig:
         # Optimise to settle Tsnap and Nfacet
         if not optimize_expression is None:
             assert(symbolify == '') # Will likely fail otherwise
-            (tsnap_opt, nfacet_opt) = evaluate.find_optimal_Tsnap_Nfacet(tp, expr_to_minimize_string=optimize_expression)
-            tp = pipelineConfig.calc_tel_params(adjusts={'Tsnap': tsnap_opt, 'Nfacet': nfacet_opt})
+            tp = pipelineConfig.calc_tel_params(optimize_expression=optimize_expression)
 
         # Create lookup map for symbols
         symMap = {}

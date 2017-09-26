@@ -11,6 +11,7 @@ import numpy as np
 from scipy import optimize as opt
 from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Symbol
 import traceback
+import itertools
 
 from .parameters.definitions import Telescopes, Pipelines, Bands, Constants as c
 from .parameters.container import ParameterContainer, BLDep
@@ -25,8 +26,7 @@ def is_literal(expression):
     return isinstance(expression, (str, float, int, np.ndarray, list))
 
 
-def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
-    # TODO check all calls ans see whether "key" can be added, or whether it should be removed altogether
+def evaluate_expression(expression, tp):
     """
     Evaluate an expression by substituting the telescopec parameters
     into them. Depending on the type of expression, the result might
@@ -35,9 +35,6 @@ def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
 
     :param expression: the expression, expressed as a function of the telescope parameters, Tsnap and Nfacet
     :param tp: the telescope parameters (ParameterContainer object containing all relevant parameters)
-    :param tsnap: The snapshot time to use
-    :param nfacet: The number of facets to use
-    :param key: (optional) the string name of the expression that is being evaluated. Used in error reporting.
     :return:
     """
 
@@ -47,27 +44,22 @@ def evaluate_expression(expression, tp, tsnap, nfacet, key=None):
 
     # Dictionary? Recurse
     if isinstance(expression, dict):
-        return { k: evaluate_expression(e, tp, tsnap, nfacet)
+        return { k: evaluate_expression(e, tp)
                  for k, e in expression.items() }
 
     # Otherwise try to evaluate using sympy
     try:
 
-        # First substitute parameters
-        expression_subst = expression.subs({tp.Tsnap: tsnap, tp.Nfacet: nfacet})
-
         # Baseline dependent?
-        if isinstance(expression_subst, BLDep):
-            result = [ float(expression_subst(**subs)) for subs in tp.bl_bins ]
+        if isinstance(expression, BLDep):
+            return [ float(expression(**subs)) for subs in tp.bl_bins ]
         else:
             # Otherwise just evaluate directly
-            result = float(expression_subst)
+            return float(expression)
 
     except Exception as e:
         traceback.print_exc()
-        result = "Failed to evaluate (%s): %s" % (e, str(expression))
-
-    return result
+        return "Failed to evaluate (%s): %s" % (e, str(expression))
 
 def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
@@ -143,105 +135,145 @@ def cheap_lambdify_curry(free_vars, expression):
     return eval(expr_head + expr_body)
 
 
-def find_optimal_Tsnap_Nfacet(telescope_parameters, expr_to_minimize_string='Rflop',
-                              max_number_nfacets=20, min_number_nfacets=1,
-                              verbose=False):
-    """
-    Computes the optimal value for Tsnap and Nfacet that minimizes the
-    value of an expression (typically Rflop). Returns result as a
-    2-tuple (Tsnap_opt, Nfacet_opt)
+def minimise_parameters(telescope_parameters,
+                        expression_string = 'Rflop',
+                        expression = None,
+                        lower_bound = {}, upper_bound = {},
+                        only_one_minimum = ['Nfacet'],
+                        verbose = False):
+    """Computes the optimal value for free variables in telescope parameters
+    such  that it minimizes the value of an expression (typically
+    Rflop). Returns result as a dictionary.
 
     :param telescope_parameters: Contains the definition of the
       expression that needs to be minimzed. This should be a
-      symbolic expression that involves Tsnap and/or Nfacet.
+      symbolic expression that involves Deltaw_Stack and/or Nfacet.
     :param expr_to_minimize_string: The expression that should be
       minimized. This is typically assumed to be the computational
       load, but may also be, for example, buffer size.
-    :param max_number_nfacets: Provides an upper limit to
-      Nfacet. Because we currently do a linear search for the
-      minimum value, using a for loop, we need to know when to
-      quit. Max should never be reached unless in pathological
-      cases
-    :param verbose:
+    :param lower_bound: Lower bound to use for symbols
+    :param upper_bound: Upper bound to use for symbols
+    :param only_one_minimum: Assume that the given (integer) symbol
+      only has one minimum, so we can assume that any local optimum we
+      find is the global optimum.
+    :param verbose: Be more chatty about what's going on.
     """
     assert isinstance(telescope_parameters, ParameterContainer)
-    assert hasattr(telescope_parameters, expr_to_minimize_string)
 
-    if telescope_parameters.pipeline not in Pipelines.imaging: # Not imaging, return defaults
-        if verbose:
-            print(telescope_parameters.pipeline, "not imaging - no need to optimise Tsnap and Nfacet")
-        return (telescope_parameters.Tobs, 1)
-
-    # Construct lambda from our two parameters (facet number and
-    # snapshot time) to the expression to minimise
-    expression_original = telescope_parameters.get(expr_to_minimize_string)
-    params = []
-    if isinstance(telescope_parameters.Nfacet, Symbol):
-        params.append(telescope_parameters.Nfacet)
-        nfacet_range = range(min_number_nfacets, max_number_nfacets+1)
+    # Find symbols to optimise
+    if expression is None:
+        expression = telescope_parameters.get(expression_string)
+        assert expression is not None, "Telescope parameters do not define %s!" % expression_string
     else:
-        nfacet_range = [telescope_parameters.Nfacet]
-    if isinstance(telescope_parameters.Tsnap, Symbol):
-        params.append(telescope_parameters.Tsnap)
-    expression_lam = cheap_lambdify_curry(params, expression_original)
+        expression_string = str(expression)
+    free_symbols = expression.free_symbols
+    free_symbol_names = [ str(sym) for sym in free_symbols ]
 
-    # Loop over the different integer values of NFacet
+    # Default bounds
+    lower_bound = dict(lower_bound)
+    upper_bound = dict(upper_bound)
+    if 'Nfacet' in free_symbol_names:
+        if 'Nfacet' not in lower_bound: lower_bound['Nfacet'] = 1
+        if 'Nfacet' not in upper_bound: upper_bound['Nfacet'] = 20
+    if 'Tsnap' in free_symbol_names:
+        if 'Tsnap' not in lower_bound:
+            lower_bound['Tsnap'] = telescope_parameters.get('Tsnap_min', 0.1, warn=False)
+        if 'Tsnap' not in upper_bound:
+            upper_bound['Tsnap'] = max(telescope_parameters.get('Tsnap_min', 0.1, warn=False),
+                                       0.5 * telescope_parameters.get('Tobs', 21600, warn=False))
+    if 'DeltaW_stack' in free_symbol_names:
+        if 'DeltaW_stack' not in lower_bound:
+            lower_bound['DeltaW_stack'] = 0.1
+        if 'DeltaW_stack' not in upper_bound:
+            upper_bound['DeltaW_stack'] = telescope_parameters.DeltaW_max(telescope_parameters.Bmax)
+
+    # We can only optimise one floating-point variable, and every symbol must have bounds
+    float_symbol = None
+    int_symbols = []
+    int_ranges = []
+    for sym in free_symbols:
+        assert str(sym) in lower_bound, "Symbol %s must have a lower bound!" % sym
+        assert str(sym) in upper_bound, "Symbol %s must have an upper bound!" % sym
+        if not sym.is_integer:
+            assert float_symbol is None, "Can only optimise for one float symbol at a time!"
+            float_symbol = sym
+            float_lower_bound = lower_bound[str(float_symbol)]
+            float_upper_bound = upper_bound[str(float_symbol)]
+        else:
+            rnge = range(lower_bound[str(sym)], upper_bound[str(sym)]+1)
+            # Sort symbols with only one minimum to the back to the list
+            if str(sym) in only_one_minimum:
+                int_symbols.append(sym)
+                int_ranges.append(rnge)
+            else:
+                int_symbols.insert(0, sym)
+                int_ranges.insert(0, rnge)
+
+    # Construct lambda from integer parameters, then float parameter
+    params = list(int_symbols)
+    if float_symbol is not None:
+        params.append(float_symbol)
+    expression_lam = cheap_lambdify_curry(params, expression)
+
+    # Loop over the different integer values
     results = []
-    warned = False
-    for nfacets in nfacet_range:
-        # Warn if large values of nfacets are reached, as it may indicate an error and take long!
-        if (nfacets > 20) and not warned:
-            warnings.warn('Searching minimum value by incrementing Nfacet; value of 20 exceeded... this is odd '
-                          '(search may take a long time; will self-terminate at Nfacet = %d' % max_number_nfacets)
-            warned = True
-
+    skip_until = tuple()
+    last_result = None
+    for int_vals in itertools.product(*int_ranges):
+        if int_vals < skip_until:
+            continue
         if verbose:
-            print ('Evaluating Nfacets = %d' % nfacets)
+            print('Evaluating', ', '.join(["%s=%d" % vi for vi in zip(int_symbols, int_vals)]), end='')
 
-        # Find optimal Tsnap for this number of facets, obtaining result in "result"
-        if isinstance(telescope_parameters.Nfacet, Symbol):
-            expr = expression_lam(nfacets)
-        else:
-            expr = expression_lam
-        if isinstance(telescope_parameters.Tsnap, Symbol):
-            result = minimize_by_Tsnap_lambdified(expr,
-                                                  telescope_parameters,
-                                                  verbose=verbose)
-        else:
-            result = (telescope_parameters.Tsnap, float(expr))
-        results.append((nfacets, result[0], result[1]))
+        # Set integer symbols
+        expr = expression_lam
+        for i in int_vals:
+            expr = expr(i)
 
-        # Continue to at least Nfacet==3 as there can be a local
-        # increase between nfacet=1 and 2
-        if len(results) >= 3:
-            if results[-1][2] >= results[-2][2]:
-                if verbose:
-                    print ('\nExpression increasing with number of facets; aborting exploration of Nfacets > %d' \
-                          % nfacets)
+        # Optimise float symbol
+        if float_symbol is None:
+            opt_val = 0
+            result = float(expr)
+            if verbose:
+                print(' -> %s = %g' % (expression_string, result))
+        else:
+            opt_val = optimize_lambdified_expr(expr, float_lower_bound, float_upper_bound)
+            result = float(expr(opt_val))
+            if verbose:
+                print(' -> %s=%g, %s=%g' % (float_symbol, opt_val, expression_string, result))
+
+        results.append((result, *int_vals, opt_val))
+
+        # Check whether we can start skipping values (naive, can likely do better)
+        if last_result is not None and \
+           last_result < result and \
+           str(int_symbols[-1]) in only_one_minimum:
+
+            if len(int_vals) == 1:
                 break
 
+            # I.e. if we are at (1,2,3), skip until (1,3)
+            skip_until = int_vals[:-1]
+            skip_until[-1] += 1
+        last_result = result
+
     # Return parameters with lowest value
-    nfacets, tsnap, val = results[np.argmin(np.array(results)[:,2])]
+    result, *vals = results[np.argmin(np.array(results)[:,0])]
     if verbose:
-        print ('\n(Nfacet, Tsnap) = (%d, %.2f) yielded the lowest value of %s = %g'
-               % (nfacets, tsnap, expr_to_minimize_string, val))
-    return (tsnap, nfacets)
+        print(', '.join(["%s=%g" % vi for vi in zip(params, vals)]),
+              ' yielded the lowest value of %s=%g' % (expression_string, result))
+    return dict(zip([str(p) for p in params],vals))
 
-
-def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
+def minimize_lambdified(lam, bound_lower, bound_upper, verbose=False):
     """
-    The supplied lambda expression (a function of Tnsap) is minimized.
+    The supplied lambda expression is minimized.
 
-    :param lam: The lambda expression (a function of Tsnap)
+    :param lam: The lambda expression
     :param telescope_parameters: The telescope parameters
     :param verbose:
     :return: The optimal Tsnap value, along with the optimal value (as a pair)
     """
     assert telescope_parameters.pipeline in Pipelines.imaging
-
-    # Compute lower & upper bounds
-    bound_lower = telescope_parameters.Tsnap_min
-    bound_upper = max(bound_lower, 0.5 * telescope_parameters.Tobs)
 
     # Do optimisation
     Tsnap_optimal = optimize_lambdified_expr(lam, bound_lower, bound_upper)
@@ -252,21 +284,14 @@ def minimize_by_Tsnap_lambdified(lam, telescope_parameters, verbose=False):
     return (Tsnap_optimal, value_optimal)  # Replace Tsnap with optimal value
 
 
-def evaluate_expressions(expressions, tp, tsnap, nfacet):
+def evaluate_expressions(expressions, tp):
     """
     Evaluate a sequence of expressions by substituting the telescope_parameters into them.
 
     :param expressions: An array of expressions to be evaluated
     :param tp: The set of telescope parameters that should be used to evaluate each expression
-    :param tsnap: The relevant (typically optimal) snapshot time
-    :param nfacet: The relevant (typically optimal) number of facets to use
     """
-    results = []
-    for i in range(len(expressions)):
-        expression = expressions[i]
-        result = evaluate_expression(expression, tp, tsnap, nfacet)
-        results.append(result)
-    return results
+    return [ evaluate_expression(expr, tp) for expr in expressions ]
 
 def collect_free_symbols(formulas):
     """
