@@ -218,7 +218,6 @@ class HPSOs:
 
     hpso04cIngest = 'hpso04cIngest'
     hpso04cRCAL   = 'hpso04cRCAL'
-    hpso04cICAL   = 'hpso04cICAL'
 
     hpso13Ingest  = 'hpso13Ingest'
     hpso13RCAL    = 'hpso13RCAL'
@@ -226,52 +225,62 @@ class HPSOs:
     hpso13DPrepA  = '13DPrepA'
     hpso13DPrepB  = '13DPrepB'
     hpso13DPrepC  = '13DPrepC'
+
     hpso14Ingest  = 'hpso14Ingest'
     hpso14RCAL    = 'hpso14RCAL'
     hpso14ICAL    = '14ICAL'
     hpso14DPrepA  = '14DPrepA'
     hpso14DPrepB  = '14DPrepB'
     hpso14DPrepC  = '14DPrepC'
+
     hpso15Ingest  = 'hpso15Ingest'
     hpso15RCAL    = 'hpso15RCAL'
     hpso15ICAL    = '15ICAL'
     hpso15DPrepA  = '15DPrepA'
     hpso15DPrepB  = '15DPrepB'
     hpso15DPrepC  = '15DPrepC'
+
     hpso22Ingest  = 'hpso22Ingest'
     hpso22RCAL    = 'hpso22RCAL'
     hpso22ICAL    = '22ICAL'
     hpso22DPrepA  = '22DPrepA'
     hpso22DPrepB  = '22DPrepB'
+
     hpso27Ingest  = 'hpso27Ingest'
     hpso27RCAL    = 'hpso27RCAL'
     hpso27ICAL    = '27ICAL'
     hpso27DPrepA  = '27DPrepA'
     hpso27DPrepB  = '27DPrepB'
+
     hpso32Ingest  = 'hpso32Ingest'
     hpso32RCAL    = 'hpso32RCAL'
     hpso32ICAL    = '32ICAL'
     hpso32DPrepB  = '32DPrepB'
+
     hpso37aIngest = 'hpso37aIngest'
     hpso37aRCAL   = 'hpso37aRCAL'
     hpso37aICAL   = '37aICAL'
     hpso37aDPrepA = '37aDPrepA'
     hpso37aDPrepB = '37aDPrepB'
+  
     hpso37bIngest = 'hpso37bIngest'
     hpso37bRCAL   = 'hpso37bRCAL'
     hpso37bICAL   = '37bICAL'
     hpso37bDPrepA = '37bDPrepA'
     hpso37bDPrepB = '37bDPrepB'
+
     hpso37cIngest = 'hpso37cIngest'
     hpso37cRCAL   = 'hpso37cRCAL'
     hpso37cICAL   = '37cICAL'
     hpso37cDPrepA = '37cDPrepA'
     hpso37cDPrepB = '37cDPrepB'
+
     hpso38aIngest = 'hpso38aIngest'
     hpso38aRCAL   = 'hpso38aRCAL'
     hpso38aICAL   = '38aICAL'
     hpso38aDPrepA = '38aDPrepA'
     hpso38aDPrepB = '38aDPrepB'
+
     hpso38bIngest = 'hpso38bIngest'
     hpso38bRCAL   = 'hpso38bRCAL'
     hpso38bICAL   = '38bICAL'
@@ -283,7 +292,7 @@ class HPSOs:
         hpso01  : (hpso01Ingest,  hpso01RCAL,  hpso01ICAL,  hpso01DPrepA,  hpso01DPrepB,  hpso01DPrepC),
         hpso02a : (hpso02aIngest, hpso02aRCAL, hpso02aICAL, hpso02aDPrepA, hpso02aDPrepB, hpso02aDPrepC),
         hpso02b : (hpso02bIngest, hpso02bRCAL, hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC),
-        hpso04c : (hpso04cIngest, hpso04cRCAL, hpso04cICAL),
+        hpso04c : (hpso04cIngest, hpso04cRCAL),
         hpso13  : (hpso13Ingest,  hpso13RCAL,  hpso13ICAL,  hpso13DPrepA,  hpso13DPrepB,  hpso13DPrepC),
         hpso14  : (hpso14Ingest,  hpso14RCAL,  hpso14ICAL,  hpso14DPrepA,  hpso14DPrepB,  hpso14DPrepC),
         hpso15  : (hpso15Ingest,  hpso15RCAL,  hpso15ICAL,  hpso15DPrepA,  hpso15DPrepB,  hpso15DPrepC),
@@ -305,7 +314,7 @@ class HPSOs:
                       hpso14RCAL, hpso15RCAL, hpso22RCAL, hpso27RCAL, hpso32RCAL, hpso37aRCAL,
                       hpso37bRCAL, hpso37cRCAL, hpso38aRCAL, hpso38bRCAL}
 
-    ical_subtasks =  {hpso01ICAL, hpso02aICAL, hpso02bICAL, hpso04cICAL, hpso13ICAL, hpso13ICAL,
+    ical_subtasks =  {hpso01ICAL, hpso02aICAL, hpso02bICAL, hpso13ICAL, hpso13ICAL,
                       hpso14ICAL, hpso15ICAL, hpso22ICAL, hpso27ICAL, hpso32ICAL, hpso37aICAL,
                       hpso37bICAL, hpso37cICAL, hpso38aICAL, hpso38bICAL}
 
@@ -981,11 +990,11 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
 
         # TODO: add missing parameters. The values below are copied from HPSO02b and are just placeholders
 
-        o.Nbeam = 2  # using 2 beams as per HPSO request...
-        o.Nf_max = 65536 / o.Nbeam  # only half the number of channels when Nbeam is doubled
-        o.Bmax = 65000  # m # TODO:
-        o.freq_min = 50e6  # TODO: placeholder value; please update
-        o.freq_max = 200e6 # TODO: placeholder value; please update
+        o.Nbeam = 1
+        o.Nf_max = 65536 # TODO: estimate the number of frequency channels we need to run RCAL
+        o.Bmax = 10000  # m # TODO: check assumption about Bmax here - visibility data just used to correct phase in RCAL
+        o.freq_min = 150e6  # TODO: placeholder value; please update
+        o.freq_max = 350e6 # TODO: placeholder value; please update
 
     elif hpso == HPSOs.hpso13:
         o.comment = 'HI, limited BW'
