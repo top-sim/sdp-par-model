@@ -416,7 +416,7 @@ def apply_global_parameters(o):
     o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
     #o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
     o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
-    o.Naa = 10  # Support Size of the A Kernel, in (linear) Pixels. Changed to 10, after PDR submission
+    o.Naa = 9  # Support Size of the A Kernel, in (linear) Pixels.
     o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
     o.Npp = 4  # Number of polarization products
     o.Nw = 2  # Bytes per value
@@ -481,11 +481,12 @@ def apply_global_parameters(o):
     o.Nselfcal = 3
     o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
     o.NAProducts = 'all'  # Number of A^A terms to be modelled
-    o.tRCAL_G = 180.0 # Real time solution interval for Antenna gains
+    o.tRCAL_G = 10.0 # Real time solution interval for Antenna gains
     o.tICAL_G = 1.0 # Solution interval for Antenna gains
     o.tICAL_B = 3600.0  # Solution interval for Bandpass
-    o.tICAL_I = 1.0 # Solution interval for Ionosphere
+    o.tICAL_I = 10.0 # Solution interval for Ionosphere
     o.NIpatches = 1 # Number of ionospheric patches to solve
+    o.Tsolve = 10 * 60 # Calibration solution process frequency (task granularity)
 
     # Pipeline variants
     o.on_the_fly = False
@@ -533,10 +534,10 @@ def apply_telescope_parameters(o, telescope):
         #o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
         o.NAProducts = 'all' # We must model the ionosphere for each station
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 30 # Number of ionospheric patches to solve
 
     elif telescope == Telescopes.SKA1_Low_old:
@@ -551,10 +552,10 @@ def apply_telescope_parameters(o, telescope):
         o.baseline_bin_distribution = np.array((49.361, 7.187, 7.819, 5.758, 10.503, 9.213, 8.053, 1.985, 0.121))
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.NAProducts = 'all' # We must model the ionosphere for each station
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 30 # Number of ionospheric patches to solve
 
     elif telescope == Telescopes.SKA1_Mid:
@@ -571,10 +572,10 @@ def apply_telescope_parameters(o, telescope):
         #o.baseline_bins = np.array((150000,)) #single bin
         #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
         #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
         #o.Tion = 3600
 
@@ -591,10 +592,10 @@ def apply_telescope_parameters(o, telescope):
             (57.453, 5.235, 5.562, 5.68, 6.076, 5.835, 6.353, 5.896, 1.846, 0.064))
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
 
     elif telescope == Telescopes.SKA1_Sur_old:
@@ -609,10 +610,10 @@ def apply_telescope_parameters(o, telescope):
         o.baseline_bin_distribution = np.array((48.39, 9.31, 9.413, 9.946, 10.052, 10.738, 1.958, 0.193))
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         #o.NAProducts = 1 # Each antenna can be modelled as the same. [deactivated for now]
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
 
     elif telescope == Telescopes.SKA2_Low:
@@ -629,10 +630,10 @@ def apply_telescope_parameters(o, telescope):
             (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         o.NAProducts = 'all' # We must model the ionosphere for each station
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
 
     elif telescope == Telescopes.SKA2_Mid:
@@ -648,10 +649,10 @@ def apply_telescope_parameters(o, telescope):
             (57.453, 5.235, 5.563, 5.68, 6.076, 5.835, 6.352, 5.896, 1.846, 0.064))
         o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
-        o.tRCAL_G = 180.0
-        o.tICAL_G = 10.0 # Solution interval for Antenna gains
+        o.tRCAL_G = 10.0
+        o.tICAL_G = 1.0 # Solution interval for Antenna gains
         o.tICAL_B = 3600.0  # Solution interval for Bandpass
-        o.tICAL_I = 1.0 # Solution interval for Ionosphere
+        o.tICAL_I = 10.0 # Solution interval for Ionosphere
         o.NIpatches = 1 # Number of ionospheric patches to solve
 
     else:
@@ -793,6 +794,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nf_out = min(o.Nf_min, o.Nf_max)
         o.Npp = 4 # We get everything
         o.Tobs = 1. * 3600.0  # in seconds
+        o.Tsolve = 10
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.08
         elif o.telescope == Telescopes.SKA1_Mid:
