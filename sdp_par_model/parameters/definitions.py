@@ -193,6 +193,7 @@ class HPSOs:
                        hpso_max_Low_s : Telescopes.SKA1_Low,
                        hpso_max_Mid_c : Telescopes.SKA1_Mid,
                        hpso_max_Mid_s : Telescopes.SKA1_Mid,
+                       hpso_max_band5_Mid_c : Telescopes.SKA1_Mid,
                        hpso_max_band5_Mid_s : Telescopes.SKA1_Mid
                        }
 

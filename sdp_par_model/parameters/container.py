@@ -63,7 +63,7 @@ class ParameterContainer(object):
         Useful for preventing situations where values may inadvertently be overwritten.
 
         :param param_name: The name of the parameter/field that needs to be assigned - provided as text
-        :param value: the value. Need not be text.
+        :param value: the value to be written (as actual data type, i.e. not necessarily text)
         :param prevent_overwrite: Disallows this value to be overwritten once defined. Default = True.
         :param require_overwrite: Only allows value to be changed if it already exists. Default = False.
         """
