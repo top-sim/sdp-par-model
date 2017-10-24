@@ -330,8 +330,9 @@ class HPSOs:
     dprepC_subtasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
                         hpso14DPrepC, hpso15DPrepC}
 
-    all_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks,
-                             dprepA_subtasks, dprepB_subtasks, dprepC_subtasks)
+    dprep_subtasks = set.union(dprepA_subtasks, dprepB_subtasks, dprepC_subtasks)
+                        
+    all_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks, dprep_subtasks)  #TODO: add fast_img
 
     # Assert that we didn't forget to group subtasks to the relevant type
     for hpso in hpso_subtasks.keys():
