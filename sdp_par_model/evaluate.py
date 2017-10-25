@@ -2,7 +2,7 @@
 parametric model.
 """
 
-from __future__ import print_function
+from __future__ import print_function  # Makes Python-3 style print() function available in Python 2.x
 
 import warnings
 

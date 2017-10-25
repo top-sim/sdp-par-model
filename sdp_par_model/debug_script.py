@@ -5,13 +5,10 @@ A script for debugging using Pycharm -- better than doing live coding in the Jup
 # Imports
 import sys
 sys.path += ['..']
-from sdp_par_model import reports as iapi
-from sdp_par_model import evaluate as imp
-from sdp_par_model.config import PipelineConfig
-from sdp_par_model.parameters.definitions import *
-from sdp_par_model.parameters.definitions import Constants as c
-import numpy as np
-import collections
+import reports as iapi
+from .config import PipelineConfig
+from .parameters.definitions import *
+from .parameters.definitions import Constants as c
 import warnings
 
 # Define useful structures and methods
@@ -39,7 +36,7 @@ def add_delta(deltas, t, delta):
 if __name__ == '__main__':
     # Needs some refactoring methinks; idea would be to specify HPSOs instead of "letters".
     hpso_lookup = {'A' : HPSOs.hpso01,
-                   #'B' : (HPSOs.hpso04c,),  # This one probably not properly defined yet
+                   'B' : HPSOs.hpso04c,  # This one probably not properly defined yet
                    'C' : HPSOs.hpso13,
                    'D' : HPSOs.hpso14,
                    'E' : HPSOs.hpso15,

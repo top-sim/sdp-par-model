@@ -4,7 +4,7 @@ the telescopes' performance values and computional requirements from
 the supplied basic parameters defined in ParameterDefinitions.
 """
 
-from __future__ import print_function
+from __future__ import print_function  # Makes Python-3 style print() function available in Python 2.x
 
 import math
 import warnings

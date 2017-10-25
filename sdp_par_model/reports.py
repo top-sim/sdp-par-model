@@ -3,7 +3,7 @@ This file contains methods for generating reports for SKA SDP
 parametric model data using especially matplotlib and Jupyter. Having
 these functions separate allows us to keep notebooks free of clutter.
 """
-from __future__ import print_function
+from __future__ import print_function  # Makes Python-3 style print() function available in Python 2.x
 
 import re
 import warnings
@@ -1237,3 +1237,35 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
     plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7,
                       xticks_rot='vertical',
                       save=save)
+
+
+def plot_deltas(deltas, title="", xlabel="", ylabel=""):
+    """
+    Plots the evolution of a variable, as defined by a series of 'deltas'
+    :param deltas: A dictionary that maps timestamps (in wall clock units) to changes to the parameter
+    :param title: (optional) The plot's title string
+    :param xlabel: (optional) The plot's title string
+    :param ylabel: (optional) The plot's title string
+    :return: nothing
+    """
+
+    timestamps_sorted = sorted(deltas.keys())
+    x_axis = []
+    y_axis = []
+
+    value = 0
+    for t in timestamps_sorted:
+        time_hours = t / 3600
+        x_axis.append(time_hours)
+        y_axis.append(value)
+        value += deltas[t]
+        x_axis.append(time_hours)
+        y_axis.append(value)
+
+    plt.figure()
+    plt.plot(x_axis, y_axis)
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.xlim(min(x_axis), max(x_axis) * 1.05)
+    plt.ylim(min(y_axis), max(y_axis) * 1.05)
