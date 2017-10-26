@@ -38,6 +38,25 @@ class DataLocation:
     hot_buffer    = "hotbuffer"
     preserve      = "preserve"
 
+class SDPSchedule:
+    """
+    An object for storing an SDP schedule
+    """
+    flops_deltas = None  # maps wall clock times to SDP FLOPS allocation / deallocation (+/-) sizes
+    memory_deltas = None  # maps wall clock times to SDP working memory (RAM) allocation / deallocation (+/-) sizes
+    hot_buffer_deltas = None  # maps wall clock times to hot buffer allocation / deallocation (+/-) sizes
+    cold_buffer_deltas = None  # maps wall clock times to cold buffer allocation / deallocation (+/-) sizes
+    preserve_deltas = None  # maps wall clock times to long term preserve allocation sizes (presumably only +)
+    tasks_to_timestamps = {}  # Maps tasks to completion times
+    timestamps_to_tasks = {}  # Maps completion times to tasks lists
+
+    def __init__(self):
+        flops_deltas = {0: 0}  # maps wall clock times to SDP FLOPS allocation / deallocation (+/-) sizes
+        memory_deltas = {0: 0}  # maps wall clock times to SDP working memory (RAM) allocation / deallocation (+/-) sizes
+        hot_buffer_deltas = {0: 0}  # maps wall clock times to hot buffer allocation / deallocation (+/-) sizes
+        cold_buffer_deltas = {0: 0}  # maps wall clock times to cold buffer allocation / deallocation (+/-) sizes
+        preserve_deltas = {0: 0}  # maps wall clock times to long term preserve allocation sizes (presumably only +)
+
 
 class SDPTask:
     uid = None  # Unique ID - must be defined at task creation. Used for hashing and equality.
@@ -375,7 +394,7 @@ class Scheduler:
     @staticmethod
     def schedule(task_list, sdp_flops, max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
-        :return:
+        :return: a SDPSchedule object
         """
 
         # First, assert that the SDP has enough FLOP/s capacity to handle the real-time tasks. If not, we can't continue.
@@ -491,4 +510,13 @@ class Scheduler:
         '''
         print('Done!')
 
-        return None   # TODO: return a value here!
+        schedule = SDPSchedule()
+        schedule.cold_buffer_deltas = cold_buffer_deltas
+        schedule.flops_deltas = flops_deltas
+        schedule.memory_deltas = memory_deltas
+        schedule.preserve_deltas = preserve_deltas
+        schedule.hot_buffer_deltas = hot_buffer_deltas
+        schedule.tasks_to_timestamps = tasks_to_timestamps
+        schedule.timestamps_to_tasks = timestamps_to_tasks
+
+        return schedule
