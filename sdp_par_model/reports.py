@@ -17,7 +17,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 #import pymp
-
+from.parameters.definitions import HPSOs
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
 from .parameters.container import ParameterContainer
@@ -852,8 +852,15 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
     # Make configuration list
     configs = []
     for hpso in hpsos:
-        cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
-        configs.append(cfg)
+        # Is it an HPSOs with defined subtasks?
+        if hpso in HPSOs.hpso_subtasks:
+            for subtask in HPSOs.hpso_subtasks[hpso]:
+                cfg = PipelineConfig(hpso=hpso, hpso_subtask=subtask, adjusts=adjusts)
+                configs.append(cfg)
+        # If not, it may be one like "hpso_max_Low_c" that does not have subtasks defined
+        else:
+            cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
+            configs.append(cfg)
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
