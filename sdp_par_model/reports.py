@@ -851,7 +851,7 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
 
     # Make configuration list
     configs = []
-    for hpso in hpsos:
+    for hpso in sorted(hpsos):
         # Is it an HPSOs with defined subtasks?
         if hpso in HPSOs.hpso_subtasks:
             for subtask in HPSOs.hpso_subtasks[hpso]:
