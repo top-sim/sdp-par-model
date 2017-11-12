@@ -11,3 +11,7 @@
 
 /iPython/.ipynb_checkpoints
 /iPython/out
+
+.idea
+@Historical
+@Obsolete

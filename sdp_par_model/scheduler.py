@@ -62,7 +62,7 @@ class SDPTask:
     uid = None  # Unique ID - must be defined at task creation. Used for hashing and equality.
     description = None  # A human-readable description of the task
     t_min_start = None  # Earliest wall clock time (in seconds) that this task can / may start
-    prec_task = None  # Preceding task that needs to complete before this one can start (can be None)
+    preq_tasks = None  # Prerequisite tasks that needs to complete before this one can start (default = empty set)
     t_fixed = None  # fixed minimum duration (in seconds) of this task (e.g. for an observation)
     data_in = None  # Amount of data (in TB) this task requires to read from (presumably hot) buffer *before* starting
     memsize = None  # The amount of SDP working memory (in TB) needed to perform this task
@@ -74,6 +74,7 @@ class SDPTask:
     def __init__(self, unique_id, description=None):
         self.uid = unique_id
         self.description = description
+        self.preq_tasks = set()
 
     def __hash__(self):
         return hash(self.uid)  # Required for using Task objects in sets.
@@ -91,8 +92,17 @@ class SDPTask:
         for key_string in fields.keys():
             if key_string == 'uid':
                 continue  # We already printed the uid
-            elif (key_string == 'prec_task') and (isinstance(fields[key_string], SDPTask)):
-                value_string = "SDPTask #%d" % fields[key_string].uid  # Prevent recursion
+            elif key_string == 'preq_tasks':
+                # Prevent recursion by not printing the prerequisite tasks, but only their UIDs
+                preq_tasks = fields[key_string]
+                assert isinstance(preq_tasks, set)
+                value_string = 'None'
+                if len(preq_tasks) > 0:
+                    value_string = ''
+                    for task in fields[key_string]:
+                        value_string += "#%d," % task.uid
+                    if len(fields[key_string]) > 0:
+                        value_string = value_string[:-1]
             else:
                 value_string = str(fields[key_string])
 
@@ -205,8 +215,7 @@ class Scheduler:
             uid += 1  # the unique id of the combined Ingest+Rcal task
             t = SDPTask(uid, 'Ingest+RCal')
             if prev_ingest_task is not None:
-                t.set_param("prec_task",
-                            prev_ingest_task)  # previous ingest task needs to be complete before this one can start
+                t.preq_tasks.add(prev_ingest_task)  # previous ingest task needs to be complete before this one can start
             t.set_param("t_fixed", performance_dict[hpso]['Tobs'])
             t.set_param("data_source", DataLocation.ingest_buffer)
             t.set_param("data_target", DataLocation.cold_buffer)
@@ -248,12 +257,11 @@ class Scheduler:
 
                 if i == 2:
                     assert subtask in HPSOs.ical_subtasks  # Assumed that this is an ical subtask
-                    t.set_param("prec_task",
-                                prev_ingest_task)  # Associated ingest task must complete before this one can start
+                    t.preq_tasks.add(prev_ingest_task)  # Associated ingest task must complete before this one can start
                     ical_task = t  # Remember this task, as DPrep tasks depend on it
                 elif subtask in HPSOs.dprep_subtasks:
                     assert ical_task is not None
-                    t.set_param("prec_task", ical_task, prevent_overwrite=False)
+                    t.preq_tasks.add(ical_task)
 
                 t.data_out = 0  # TODO: No idea what gets output here. visRate? Temporarily set to zero
 
@@ -287,24 +295,23 @@ class Scheduler:
             value_at_t += deltas_history[timestamps_sorted[i]]
             if (((value_min is not None) and (value_at_t + eps < value_min)) or
                     ((value_max is not None) and (value_at_t - eps > value_max))):
-                warnings.warn("Sum of deltas leads to value of %g at time %g sec. Outside imposed bounds of [%s,%s] " %
-                              (value_at_t, timestamps_sorted[i], value_min, value_max))
-                return None
+                raise Exception("Sum of deltas leads to value of %g at time %g sec. Outside imposed bounds of "
+                                "[%s,%s] " % (value_at_t, timestamps_sorted[i], value_min, value_max))
 
         return value_at_t
 
     @staticmethod
-    def find_suitable_time(deltas_history, timepoint, sorted_delta_keys=None, value_min=None, value_max=None,
+    def find_suitable_time(timestamp_deltas, timepoint, sorted_delta_keys=None, value_min=None, value_max=None,
                            eps=1e-15):
         """
-        Finds the smallest time >= t_min, so that the sum of the deltas is between value_min and value_max (if defined)
-        @param deltas_history  : a dictionary that maps wall clock timestamps to a resource's value-changes
-        @param timepoint       : The earliest point in time for the insertion
+        Finds the earliest time >= timepoint when the sum of deltas is between value_min and value_max (if defined)
+        @param timestamp_deltas : dictionary that maps wall clock timestamps to a resource's value-changes
+        @param timepoint        : The earliest point in time for the insertion
         @param sorted_delta_keys : Optional sorted timestamps; prevents re-sorting the timestamps for efficiency
-        @param value_min       : Lowest allowable value of the resource's balance for insertion.
-        @param value_max       : Higest allowable value of the resource's balance for insertion.
-        @param eps             : Numerical rounding tolerance
-        @return                : The timestamp. None, if none found.
+        @param value_min        : Lowest allowable value of the resource's balance for insertion.
+        @param value_max        : Higest allowable value of the resource's balance for insertion.
+        @param eps              : Numerical rounding tolerance
+        @return                 : The timestamp. None, if none found.
         """
         # First cover the trivial case where there is no requirement for a suitable value at t=timepoint.
         if (value_min is None) and (value_max is None):
@@ -312,34 +319,35 @@ class Scheduler:
 
         timestamps_sorted = sorted_delta_keys
         if timestamps_sorted is None:
-            timestamps_sorted = sorted(deltas_history.keys())
+            timestamps_sorted = sorted(timestamp_deltas.keys())
 
-        value_at_t = Scheduler.sum_deltas(deltas_history, timepoint, timestamps_sorted)
+        value_at_t = Scheduler.sum_deltas(timestamp_deltas, timepoint, timestamps_sorted)
 
-        # Check whether the value at the supplied timepoint is suitable. If so we just use this timepoint.
+        # Check whether the value at the supplied time-point is suitable.
         if not (((value_min is not None) and (value_at_t + eps < value_min)) or
                     ((value_max is not None) and (value_at_t - eps > value_max))):
             return timepoint
 
         # Otherwise, we continue searching until we find a suitable timepoint
-        print("... initial task insertion time unsuitable. Searching forward in time...")  # TODO remove
         start_at_index = bisect.bisect_left(timestamps_sorted, timepoint)
-        if timepoint in deltas_history:
-            start_at_index += 1  # The position found by bisect was included in the summation; start one position later
+        if timepoint in timestamp_deltas:
+            start_at_index += 1  # value at pos found by bisect already included in summation; increment start pos.
         assert start_at_index > 0
 
         for i in range(start_at_index, len(timestamps_sorted)):
-            value_at_t += deltas_history[timestamps_sorted[i]]
+            t = timestamps_sorted[i]
+            value_at_t += timestamp_deltas[t]
             if not (((value_min is not None) and (value_at_t + eps < value_min)) or
                         ((value_max is not None) and (value_at_t - eps > value_max))):
-                return timepoint
+                return t
 
         # Otherwise, no valid timepoint has been found!
         raise Exception("No valid time point found!")
         return None
 
     @staticmethod
-    def add_delta(deltas_history, delta, t_start, t_end=None, value_min=0, value_max=None, sorted_delta_keys=None, eps=Definitions.epsilon):
+    def add_delta(deltas_history, delta, t_start, t_end=None, value_min=0, value_max=None, sorted_delta_keys=None,
+                  eps=Definitions.epsilon):
         """
         Applies the delta with proposed start and end times (wall clock) to a resource's simulated value change history.
         @param deltas_history  : a dictionary that maps wall clock timestamps to a resource's value-changes
@@ -355,9 +363,10 @@ class Scheduler:
         if (value_min is not None) and (value_max is not None):
             assert value_max >= value_min
 
-        timestamps_sorted = sorted_delta_keys
-        if timestamps_sorted is None:
-            timestamps_sorted = sorted(deltas_history.keys())
+        # TODO -- originally we checked whether the delta can be added; now we just do it regardless. Reintroduce check
+        '''
+        if sorted_delta_keys is None:
+            sorted_delta_keys = sorted(deltas_history.keys())
 
         # We now insert the deltas into the variable's history, and then sum it until the end of the delta's duration
         # to ensure that we do not violate any condition by adding this delta to the history
@@ -365,35 +374,48 @@ class Scheduler:
 
         if t_start in deltas_new:
             deltas_new[t_start] += delta
+            if deltas_new[t_start] == 0:
+                del deltas_new[t_start]
         else:
             deltas_new[t_start] = delta
 
         if t_end is not None:
             if t_end in deltas_new:
                 deltas_new[t_end] -= delta
+                if deltas_new[t_end] == 0:
+                    del deltas_new[t_end]
             else:
                 deltas_new[t_end] = -delta
 
         # The step below sums across the whole new delta sequence to make sure that it is valid. Will raise exception if not.
         timestamps_sorted = sorted(deltas_new.keys())
         value_after = Scheduler.sum_deltas(deltas_new, timestamps_sorted[-1], timestamps_sorted, value_min, value_max, eps)
+        '''
 
-        # If return value is not none the addition is valid and we can add the value into the real sequence of deltas
-        if value_after is not None:
-            if t_start in deltas_history:
-                deltas_history[t_start] += delta
+        if t_start in deltas_history:
+            deltas_history[t_start] += delta
+            if deltas_history[t_start] == 0:
+                del deltas_history[t_start]
+        else:
+            deltas_history[t_start] = delta
+
+        if t_end is not None:
+            if t_end in deltas_history:
+                deltas_history[t_end] -= delta
+                if deltas_history[t_end] == 0:
+                    del deltas_history[t_end]
             else:
-                deltas_history[t_start] = delta
-
-            if t_end is not None:
-                if t_end in deltas_history:
-                    deltas_history[t_end] -= delta
-                else:
-                    deltas_history[t_end] = -delta
+                deltas_history[t_end] = -delta
 
     @staticmethod
-    def schedule(task_list, sdp_flops, max_nr_iterations=9999, epsilon=Definitions.epsilon):
+    def schedule(task_list, sdp_flops, assign_sdp_fraction=0.5, minimum_flops=1.0, max_nr_iterations=9999,
+                 epsilon=Definitions.epsilon):
         """
+        :param task_list
+        :param sdp_flops
+        :param assign_sdp_fraction fraction of the available FLOPS assigned to a task that has no fixed completion time
+        :param minimum_flops minimum amount of petaflops to be assigned to a task that has no fixed completion time
+        :type task_list: iterable of SDPTask objects
         :return: a SDPSchedule object
         """
 
@@ -403,9 +425,8 @@ class Scheduler:
             tasks_to_be_scheduled.add(task)
             if task.t_fixed is not None:
                 required_FLOPs = task.flopcount / task.t_fixed
-                # print("Task %d requires a FLOPS rate of %g PetaFLOP/s" % (task.uid, required_FLOPs))
                 if (task.flopcount / task.t_fixed) > sdp_flops:
-                    raise AssertionError("Task %d (%s) requires %g PetaFLOP/s. SDP capacity of %g PetaFLOP/s is insufficient!"
+                    raise AssertionError("Task %d (%s) requires %g PetaFLOP/s. SDP capacity of %g PetaFLOPS is insufficient!"
                                          % (task.uid, task.description, required_FLOPs, sdp_flops))
         print('SDP has sufficient FLOPS capacity to handle real-time tasks.')
 
@@ -413,8 +434,7 @@ class Scheduler:
         # Scheduling means that each task gets put in a plausible sequence.
         # Repeat until all tasks are scheduled
         nr_iterations = 0
-        tasks_to_timestamps = {}  # Maps tasks to completion times
-        timestamps_to_tasks = {}  # Maps completion times to tasks lists
+        task_completion_times = {}  # Maps tasks to their completion timestamps
 
         wall_clock = 0  # Simulated wall clock time (seconds)
         wall_clock_advance = False  # Iff not true, advance the wall clock to this value
@@ -425,7 +445,7 @@ class Scheduler:
         cold_buffer_deltas = {0: 0}  # maps wall clock times to cold buffer allocation / deallocation (+/-) sizes
         preserve_deltas = {0: 0}  # maps wall clock times to long term preserve allocation sizes (presumably only +)
 
-        while len(tasks_to_timestamps) < len(tasks_to_be_scheduled):
+        while len(task_completion_times) < len(tasks_to_be_scheduled):
             nr_iterations += 1
             print("-= Starting iteration %d =-" % nr_iterations)
             nr_tasks_scheduled_this_iteration = 0
@@ -436,54 +456,72 @@ class Scheduler:
                 break
 
             for task in tasks_to_be_scheduled:
-                if task in tasks_to_timestamps:
-                    continue  # The task has already been scheduled. Skipping
+                # Check if task has already been scheduled.
+                if task in task_completion_times:
+                    continue  # Skipping this task (as it is already scheduled)
 
-                elif (task.prec_task is not None) and (task.prec_task not in tasks_to_timestamps):
-                    continue
+                # Check if an unfinished prerequisite task prevents this task from being scheduled at this time.
+                # If so, continue to next task (we will revisit this task at a later iteration).
+                elif len(task.preq_tasks) > 0:
+                    unscheduled_preq_task = False
+                    task_wall_clock_advance = False
+                    for preq_task in task.preq_tasks:
+                        if preq_task not in task_completion_times:
+                            unscheduled_preq_task = True
+                            break
+                        elif preq_task.t_end > wall_clock:
+                            if not task_wall_clock_advance:
+                                task_wall_clock_advance = preq_task.t_end
+                            else:
+                                # advance the wall clock enough for all of this task's prerequisite tasks to complete
+                                task_wall_clock_advance = max(task_wall_clock_advance, preq_task.t_end)
 
-                elif (task.prec_task is not None) and (task.prec_task in tasks_to_timestamps) and (
-                    wall_clock < task.prec_task.t_end):
-                    # Wall clock is less than the end time of the preceding task (on which this task depends).
-                    # Therefore we may need to advance the clock to enable us to schedule any tasks!
-                    if not wall_clock_advance:
-                        wall_clock_advance = task.prec_task.t_end
-                    else:
-                        wall_clock_advance = min(wall_clock_advance, task.prec_task.t_end)
+                    if task_wall_clock_advance:
+                        if not wall_clock_advance:
+                            wall_clock_advance = task_wall_clock_advance
+                        else:
+                            # advance global wall clock by minimum so that one additional task can complete
+                            wall_clock_advance = min(wall_clock_advance, task_wall_clock_advance)
+
+                    if unscheduled_preq_task or task_wall_clock_advance:
+                        # Some prerequisite task has a) not yet been scheduled, or b) will only complete in the future
+                        continue  # Skipping this task for now
+
+                # If we reach this point in the code (without hitting a 'continue' statement), the task
+                # a) has not yet been scheduled and
+                # b) does not have an unfinished prerequisite task preventing it from begin scheduled at this
+                #    (wall clock) point in time.
+                # Hence, we can schedule it.
+
+                flops_assigned_to_task = 0
+                if (task.t_fixed is not None):
+                    flops_assigned_to_task = task.flopcount / task.t_fixed
                 else:
-                    task_flops = 0
-                    if (task.t_fixed is not None):
-                        task_flops = task.flopcount / task.t_fixed
-                    else:
-                        flops_in_use = Scheduler.sum_deltas(flops_deltas, wall_clock, value_max=sdp_flops)
-                        task_flops = max(1, (sdp_flops - flops_in_use) * 0.5)  # TODO: this may be changed
+                    flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, wall_clock, value_max=sdp_flops)
+                    flops_assigned_to_task = max(minimum_flops, flops_available * assign_sdp_fraction)
 
-                    start_time = Scheduler.find_suitable_time(flops_deltas, wall_clock, value_max=(sdp_flops - task_flops), eps=epsilon)
-                    t_start = start_time
-                    t_end = start_time + (task.flopcount / task_flops)
+                start_time = Scheduler.find_suitable_time(flops_deltas, wall_clock,
+                                                          value_max=(sdp_flops - flops_assigned_to_task), eps=epsilon)
+                t_start = start_time
+                t_end = start_time + (task.flopcount / flops_assigned_to_task)
 
-                    if hasattr(task, "t_start"):
-                        raise Exception("Task already has t_start defined!\n %s" % str(task))
-                    task.set_param("t_start", t_start)
-                    task.set_param("t_end", t_end)
+                task.set_param("t_start", t_start)
+                task.set_param("t_end", t_end)
 
-                    Scheduler.add_delta(flops_deltas, task_flops, t_start, t_end, value_min=0, value_max=sdp_flops)
-                    Scheduler.add_delta(memory_deltas, task.memsize, t_start, t_end, value_min=0)
-                    # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
-                    # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
-                    # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
+                Scheduler.add_delta(flops_deltas, flops_assigned_to_task, t_start, t_end, value_min=0,
+                                    value_max=sdp_flops)
 
-                    # Add this task to the 'tasks_to_timestamps' and 'timestamps_to_tasks' mappings
-                    tasks_to_timestamps[task] = t_end
-                    if t_end in timestamps_to_tasks:
-                        timestamps_to_tasks[t_end].append(task)
-                    else:
-                        timestamps_to_tasks[t_end] = [task]
+                Scheduler.add_delta(memory_deltas, task.memsize, t_start, t_end, value_min=0)
+                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
+                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
+                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
 
-                    print('* Scheduled Task %d at wall clock time %g sec. Ends at t=%g sec. ' % (task.uid, t_start, t_end))
-                    nr_tasks_scheduled_this_iteration += 1
+                # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
+                task_completion_times[task] = t_end
+                print('* Scheduled Task %d at wall clock time %g sec. Ends at t=%g sec. ' % (task.uid, t_start, t_end))
+                nr_tasks_scheduled_this_iteration += 1
 
-            print('Number of scheduled tasks after %d iterations is %d out of %d' % (nr_iterations, len(tasks_to_timestamps),
+            print('Number of scheduled tasks after %d iterations is %d out of %d' % (nr_iterations, len(task_completion_times),
                                                                                      len(tasks_to_be_scheduled)))
 
             if (nr_tasks_scheduled_this_iteration == 0):
@@ -499,7 +537,7 @@ class Scheduler:
             uid         = None  # Unique ID - must be defined at task creation. Used for hashing and equality.
             description = None  # A human-readable description of the task
             t_min_start = None  # Earliest wall clock time (in seconds) that this task can / may start
-            prec_task   = None  # Preceding task that needs to complete before this one can start (can be None)
+            preq_task   = None  # Prerequisite task that needs to complete before this one can start
             t_fixed     = None  # fixed minimum duration (in seconds) of this task (e.g. for an observation)
             data_in     = None  # Amount of data (in TB) this task requires to read from (presumably hot) buffer *before* starting
             memsize     = None  # The amount of SDP working memory (in TB) needed to perform this task
@@ -516,7 +554,6 @@ class Scheduler:
         schedule.memory_deltas = memory_deltas
         schedule.preserve_deltas = preserve_deltas
         schedule.hot_buffer_deltas = hot_buffer_deltas
-        schedule.tasks_to_timestamps = tasks_to_timestamps
-        schedule.timestamps_to_tasks = timestamps_to_tasks
+        schedule.tasks_to_timestamps = task_completion_times
 
         return schedule
