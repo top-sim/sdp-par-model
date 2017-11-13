@@ -32,11 +32,20 @@ class Definitions:
                   ('Total Compute Rate',       'PetaFLOP/s', True, True,  lambda tp: tp.Rflop/c.peta,      )]
 
 
-class DataLocation:
+class DataLocations:
     ingest_buffer = "ingestbuffer"
+    working_mem   = "working_mem"
     cold_buffer   = "coldbuffer"
     hot_buffer    = "hotbuffer"
     preserve      = "preserve"
+
+    datapath_speeds = {(ingest_buffer, working_mem) : 0.5,  # all values in TB/s
+                       (working_mem, cold_buffer)   : 0.5,
+                       (cold_buffer, hot_buffer)    : 0.5,
+                       (hot_buffer, working_mem)    : 5.0,
+                       (working_mem, hot_buffer)    : 5.0,
+                       (hot_buffer, preserve)       : 0.5}
+
 
 class SDPSchedule:
     """
@@ -59,20 +68,29 @@ class SDPSchedule:
 
 
 class SDPTask:
-    uid = None  # Unique ID - must be defined at task creation. Used for hashing and equality.
-    description = None  # A human-readable description of the task
-    t_min_start = None  # Earliest wall clock time (in seconds) that this task can / may start
-    preq_tasks = None  # Prerequisite tasks that needs to complete before this one can start (default = empty set)
-    t_fixed = None  # fixed minimum duration (in seconds) of this task (e.g. for an observation)
-    data_in = None  # Amount of data (in TB) this task requires to read from (presumably hot) buffer *before* starting
-    memsize = None  # The amount of SDP working memory (in TB) needed to perform this task
-    flopcount = None  # Number of operations (in PetaFLOP) required to complete this task
-    data_out = None  # Amount of data (in TB) this task stores *after* finishing (written to buffer or long-term preserve)
-    data_source = None  # Data Location
-    data_target = None  # Data Location
+    """
+    An object that represents an SDP task. This typically has a subset (some of them optional, some not)
+    of the following attributes:
 
-    def __init__(self, unique_id, description=None):
-        self.uid = unique_id
+    uid          : Unique ID - must be defined at task creation. Used for hashing and equality.
+    description  : A human-readable description of the task
+    t_min_start  : Earliest wall clock time (in seconds) that this task can / may start
+    preq_tasks   : Prerequisite tasks that needs to complete before this one can start (default = empty set)
+    t_fixed      : fixed minimum duration (in seconds) of this task (e.g. for an observation)
+    data_in      : Amount of data (in TB) this task requires to read from (presumably hot) buffer *before* starting
+    memsize      : The amount of SDP working memory (in TB) needed to perform this task
+    flopcount    : Number of operations (in PetaFLOP) required to complete this task
+    data_out     : Amount of data (in TB) this task stores *after* finishing (written to buffer or long-term preserve)
+    data_source  : Data Location
+    data_target  : Data Location
+
+    Required attributes are created during in the __init__ method - note that these are all
+    """
+    class_uid_generator = 0  # Class variable for creating unique IDs
+
+    def __init__(self, description=None):
+        SDPTask.class_uid_generator += 1
+        self.uid = SDPTask.class_uid_generator
         self.description = description
         self.preq_tasks = set()
 
@@ -199,7 +217,6 @@ class Scheduler:
         @param performance_dict : a dictionary of computational requirements for each HPSO; these need to be computed only once
         """
         tasks = []
-        uid = -1
         prev_ingest_task = None
         for task_letter in letter_sequence:
             hpso = Definitions.hpso_lookup[task_letter]
@@ -212,13 +229,12 @@ class Scheduler:
                 raise AssertionError("Assumption was wrong - some HPSO apparently doesn't involve Ingest + RCal")
 
             # Ingest and Rcal are combined into a a single task object, as they cannot be separated
-            uid += 1  # the unique id of the combined Ingest+Rcal task
-            t = SDPTask(uid, 'Ingest+RCal')
+            t = SDPTask('Ingest+RCal')
             if prev_ingest_task is not None:
                 t.preq_tasks.add(prev_ingest_task)  # previous ingest task needs to be complete before this one can start
             t.set_param("t_fixed", performance_dict[hpso]['Tobs'])
-            t.set_param("data_source", DataLocation.ingest_buffer)
-            t.set_param("data_target", DataLocation.cold_buffer)
+            t.set_param("data_source", DataLocations.ingest_buffer)
+            t.set_param("data_target", DataLocations.cold_buffer)
             prev_ingest_task = t  # current (ingest+rcal) task remembered for later; subtasks may only start once this completes
 
             # Ingest
@@ -248,8 +264,7 @@ class Scheduler:
             ical_task = None
             for i in range(2, nr_subtasks):
                 subtask = hpso_subtasks[i]
-                uid += 1
-                t = SDPTask(uid, str(subtask))
+                t = SDPTask(str(subtask))
                 t.set_param("data_in", ingest_rcal_data)  # Shared by all these tasks; needs not to be copied every time
                 # TODO - replace "buffersize" as task field. Should be a 'data object' whose movement is modelled separately
                 t.set_param("memsize", performance_dict[hpso][subtask]['cache'])
@@ -423,7 +438,7 @@ class Scheduler:
         tasks_to_be_scheduled = set()
         for task in task_list:
             tasks_to_be_scheduled.add(task)
-            if task.t_fixed is not None:
+            if hasattr(task, "t_fixed"):
                 required_FLOPs = task.flopcount / task.t_fixed
                 if (task.flopcount / task.t_fixed) > sdp_flops:
                     raise AssertionError("Task %d (%s) requires %g PetaFLOP/s. SDP capacity of %g PetaFLOPS is insufficient!"
@@ -494,7 +509,7 @@ class Scheduler:
                 # Hence, we can schedule it.
 
                 flops_assigned_to_task = 0
-                if (task.t_fixed is not None):
+                if hasattr(task, "t_fixed"):
                     flops_assigned_to_task = task.flopcount / task.t_fixed
                 else:
                     flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, wall_clock, value_max=sdp_flops)
