@@ -233,71 +233,71 @@ class HPSOs:
 
     hpso13Ingest  = 'hpso13Ingest'
     hpso13RCAL    = 'hpso13RCAL'
-    hpso13ICAL    = '13ICAL'
-    hpso13DPrepA  = '13DPrepA'
-    hpso13DPrepB  = '13DPrepB'
-    hpso13DPrepC  = '13DPrepC'
+    hpso13ICAL    = 'hpso13ICAL'
+    hpso13DPrepA  = 'hpso13DPrepA'
+    hpso13DPrepB  = 'hpso13DPrepB'
+    hpso13DPrepC  = 'hpso13DPrepC'
 
     hpso14Ingest  = 'hpso14Ingest'
     hpso14RCAL    = 'hpso14RCAL'
-    hpso14ICAL    = '14ICAL'
-    hpso14DPrepA  = '14DPrepA'
-    hpso14DPrepB  = '14DPrepB'
-    hpso14DPrepC  = '14DPrepC'
+    hpso14ICAL    = 'hpso14ICAL'
+    hpso14DPrepA  = 'hpso14DPrepA'
+    hpso14DPrepB  = 'hpso14DPrepB'
+    hpso14DPrepC  = 'hpso14DPrepC'
 
     hpso15Ingest  = 'hpso15Ingest'
     hpso15RCAL    = 'hpso15RCAL'
-    hpso15ICAL    = '15ICAL'
-    hpso15DPrepA  = '15DPrepA'
-    hpso15DPrepB  = '15DPrepB'
-    hpso15DPrepC  = '15DPrepC'
+    hpso15ICAL    = 'hpso15ICAL'
+    hpso15DPrepA  = 'hpso15DPrepA'
+    hpso15DPrepB  = 'hpso15DPrepB'
+    hpso15DPrepC  = 'hpso15DPrepC'
 
     hpso22Ingest  = 'hpso22Ingest'
     hpso22RCAL    = 'hpso22RCAL'
-    hpso22ICAL    = '22ICAL'
-    hpso22DPrepA  = '22DPrepA'
-    hpso22DPrepB  = '22DPrepB'
+    hpso22ICAL    = 'hpso22ICAL'
+    hpso22DPrepA  = 'hpso22DPrepA'
+    hpso22DPrepB  = 'hpso22DPrepB'
 
     hpso27Ingest  = 'hpso27Ingest'
     hpso27RCAL    = 'hpso27RCAL'
-    hpso27ICAL    = '27ICAL'
-    hpso27DPrepA  = '27DPrepA'
-    hpso27DPrepB  = '27DPrepB'
+    hpso27ICAL    = 'hpso27ICAL'
+    hpso27DPrepA  = 'hpso27DPrepA'
+    hpso27DPrepB  = 'hpso27DPrepB'
 
     hpso32Ingest  = 'hpso32Ingest'
     hpso32RCAL    = 'hpso32RCAL'
-    hpso32ICAL    = '32ICAL'
-    hpso32DPrepB  = '32DPrepB'
+    hpso32ICAL    = 'hpso32ICAL'
+    hpso32DPrepB  = 'hpso32DPrepB'
 
     hpso37aIngest = 'hpso37aIngest'
     hpso37aRCAL   = 'hpso37aRCAL'
-    hpso37aICAL   = '37aICAL'
-    hpso37aDPrepA = '37aDPrepA'
-    hpso37aDPrepB = '37aDPrepB'
-  
+    hpso37aICAL   = 'hpso37aICAL'
+    hpso37aDPrepA = 'hpso37aDPrepA'
+    hpso37aDPrepB = 'hpso37aDPrepB'
+
     hpso37bIngest = 'hpso37bIngest'
     hpso37bRCAL   = 'hpso37bRCAL'
-    hpso37bICAL   = '37bICAL'
-    hpso37bDPrepA = '37bDPrepA'
-    hpso37bDPrepB = '37bDPrepB'
+    hpso37bICAL   = 'hpso37bICAL'
+    hpso37bDPrepA = 'hpso37bDPrepA'
+    hpso37bDPrepB = 'hpso37bDPrepB'
 
     hpso37cIngest = 'hpso37cIngest'
     hpso37cRCAL   = 'hpso37cRCAL'
-    hpso37cICAL   = '37cICAL'
-    hpso37cDPrepA = '37cDPrepA'
-    hpso37cDPrepB = '37cDPrepB'
+    hpso37cICAL   = 'hpso37cICAL'
+    hpso37cDPrepA = 'hpso37cDPrepA'
+    hpso37cDPrepB = 'hpso37cDPrepB'
 
     hpso38aIngest = 'hpso38aIngest'
     hpso38aRCAL   = 'hpso38aRCAL'
-    hpso38aICAL   = '38aICAL'
-    hpso38aDPrepA = '38aDPrepA'
-    hpso38aDPrepB = '38aDPrepB'
+    hpso38aICAL   = 'hpso38aICAL'
+    hpso38aDPrepA = 'hpso38aDPrepA'
+    hpso38aDPrepB = 'hpso38aDPrepB'
 
     hpso38bIngest = 'hpso38bIngest'
     hpso38bRCAL   = 'hpso38bRCAL'
-    hpso38bICAL   = '38bICAL'
-    hpso38bDPrepA = '38bDPrepA'
-    hpso38bDPrepB = '38bDPrepB'
+    hpso38bICAL   = 'hpso38bICAL'
+    hpso38bDPrepA = 'hpso38bDPrepA'
+    hpso38bDPrepB = 'hpso38bDPrepB'
 
     # Map each HPSO to its subtasks
     hpso_subtasks = {
@@ -350,7 +350,7 @@ class HPSOs:
                         hpso14DPrepC, hpso15DPrepC, hpso_maxLowS_DprepC, hpso_maxMidS_DprepC, hpso_maxBand5S_DprepC}
 
     dprep_subtasks = set.union(dprepA_subtasks, dprepA_Image_subtasks, dprepB_subtasks, dprepC_subtasks)
-                        
+
     all_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks, dprep_subtasks)  #TODO: add fast_img
 
     # Assert that we didn't forget to group subtasks to the relevant type
