@@ -46,7 +46,7 @@ class DataLocations:
                        (cold_buffer, hot_buffer)    : 0.5,
                        (hot_buffer, working_mem)    : 5.0,
                        (working_mem, hot_buffer)    : 5.0,
-                       (hot_buffer, preserve)       : 0.5,
+                       (hot_buffer, preserve)       : 0.012,
                        None                         : 0.0}
 
 class SDPTask:
@@ -69,8 +69,8 @@ class SDPTask:
     """
     class_uid_generator = 0  # Class variable for creating unique IDs
 
-    def __init__(self, datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, description="",
-                 purge_data=0):
+    def __init__(self, datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, preq_tasks=set(),
+                 purge_data=0, description=""):
         """
         :param datapath_in: (source, destination) tuple defining how the task receives its input data
         :param datapath_out: (source, destination) tuple defining how the task sends its output data
@@ -83,6 +83,10 @@ class SDPTask:
         """
         assert datapath_in in DataLocations.datapath_speeds
         assert datapath_out in DataLocations.datapath_speeds
+        if datapath_in is None:
+            assert datasize_in == 0
+        if datapath_out is None:
+            assert datasize_out == 0
 
         SDPTask.class_uid_generator += 1
         self.uid = SDPTask.class_uid_generator
@@ -94,7 +98,7 @@ class SDPTask:
         self.flopcount = flopcount
         self.description = description
         self.purge_data = purge_data
-        self.preq_tasks = set()  # Prerequisite tasks that needs to complete before this one can start
+        self.preq_tasks = set().union(preq_tasks)  # Prerequisite tasks that needs to complete before this one can start
 
     def __hash__(self):
         return hash(self.uid)  # Required for using Task objects in sets.
@@ -266,36 +270,43 @@ class Scheduler:
                        performance_dict[hpso][hpso_subtasks[1]]['cache'])
             flopcount = performance_dict[hpso]['Tobs'] * (performance_dict[hpso][hpso_subtasks[0]]['compRate'] +
                                                           performance_dict[hpso][hpso_subtasks[1]]['compRate'])
-
-            t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, 'Ingest+RCal')
-            t.set_param("t_fixed", t_fixed)
+            preq_task = set()
             if prev_ingest_task is not None:
-                t.preq_tasks.add(prev_ingest_task)  # previous ingest task needs to be complete before this one can start
+                preq_task = {prev_ingest_task}  # previous ingest task needs to be complete before this one can start
+
+            t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, preq_tasks=preq_task
+                        , description='Ingest+RCal')
+            t.set_param("t_fixed", t_fixed)
             prev_ingest_task = t  # current (ingest+rcal) task remembered; subtasks may only start once this completes
             tasks.append(t)
 
             # -----------------------------
-            # Create a data transfer task to get the data from cold to the hot buffer
+            # Creates transfer task to get the data from cold to the hot buffer, purging it in the cold buffer
             # -----------------------------
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
             datapath_out = (DataLocations.cold_buffer, DataLocations.hot_buffer)
-            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, 'Transfer cold-hot',
-                        purge_data=datasize_out)
+            preq_task = {prev_ingest_task}
+            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=preq_task,
+                        purge_data=datasize_out, description='Transfer cold-hot')
             hotbuffer_data_size = datasize_out
-            t.preq_tasks.add(prev_ingest_task)
             prev_transfer_task = t
-            prev_ical_task = None
             tasks.append(t)
 
             # -----------------------------
-            # We assume transfer from hot buffer to RAM is essentially without any delay (hence no task).
+            # We assume transfer from hot buffer to RAM is essentially without any delay (hence no transfer task).
             # In fact it is limited to 5 TB/s, but not clear how much data needs to be copied. Maybe not much.
+            # Or maybe all of the hot buffer content, but not all at once before the processing can start, so it is
+            # hard to know at what rate it will need to be copied. Is it used linearly as the process runs, and hence
+            # a funtion of the execution time, which in turn depends on the amount of allocated FLOPS? Much work to be
+            # done here to figure it out.
+            # TODO: Investigate how this works.
             # -----------------------------
 
             # -----------------------------
-            # Now handle the ICal and DPrep subtasks (if there are any)
+            # Now handle the ICal subtask (if there is any) and DPrep subtasks (if there are any)
             # -----------------------------
+            ical_task = None
             ical_dprep_tasks = set()
 
             for i in range(2, nr_subtasks):
@@ -307,16 +318,17 @@ class Scheduler:
                 flopcount = performance_dict[hpso]['Tobs'] * performance_dict[hpso][subtask]['compRate']
                 datasize_in   = memsize  # TODO: is this correct? No idea.
                 datasize_out  = memsize  # TODO: Replace by ICal & Dprep output data sizes (when we know what it is)
-                t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, str(subtask))
+                t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
+                            description=str(subtask))
                 hotbuffer_data_size += datasize_out
 
                 if i == 2:
                     assert subtask in HPSOs.ical_subtasks  # Assumed that this is an ical subtask
                     t.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
-                    prev_ical_task = t  # Remember this task, as DPrep tasks depend on it
+                    ical_task = t  # Remember this task, as DPrep tasks depend on it
                 elif subtask in HPSOs.dprep_subtasks:
-                    assert prev_ical_task is not None
-                    t.preq_tasks.add(prev_ical_task)
+                    assert ical_task is not None
+                    t.preq_tasks.add(ical_task)
                 else:
                     raise Exception("Unknown subtask type!")
 
@@ -324,15 +336,14 @@ class Scheduler:
                 tasks.append(t)
 
             # -----------------------------
-            # A last transfer task to flush out the results to preservation, and we're done
+            # A last task to flush out the results to Preservation, and then we're done
             # -----------------------------
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
             datapath_out = (DataLocations.hot_buffer, DataLocations.preserve)
             datasize_out = 0  # TODO: Replace by Image preservation data size when known
-            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, 'Transfer hot-preserve',
-                        purge_data=hotbuffer_data_size)
-            t.preq_tasks = t.preq_tasks.union(ical_dprep_tasks)
+            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=ical_dprep_tasks,
+                        purge_data=hotbuffer_data_size, description='Transfer hot-preserve')
             tasks.append(t)
 
         self.task_list = tasks
@@ -477,8 +488,8 @@ class Scheduler:
             else:
                 deltas_history[t_end] = -delta
 
-    def schedule(self, sdp_flops, assign_sdp_fraction=0.5, minimum_flops=1.0, max_nr_iterations=9999,
-                 epsilon=Definitions.epsilon):
+    def schedule(self, sdp_flops, assign_sdp_fraction=0.5, assign_bandwidth_fraction=0.8, minimum_flops=1.0,
+                 max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
         :param sdp_flops
         :param assign_sdp_fraction fraction of the available FLOPS assigned to a task that has no fixed completion time
@@ -517,6 +528,20 @@ class Scheduler:
         mem_hot_pipe_delta      = {0: 0}
         hot_preserve_pipe_delta = {0: 0}
 
+        datalocation_to_deltas_map = {DataLocations.cold_buffer : cold_buffer_deltas,
+                                      DataLocations.hot_buffer : hot_buffer_deltas,
+                                      DataLocations.preserve : preserve_deltas,
+                                      DataLocations.working_mem : memory_deltas}
+
+
+        datapath_to_deltas_map = {(DataLocations.ingest_buffer, DataLocations.working_mem) : ingest_pipe_deltas,
+                              (DataLocations.working_mem, DataLocations.cold_buffer): ingest_cold_pipe_deltas,
+                              (DataLocations.cold_buffer, DataLocations.hot_buffer): cold_hot_pipe_deltas,
+                              (DataLocations.hot_buffer, DataLocations.working_mem): hot_mem_pipe_delta,
+                              (DataLocations.working_mem, DataLocations.hot_buffer): mem_hot_pipe_delta,
+                              (DataLocations.hot_buffer, DataLocations.preserve): hot_preserve_pipe_delta,
+                                None : None}
+
         # Next, iteratively run through all tasks, scheduling them as we go along (whenever it becomes possible).
         # Repeat until all tasks are scheduled
         nr_iterations = 0
@@ -527,13 +552,12 @@ class Scheduler:
 
         while len(task_completion_times) < len(tasks_to_be_scheduled):
             nr_iterations += 1
-            print("-= Starting iteration %d =-" % nr_iterations)
-            nr_tasks_scheduled_this_iteration = 0
-
             if nr_iterations > max_nr_iterations:
                 print("Warning: Maximum number of iterations exceeded; aborting!")
                 warnings.warn('Maximum number of iterations exceeded; aborting!')
                 break
+            print("-= Starting iteration %d =-" % nr_iterations)
+            nr_tasks_scheduled_this_iteration = 0
 
             for task in tasks_to_be_scheduled:
                 assert isinstance(task, SDPTask)
@@ -574,6 +598,7 @@ class Scheduler:
                 #    (wall clock) point in time.
                 # Hence, we can schedule it.
 
+                # First, we have to assign FLOPS to the task
                 flops_assigned_to_task = 0
                 if hasattr(task, "t_fixed"):
                     flops_assigned_to_task = task.flopcount / task.t_fixed
@@ -581,25 +606,68 @@ class Scheduler:
                     flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, wall_clock, value_max=sdp_flops)
                     flops_assigned_to_task = max(minimum_flops, flops_available * assign_sdp_fraction)
 
-                start_time = Scheduler.find_suitable_time(flops_deltas, wall_clock,
+                # Determine the task's start and end times and assign bandwidth for the incoming and outgoing data
+                # TODO: may need to be done interatively / recursively to make sure that these are mutually compatible
+                bandwidth_in_full  = DataLocations.datapath_speeds[task.datapath_in]
+                bandwidth_out_full = DataLocations.datapath_speeds[task.datapath_out]
+                datapath_deltas_in  = datapath_to_deltas_map[task.datapath_in]
+                datapath_deltas_out = datapath_to_deltas_map[task.datapath_out]
+
+                bandwidth_in_available = bandwidth_in_full - Scheduler.sum_deltas(datapath_deltas_in, wall_clock,
+                                                                                  value_max=bandwidth_in_full)
+                bandwidth_in_assigned = bandwidth_in_available * assign_bandwidth_fraction
+
+                dt_transfer_in = 0
+                if task.datasize_in > 0:
+                    dt_transfer_in = task.datasize_in / bandwidth_in_assigned
+
+                dt_compute = 0
+                if task.flopcount > 0:
+                    dt_compute = task.flopcount / flops_assigned_to_task
+
+                start_time = Scheduler.find_suitable_time(flops_deltas, (wall_clock + dt_transfer_in),
                                                           value_max=(sdp_flops - flops_assigned_to_task), eps=epsilon)
-                t_start = start_time
-                t_end = start_time + (task.flopcount / flops_assigned_to_task)
 
-                task.set_param("t_start", t_start)
-                task.set_param("t_end", t_end)
+                t_transfer_in_start = start_time - dt_transfer_in
+                # TODO - may need to recursively check that the available bandwidth is still the same at the actual
+                # transfer start time (which differs from the wall clock) time first used. Not doing this for now.
+                t_process_start = start_time
 
-                Scheduler.add_delta(flops_deltas, flops_assigned_to_task, t_start, t_end, value_min=0,
+                t_process_end = start_time + dt_compute
+
+                bandwidth_out_available = bandwidth_out_full - Scheduler.sum_deltas(datapath_deltas_out, t_process_end,
+                                                                                    value_max=bandwidth_out_full)
+                bandwidth_out_assigned = bandwidth_out_available * assign_bandwidth_fraction
+
+                dt_transfer_out = 0
+                if task.datasize_out > 0:
+                    dt_transfer_out = task.datasize_out / bandwidth_out_assigned
+                t_transfer_out_end = t_process_end + dt_transfer_out
+
+                task.set_param("t_start", t_transfer_in_start)
+                task.set_param("t_end", t_transfer_out_end)
+
+                Scheduler.add_delta(flops_deltas, flops_assigned_to_task, t_process_start, t_process_end, value_min=0,
                                     value_max=sdp_flops)
+                Scheduler.add_delta(memory_deltas, task.memsize, t_transfer_in_start, t_transfer_out_end, value_min=0)
+                Scheduler.add_delta(datapath_deltas_in, bandwidth_in_assigned, t_transfer_in_start, t_process_start,
+                                    value_min=0, value_max=bandwidth_in_full)
+                Scheduler.add_delta(datapath_deltas_out, bandwidth_out_assigned, t_process_end, t_transfer_out_end,
+                                    value_min=0, value_max=bandwidth_out_full)
 
-                Scheduler.add_delta(memory_deltas, task.memsize, t_start, t_end, value_min=0)
-                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
-                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
-                # add_delta(flops_deltas, flops_required, t_start, t_end, value_min=0, value_max=sdp_flops)
+                # Write data to the target (preallocate full data size at start of write)
+                deltas = datalocation_to_deltas_map[task.datapath_out[1]]
+                Scheduler.add_delta(deltas, task.datasize_out, t_process_end, value_min=0)
+
+                # Purge Data at the end of the whole thing, if so specified
+                if task.purge_data > 0:
+                    print("Purging %g from %s" % (task.purge_data, task.datapath_out[0]))  # TODO remove
+                    deltas = datalocation_to_deltas_map[task.datapath_out[0]]
+                    Scheduler.add_delta(deltas, -task.purge_data, t_transfer_out_end, value_min=0)
 
                 # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
-                task_completion_times[task] = t_end
-                print('* Scheduled Task %d at wall clock time %g sec. Ends at t=%g sec. ' % (task.uid, t_start, t_end))
+                task_completion_times[task] = t_transfer_out_end
+                print('* Scheduled Task %d at wall clock time %g sec. Ends at t=%g sec. ' % (task.uid, t_process_start, t_process_end))
                 nr_tasks_scheduled_this_iteration += 1
 
             print('Number of scheduled tasks after %d iterations is %d out of %d' % (
