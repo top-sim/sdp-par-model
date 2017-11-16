@@ -83,7 +83,7 @@ class SDPTask:
     """
     class_uid_generator = 0  # Class variable for creating unique IDs
 
-    def __init__(self, datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, t_fixed=False,
+    def __init__(self, datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, dt_fixed=False,
                  preq_tasks=set(), streaming_in=False, streaming_out=False, purge_data=0, description=""):
         """
         :param datapath_in: (source, destination) tuple defining how the task receives its input data
@@ -92,7 +92,7 @@ class SDPTask:
         :param datasize_out: Data volume, in TB
         :param memsize: The amount of working memory required by this task
         :param flopcount: The number of floating point operations required by this task
-        :param t_fixed: If a numeric value, specifies a fixed amount of seconds during which this task must complete.
+        :param dt_fixed: If a numeric value, specifies a fixed amount of seconds during which this task must complete.
         :param preq_tasks: A collection of tasks that must complete before this task can start
         :param streaming_in: True iff the task can stream its input data instead of reading everything first
         :param streaming_out: True iff the task can stream its output data instead of writing everything first
@@ -106,6 +106,10 @@ class SDPTask:
         if datapath_out is None:
             assert datasize_out == 0
 
+        if dt_fixed:
+            # Not compulsory but something we assume; we need to update Scheduler.schedule() code if not always true
+            assert (streaming_in and streaming_out)
+
         SDPTask.class_uid_generator += 1
         self.uid = SDPTask.class_uid_generator
         self.datapath_in = datapath_in
@@ -114,7 +118,7 @@ class SDPTask:
         self.datasize_out = datasize_out
         self.memsize = memsize
         self.flopcount = flopcount
-        self.t_fixed = t_fixed
+        self.dt_fixed = dt_fixed
         self.preq_tasks = set().union(preq_tasks)  # Prerequisite tasks that needs to complete before this one can start
         self.streaming_in = streaming_in
         self.streaming_out = streaming_out
@@ -284,7 +288,7 @@ class Scheduler:
             # -----------------------------
             datapath_in  = (SDPAttributes.ingest_buffer, SDPAttributes.working_mem)
             datapath_out = (SDPAttributes.working_mem, SDPAttributes.cold_buffer)
-            t_observe = performance_dict[hpso]['Tobs']
+            dt_observe = performance_dict[hpso]['Tobs']
             datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_subtasks[0]]['ingestRate']
             datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
 
@@ -296,7 +300,7 @@ class Scheduler:
             if prev_ingest_task is not None:
                 preq_task = {prev_ingest_task}  # previous ingest task needs to be complete before this one can start
 
-            t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, t_fixed=t_observe,
+            t = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, dt_fixed=dt_observe,
                         streaming_in=True, streaming_out=True, preq_tasks=preq_task, description='Ingest+RCal')
             prev_ingest_task = t  # current (ingest+rcal) task remembered; subtasks may only start once this completes
             tasks.append(t)
@@ -525,18 +529,22 @@ class Scheduler:
         for task in self.task_list:
             assert isinstance(task, SDPTask)
             tasks_to_be_scheduled.add(task)
-            if task.t_fixed:
-                minimum_read_time = 0
-                if task.datapath_in is not None:
+            if task.dt_fixed:
+                if task.datapath_in is None:
+                    minimum_read_time = 0
+                else:
                     datapath_in_capacity = SDPAttributes.datapath_speeds[task.datapath_in]
                     minimum_read_time = task.datasize_in / datapath_in_capacity
 
                 minimum_compute_time = task.flopcount / sdp_flops
 
-                minimum_write_time = 0
-                if task.datapath_out is not None:
+                if task.datapath_out is None:
+                    minimum_write_time = 0
+                else:
                     datapath_out_capacity = SDPAttributes.datapath_speeds[task.datapath_out]
                     minimum_write_time = task.datasize_out / datapath_out_capacity
+
+                assert task.datapath_out is not None  # TODO: This assertion may be false (if so just remove this line)
 
                 minimum_task_time = minimum_compute_time
                 if task.streaming_in:
@@ -548,22 +556,24 @@ class Scheduler:
                 else:
                     minimum_task_time += minimum_write_time
 
-                if (minimum_task_time > task.t_fixed):
+                if (minimum_task_time > task.dt_fixed):
                     raise AssertionError("SDP has too little capacity to handle the following real-time task:\n%s"
                                          % str(task))
 
         print('SDP seems to have sufficient FLOPS and data streaming capacity to handle real-time tasks.')
 
         # Delta sequences for the resources being used at each *node* in the data path.
-        # allocation / deallocation are shown as (+/-) values
-        flops_deltas       = {0: 0}  # maps wall clock times to SDP FLOPS
-        memory_deltas      = {0: 0}  # maps wall clock times to SDP working memory (RAM)
-        hot_buffer_deltas  = {0: 0}  # maps wall clock times to hot buffer
-        cold_buffer_deltas = {0: 0}  # maps wall clock times to cold buffer
-        preserve_deltas    = {0: 0}  # maps wall clock times to long term preserve
+        # A delta sequence maps timestamps to numerical changes
+        # allocation / deallocation are designated by (+/-) values
+        flops_deltas       = {0: 0}
+        memory_deltas      = {0: 0}
+        hot_buffer_deltas  = {0: 0}
+        cold_buffer_deltas = {0: 0}
+        preserve_deltas    = {0: 0}
 
         # Delta sequences for the resources used along each *edge* of the data path
-        # allocation / deallocation are shown as (+/-) values
+        # A delta sequence maps timestamps to numerical changes
+        # allocation / deallocation are designated by (+/-) values
         ingest_pipe_deltas      = {0: 0}
         ingest_cold_pipe_deltas = {0: 0}
         cold_hot_pipe_deltas    = {0: 0}
@@ -651,104 +661,147 @@ class Scheduler:
                 # b) does not have an unfinished prerequisite task preventing it from begin scheduled at this
                 #    (wall clock) point in time.
                 # Hence, we can schedule it, keeping track of the resources that are available and changed by the
-                # task's execution
+                # task's execution.
+                # All "_dt" values refer to time durations (in seconds), where "_t" refer to wall clock time (in sec)
                 # ------------------------
 
-                # Compute the input and output pipeline bandwidths avaialable and required by the task
+                # Obtain the relevant the input and output pipeline bandwidths, and their delta histories
                 bandwidth_in_full = SDPAttributes.datapath_speeds[task.datapath_in]
                 bandwidth_out_full = SDPAttributes.datapath_speeds[task.datapath_out]
-                # And collect the deltas belonging to these data paths
-                datapath_deltas_in = datapath_to_deltas_map[task.datapath_in]
-                datapath_deltas_out = datapath_to_deltas_map[task.datapath_out]
+                datapath_in_deltas = datapath_to_deltas_map[task.datapath_in]
+                datapath_out_deltas = datapath_to_deltas_map[task.datapath_out]
 
-                bandwidth_in_available = bandwidth_in_full - Scheduler.sum_deltas(datapath_deltas_in, wall_clock,
-                                                                                  value_max=bandwidth_in_full)
-                read_seq_dt = task.datasize_in / (bandwidth_in_available * assign_bandwidth_fraction)
+                if datapath_in_deltas is None:
+                    assert task.datapath_in == None
+                    assert task.datasize_in == 0
+                    bandwidth_in_available = 0
+                    read_dt = 0
+                else:
+                    bandwidth_in_available = bandwidth_in_full - Scheduler.sum_deltas(datapath_in_deltas, wall_clock,
+                                                                                      value_max=bandwidth_in_full)
+                    read_dt = task.datasize_in / (bandwidth_in_available * assign_bandwidth_fraction)
 
-                start_compute_dt = read_seq_dt
+                compute_dt = None
+                write_dt = None
+
+                start_read_t = wall_clock
+                start_compute_t = start_read_t + read_dt
+                start_write_t = None
+
                 if task.streaming_in:
-                    start_compute_dt = 0
+                    start_compute_t = start_read_t
 
-                flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, (wall_clock + start_compute_dt),
-                                                                   value_max=sdp_flops)
+                # The main constraint in starting this task may be that there aren't enough FLOPS available at current
+                # wallclock time. If so, we delay the start if the task's computation until enough FLOPS are free.
+                flops_assigned = minimum_flops
+                if task.dt_fixed:
+                    flops_assigned = task.flopcount / task.dt_fixed
+                delay = start_compute_t - Scheduler.find_suitable_time(flops_deltas, start_compute_t,
+                                                                       value_max=(sdp_flops - flops_assigned),
+                                                                       eps=epsilon)
+                if delay > 0:
+                    #TODO remove print statement
+                    print("Needed to delay task %d by %g sec due to resource availability" % (task.uid, delay))
+                    # We can now increase the amount of time taken reading the input, thereby lowering the demand
+                    # on the input pipeline
+                    read_dt += delay
+                    start_compute_t += delay
 
-                # Assign the timings that will be used, based on whether streaming is used.
-                read_dt = read_seq_dt
-                compute_dt  = task.flopcount / (flops_available * assign_flops_fraction)
-                if task.streaming_in:  # streaming input and computation happen simultaneously in this case
-                    compute_dt = max(compute_dt, read_dt)  # to accommodate the slowest of the two tasks
-                    read_dt    = compute_dt
+                # Now that FLOPS avalaibility has been confirmed we assume that there is enough of other
+                # (e.g. bandwidth) resources available for all tasks to happen at this chosen time point.
+                # If not, we have a scheduling problem which we don't yet have a solution for.
+                # TODO: check that the pipelines have enough capacity to handle the task with the current timeline
 
-                start_write_dt = start_compute_dt + compute_dt
-                if task.streaming_out:
-                    start_write_dt = start_compute_dt
+                flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, start_compute_t, value_max=sdp_flops)
+                assert flops_available >= flops_assigned
 
-                bandwidth_out_available = bandwidth_out_full - \
-                                          Scheduler.sum_deltas(datapath_deltas_out, (wall_clock + start_write_dt),
-                                                                                    value_max=bandwidth_out_full)
-                write_seq_dt = task.datasize_out / (bandwidth_out_available * assign_bandwidth_fraction)
-                write_dt = write_seq_dt
-                if task.streaming_out:
-                    write_dt   = max(compute_dt, write_seq_dt)
-                    compute_dt = write_dt
+                if task.dt_fixed:
+                    assert (task.streaming_in and task.streaming_out)  # Reading, computing and writing = simultaneous
+                    start_read_t = start_compute_t
+                    start_write_t = start_compute_t
+                    read_dt = task.dt_fixed
+                    compute_dt = task.dt_fixed
+                    write_dt = task.dt_fixed
+                else:
+                    # Assign the timings that will be used, based on whether streaming is used.
+                    compute_dt = task.flopcount / (flops_available * assign_flops_fraction)
 
-                # Now that we have the timings, we can assign the flops and bandwidths used
-                flops_used = task.flopcount / compute_dt
-                bandwidth_in_used = task.datasize_in / read_dt
-                bandwidth_out_used = task.datasize_out / write_dt
+                    if task.streaming_in:  # streaming input and computation happen simultaneously in this case
+                        compute_dt = max(compute_dt, read_dt)  # to accommodate the slowest of the two tasks
+                        read_dt = compute_dt
 
-                ## TODO -- update the "find suitable time" and rest of method below this line
+                    start_write_t = start_compute_t + compute_dt
+                    if task.streaming_out:
+                        start_write_t = start_compute_t
 
-                start_time = Scheduler.find_suitable_time(flops_deltas, (wall_clock + dt_transfer_in),
-                                                          value_max=(sdp_flops - flops_assigned_to_task), eps=epsilon)
+                    bandwidth_out_available = bandwidth_out_full - Scheduler.sum_deltas(datapath_out_deltas,
+                                                                                        start_write_t,
+                                                                                        value_max=bandwidth_out_full)
+                    write_dt = task.datasize_out / (bandwidth_out_available * assign_bandwidth_fraction)
+                    if task.streaming_out:
+                        write_dt   = max(compute_dt, write_dt)
+                        compute_dt = write_dt
+                        if task.streaming_in:
+                            read_dt = write_dt
 
-                t_transfer_in_start = start_time - dt_transfer_in
-                # TODO - may need to recursively check that the available bandwidth is still the same at the actual
-                # transfer start time (which differs from the wall clock) time first used. Not doing this for now.
-                t_process_start = start_time
+                task_completion_time = start_write_t + write_dt
+                task.set_param("t_end", task_completion_time)
 
-                t_process_end = start_time + dt_compute
+                # ---------------------------------------------------------------------------
+                # Now we have the timings for reading, computing and writing. All that remains is to add their effects
+                # to the relevant delta sequences
+                # ---------------------------------------------------------------------------
 
-                bandwidth_out_available = bandwidth_out_full - Scheduler.sum_deltas(datapath_deltas_out, t_process_end,
-                                                                                    value_max=bandwidth_out_full)
-                bandwidth_out_assigned = bandwidth_out_available * assign_bandwidth_fraction
 
-                dt_transfer_out = 0
-                if task.datasize_out > 0:
-                    dt_transfer_out = task.datasize_out / bandwidth_out_assigned
-                t_transfer_out_end = t_process_end + dt_transfer_out
+                # Assign the flops and bandwidths actually used (assuming they're constant during execution)
+                if read_dt == 0:
+                    assert task.datasize_in == 0
+                    bandwidth_in_used = 0
+                else:
+                    bandwidth_in_used = task.datasize_in / read_dt
 
-                task.set_param("t_start", t_transfer_in_start)
-                task.set_param("t_end", t_transfer_out_end)
+                if compute_dt == 0:
+                    assert task.flopcount == 0
+                    flops_used = 0
+                else:
+                    flops_used = task.flopcount / compute_dt
 
-                Scheduler.add_delta(flops_deltas, flops_assigned_to_task, t_process_start, t_process_end, value_min=0,
-                                    value_max=sdp_flops)
-                Scheduler.add_delta(memory_deltas, task.memsize, t_transfer_in_start, t_transfer_out_end, value_min=0)
-                Scheduler.add_delta(datapath_deltas_in, bandwidth_in_assigned, t_transfer_in_start, t_process_start,
-                                    value_min=0, value_max=bandwidth_in_full)
-                Scheduler.add_delta(datapath_deltas_out, bandwidth_out_assigned, t_process_end, t_transfer_out_end,
+                if write_dt == 0:
+                    assert task.datasize_out == 0
+                    bandwidth_out_used = 0
+                else:
+                    bandwidth_out_used = task.datasize_out / write_dt
+
+                Scheduler.add_delta(memory_deltas, task.memsize, start_read_t, task_completion_time, value_min=0)
+                if datapath_in_deltas is not None:
+                    Scheduler.add_delta(datapath_in_deltas, bandwidth_in_used, start_read_t, (start_read_t + read_dt),
+                                        value_min=0, value_max=bandwidth_in_full)
+                Scheduler.add_delta(flops_deltas, flops_used, start_compute_t, (start_compute_t + compute_dt),
+                                    value_min=0, value_max=sdp_flops)
+                Scheduler.add_delta(datapath_out_deltas, bandwidth_out_used, start_write_t, task_completion_time,
                                     value_min=0, value_max=bandwidth_out_full)
 
-                # Write data to the target (preallocate full data size at start of write)
+                # Assign delta to the data target (preallocate full data size at start of write)
                 deltas = datalocation_to_deltas_map[task.datapath_out[1]]
-                Scheduler.add_delta(deltas, task.datasize_out, t_process_end, value_min=0)
+                Scheduler.add_delta(deltas, task.datasize_out, start_write_t, value_min=0)
 
                 # Purge Data at the end of the whole thing, if so specified
                 if task.purge_data > 0:
                     print("Purging %g from %s" % (task.purge_data, task.datapath_out[0]))  # TODO remove
                     deltas = datalocation_to_deltas_map[task.datapath_out[0]]
-                    Scheduler.add_delta(deltas, -task.purge_data, t_transfer_out_end, value_min=0)
+                    Scheduler.add_delta(deltas, -task.purge_data, task_completion_time, value_min=0)
 
                 # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
-                task_completion_times[task] = t_transfer_out_end
-                print('* Scheduled Task %d at wall clock time %g sec. Ends at t=%g sec. ' % (task.uid, t_process_start, t_process_end))
+                task_completion_times[task] = task_completion_time
+                print('* Scheduled Task %d at wall clock = %g sec. Ends at t=%g sec. ' %
+                      (task.uid, start_read_t, task_completion_time))
                 nr_tasks_scheduled_this_iteration += 1
 
-            print('Number of scheduled tasks after %d iterations is %d out of %d' % (
-            nr_iterations, len(task_completion_times),
-            len(tasks_to_be_scheduled)))
+            print('Number of scheduled tasks after %d iterations is %d out of %d' % (nr_iterations,
+                                                                                     len(task_completion_times),
+                                                                                     len(tasks_to_be_scheduled)))
 
-            if (nr_tasks_scheduled_this_iteration == 0):
+            if nr_tasks_scheduled_this_iteration == 0:
                 if wall_clock_advance:
                     print("-> Advancing wall clock to %g sec." % wall_clock_advance)
                     wall_clock = wall_clock_advance
@@ -758,11 +811,11 @@ class Scheduler:
 
         print('Done!')
 
-        self.cold_buffer_deltas = cold_buffer_deltas
         self.flops_deltas = flops_deltas
         self.memory_deltas = memory_deltas
-        self.preserve_deltas = preserve_deltas
+        self.cold_buffer_deltas = cold_buffer_deltas
         self.hot_buffer_deltas = hot_buffer_deltas
+        self.preserve_deltas = preserve_deltas
         self.tasks_to_timestamps = task_completion_times
 
         self.ingest_pipe_deltas = ingest_pipe_deltas
