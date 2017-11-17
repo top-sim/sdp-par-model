@@ -44,7 +44,10 @@ class Definitions:
                   ('Total Compute Rate',       'PetaFLOP/s', True, True,  lambda tp: tp.Rflop/c.peta,      )]
 
 
-class SDPAttributes:
+class SDPAttr:
+    """
+    Lists attributes of the SDP; used for lookup
+    """
     ingest_buffer = "ingestbuffer"
     working_mem   = "working_mem"
     cold_buffer   = "coldbuffer"
@@ -99,8 +102,8 @@ class SDPTask:
         :param purge_data: The amount of memory which should be deallocated from the datapath_out source
         :param description: Optional description
         """
-        assert datapath_in in SDPAttributes.datapath_speeds
-        assert datapath_out in SDPAttributes.datapath_speeds
+        assert datapath_in in SDPAttr.datapath_speeds
+        assert datapath_out in SDPAttr.datapath_speeds
         if datapath_in is None:
             assert datasize_in == 0
         if datapath_out is None:
@@ -191,20 +194,40 @@ class SDPTask:
 
         exec('self.%s = value' % param_name)  # Write the value
 
-class Scheduler:
-    # TODO : it would be better to logically split the Schedule, Scheduler and simulated SDP into separate classes.
-
+class SDPSchedule:
+    """
+    Represents an SDP Schedule
+    """
     def __init__(self):
         self.task_list = []
 
-        self.flops_deltas = {0: 0}  # maps wall clock times to SDP FLOPS allocation / deallocation (+/-) sizes
-        self.memory_deltas = {0: 0}  # maps wall clock times to SDP working memory (RAM) allocation / deallocation (+/-) sizes
-        self.hot_buffer_deltas = {0: 0}  # maps wall clock times to hot buffer allocation / deallocation (+/-) sizes
-        self.cold_buffer_deltas = {0: 0}  # maps wall clock times to cold buffer allocation / deallocation (+/-) sizes
-        self.preserve_deltas = {0: 0}  # maps wall clock times to long term preserve allocation sizes (presumably only +)
-        self.tasks_to_timestamps = {}  # Maps tasks to completion times
-        self.timestamps_to_tasks = {}  # Maps completion times to tasks lists
+        self.task_completion_times = {}  # Maps tasks to completion times
+        # self.timestamps_to_tasks = {}  # Maps completion times to tasks lists  #TODO Not needed; remove.
 
+        # Delta sequences for the resources being used at each *node* in the data path.
+        # A delta sequence maps timestamps to numerical changes
+        # allocation / deallocation are designated by (+/-) values
+        self.flops_deltas       = {0: 0}
+        self.memory_deltas      = {0: 0}
+        self.hot_buffer_deltas  = {0: 0}
+        self.cold_buffer_deltas = {0: 0}
+        self.preserve_deltas    = {0: 0}
+
+        # Delta sequences for the resources used along each *edge* of the data path
+        # A delta sequence maps timestamps to numerical changes
+        # allocation / deallocation are designated by (+/-) values
+        self.ingest_pipe_deltas      = {0: 0}
+        self.ingest_cold_pipe_deltas = {0: 0}
+        self.cold_hot_pipe_deltas    = {0: 0}
+        self.hot_mem_pipe_delta      = {0: 0}
+        self.mem_hot_pipe_delta      = {0: 0}
+        self.hot_preserve_pipe_delta = {0: 0}
+
+
+class Scheduler:
+    # TODO : it may be better to logically split the Scheduler and 'SDP Simulation' into separate classes.
+
+    def __init__(self):
         self.performance_dict = None
 
     def set_performance_dictionary(self, performance_dictionary):
@@ -286,8 +309,8 @@ class Scheduler:
             # -----------------------------
             # Ingest and Rcal cannot be separated; combined into a a single task object
             # -----------------------------
-            datapath_in  = (SDPAttributes.ingest_buffer, SDPAttributes.working_mem)
-            datapath_out = (SDPAttributes.working_mem, SDPAttributes.cold_buffer)
+            datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
+            datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
             dt_observe = performance_dict[hpso]['Tobs']
             datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_subtasks[0]]['ingestRate']
             datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
@@ -310,7 +333,7 @@ class Scheduler:
             # -----------------------------
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
-            datapath_out = (SDPAttributes.cold_buffer, SDPAttributes.hot_buffer)
+            datapath_out = (SDPAttr.cold_buffer, SDPAttr.hot_buffer)
             preq_task = {prev_ingest_task}
             t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=preq_task,
                         purge_data=datasize_out, description='Transfer cold-hot')
@@ -337,8 +360,8 @@ class Scheduler:
             for i in range(2, nr_subtasks):
                 subtask = hpso_subtasks[i]
 
-                datapath_in  = (SDPAttributes.hot_buffer, SDPAttributes.working_mem)
-                datapath_out = (SDPAttributes.working_mem, SDPAttributes.hot_buffer)
+                datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
+                datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
                 memsize   = performance_dict[hpso][subtask]['cache']
                 flopcount = performance_dict[hpso]['Tobs'] * performance_dict[hpso][subtask]['compRate']
                 datasize_in   = memsize  # TODO: is this correct? No idea.
@@ -365,13 +388,12 @@ class Scheduler:
             # -----------------------------
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
-            datapath_out = (SDPAttributes.hot_buffer, SDPAttributes.preserve)
+            datapath_out = (SDPAttr.hot_buffer, SDPAttr.preserve)
             datasize_out = 0  # TODO: Replace by Image preservation data size when known
             t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=ical_dprep_tasks,
                         purge_data=hotbuffer_data_size, description='Transfer hot-preserve')
             tasks.append(t)
 
-        self.task_list = tasks
         return tasks
 
     @staticmethod
@@ -513,9 +535,10 @@ class Scheduler:
             else:
                 deltas_history[t_end] = -delta
 
-    def schedule(self, sdp_flops=SDPAttributes.sdp_flops, assign_flops_fraction=0.5, assign_bandwidth_fraction=0.8,
-                 minimum_flops=1.0, max_nr_iterations=9999, epsilon=Definitions.epsilon):
+    def schedule(self, task_list, sdp_flops=SDPAttr.sdp_flops, assign_flops_fraction=0.5,
+                 assign_bandwidth_fraction=0.8, minimum_flops=1.0, max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
+        :param task_list an iterable collection of SDPTask objects that need to be scheduled
         :param sdp_flops
         :param assign_flops_fraction fraction of the available FLOPS assigned to a task that has no fixed completion time
         :param assign_bandwidth_fraction
@@ -526,14 +549,14 @@ class Scheduler:
 
         # First, assert that the SDP has enough capability to handle all of the tasks. Raise exception if not.
         tasks_to_be_scheduled = set()
-        for task in self.task_list:
+        for task in task_list:
             assert isinstance(task, SDPTask)
             tasks_to_be_scheduled.add(task)
             if task.dt_fixed:
                 if task.datapath_in is None:
                     minimum_read_time = 0
                 else:
-                    datapath_in_capacity = SDPAttributes.datapath_speeds[task.datapath_in]
+                    datapath_in_capacity = SDPAttr.datapath_speeds[task.datapath_in]
                     minimum_read_time = task.datasize_in / datapath_in_capacity
 
                 minimum_compute_time = task.flopcount / sdp_flops
@@ -541,7 +564,7 @@ class Scheduler:
                 if task.datapath_out is None:
                     minimum_write_time = 0
                 else:
-                    datapath_out_capacity = SDPAttributes.datapath_speeds[task.datapath_out]
+                    datapath_out_capacity = SDPAttr.datapath_speeds[task.datapath_out]
                     minimum_write_time = task.datasize_out / datapath_out_capacity
 
                 assert task.datapath_out is not None  # TODO: This assertion may be false (if so just remove this line)
@@ -561,38 +584,19 @@ class Scheduler:
                                          % str(task))
 
         print('SDP seems to have sufficient FLOPS and data streaming capacity to handle real-time tasks.')
+        schedule = SDPSchedule()
 
-        # Delta sequences for the resources being used at each *node* in the data path.
-        # A delta sequence maps timestamps to numerical changes
-        # allocation / deallocation are designated by (+/-) values
-        flops_deltas       = {0: 0}
-        memory_deltas      = {0: 0}
-        hot_buffer_deltas  = {0: 0}
-        cold_buffer_deltas = {0: 0}
-        preserve_deltas    = {0: 0}
+        datalocation_to_deltas_map = {SDPAttr.cold_buffer : schedule.cold_buffer_deltas,
+                                      SDPAttr.hot_buffer  : schedule.hot_buffer_deltas,
+                                      SDPAttr.preserve    : schedule.preserve_deltas,
+                                      SDPAttr.working_mem : schedule.memory_deltas}
 
-        # Delta sequences for the resources used along each *edge* of the data path
-        # A delta sequence maps timestamps to numerical changes
-        # allocation / deallocation are designated by (+/-) values
-        ingest_pipe_deltas      = {0: 0}
-        ingest_cold_pipe_deltas = {0: 0}
-        cold_hot_pipe_deltas    = {0: 0}
-        hot_mem_pipe_delta      = {0: 0}
-        mem_hot_pipe_delta      = {0: 0}
-        hot_preserve_pipe_delta = {0: 0}
-
-        datalocation_to_deltas_map = {SDPAttributes.cold_buffer : cold_buffer_deltas,
-                                      SDPAttributes.hot_buffer : hot_buffer_deltas,
-                                      SDPAttributes.preserve : preserve_deltas,
-                                      SDPAttributes.working_mem : memory_deltas}
-
-
-        datapath_to_deltas_map = {(SDPAttributes.ingest_buffer, SDPAttributes.working_mem) : ingest_pipe_deltas,
-                                  (SDPAttributes.working_mem, SDPAttributes.cold_buffer): ingest_cold_pipe_deltas,
-                                  (SDPAttributes.cold_buffer, SDPAttributes.hot_buffer): cold_hot_pipe_deltas,
-                                  (SDPAttributes.hot_buffer, SDPAttributes.working_mem): hot_mem_pipe_delta,
-                                  (SDPAttributes.working_mem, SDPAttributes.hot_buffer): mem_hot_pipe_delta,
-                                  (SDPAttributes.hot_buffer, SDPAttributes.preserve): hot_preserve_pipe_delta,
+        datapath_to_deltas_map = {(SDPAttr.ingest_buffer, SDPAttr.working_mem) : schedule.ingest_pipe_deltas,
+                                  (SDPAttr.working_mem, SDPAttr.cold_buffer)   : schedule.ingest_cold_pipe_deltas,
+                                  (SDPAttr.cold_buffer, SDPAttr.hot_buffer)    : schedule.cold_hot_pipe_deltas,
+                                  (SDPAttr.hot_buffer, SDPAttr.working_mem)    : schedule.hot_mem_pipe_delta,
+                                  (SDPAttr.working_mem, SDPAttr.hot_buffer)    : schedule.mem_hot_pipe_delta,
+                                  (SDPAttr.hot_buffer, SDPAttr.preserve)       : schedule.hot_preserve_pipe_delta,
                                   None : None}
 
         # -----------------------------------------------------------------------------------------------
@@ -601,13 +605,13 @@ class Scheduler:
         # -----------------------------------------------------------------------------------------------
 
         nr_iterations = 0
-        task_completion_times = {}  # Maps tasks to their *completion* timestamps
+        schedule.task_completion_times = {}  # Maps tasks to their *completion* timestamps
 
         wall_clock = 0  # Simulated wall clock time (seconds)
         wall_clock_advance = False  # Advance the wall clock to this value if no tasks were schedulable
 
         # Outer loop (keeps repeating until all tasks scheduled)
-        while len(task_completion_times) < len(tasks_to_be_scheduled):
+        while len(schedule.task_completion_times) < len(tasks_to_be_scheduled):
             nr_iterations += 1
             nr_tasks_scheduled_this_iteration = 0
             if nr_iterations > max_nr_iterations:
@@ -623,7 +627,7 @@ class Scheduler:
                 # ------------------------
                 # Check if task has already been scheduled.
                 # ------------------------
-                if task in task_completion_times:
+                if task in schedule.task_completion_times:
                     continue  # Skipping this task (as it is already scheduled)
 
                 # ------------------------
@@ -634,7 +638,7 @@ class Scheduler:
                     unscheduled_preq_task = False
                     task_wall_clock_advance = False
                     for preq_task in task.preq_tasks:
-                        if preq_task not in task_completion_times:
+                        if preq_task not in schedule.task_completion_times:
                             unscheduled_preq_task = True
                             break
                         elif preq_task.t_end > wall_clock:
@@ -666,8 +670,8 @@ class Scheduler:
                 # ------------------------
 
                 # Obtain the relevant the input and output pipeline bandwidths, and their delta histories
-                bandwidth_in_full = SDPAttributes.datapath_speeds[task.datapath_in]
-                bandwidth_out_full = SDPAttributes.datapath_speeds[task.datapath_out]
+                bandwidth_in_full = SDPAttr.datapath_speeds[task.datapath_in]
+                bandwidth_out_full = SDPAttr.datapath_speeds[task.datapath_out]
                 datapath_in_deltas = datapath_to_deltas_map[task.datapath_in]
                 datapath_out_deltas = datapath_to_deltas_map[task.datapath_out]
 
@@ -696,7 +700,7 @@ class Scheduler:
                 flops_assigned = minimum_flops
                 if task.dt_fixed:
                     flops_assigned = task.flopcount / task.dt_fixed
-                delay = start_compute_t - Scheduler.find_suitable_time(flops_deltas, start_compute_t,
+                delay = start_compute_t - Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
                                                                        value_max=(sdp_flops - flops_assigned),
                                                                        eps=epsilon)
                 if delay > 0:
@@ -712,7 +716,8 @@ class Scheduler:
                 # If not, we have a scheduling problem which we don't yet have a solution for.
                 # TODO: check that the pipelines have enough capacity to handle the task with the current timeline
 
-                flops_available = sdp_flops - Scheduler.sum_deltas(flops_deltas, start_compute_t, value_max=sdp_flops)
+                flops_available = sdp_flops - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
+                                                                   value_max=sdp_flops)
                 assert flops_available >= flops_assigned
 
                 if task.dt_fixed:
@@ -772,11 +777,12 @@ class Scheduler:
                 else:
                     bandwidth_out_used = task.datasize_out / write_dt
 
-                Scheduler.add_delta(memory_deltas, task.memsize, start_read_t, task_completion_time, value_min=0)
+                Scheduler.add_delta(schedule.memory_deltas, task.memsize, start_read_t, task_completion_time,
+                                    value_min=0)
                 if datapath_in_deltas is not None:
                     Scheduler.add_delta(datapath_in_deltas, bandwidth_in_used, start_read_t, (start_read_t + read_dt),
                                         value_min=0, value_max=bandwidth_in_full)
-                Scheduler.add_delta(flops_deltas, flops_used, start_compute_t, (start_compute_t + compute_dt),
+                Scheduler.add_delta(schedule.flops_deltas, flops_used, start_compute_t, (start_compute_t + compute_dt),
                                     value_min=0, value_max=sdp_flops)
                 Scheduler.add_delta(datapath_out_deltas, bandwidth_out_used, start_write_t, task_completion_time,
                                     value_min=0, value_max=bandwidth_out_full)
@@ -792,14 +798,14 @@ class Scheduler:
                     Scheduler.add_delta(deltas, -task.purge_data, task_completion_time, value_min=0)
 
                 # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
-                task_completion_times[task] = task_completion_time
+                schedule.task_completion_times[task] = task_completion_time
                 print('* Scheduled Task %d at wall clock = %g sec. Ends at t=%g sec. ' %
                       (task.uid, start_read_t, task_completion_time))
                 nr_tasks_scheduled_this_iteration += 1
 
-            print('Number of scheduled tasks after %d iterations is %d out of %d' % (nr_iterations,
-                                                                                     len(task_completion_times),
-                                                                                     len(tasks_to_be_scheduled)))
+            print('After %d iterations -> %d out of %d tasks scheduled ' % (nr_iterations,
+                                                                            len(schedule.task_completion_times),
+                                                                            len(tasks_to_be_scheduled)))
 
             if nr_tasks_scheduled_this_iteration == 0:
                 if wall_clock_advance:
@@ -810,17 +816,4 @@ class Scheduler:
                     print("Warning! No tasks scheduled, and wall clock not advanced!")
 
         print('Done!')
-
-        self.flops_deltas = flops_deltas
-        self.memory_deltas = memory_deltas
-        self.cold_buffer_deltas = cold_buffer_deltas
-        self.hot_buffer_deltas = hot_buffer_deltas
-        self.preserve_deltas = preserve_deltas
-        self.tasks_to_timestamps = task_completion_times
-
-        self.ingest_pipe_deltas = ingest_pipe_deltas
-        self.ingest_cold_pipe_deltas = ingest_cold_pipe_deltas
-        self.cold_hot_pipe_deltas = cold_hot_pipe_deltas
-        self.hot_mem_pipe_delta = cold_hot_pipe_deltas
-        self.mem_hot_pipe_delta = mem_hot_pipe_delta
-        self.hot_preserve_pipe_delta = hot_preserve_pipe_delta
+        return schedule
