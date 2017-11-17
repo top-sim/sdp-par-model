@@ -17,6 +17,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pymp
+import sympy
 
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
@@ -209,9 +210,15 @@ def format_result(value):
     accuracy by default.
     """
 
+    # Attempt to make proper floats out of sympy expressions
+    if isinstance(value, sympy.Expr):
+        try:
+            value = float(value.evalf())
+        except e:
+            pass
     # Floating point values up to 4 digits
     if isinstance(value, float):
-        return min(['%.3g' % value, '%.4g' % value, '%.5g' % value], key=len)
+        return min(['%.4g' % value, '%.5g' % value], key=len)
     # Lists: Apply formating recursively
     if isinstance(value, list):
         s = '['
@@ -248,7 +255,7 @@ def format_result_cells(val, color='black', max_cols=1):
     return row_html
 
 
-def show_table(title, labels, values, units):
+def show_table(title, labels, values, units, docs=None):
     """
     Plots a table of label-value pairs
 
@@ -256,21 +263,25 @@ def show_table(title, labels, values, units):
     :param labels: string list / tuple
     :param values: string list / tuple
     :param units: string list / tuple
+    :param docs: Optional documentation per row
     :returns:
     """
     s = '<h3>%s:</h3><table>\n' % title
     assert len(labels) == len(values)
     assert len(labels) == len(units)
     max_cols = max([1] + [len(v) for v in values if type(v) == list])
+    extra_cols = (2 if docs is None else 3)
     for i in range(len(labels)):
         if labels[i].startswith('--'):
-            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=max_cols+2, typ='th')
+            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=max_cols+extra_cols, typ='th')
             continue
         def row(label, val):
             row_html = '<tr><td>%s</td>' % label
             row_html += format_result_cells(val, color='blue', max_cols=max_cols)
-            row_html += '<td>%s</td></tr>\n' % units[i]
-            return row_html
+            row_html += '<td style="text-align:left">%s</td>' % units[i]
+            if docs is not None:
+                row_html += '<td style="text-align:left">%s</td>' % docs[i]
+            return row_html + '</tr>\n'
         if not isinstance(values[i], dict):
             s += row(labels[i], values[i])
         else:
