@@ -101,6 +101,7 @@ class SDPTask:
         :param streaming_out: True iff the task can stream its output data instead of writing everything first
         :param purge_data: The amount of memory which should be deallocated from the datapath_out source
         :param description: Optional description
+        :type preq_tasks set
         """
         assert datapath_in in SDPAttr.datapath_speeds
         assert datapath_out in SDPAttr.datapath_speeds
@@ -390,7 +391,11 @@ class Scheduler:
             flopcount = 0  # We assume it takes no flops to perform a transfer
             datapath_out = (SDPAttr.hot_buffer, SDPAttr.preserve)
             datasize_out = 0  # TODO: Replace by Image preservation data size when known
-            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=ical_dprep_tasks,
+            if len(ical_dprep_tasks) > 0:
+                preq_tasks = ical_dprep_tasks
+            else:
+                preq_tasks = {prev_transfer_task}
+            t = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=preq_tasks,
                         purge_data=hotbuffer_data_size, description='Transfer hot-preserve')
             tasks.append(t)
 
