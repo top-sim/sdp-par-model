@@ -1246,10 +1246,13 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
                       save=save)
 
 
-def plot_deltas(deltas, title="", xlabel="", ylabel=""):
+def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="", ylabel="", colour='b'):
     """
     Plots the evolution of a variable, as defined by a series of 'deltas'
     :param deltas: A dictionary that maps timestamps (in wall clock units) to changes to the parameter
+    :param xrange: (optional) A 2-tuple indicating the x-axis (time) limits to plot
+    :param yrange: (optional) A 2-tuple indicating the y-axis (value) limits to plot
+    :param max_t: (optional) The maximum simulation time, to be indicated by a marker on the X axis
     :param title: (optional) The plot's title string
     :param xlabel: (optional) The plot's title string
     :param ylabel: (optional) The plot's title string
@@ -1270,9 +1273,20 @@ def plot_deltas(deltas, title="", xlabel="", ylabel=""):
         y_axis.append(value)
 
     plt.figure()
-    plt.plot(x_axis, y_axis)
+    plt.plot(x_axis, y_axis, colour)
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.xlim(min(x_axis), max(x_axis) * 1.05)
-    plt.ylim(min(y_axis), max(y_axis) * 1.05)
+
+    if xrange is None:
+        plt.xlim(min(x_axis), max(x_axis) * 1.05)
+    else:
+        plt.ylim(xrange[0], xrange[1])
+
+    if yrange is None:
+        plt.ylim(min(y_axis), max(y_axis) * 1.05)
+    else:
+        plt.ylim(yrange[0], yrange[1])
+
+    if max_t is not None:
+        plt.plot(max_t / 3600, 0, 'ro')

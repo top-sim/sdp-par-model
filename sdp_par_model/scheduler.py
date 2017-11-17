@@ -540,7 +540,7 @@ class Scheduler:
             else:
                 deltas_history[t_end] = -delta
 
-    def schedule(self, task_list, sdp_flops=SDPAttr.sdp_flops, assign_flops_fraction=0.5,
+    def schedule(self, task_list, sdp_flops=SDPAttr.sdp_flops, assign_flops_fraction=0.5, verbose=False,
                  assign_bandwidth_fraction=0.8, minimum_flops=1.0, max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
         :param task_list an iterable collection of SDPTask objects that need to be scheduled
@@ -572,7 +572,7 @@ class Scheduler:
                     datapath_out_capacity = SDPAttr.datapath_speeds[task.datapath_out]
                     minimum_write_time = task.datasize_out / datapath_out_capacity
 
-                assert task.datapath_out is not None  # TODO: This assertion may be false (if so just remove this line)
+                assert task.datapath_out is not None  # TODO: Maybe datapath_out may be none in some cases?
 
                 minimum_task_time = minimum_compute_time
                 if task.streaming_in:
@@ -588,7 +588,8 @@ class Scheduler:
                     raise AssertionError("SDP has too little capacity to handle the following real-time task:\n%s"
                                          % str(task))
 
-        print('SDP seems to have sufficient FLOPS and data streaming capacity to handle real-time tasks.')
+        if verbose:
+            print('SDP seems to have sufficient FLOPS and data streaming capacity to handle real-time tasks.')
         schedule = SDPSchedule()
 
         datalocation_to_deltas_map = {SDPAttr.cold_buffer : schedule.cold_buffer_deltas,
@@ -623,7 +624,8 @@ class Scheduler:
                 print("Warning: Maximum number of iterations exceeded; aborting!")
                 warnings.warn('Maximum number of iterations exceeded; aborting!')
                 break
-            print("-= Starting iteration %d =-" % nr_iterations)
+            if verbose:
+                print("-= Starting iteration %d =-" % nr_iterations)
 
             # Loop across all tasks
             for task in tasks_to_be_scheduled:
@@ -709,8 +711,8 @@ class Scheduler:
                                                                        value_max=(sdp_flops - flops_assigned),
                                                                        eps=epsilon)
                 if delay > 0:
-                    #TODO remove print statement
-                    print("Needed to delay task %d by %g sec due to resource availability" % (task.uid, delay))
+                    if verbose:
+                        print("Needed to delay task %d by %g sec due to resource availability" % (task.uid, delay))
                     # We can now increase the amount of time taken reading the input, thereby lowering the demand
                     # on the input pipeline
                     read_dt += delay
@@ -798,26 +800,30 @@ class Scheduler:
 
                 # Purge Data at the end of the whole thing, if so specified
                 if task.purge_data > 0:
-                    print("Purging %g from %s" % (task.purge_data, task.datapath_out[0]))  # TODO remove
+                    if verbose:
+                        print("Purging %g from %s" % (task.purge_data, task.datapath_out[0]))
                     deltas = datalocation_to_deltas_map[task.datapath_out[0]]
                     Scheduler.add_delta(deltas, -task.purge_data, task_completion_time, value_min=0)
 
                 # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
                 schedule.task_completion_times[task] = task_completion_time
-                print('* Scheduled Task %d at wall clock = %g sec. Ends at t=%g sec. ' %
-                      (task.uid, start_read_t, task_completion_time))
+                if verbose:
+                    print('* Scheduled Task %d at wall clock = %g sec. Ends at t=%g sec. ' %
+                          (task.uid, start_read_t, task_completion_time))
                 nr_tasks_scheduled_this_iteration += 1
 
-            print('After %d iterations -> %d out of %d tasks scheduled ' % (nr_iterations,
-                                                                            len(schedule.task_completion_times),
-                                                                            len(tasks_to_be_scheduled)))
+            if verbose:
+                print('After %d iterations -> %d out of %d tasks scheduled ' % (nr_iterations,
+                                                                                len(schedule.task_completion_times),
+                                                                                len(tasks_to_be_scheduled)))
 
             if nr_tasks_scheduled_this_iteration == 0:
                 if wall_clock_advance:
-                    print("-> Advancing wall clock to %g sec." % wall_clock_advance)
+                    if verbose:
+                        print("-> Advancing wall clock to %g sec." % wall_clock_advance)
                     wall_clock = wall_clock_advance
                     wall_clock_advance = False
-                else:
+                elif verbose:
                     print("Warning! No tasks scheduled, and wall clock not advanced!")
 
         print('Done!')
