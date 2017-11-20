@@ -59,7 +59,8 @@ def evaluate_expression(expression, tp):
 
     except Exception as e:
         traceback.print_exc()
-        return "Failed to evaluate (%s): %s" % (e, str(expression))
+        warnings.warn("Failed to evaluate (%s): %s" % (e, str(expression)))
+        return None
 
 def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
