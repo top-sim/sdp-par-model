@@ -616,9 +616,10 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
 
     # Loop through telescope configurations, collect results
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
+    detailed = (verbosity=='Debug')
     tels_result_values = [
-        _compute_results(cfg_1, verbosity=='Debug', result_map),
-        _compute_results(cfg_2, verbosity=='Debug', result_map),
+        _compute_results(cfg_1, result_map, detailed, detailed),
+        _compute_results(cfg_2, result_map, detailed, detailed),
     ]
     display(HTML('<font color="blue">Done computing.</font>'))
 
@@ -684,8 +685,9 @@ def evaluate_telescope_manual(telescope, band, pipeline,
     (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Loop through pipelines
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map,
-                                                   Tsnap=Tsnap, Nfacet=Nfacet)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed,
+                                     adjusts=dict(Tsnap=Tsnap, Nfacet=Nfacet))
 
     # Show table of results
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
@@ -752,7 +754,8 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
     (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Compute
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Show table of results
@@ -794,7 +797,8 @@ def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="defaul
     # Compute
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                  '</font>'))
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Make table
@@ -837,7 +841,7 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel, verbose, True)
 
     # Write CSV
     _write_csv(filename, results, rows)
@@ -857,20 +861,19 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel, verbose, True)
 
     # Write CSV
     _write_csv(filename, results, rows)
 
 
-def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):
+def _compute_results(pipelineConfig, result_map, verbose=False, detailed=False, adjusts={}):
     """A private method for computing a set of results.
 
     :param pipelineConfig: Complete pipeline configuration
-    :param verbose:
     :param result_map: results to produce
-    :param Tsnap: Snapshot time. If None it will get determined by optimisation.
-    :param Nfacet: Facet count. If None it will get determined by optimisation.
+    :param verbose: Chattiness of parameter generation
+    :param detailed: Produce detailed output results?
     :returns: result value array
     """
 
@@ -880,7 +883,7 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
 
         # Calculate the telescope parameters
         pipelineConfig.pipeline = pipeline
-        tp = pipelineConfig.calc_tel_params(verbose=verbose)
+        tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
 
         # Evaluate expressions from map
         result_expressions = get_result_expressions(result_map, tp)
@@ -892,8 +895,8 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     transposed_results = zip(*result_value_array)
     sum_results = get_result_sum(result_map)
     for (row_values, sum_it) in zip(transposed_results, sum_results):
-        # Sum up baseline dependency unless in verbose mode
-        if not verbose and all([isinstance(vals, list) for vals in row_values]):
+        # Sum up baseline dependency unless in detailed mode
+        if not detailed and all([isinstance(vals, list) for vals in row_values]):
             if sum_it:
                 row_values = [ sum(vals) for vals in row_values ]
             else:
@@ -912,7 +915,7 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     return result_values
 
 
-def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False):
+def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detailed=False, quiet=False):
     """Calculate a whole bunch of pipeline configurations. """
 
     if not quiet:
@@ -932,7 +935,8 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
                         f.value = len(configs) - len(configQueue)
                         f.description = "%d/%d" % (f.value, len(configs))
                     config = configQueue.pop()
-                    results[config.describe()] = _batch_compute_results([config], verbose, result_map, quiet=True)
+                    results[config.describe()] = _batch_compute_results(
+                        [config], result_map, verbose=verbose, detailed=detailed,quiet=True)
             except IndexError:
                 pass
         return list([res for cfg in configs for res in results[cfg.describe()]])
@@ -949,7 +953,7 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
         # Compute, add to results
         if verbose:
             display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
-        results.append((cfg, _compute_results(cfg, verbose, result_map)))
+        results.append((cfg, _compute_results(cfg, result_map, verbose=verbose, detailed=detailed)))
     return results
 
 
@@ -1184,7 +1188,7 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
 
     # Calculate
     rows = [RESULT_MAP[-1]] # Products only
-    results = _batch_compute_results(configs, False, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
@@ -1211,7 +1215,7 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
         configs.append(cfg)
 
     rows = [RESULT_MAP[-1]] # Products only
-    results = _batch_compute_results(configs, False, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
