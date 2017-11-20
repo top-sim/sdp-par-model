@@ -428,8 +428,8 @@ class Scheduler:
             value_at_t += deltas_history[timestamps_sorted[i]]
             if (((value_min is not None) and (value_at_t + eps < value_min)) or
                     ((value_max is not None) and (value_at_t - eps > value_max))):
-                raise Exception("Sum of deltas leads to value of %g at time %g sec. Outside imposed bounds of "
-                                "[%s,%s] " % (value_at_t, timestamps_sorted[i], value_min, value_max))
+                warnings.warn("Sum of deltas leads to value of %g at time %g sec. Outside imposed bounds of "
+                               "[%s,%s] " % (value_at_t, timestamps_sorted[i], value_min, value_max))
 
         return value_at_t
 
@@ -702,30 +702,38 @@ class Scheduler:
                 if task.streaming_in:
                     start_compute_t = start_read_t
 
-                # The main constraint in starting this task may be that there aren't enough FLOPS available at current
-                # wallclock time. If so, we delay the start if the task's computation until enough FLOPS are free.
-                flops_assigned = minimum_flops
+                flops_available = sdp_flops - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
+                                                                   value_max=sdp_flops)
                 if task.dt_fixed:
                     flops_assigned = task.flopcount / task.dt_fixed
-                delay = start_compute_t - Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
-                                                                       value_max=(sdp_flops - flops_assigned),
-                                                                       eps=epsilon)
+                else:
+                    flops_assigned = max(minimum_flops, assign_flops_fraction * flops_available)
+
+                # The main constraint in starting this task may be that there aren't enough FLOPS available at current
+                # wall clock time. If so, we delay starting the computation until enough FLOPS are free.
+                delay = Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
+                                                     value_max=(sdp_flops - flops_assigned), eps=epsilon) - start_compute_t
+                assert delay >= 0
+
                 if delay > 0:
+                    start_compute_t += delay
+                    # Recompute the available FLOPS at the new start point
+                    flops_available = sdp_flops - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
+                                                                       value_max=sdp_flops)
+                    if flops_assigned > flops_available:
+                        warnings.warn("WARNING: Scheduled task %d but exceeded max SDP FLOPS (%g PetaFLOPS assigned > "
+                                      "%g PetaFLOPS available)!" % (task.uid, flops_assigned, flops_available))
+
                     if verbose:
                         print("Needed to delay task %d by %g sec due to resource availability" % (task.uid, delay))
                     # We can now increase the amount of time taken reading the input, thereby lowering the demand
                     # on the input pipeline
                     read_dt += delay
-                    start_compute_t += delay
 
                 # Now that FLOPS avalaibility has been confirmed we assume that there is enough of other
                 # (e.g. bandwidth) resources available for all tasks to happen at this chosen time point.
                 # If not, we have a scheduling problem which we don't yet have a solution for.
                 # TODO: check that the pipelines have enough capacity to handle the task with the current timeline
-
-                flops_available = sdp_flops - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
-                                                                   value_max=sdp_flops)
-                assert flops_available >= flops_assigned
 
                 if task.dt_fixed:
                     assert (task.streaming_in and task.streaming_out)  # Reading, computing and writing = simultaneous
