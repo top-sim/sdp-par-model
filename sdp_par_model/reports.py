@@ -101,7 +101,8 @@ RESULT_MAP = [
     ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
     ('Delta W snapshot',           'lambda',     False,   False, lambda tp: tp.DeltaW_SShot,      ),
     ('Delta W max',                'lambda',     False,   False, lambda tp: tp.DeltaW_max,        ),
-    ('Delta W projection',         'lambda',     False,   False, lambda tp: tp.Qmax_wproject / tp.Theta_fov**2,),
+    ('Delta W stack',              'lambda',     False,   False, lambda tp: tp.DeltaW_stack,),
+    ('Delta W theory',             'lambda',     False,   False, lambda tp: 1/(1-max(0,1-2*tp.Theta_fov**2)**0.5),),
 
     ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
     ('W kernel support pred',      'uv-pixels',  False,   False, lambda tp: tp.Ngw_predict,       ),
@@ -118,22 +119,21 @@ RESULT_MAP = [
     ('Image size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear_fov_total**2 / c.giga ),
     ('Image cube size',            'GB',         True,    False, lambda tp: tp.Nf_out * tp.Npp * tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
 
-    ('Gain calibration',           'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_G_sols * tp.Tsolve / c.mega ),
-    ('Ionospheric calibration',    'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_I_sols * tp.Tsolve / c.mega ),
+    ('Calibration input',          'MB',         True,    False, lambda tp: tp.Mcal_in / c.mega ),
+    ('Calibration output',         'MB',         True,    False, lambda tp: tp.Mcal_out / c.mega ),
     ('Calibration process interval','s',         True,    False, lambda tp: tp.Tsolve ),
-    ('Bandpass calibration',       'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_B_sols * max(tp.Tsolve, tp.tICAL_B) / c.mega ),
-    ('Bandpass process interval',  's',          True,    False, lambda tp: max(tp.Tsolve, tp.tICAL_B) ),
 
+    ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta,   ),
+    ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
     ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
     ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
     ('Total buffer ingest rate',   'TeraBytes/s',True,    False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
     #('Rosies buffer size',   'PetaBytes',       True,       False, lambda tp: tp.Tobs*tp.buffer_factor*tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.peta),
 
-    ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta,   ),
-    ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
     ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera), ),
     ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
-    ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rio', scale=c.tera), ),
+    ('Facet visibility rate',      'TeraBytes/s',True,    False, lambda tp: tp.Rfacet_vis/c.tera),
+    ('Image Write Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rimage/c.tera,        ),
 
     #('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
     #('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
