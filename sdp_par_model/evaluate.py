@@ -219,6 +219,7 @@ def minimise_parameters(telescope_parameters,
     results = []
     skip_until = tuple()
     last_result = None
+    result_got_worse = 0
     for int_vals in itertools.product(*int_ranges):
         if int_vals < skip_until:
             continue
@@ -245,16 +246,21 @@ def minimise_parameters(telescope_parameters,
         results.append((result, *int_vals, opt_val))
 
         # Check whether we can start skipping values (naive, can likely do better)
-        if last_result is not None and \
-           last_result < result and \
-           str(int_symbols[-1]) in only_one_minimum:
+        if last_result is None:
+            pass
+        elif last_result >= result:
+            result_got_worse = 0
+        elif str(int_symbols[-1]) in only_one_minimum:
 
-            if len(int_vals) == 1:
-                break
+            # Allow this a few times before we actually stop
+            result_got_worse += 1
+            if result_got_worse >= 2:
+                if len(int_vals) == 1:
+                    break
 
-            # I.e. if we are at (1,2,3), skip until (1,3)
-            skip_until = int_vals[:-1]
-            skip_until[-1] += 1
+                # I.e. if we are at (1,2,3), skip until (1,3)
+                skip_until = int_vals[:-1]
+                skip_until[-1] += 1
         last_result = result
 
     # Return parameters with lowest value
