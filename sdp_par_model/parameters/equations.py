@@ -590,9 +590,12 @@ def _apply_calibration_equations(o):
     o.Ncal_B_solve = calcNcal(o.Nsubbands, o.Tsolve, **B_cal)
     o.Ncal_I_solve = calcNcal(o.Nsubbands, o.Tsolve, **I_cal)
 
-    # Calibration problem & solutions sizes
-    o.Mcal_in = 2 * o.Mvis * o.Npp * o.Nbl * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
-    o.Mcal_out = o.Mjones * o.Na * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
+    # Global calibration solution size
+    o.Mcal_out = o.Mjones * o.Na * (o.Ncal_G_obs + o.Ncal_B_obs + o.Ncal_I_obs)
+
+    # Calibration problem & solutions sizes (per solve interval)
+    o.Mcal_solve_in = 2 * o.Mvis * o.Npp * o.Nbl * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
+    o.Mcal_solve_out = o.Mjones * o.Na * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
 
     # How many directions do we need to solve in total? Assume we have
     # to average for each separately.
@@ -608,7 +611,7 @@ def _apply_calibration_equations(o):
             # LSM from the GSM and then we do Nselfcal more.
             N = (o.Nselfcal + 1) * o.Nsubbands * o.Nbeam,
             Rflop = Rflop_solving + Rflop_averaging / o.Nsubbands,
-            Rout = o.Mcal_out / o.Tsolve)
+            Rout = o.Mcal_solve_out / o.Tsolve)
 
 def _apply_dft_equations(o):
     """
@@ -848,6 +851,22 @@ def _apply_io_equations(o):
     #
     # Visibilities that go into a single facet
     o.Rfacet_vis = o.Nbeam * o.Npp * o.Nmajortotal * o.Rvis_backward.eval_sum(o.bl_bins) * o.Mvis
+
+    # Snapshot Size
+    #
+    # The amount of visibility data considered together for a snapshot
+    # and FFT frequency band
+    o.Msnap = o.Mvis * o.Rvis * o.Npp * o.Tsnap / o.Nf_FFT_backward
+    o.Msnap_predict = o.Mvis * o.Rvis_predict * o.Npp * o.Tsnap / o.Nf_FFT_predict
+
+    # Image sizes
+    #
+    # First for just a single image (single polarisation, frequency
+    # and beam), then the cube of all results put together
+    o.Mfacet = o.Mpx * o.Npix_linear**2
+    o.Mfacet_cube = o.Nbeam * o.Mfacet * o.Npp * o.Nf_out
+    o.Mimage = o.Mpx * o.Npix_linear_fov_total**2
+    o.Mimage_cube = o.Nbeam * o.Mimage * o.Npp * o.Nf_out
 
     # Image write rate
     #
