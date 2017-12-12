@@ -168,7 +168,7 @@ class PipelineConfig:
 
     def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify='',
                         optimize_expression='Rflop',
-                        clear_symbolised=True):
+                        clear_symbolised=None):
         """
         Calculates telescope parameters for this configuration.  Some
         values may (optionally) be overwritten, e.g. the
@@ -181,10 +181,12 @@ class PipelineConfig:
         :param optimize_expression: Set free symbols in a way that minimises given telescope parameter
            (only if symbolify is not set)
         :param clear_symbolised: Whether to clear parameters with free symbols after optimisation.
-           (only if symbolify is not set)
+           (only if symbolify is not set. Default on if optimize_expression is not None.)
         """
 
         assert cfg.is_valid()[0], "calc_tel_params must be called for a valid pipeline configuration!"
+        if clear_symbolised is None:
+            clear_symbolised = (optimize_expression is not None)
 
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
