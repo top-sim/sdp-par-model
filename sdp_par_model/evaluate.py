@@ -246,7 +246,7 @@ def minimise_parameters(telescope_parameters,
             if verbose:
                 print(' -> %s=%g, %s=%g' % (float_symbol, opt_val, expression_string, result))
 
-        results.append((result, *int_vals, opt_val))
+        results.append((result,) + int_vals + (opt_val,))
 
         # Check whether we can start skipping values (naive, can likely do better)
         if last_result is None:
