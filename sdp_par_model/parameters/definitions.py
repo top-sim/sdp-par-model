@@ -792,7 +792,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
         o.Npp = 2 # We only want Stokes I, V
         o.Tobs = 1.0
-        o.Tsnap_min = o.Tobs
+        o.Tsnap = o.Tobs
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
         elif o.telescope == Telescopes.SKA1_Mid:
