@@ -49,7 +49,7 @@ class EvaluateTests(unittest.TestCase):
         # Compare with auto-optimised version (uses subst internally)
         opt_tp2 = unopt_cfg.calc_tel_params()
 
-        self.assertAlmostEqual(float(opt_tp.Rflop), float(opt_tp2.Rflop), places=4)
+        self.assertAlmostEqual(float(opt_tp.Rflop), float(opt_tp2.Rflop), delta=10)
         self.assertAlmostEqual(float(opt_tp.Nfacet), float(opt_tp2.Nfacet), places=4)
         self.assertAlmostEqual(float(opt_tp.products[Products.DFT]['Rflop']),
                                float(opt_tp2.products[Products.DFT]['Rflop']), places=3)
