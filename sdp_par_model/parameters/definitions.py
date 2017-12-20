@@ -377,8 +377,8 @@ def define_symbolic_variables(o):
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
-    o.Tsnap = symbols("Tsnap", positive=True)  # Snapshot timescale implemented
     o.Nfacet = symbols("Nfacet", integer=True, positive=True)  # Number of facets
+    o.DeltaW_stack = symbols("DeltaW_stack", positive=True)
 
     return o
 
@@ -453,7 +453,6 @@ def apply_global_parameters(o):
     o.Qfov = 1.0 # Define this in case not defined below
     o.amp_f_max = 1.02  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
     o.Tion = 10.0  #This was previously set to 60s (for PDR) May wish to use much smaller value.
-    o.Tsnap_min = 0.1 #1.0 logically, this shoudl be set to Tdump, but odd behaviour happens for fast imaging. TODO
     o.Nf_min = 40  #minimum number of channels to still enable distributed computing, and to reconstruct 5 Taylor terms
     o.Fast_Img_channels = 40  #minimum number of channels to still enable distributed computing, and to calculate spectral images
     o.Nf_min_gran = 800 # minimum number of channels in predict output to prevent overly large output sizes
@@ -464,6 +463,7 @@ def apply_global_parameters(o):
     o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
     o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
     o.Qfov_ICAL = 2.7 #Put the Qfov factor for the ICAL pipeline in here. It is used to calculate the correlator dump rate for instances where the maximum baseline used for an experiment is smaller than the maximum possible for the array. In that case, we might be able to request a longer correlator integration time in the correlator.
+    o.Qmax_wproject = 1 # Maximum w-distance to use w-projection on (use w-stacking otherwise)
 
     # From CSP we are ingesting 10 bytes per visibility (single
     # polarization) built up as follows:
@@ -499,7 +499,7 @@ def apply_global_parameters(o):
     # To be overridden by the pipelines
     o.Nmajor = 2
     o.Nselfcal = 3
-    o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) 
+    o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1)
     o.NAProducts = 'all'  # Number of A^A terms to be modelled
     o.tRCAL_G = 10.0 # Real time solution interval for Antenna gains
     o.tICAL_G = 1.0 # Solution interval for Antenna gains
@@ -507,6 +507,8 @@ def apply_global_parameters(o):
     o.tICAL_I = 10.0 # Solution interval for Ionosphere
     o.NIpatches = 1 # Number of ionospheric patches to solve
     o.Tsolve = 10 * 60 # Calibration solution process frequency (task granularity)
+    o.Tsnap_min = 0.1
+    o.Tsnap = 10 * 60
 
     # Pipeline variants
     o.on_the_fly = False
@@ -888,7 +890,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nf_out = min(o.Fast_Img_channels, o.Nf_max)  # Initially this value was computed, but now capped to 500.
         o.Npp = 2 # We only want Stokes I, V
         o.Tobs = 1.0
-        o.Tsnap_min = o.Tobs
+        o.Tsnap = o.Tobs
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
         elif o.telescope == Telescopes.SKA1_Mid:

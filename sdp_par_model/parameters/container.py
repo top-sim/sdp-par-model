@@ -13,12 +13,14 @@ from sympy import Symbol, Expr, Lambda, Mul, Add, Sum
 import warnings
 import string
 
-def is_value(self, v):
+import time
+
+def is_value(v):
     if isinstance(v, int) or isinstance(v, float) or \
        isinstance(v, str) or isinstance(v, list):
         return True
 
-def is_expr(self, e):
+def is_expr(e):
     return isinstance(e, Expr) or isinstance(e, BLDep)
 
 class ParameterContainer(object):
@@ -136,6 +138,46 @@ class ParameterContainer(object):
             i0 = 2 if name[1] == '_' else 1
             return name[0] + "_" + name[i0:].replace('_', ',')
         return name
+
+    def subs(self, substs):
+        tp = ParameterContainer()
+
+        # If expression to substitute is given as a string: Look up
+        # in this container
+        substs_new = {}
+        for sym, v in substs.items():
+            if isinstance(sym, Expr):
+                substs_new[sym] = v
+            else:
+                substs_new[self.get(sym)] = v
+
+        # Perform substitution
+        for name, v in self.__dict__.items():
+            tp.__dict__[name] = (v.subs(substs_new) if is_expr(v) else v)
+
+        # In products as well
+        tp.products = { product:
+                        { name: (v.subs(substs_new) if is_expr(v) else v)
+                          for name, v in vals.items() }
+                        for product, vals in tp.products.items() }
+        return tp
+
+    def clear_symbolised(self):
+        """Remove any parameters with free variables.
+
+        This is useful if the telescope parameters were optimised for
+        something, yet some parameters did not factor into the
+        optimisation and were therefore left as symbols. Those
+        parameter values are therefore undefined, so discarding them
+        is the right thing to do.
+        """
+
+        to_remove = []
+        for name, v in self.__dict__.items():
+            if is_expr(v) and len(v.free_symbols) > 0:
+                to_remove.append(name)
+        for name in to_remove:
+            del self.__dict__[name]
 
     def symbolify(self):
         """

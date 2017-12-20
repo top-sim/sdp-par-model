@@ -11,7 +11,7 @@ import warnings
 
 from numpy import pi, round
 import sympy
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin
 
 from .definitions import Pipelines, Products
 from .container import ParameterContainer, BLDep, blsum
@@ -297,7 +297,6 @@ def _apply_coalesce_equations(o, symbolify):
     # Visibility rate (visibilities per second) on ingest, including autocorrelations (per beam, per polarisation)
     o.Rvis_ingest = (o.Nbl + o.Na) * o.Nf_max / o.Tint_used
 
-
     # Total visibility rate (visibilities per second per beam, per
     # polarisation) after frequency channels have been combined where
     # possible. We focus on imaging pipelines here, so we remove
@@ -332,20 +331,22 @@ def _apply_geometry_equations(o, symbolify):
     # Contribution of earth curvature to w-term
     o.DeltaW_Earth = BLDep(b, b ** 2 / (8. * o.R_Earth * o.wl))
     # Contribution of earth movement to w-term
-    o.DeltaW_SShot = BLDep(b, b * o.Omega_E * o.Tsnap / (2. * o.wl))
+    o.DeltaW_SShot = BLDep(b, b * sin(o.Omega_E * o.Tsnap) / (2. * o.wl))
     o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
     if symbolify == 'helper':
         o.DeltaW_Earth = Symbol(o.make_symbol_name('DeltaW_Earth'))
         o.DeltaW_SShot = Symbol(o.make_symbol_name('DeltaW_SShot'))
         o.DeltaW_max = Symbol(o.make_symbol_name('DeltaW_max'))
+    o.DeltaW_wproj = BLDep(b, Min(o.DeltaW_stack, o.DeltaW_max(b)))
 
     # Eq. 25, w-kernel support size. Note possible difference in
     # cellsize assumption!
     def Ngw(deltaw, fov):
         return 2 * fov * sqrt((deltaw * fov / 2.) ** 2 +
                               (deltaw**1.5 * fov / (2 * pi * o.epsilon_w)))
-    o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov))
-    o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_max(b), o.Theta_fov_predict))
+    o.Ngw_backward = BLDep(b, Ngw(o.DeltaW_wproj(b), o.Theta_fov))
+    o.Ngw_predict = BLDep(b, Ngw(o.DeltaW_wproj(b), o.Theta_fov_predict))
+
 
     # TODO: Check split of kernel size for backward and predict steps.
     # squared linear size of combined W and A kernels; used in eqs 23 and 32
@@ -462,14 +463,18 @@ def _apply_fft_equations(o):
 
     if not o.pipeline in Pipelines.imaging: return
 
+    # Determine number of w-stacks we need
+    o.Nwstack = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
+    o.Nwstack_predict = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
+
     # These are real-to-complex for which the prefactor in the FFT is 2.5
     o.set_product(Products.FFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
-        Rflop = 2.5 * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
+        Rflop = 2.5 * o.Nwstack * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
         Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap)
     o.set_product(Products.IFFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
-        Rflop = 2.5 * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
+        Rflop = 2.5 * o.Nwstack_predict * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
         Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap)
 
 
@@ -566,34 +571,47 @@ def _apply_calibration_equations(o):
     # the model phase (16 flops), multiply Vis by that phasor (16 flops) then average (8 flops)
     o.NFlop_averager = 40 * o.Npp
 
-    b = Symbol('b')
-
-    # Determine number of calibration solutions we need to solve
-    N_solve = 0
-    o.R_G_sols = 0
-    o.R_B_sols = 0
-    o.R_I_sols = 0
+    # Collect calibration windows to solve
+    G_cal = B_cal = I_cal = dict(Ndircal=0, Nfcal=1, Tcal=1)
     if o.pipeline == Pipelines.ICAL:
-        # ICAL solves for all terms but on different time scales. These should be set for context in the HPSOs.
-        N_solve = 3
-        o.R_G_sols = 1 / o.tICAL_G
-        o.R_B_sols = o.NB_parameters / o.tICAL_B
-        o.R_I_sols = o.NIpatches / o.tICAL_I
+        G_cal = dict(Ndircal=1, Nfcal=o.Nsubbands, Tcal=o.tICAL_G)
+        B_cal = dict(Ndircal=1, Nfcal=o.NB_parameters, Tcal=o.tICAL_B)
+        I_cal = dict(Ndircal=o.NIpatches, Nfcal=o.Nsubbands, Tcal=o.tICAL_I)
     elif o.pipeline == Pipelines.RCAL:
-        N_solve = 1
-        o.R_G_sols = 1 / o.tRCAL_G
+        G_cal = dict(Ndircal=1, Nfcal=o.Nf_out, Tcal=o.tRCAL_G)
 
+    # Calculate number of calibration problems total / per snapshot&subband
+    def calcNcal(Nf, t, Ndircal, Nfcal, Tcal):
+        return Ndircal * Max(1, Nfcal / Nf) * Max(1, t / Tcal)
+    o.Ncal_G_obs = calcNcal(1, o.Tobs, **G_cal)
+    o.Ncal_B_obs = calcNcal(1, o.Tobs, **B_cal)
+    o.Ncal_I_obs = calcNcal(1, o.Tobs, **I_cal)
+    o.Ncal_G_solve = calcNcal(o.Nsubbands, o.Tsolve, **G_cal)
+    o.Ncal_B_solve = calcNcal(o.Nsubbands, o.Tsolve, **B_cal)
+    o.Ncal_I_solve = calcNcal(o.Nsubbands, o.Tsolve, **I_cal)
+
+    # Global calibration solution size
+    o.Mcal_out = o.Mjones * o.Na * (o.Ncal_G_obs + o.Ncal_B_obs + o.Ncal_I_obs)
+
+    # Calibration problem & solutions sizes (per solve interval)
+    o.Mcal_solve_in = 2 * o.Mvis * o.Npp * o.Nbl * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
+    o.Mcal_solve_out = o.Mjones * o.Na * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve)
+
+    # How many directions do we need to solve in total? Assume we have
+    # to average for each separately.
+    N_solve = G_cal['Ndircal'] + B_cal['Ndircal'] + I_cal['Ndircal']
     if N_solve > 0:
+
         # Averaging needs to be done for each calibration method
         Rflop_averaging = o.NFlop_averager * N_solve * o.Rvis.eval_sum(o.bl_bins)
-        Rflop_solving   = o.NFlop_solver * (o.R_G_sols + o.R_B_sols + o.R_I_sols)
+        Rflop_solving   = o.NFlop_solver * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve) / o.Tsolve
         o.set_product(Products.Solve,
             T = o.Tsolve,
             # We do one calibration to start with (using the original
             # LSM from the GSM and then we do Nselfcal more.
             N = (o.Nselfcal + 1) * o.Nsubbands * o.Nbeam,
             Rflop = Rflop_solving + Rflop_averaging / o.Nsubbands,
-            Rout = o.Mjones * o.Na * (o.R_G_sols + o.R_B_sols + o.R_I_sols))
+            Rout = o.Mcal_solve_out / o.Tsolve)
 
 def _apply_dft_equations(o):
     """
@@ -828,6 +846,32 @@ def _apply_io_equations(o):
     # to read all visibilities twice per major cycle and beam.
     o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.bl_bins) * o.Mvis
     # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
+
+    # Facet visibility rate
+    #
+    # Visibilities that go into a single facet
+    o.Rfacet_vis = o.Nbeam * o.Npp * o.Nmajortotal * o.Rvis_backward.eval_sum(o.bl_bins) * o.Mvis
+
+    # Snapshot Size
+    #
+    # The amount of visibility data considered together for a snapshot
+    # and FFT frequency band
+    o.Msnap = o.Mvis * o.Rvis * o.Npp * o.Tsnap / o.Nf_FFT_backward
+    o.Msnap_predict = o.Mvis * o.Rvis_predict * o.Npp * o.Tsnap / o.Nf_FFT_predict
+
+    # Image sizes
+    #
+    # First for just a single image (single polarisation, frequency
+    # and beam), then the cube of all results put together
+    o.Mfacet = o.Mpx * o.Npix_linear**2
+    o.Mfacet_cube = o.Nbeam * o.Mfacet * o.Npp * o.Nf_out
+    o.Mimage = o.Mpx * o.Npix_linear_fov_total**2
+    o.Mimage_cube = o.Nbeam * o.Mimage * o.Npp * o.Nf_out
+
+    # Image write rate
+    #
+    # Basically the output rate of the FFTs
+    o.Rimage = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Mpx * o.Npix_linear**2 * o.Nfacet**2 / o.Tsnap
 
     # Convolution kernel cache size
     #

@@ -17,6 +17,7 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 #import pymp
+import sympy
 from.parameters.definitions import HPSOs
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
@@ -43,6 +44,8 @@ RESULT_MAP = [
     ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
     ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
     ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
+    ('w-stacking planes',          '',           True,    False, lambda tp: tp.Nwstack,           ),
+    ('w-stacking planes predict',  '',           True,    False, lambda tp: tp.Nwstack_predict,   ),
     ('Stations/antennas',          '',           False,   False, lambda tp: tp.Na,                ),
     ('Max Baseline [per bin]',     'km',         False,   False, lambda tp: [ bin['b'] / c.kilo for  bin in tp.bl_bins ] ),
     ('Baseline fraction [per bin]','%',          False,   False, lambda tp: [ 100*bin['bfrac'] for  bin in tp.bl_bins ]  ),
@@ -98,36 +101,37 @@ RESULT_MAP = [
     ('Delta W earth',              'lambda',     False,   False, lambda tp: tp.DeltaW_Earth,      ),
     ('Delta W snapshot',           'lambda',     False,   False, lambda tp: tp.DeltaW_SShot,      ),
     ('Delta W max',                'lambda',     False,   False, lambda tp: tp.DeltaW_max,        ),
+    ('Delta W stack',              'lambda',     False,   False, lambda tp: tp.DeltaW_stack,),
+    ('Delta W theory',             'lambda',     False,   False, lambda tp: 1/(1-max(0,1-2*tp.Theta_fov**2)**0.5),),
+
+    ('-- Kernel Sizes --',         '',           False,   False, lambda tp: ''                    ),
     ('W kernel support pred',      'uv-pixels',  False,   False, lambda tp: tp.Ngw_predict,       ),
     ('AW kernel support pred',     'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_predict,),
     ('W kernel support bw',        'uv-pixels',  False,   False, lambda tp: tp.Ngw_backward,      ),
     ('AW kernel support bw',       'uv-pixels',  False,   False, lambda tp: tp.Nkernel_AW_backward,),
 
     ('-- Data --',                 '',           True,    False, lambda tp: ''                    ),
-    ('Snapshot vis size',          'GB',         True,    True,  lambda tp: tp.Mvis * tp.Rvis * tp.Npp * tp.Tsnap / tp.Nf_FFT_backward / c.giga ),
-    ('Facet vis size predict',     'GB',         True,    True,  lambda tp: tp.Mvis * tp.Rvis_predict * tp.Npp * tp.Tsnap / tp.Nf_FFT_predict / c.giga ),
-    ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear**2 / c.giga ),
-    ('Facet size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear**2 / c.giga ),
-    ('Image size',                 'GB',         True,    False, lambda tp: tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
-    ('Image size (all pol)',       'GB',         True,    False, lambda tp: tp.Mpx * tp.Npp * tp.Npix_linear_fov_total**2 / c.giga ),
-    ('Image cube size',            'GB',         True,    False, lambda tp: tp.Nf_out * tp.Npp * tp.Mpx * tp.Npix_linear_fov_total**2 / c.giga ),
+    ('Snapshot vis size',          'GB',         True,    True,  lambda tp: tp.Msnap / c.giga ),
+    ('Facet size',                 'GB',         True,    False, lambda tp: tp.Mfacet / c.giga ),
+    ('Image size',                 'GB',         True,    False, lambda tp: tp.Mimage / c.giga ),
+    ('Image cube size',            'GB',         True,    False, lambda tp: tp.Mimage_cube / c.giga ),
+    ('Calibration output',         'GB',         True,    False, lambda tp: tp.Mcal_out / c.giga ),
 
-    ('Gain calibration',           'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_G_sols * tp.Tsolve / c.mega ),
-    ('Ionospheric calibration',    'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_I_sols * tp.Tsolve / c.mega ),
     ('Calibration process interval','s',         True,    False, lambda tp: tp.Tsolve ),
-    ('Bandpass calibration',       'MB',         True,    False, lambda tp: tp.Mjones * tp.Na * tp.R_B_sols * max(tp.Tsolve, tp.tICAL_B) / c.mega ),
-    ('Bandpass process interval',  's',          True,    False, lambda tp: max(tp.Tsolve, tp.tICAL_B) ),
+    ('Calibration process in',     'MB',         True,    False, lambda tp: tp.Mcal_solve_in / c.mega ),
+    ('Calibration process out',    'MB',         True,    False, lambda tp: tp.Mcal_solve_out / c.mega ),
 
+    ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta,   ),
+    ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
     ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
     ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta,   ),
     ('Total buffer ingest rate',   'TeraBytes/s',True,    False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
     #('Rosies buffer size',   'PetaBytes',       True,       False, lambda tp: tp.Tobs*tp.buffer_factor*tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.peta),
 
-    ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta,   ),
-    ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera,   ),
     ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera), ),
     ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera,        ),
-    ('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rio', scale=c.tera), ),
+    ('Facet visibility rate',      'TeraBytes/s',True,    False, lambda tp: tp.Rfacet_vis/c.tera),
+    ('Image Write Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rimage/c.tera,        ),
 
     #('Inter-Facet I/O Rate',       'TeraBytes/s',True,    True,  lambda tp: tp.Rinterfacet/c.tera,),
     #('-> ',                        'TeraBytes/s',True,    True,  lambda tp: tp.get_products('Rinterfacet', scale=c.tera), ),
@@ -204,9 +208,15 @@ def format_result(value):
     accuracy by default.
     """
 
+    # Attempt to make proper floats out of sympy expressions
+    if isinstance(value, sympy.Expr):
+        try:
+            value = float(value.evalf())
+        except e:
+            pass
     # Floating point values up to 4 digits
     if isinstance(value, float):
-        return min(['%.3g' % value, '%.4g' % value, '%.5g' % value], key=len)
+        return min(['%.4g' % value, '%.5g' % value], key=len)
     # Lists: Apply formating recursively
     if isinstance(value, list):
         s = '['
@@ -243,7 +253,7 @@ def format_result_cells(val, color='black', max_cols=1):
     return row_html
 
 
-def show_table(title, labels, values, units):
+def show_table(title, labels, values, units, docs=None):
     """
     Plots a table of label-value pairs
 
@@ -251,21 +261,25 @@ def show_table(title, labels, values, units):
     :param labels: string list / tuple
     :param values: string list / tuple
     :param units: string list / tuple
+    :param docs: Optional documentation per row
     :returns:
     """
     s = '<h3>%s:</h3><table>\n' % title
     assert len(labels) == len(values)
     assert len(labels) == len(units)
     max_cols = max([1] + [len(v) for v in values if type(v) == list])
+    extra_cols = (2 if docs is None else 3)
     for i in range(len(labels)):
         if labels[i].startswith('--'):
-            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=max_cols+2, typ='th')
+            s += '<tr>%s</tr>' % format_result_cell(labels[i], colspan=max_cols+extra_cols, typ='th')
             continue
         def row(label, val):
             row_html = '<tr><td>%s</td>' % label
             row_html += format_result_cells(val, color='blue', max_cols=max_cols)
-            row_html += '<td>%s</td></tr>\n' % units[i]
-            return row_html
+            row_html += '<td style="text-align:left">%s</td>' % units[i]
+            if docs is not None:
+                row_html += '<td style="text-align:left">%s</td>' % docs[i]
+            return row_html + '</tr>\n'
         if not isinstance(values[i], dict):
             s += row(labels[i], values[i])
         else:
@@ -616,9 +630,10 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
 
     # Loop through telescope configurations, collect results
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.</font>'))
+    detailed = (verbosity=='Debug')
     tels_result_values = [
-        _compute_results(cfg_1, verbosity=='Debug', result_map),
-        _compute_results(cfg_2, verbosity=='Debug', result_map),
+        _compute_results(cfg_1, result_map, detailed, detailed),
+        _compute_results(cfg_2, result_map, detailed, detailed),
     ]
     display(HTML('<font color="blue">Done computing.</font>'))
 
@@ -684,8 +699,9 @@ def evaluate_telescope_manual(telescope, band, pipeline,
     (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Loop through pipelines
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map,
-                                                   Tsnap=Tsnap, Nfacet=Nfacet)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed,
+                                     adjusts=dict(Tsnap=Tsnap, Nfacet=Nfacet))
 
     # Show table of results
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
@@ -752,7 +768,8 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
     (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
 
     # Compute
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Show table of results
@@ -794,7 +811,8 @@ def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="defaul
     # Compute
     display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
                  '</font>'))
-    result_values = _compute_results(cfg, verbosity=='Debug', result_map)
+    detailed = (verbosity=='Debug')
+    result_values = _compute_results(cfg, result_map, detailed, detailed)
     display(HTML('<font color="blue">Done computing. Results follow:</font>'))
 
     # Make table
@@ -837,7 +855,7 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel, verbose, True)
 
     # Write CSV
     _write_csv(filename, results, rows)
@@ -864,20 +882,19 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
 
     # Calculate
     rows = RESULT_MAP # Everything - hardcoded for now
-    results = _batch_compute_results(configs, verbose, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel, verbose, True)
 
     # Write CSV
     _write_csv(filename, results, rows)
 
 
-def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=None):  # TODO: make verbose default False
+def _compute_results(pipelineConfig, result_map, verbose=False, detailed=False, adjusts={}):
     """A private method for computing a set of results.
 
     :param pipelineConfig: Complete pipeline configuration
-    :param verbose:
     :param result_map: results to produce
-    :param Tsnap: Snapshot time. If None it will get determined by optimisation.
-    :param Nfacet: Facet count. If None it will get determined by optimisation.
+    :param verbose: Chattiness of parameter generation
+    :param detailed: Produce detailed output results?
     :returns: result value array
     """
 
@@ -887,19 +904,11 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
 
         # Calculate the telescope parameters
         pipelineConfig.pipeline = pipeline
-        tp = pipelineConfig.calc_tel_params(verbose=verbose)
-
-        # Optimise Tsnap & Nfacet
-        tsnap_opt = Tsnap
-        nfacet_opt = Nfacet
-        if tsnap_opt is None and nfacet_opt is None:
-            (tsnap_opt, nfacet_opt) = imp.find_optimal_Tsnap_Nfacet(tp, verbose=verbose)
-        elif tsnap_opt is None or nfacet_opt is None:
-            raise Exception("We can only optimise Tsnap and Nfacet together so far!")
+        tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
 
         # Evaluate expressions from map
         result_expressions = get_result_expressions(result_map, tp)
-        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp, tsnap_opt, nfacet_opt)
+        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
         result_value_array.append(results_for_pipeline)
 
     # Now transpose, then sum up results from pipelines per row
@@ -907,8 +916,8 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     transposed_results = zip(*result_value_array)
     sum_results = get_result_sum(result_map)
     for (row_values, sum_it) in zip(transposed_results, sum_results):
-        # Sum up baseline dependency unless in verbose mode
-        if not verbose and all([isinstance(vals, list) for vals in row_values]):
+        # Sum up baseline dependency unless in detailed mode
+        if not detailed and all([isinstance(vals, list) for vals in row_values]):
             if sum_it:
                 row_values = [ sum(vals) for vals in row_values ]
             else:
@@ -927,7 +936,7 @@ def _compute_results(pipelineConfig, verbose, result_map, Tsnap=None, Nfacet=Non
     return result_values
 
 
-def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False):
+def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detailed=False, quiet=False):
     """Calculate a whole bunch of pipeline configurations. """
 
     if not quiet:
@@ -949,7 +958,8 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
                         f.value = len(configs) - len(configQueue)
                         f.description = "%d/%d" % (f.value, len(configs))
                     config = configQueue.pop()
-                    results[config.describe()] = _batch_compute_results([config], verbose, result_map, quiet=True)
+                    results[config.describe()] = _batch_compute_results(
+                        [config], result_map, verbose=verbose, detailed=detailed,quiet=True)
             except IndexError:
                 pass
         return list([res for cfg in configs for res in results[cfg.describe()]])
@@ -967,7 +977,7 @@ def _batch_compute_results(configs, verbose, result_map, parallel=0, quiet=False
         # Compute, add to results
         if verbose:
             display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
-        results.append((cfg, _compute_results(cfg, verbose, result_map)))
+        results.append((cfg, _compute_results(cfg, result_map, verbose=verbose, detailed=detailed)))
     return results
 
 
@@ -1202,7 +1212,7 @@ def stack_bars_pipelines(title, telescopes, bands, pipelines,
 
     # Calculate
     rows = [RESULT_MAP[-1]] # Products only
-    results = _batch_compute_results(configs, False, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
@@ -1229,7 +1239,7 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
         configs.append(cfg)
 
     rows = [RESULT_MAP[-1]] # Products only
-    results = _batch_compute_results(configs, False, rows, parallel)
+    results = _batch_compute_results(configs, rows, parallel)
 
     products = list(map(lambda r: r[1][-1], results))
     labels = sorted(set().union(*list(map(lambda p: p.keys(), products))))
