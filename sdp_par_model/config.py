@@ -301,7 +301,7 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-            result += evaluate.evaluate_expression(result_expression, tp)
+            result += evaluate.evaluate_expression(tp.get(expression_string), tp)
 
         return result
 
