@@ -294,7 +294,7 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-            result += evaluate.evaluate_expression(result_expression, tp)
+            result += evaluate.evaluate_expression(tp.get(expression_string), tp)
 
         return result
 
@@ -312,7 +312,7 @@ class PipelineConfig:
         for pipeline in pipelineConfig.relevant_pipelines:
             pipelineConfig.pipeline = pipeline
             tp = pipelineConfig.calc_tel_params(verbose)
-            result += evaluate.evaluate_expression(result_expression, tp)
+            result += evaluate.evaluate_expression(tp.get(expression), tp)
 
         return result
 
@@ -474,49 +474,6 @@ class PipelineConfig:
         print('done with parameter sweep!')
         return (param_x_values, param_y_values, results)
 
-
-    def eval_param_sweep_2d_noopt(pipelineConfig, expression='Rflop',
-                                  tsnaps=[100.0], nfacets=[1], verbose=False):
-        """Evaluates an expression for a 2D grid of different values for
-        snapshot time and facet number, by varying each parameter
-        linearly in a specified range in a number of steps.
-
-        """
-        n_param_y_values = len(tsnaps)
-        n_param_x_values = len(nfacets)
-        nr_evaluations = n_param_x_values * n_param_y_values  # The number of function evaluations that will be required
-
-        print("Evaluating expression %s while\nsweeping parameters tsnap and nfacet over 2D domain %s x %s " %
-              (expression, str(tsnaps), str(nfacets)))
-
-        # Generate telescope parameters, lambdify target expression
-        telescope_params = pipelineConfig.calc_tel_params(verbose=verbose)
-        result_expression = telescope_params.get(expression)
-        expression_lam = evaluate.cheap_lambdify_curry((telescope_params.Nfacet,
-                                               telescope_params.Tsnap),
-                                              result_expression)
-
-        # Create an empty numpy matrix to hold results
-        results = np.zeros((n_param_y_values, n_param_x_values))
-
-
-        # Nested 2D loop over all values for param1 and
-        # param2. Indexes iterate over y (inner loop), then x (outer
-        # loop)
-        for iy in range(len(tsnaps)):
-            tsnap = tsnaps[iy]
-            for ix in range(len(nfacets)):
-                nfacet = nfacets[ix]
-
-                if verbose:
-                    percentage_done = (ix + iy * n_param_x_values) * 100.0 / nr_evaluations
-                    print("> %.1f%% done: Evaluating %s for (tsnap, nfacet) = (%s, %s)" % (percentage_done, expression,
-                                                                                 str(tsnap), str(nfacet)))
-
-                results[iy, ix] = expression_lam(nfacet)(tsnap)
-
-        print('Done with parameter sweep!')
-        return (tsnaps, nfacets, results)
 
     def eval_products_symbolic(pipelineConfig, expression='Rflop', symbolify='product'):
         """
