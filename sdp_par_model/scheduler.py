@@ -266,7 +266,10 @@ class Scheduler:
                         print(msg)
                     raise AssertionError("Invalid config")
                 tp = cfg.calc_tel_params()
-                results = iapi._compute_results(cfg, False, Definitions.results_map)  # TODO - refactor this method's parameter sequence
+                results = iapi._compute_results(cfg, Definitions.results_map)  # TODO - refactor this method's parameter sequence
+
+                print(results)
+                raise Exception()
 
                 performance_dict[hpso]['Tobs'] = tp.Tobs  # Observation time
                 performance_dict[hpso][subtask]['ingestRate'] = results[0]

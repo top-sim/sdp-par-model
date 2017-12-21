@@ -6,9 +6,9 @@ A script for debugging using Pycharm -- better than doing live coding in the Jup
 import sys
 sys.path += ['..']
 import reports as iapi
-from .config import PipelineConfig
-from .parameters.definitions import *
-from .parameters.definitions import Constants as c
+from config import PipelineConfig
+from parameters.definitions import *
+from parameters.definitions import Constants as c
 import warnings
 
 # Define useful structures and methods
@@ -56,7 +56,6 @@ if __name__ == '__main__':
                    ('Total Compute Rate', 'PetaFLOP/s', True, True, lambda tp: tp.Rflop / c.peta,),
                    ('Comp Req Breakdown ->', 'PetaFLOP/s', True, True,
                     lambda tp: tp.get_products('Rflop', scale=c.peta),)]
-    del results_map[4]  # We actually don't care about the breakdown for now; but it is useful to know how to get it
 
     print('*** Processing task type %s => %s ***\n' % (task_letter, hpso))
 
@@ -71,7 +70,7 @@ if __name__ == '__main__':
                 print(msg)
             raise AssertionError("Invalid config")
         tp = cfg.calc_tel_params()
-        results = iapi._compute_results(cfg, False, results_map)  #TODO - refactor this method's parameter sequence
+        results = iapi._compute_results(cfg, results_map)  #TODO - refactor this method's parameter sequence
         print('Buffer ingest rate\t= %g TB/s' % results[0])
         print('Cache memory\t= %g TB' % results[1])
         print('Visibility IO rate\t= %g TB/s' % results[2])

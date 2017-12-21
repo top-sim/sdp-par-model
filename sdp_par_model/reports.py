@@ -18,13 +18,13 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 #import pymp
 import sympy
-from.parameters.definitions import HPSOs
-from .parameters import definitions as ParameterDefinitions
-from .parameters.definitions import Constants as c
-from .parameters.container import ParameterContainer
+from parameters.definitions import HPSOs
+from parameters import definitions as ParameterDefinitions
+from parameters.definitions import Constants as c
+from parameters.container import ParameterContainer
 #from .parameters import equations as ParameterEquations # formulae that derive secondary telescope-specific parameters from input parameters
-from . import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
-from .config import PipelineConfig
+import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
+from config import PipelineConfig
 
 # Possible calculated results to display in the notebook
 RESULT_MAP = [

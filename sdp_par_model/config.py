@@ -7,12 +7,12 @@ import warnings
 import numpy as np
 import sympy
 
-from .parameters.container import ParameterContainer, BLDep
-from .parameters import definitions as p
-from .parameters.definitions import (Telescopes, Pipelines, Bands)
-from .parameters.definitions import Constants as c
-from .parameters import equations as f
-from . import evaluate
+from parameters.container import ParameterContainer, BLDep
+from parameters import definitions as p
+from parameters.definitions import (Telescopes, Pipelines, Bands)
+from parameters.definitions import Constants as c
+from parameters import equations as f
+import evaluate
 
 class PipelineConfig:
     """
