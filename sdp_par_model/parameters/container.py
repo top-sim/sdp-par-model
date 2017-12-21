@@ -207,6 +207,9 @@ class ParameterContainer(object):
         self.bl_bins = (ib, 1, self.Nbl, { 'b': Symbol('B_max')(ib), 'bcount': 1 })
 
     def get_products(self, expression='Rflop', scale=1):
+        """
+        TODO:What does this method do exactly? Why does it default to Rflop?
+        """
         results = {}
         for product, exprs in self.products.items():
             if expression in exprs:

@@ -101,8 +101,8 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     _apply_minor_cycle_equations(o)
 
     # Apply summary equations
-    _apply_flop_equations(o)
     _apply_io_equations(o)
+    _apply_flop_equations(o)
 
     return o
 
