@@ -12,8 +12,8 @@ from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Sy
 import traceback
 import itertools
 
-from parameters.definitions import Telescopes, Pipelines, Bands, Constants as c
-from parameters.container import ParameterContainer, BLDep
+from .parameters.definitions import Telescopes, Pipelines, Bands, Constants as c
+from .parameters.container import ParameterContainer, BLDep
 
 def is_literal(expression):
     """

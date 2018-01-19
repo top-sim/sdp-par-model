@@ -10,21 +10,21 @@ import warnings
 
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
-from ipywidgets import FloatProgress
+# from ipywidgets import FloatProgress
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-#import pymp
+# import pymp
 import sympy
-from parameters.definitions import HPSOs
-from parameters import definitions as ParameterDefinitions
-from parameters.definitions import Constants as c
-from parameters.container import ParameterContainer
-#from .parameters import equations as ParameterEquations # formulae that derive secondary telescope-specific parameters from input parameters
-import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
-from config import PipelineConfig
+from .parameters.definitions import HPSOs
+from .parameters import definitions as ParameterDefinitions
+from .parameters.definitions import Constants as c
+from .parameters.container import ParameterContainer
+# from .parameters import equations as ParameterEquations # formulae that derive secondary telescope-specific parameters from input parameters
+from . import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
+from .config import PipelineConfig
 
 # Possible calculated results to display in the notebook
 RESULT_MAP = [

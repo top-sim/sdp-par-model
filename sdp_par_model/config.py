@@ -1,18 +1,18 @@
 
 from __future__ import print_function
 
-from builtins import int
+# from builtins import int
 import warnings
 
 import numpy as np
 import sympy
 
-from parameters.container import ParameterContainer, BLDep
-from parameters import definitions as p
-from parameters.definitions import (Telescopes, Pipelines, Bands)
-from parameters.definitions import Constants as c
-from parameters import equations as f
-import evaluate
+from .parameters.container import ParameterContainer, BLDep
+from .parameters import definitions as p
+from .parameters.definitions import (Telescopes, Pipelines, Bands)
+from .parameters import equations as f
+# from .parameters.definitions import Constants as c
+from . import evaluate
 
 class PipelineConfig:
     """
