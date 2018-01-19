@@ -11,17 +11,17 @@ computations.
 
 from sympy import Symbol, Expr, Lambda, Mul, Add, Sum
 import warnings
-import string
 
-import time
 
 def is_value(v):
     if isinstance(v, int) or isinstance(v, float) or \
-       isinstance(v, str) or isinstance(v, list):
+            isinstance(v, str) or isinstance(v, list):
         return True
+
 
 def is_expr(e):
     return isinstance(e, Expr) or isinstance(e, BLDep)
+
 
 class ParameterContainer(object):
     """Stores calculated telescope parameters.
@@ -42,6 +42,7 @@ class ParameterContainer(object):
       baseline.
 
     """
+
     def __init__(self):
         self.products = {}
         self.bl_bins = []
@@ -72,7 +73,8 @@ class ParameterContainer(object):
         assert isinstance(param_name, str)
         if prevent_overwrite:
             if require_overwrite:
-                raise AssertionError("Cannot simultaneously require and prevent overwrite of parameter '%s'" % param_name)
+                raise AssertionError(
+                    "Cannot simultaneously require and prevent overwrite of parameter '%s'" % param_name)
 
             if hasattr(self, param_name):
                 if eval('self.%s == value' % param_name):
@@ -81,7 +83,8 @@ class ParameterContainer(object):
                     try:
                         assert eval('self.%s == None' % param_name)
                     except AssertionError:
-                        raise AssertionError("The parameter %s has already been defined and may not be overwritten." % param_name)
+                        raise AssertionError(
+                            "The parameter %s has already been defined and may not be overwritten." % param_name)
 
         elif require_overwrite and (not hasattr(self, param_name)):
             raise AssertionError("Parameter '%s' is undefined and therefore cannot be assigned" % param_name)
@@ -156,10 +159,10 @@ class ParameterContainer(object):
             tp.__dict__[name] = (v.subs(substs_new) if is_expr(v) else v)
 
         # In products as well
-        tp.products = { product:
-                        { name: (v.subs(substs_new) if is_expr(v) else v)
-                          for name, v in vals.items() }
-                        for product, vals in tp.products.items() }
+        tp.products = {product:
+                           {name: (v.subs(substs_new) if is_expr(v) else v)
+                            for name, v in vals.items()}
+                       for product, vals in tp.products.items()}
         return tp
 
     def clear_symbolised(self):
@@ -193,7 +196,7 @@ class ParameterContainer(object):
                 self.__dict__[name] = sym
             elif isinstance(v, BLDep):
                 # SymPy cannot pass parameters by dictionary, so make a list instead
-                pars = [ v.pars[n] for n in sorted(v.pars.keys())]
+                pars = [v.pars[n] for n in sorted(v.pars.keys())]
                 self.__dict__[name] = BLDep(v.pars, sym(*pars), defaults=v.defaults)
 
         # For products too
@@ -204,7 +207,7 @@ class ParameterContainer(object):
         # Replace baseline bins with symbolic expression as well (see
         # BLDep#eval_sum for what the tuple means)
         ib = Symbol('i')
-        self.bl_bins = (ib, 1, self.Nbl, { 'b': Symbol('B_max')(ib), 'bcount': 1 })
+        self.bl_bins = (ib, 1, self.Nbl, {'b': Symbol('B_max')(ib), 'bcount': 1})
 
     def get_products(self, expression='Rflop', scale=1):
         """
@@ -215,7 +218,6 @@ class ParameterContainer(object):
             if expression in exprs:
                 results[product] = exprs[expression] / scale
         return results
-
 
     def _sum_bl_bins(self, bldep, bins=None):
         """
@@ -259,7 +261,7 @@ class ParameterContainer(object):
 
         # Collect properties
         if T is None: T = self.Tobs
-        props = { "N": N, "T": T }
+        props = {"N": N, "T": T}
         for k, expr in args.items():
 
             # Multiply out multiplicator. If either of them is
@@ -270,7 +272,7 @@ class ParameterContainer(object):
             # Baseline-dependent? Generate a sum term, otherwise just say as-is
             if isinstance(total, BLDep):
                 props[k] = self._sum_bl_bins(total, bins)
-                props[k+"_task"] = expr
+                props[k + "_task"] = expr
             else:
                 props[k] = total
 
@@ -278,6 +280,7 @@ class ParameterContainer(object):
         if not product in self.products:
             self.products[product] = {}
         self.products[product].update(props)
+
 
 class BLDep(object):
     """A baseline-dependent sympy expression.
@@ -307,7 +310,7 @@ class BLDep(object):
         self.defaults = defaults
         # Collect formal parameters. We default to parameter name 'b'
         if not isinstance(pars, dict):
-            self.pars = { 'b': pars }
+            self.pars = {'b': pars}
         else:
             self.pars = pars
         non_symbols = [p for p in self.pars.values() if not isinstance(p, Symbol)]
@@ -349,7 +352,7 @@ class BLDep(object):
             return op(other, self.term)
         # Determine required renamings
         renamings = {
-            pold : other.pars[name]
+            pold: other.pars[name]
             for name, pold in self.pars.items()
             if name in other.pars
         }
@@ -358,14 +361,18 @@ class BLDep(object):
         newpars.update(other.pars)
         newterm = self.term.subs(renamings.items())
         return BLDep(newpars, op(newterm, other.term))
+
     def __mul__(self, other):
-        return self._oper(other, lambda a,b: a*b)
+        return self._oper(other, lambda a, b: a * b)
+
     def __rmul__(self, other):
-        return self._oper(other, lambda a,b: b*a)
+        return self._oper(other, lambda a, b: b * a)
+
     def __truediv__(self, other):
-        return self._oper(other, lambda a,b: a/b)
+        return self._oper(other, lambda a, b: a / b)
+
     def __rtruediv__(self, other):
-        return self._oper(other, lambda a,b: b/a)
+        return self._oper(other, lambda a, b: b / a)
 
     def subs(self, *args, **kwargs):
         if not isinstance(self.term, Expr):
@@ -375,10 +382,11 @@ class BLDep(object):
     @property
     def free_symbols(self):
         return Lambda(list(self.pars.values()), self.term).free_symbols
+
     def atoms(self, typ):
         return Lambda(list(self.pars.values()), self.term).atoms(typ)
 
-    def eval_sum(self, bins, known_sums = {}):
+    def eval_sum(self, bins, known_sums={}):
         """
         Converts a possibly baseline-dependent terms (e.g. constructed
         using "BLDep" or "blsum") into a formula by summing over
@@ -407,9 +415,11 @@ class BLDep(object):
         if isinstance(expr, Mul):
             def independent(e):
                 return not any([s in e.free_symbols for s in self.pars.values()])
+
             indepFactors = list(filter(independent, expr.as_ordered_factors()))
             if len(indepFactors) > 0:
                 def not_indep(e): return not independent(e)
+
                 restFactors = filter(not_indep, expr.as_ordered_factors())
                 bldep = BLDep(self.pars, Mul(*restFactors))
                 return Mul(*indepFactors) * bldep.eval_sum(bins, known_sums)
@@ -420,8 +430,9 @@ class BLDep(object):
 
         # Otherwise generate sum term manually that approximates the
         # full sum using baseline bins
-        results = [ self(vals) for vals in bins ]
+        results = [self(vals) for vals in bins]
         return Add(*results, evaluate=False)
+
 
 def blsum(b, expr):
     """
@@ -438,7 +449,7 @@ def blsum(b, expr):
        expr2 = blsum(b, expr(b) * ...)
     """
     bcount = Symbol('bcount')
-    pars = {'b': b } if isinstance(b, Symbol) else dict(b)
+    pars = {'b': b} if isinstance(b, Symbol) else dict(b)
     pars['bcount'] = bcount
     defaults = {'bcount': 1}
-    return BLDep(pars, bcount * expr, defaults={'bcount':1})
+    return BLDep(pars, bcount * expr, defaults={'bcount': 1})
