@@ -16,7 +16,11 @@ import matplotlib.pylab as pylab
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import pymp
+try:
+    import pymp
+    HAVE_PYMP=True
+except:
+    HAVE_PYMP=False
 import sympy
 
 from .parameters import definitions as ParameterDefinitions
@@ -937,7 +941,7 @@ def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detai
                      len(configs)))
 
     # Parallelise if requested
-    if parallel > 0:
+    if parallel > 0 and HAVE_PYMP:
         configQueue = pymp.shared.list(configs)
         results = pymp.shared.dict()
         f = FloatProgress(min=0, max=len(configs))
