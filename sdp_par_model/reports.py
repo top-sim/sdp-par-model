@@ -16,8 +16,13 @@ import matplotlib.pylab as pylab
 from matplotlib import cm
 # from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-# import pymp
+try:
+    import pymp
+    HAVE_PYMP=True
+except:
+    HAVE_PYMP=False
 import sympy
+
 from .parameters.definitions import HPSOs
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
@@ -944,7 +949,7 @@ def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detai
                      len(configs)))
 
     # Parallelise if requested
-    if parallel > 0:
+    if parallel > 0 and HAVE_PYMP:
         raise Exception("Cannot run PyMP on Windows")
     '''
         configQueue = pymp.shared.list(configs)
