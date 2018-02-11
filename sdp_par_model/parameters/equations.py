@@ -119,7 +119,7 @@ def _apply_common_equations(o, bins, binfracs):
     o.Nbl = sum(binfracs) * o.Nbl_full
 
     # Build baseline bins
-    o.bl_bins = list([
+    o.baseline_bins = list([
         { 'b': bmax,
           'bfrac': frac,
           'bcount': frac * o.Nbl_full
@@ -603,7 +603,7 @@ def _apply_calibration_equations(o):
     if N_solve > 0:
 
         # Averaging needs to be done for each calibration method
-        Rflop_averaging = o.NFlop_averager * N_solve * o.Rvis.eval_sum(o.bl_bins)
+        Rflop_averaging = o.NFlop_averager * N_solve * o.Rvis.eval_sum(o.baseline_bins)
         Rflop_solving   = o.NFlop_solver * (o.Ncal_G_solve + o.Ncal_B_solve + o.Ncal_I_solve) / o.Tsolve
         o.set_product(Products.Solve,
             T = o.Tsolve,
@@ -751,7 +751,7 @@ def _apply_kernel_product_equations(o):
 
     # Baselines to cover with kernels.
     if o.NAProducts == 'all' or o.on_the_fly or not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
-        bins = o.bl_bins
+        bins = o.baseline_bins
 
     else:
         # If we do not need a separate A^A-kernel per baseline,
@@ -838,19 +838,19 @@ def _apply_io_equations(o):
     # factor for double-buffering
     #
     # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-    o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis.eval_sum(o.bl_bins) * o.Nbeam * o.Mvis * o.Tobs
+    o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis.eval_sum(o.baseline_bins) * o.Nbeam * o.Mvis * o.Tobs
 
     # Visibility read rate
     #
     # According to SDPPROJECT-133 (JIRA) assume that we only need
     # to read all visibilities twice per major cycle and beam.
-    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.bl_bins) * o.Mvis
+    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.baseline_bins) * o.Mvis
     # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
 
     # Facet visibility rate
     #
     # Visibilities that go into a single facet
-    o.Rfacet_vis = o.Nbeam * o.Npp * o.Nmajortotal * o.Rvis_backward.eval_sum(o.bl_bins) * o.Mvis
+    o.Rfacet_vis = o.Nbeam * o.Npp * o.Nmajortotal * o.Rvis_backward.eval_sum(o.baseline_bins) * o.Mvis
 
     # Snapshot Size
     #

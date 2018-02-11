@@ -17,7 +17,7 @@ using the Scheduler.sum_deltas() method with maximum and minimum allowable value
 from .parameters.definitions import Constants as c
 from .parameters.definitions import HPSOs
 from .config import PipelineConfig
-import sdp_par_model.reports as iapi  # PyCharm doesn't like this import statement but it is correct
+from . import reports as iapi  # PyCharm doesn't like this import statement but it is correct
 import warnings
 import bisect
 
@@ -39,7 +39,6 @@ class Definitions:
     # The following results map was copied from examples used by Peter Wortmann. It defines values we wish to calculate.
     #               Title                      Unit       Default? Sum?             Expression
     results_map =[('Total buffer ingest rate','TeraBytes/s',True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
-                  ('Working (cache) memory',  'TeraBytes',  True, True,  lambda tp: tp.Mw_cache/c.tera,   ),
                   ('Visibility I/O Rate',     'TeraBytes/s',True, True,  lambda tp: tp.Rio/c.tera,        ),
                   ('Total Compute Rate',       'PetaFLOP/s', True, True,  lambda tp: tp.Rflop/c.peta,      )]
 

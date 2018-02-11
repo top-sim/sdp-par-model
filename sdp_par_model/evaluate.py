@@ -51,7 +51,7 @@ def evaluate_expression(expression, tp):
 
         # Baseline dependent?
         if isinstance(expression, BLDep):
-            return [ float(expression(**subs)) for subs in tp.bl_bins ]
+            return [ float(expression(**subs)) for subs in tp.baseline_bins ]
         else:
             # Otherwise just evaluate directly
             return float(expression)
@@ -65,9 +65,7 @@ def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
     # Lower bound cannot be higher than the uppper bound.
     if bound_lower < bound_upper:
-        result = opt.minimize_scalar(lam,
-                                     bounds=(bound_lower, bound_upper),
-                                     method='bounded')
+        result = opt.minimize_scalar(lam, bounds=(bound_lower, bound_upper), method='bounded')
         if not result.success:
             warnings.warn('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
         # else:
@@ -137,12 +135,8 @@ def cheap_lambdify_curry(free_vars, expression):
     return eval(expr_head + expr_body)
 
 
-def minimise_parameters(telescope_parameters,
-                        expression_string = 'Rflop',
-                        expression = None,
-                        lower_bound = {}, upper_bound = {},
-                        only_one_minimum = ['Nfacet'],
-                        verbose = False):
+def minimise_parameters(telescope_parameters, expression_string = 'Rflop', expression = None,
+                        lower_bound = {}, upper_bound = {}, only_one_minimum = ['Nfacet'], verbose = False):
     """Computes the optimal value for free variables in telescope parameters
     such  that it minimizes the value of an expression (typically
     Rflop). Returns result as a dictionary.
@@ -150,9 +144,9 @@ def minimise_parameters(telescope_parameters,
     :param telescope_parameters: Contains the definition of the
       expression that needs to be minimzed. This should be a
       symbolic expression that involves Deltaw_Stack and/or Nfacet.
-    :param expr_to_minimize_string: The expression that should be
-      minimized. This is typically assumed to be the computational
-      load, but may also be, for example, buffer size.
+    :param expression_string: The expression that should be minimized.
+            This is typically assumed to be the computational load, but may also be, for example, buffer size.
+    :param expression: TODO define
     :param lower_bound: Lower bound to use for symbols
     :param upper_bound: Upper bound to use for symbols
     :param only_one_minimum: Assume that the given (integer) symbol
@@ -230,6 +224,7 @@ def minimise_parameters(telescope_parameters,
 
         # Set integer symbols
         expr = expression_lam
+        #TODO Peter: what does the forloop below accomplish?
         for i in int_vals:
             expr = expr(i)
 

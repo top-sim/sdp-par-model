@@ -57,6 +57,8 @@ class PipelineConfig:
                 raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
             self.band = band
             self.telescope = telescope
+            p.apply_telescope_parameters(params, self.telescope)
+            p.apply_band_parameters(params, self.band)
 
         # Determine relevant pipelines
         if isinstance(pipeline, list):
@@ -161,7 +163,11 @@ class PipelineConfig:
 
         # Band compatibility. Can skip for HPSOs, as they override the
         # band manually.
-        if self.hpso is None and not self.telescope_and_band_are_compatible():
+        if (hasattr(self, "hpso") and hasattr(self, "band")) or (not (hasattr(self, "hpso") or hasattr(self, "band"))):
+                messages.append("ERROR: Either the Imaging Band or an HPSO needs to be defined (and not both).")
+                okay = False
+
+        if not (hasattr(self, "hpso") or self.telescope_and_band_are_compatible()):
             messages.append("ERROR: Telescope '%s' and band '%s' are not compatible" %
                               (str(self.telescope), str(self.band)))
             okay = False
@@ -170,9 +176,6 @@ class PipelineConfig:
             messages.append("ERROR: Configuration has no defined pipeline")
             okay = False
 
-        if (hasattr(self, "hpso") and hasattr(self, "band")) or (not (hasattr(self, "hpso") or hasattr(self, "band"))):
-                messages.append("ERROR: Either the Imaging Band or an HPSO needs to be defined (and not both).")
-                okay = False
         return (okay, messages)
 
     def calc_tel_params(cfg, verbose=False, adjusts={}, symbolify='',

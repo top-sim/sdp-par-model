@@ -45,7 +45,7 @@ class ParameterContainer(object):
 
     def __init__(self):
         self.products = {}
-        self.bl_bins = []
+        self.baseline_bins = []
         self.Nbl = 0
         pass
 
@@ -207,7 +207,7 @@ class ParameterContainer(object):
         # Replace baseline bins with symbolic expression as well (see
         # BLDep#eval_sum for what the tuple means)
         ib = Symbol('i')
-        self.bl_bins = (ib, 1, self.Nbl, {'b': Symbol('B_max')(ib), 'bcount': 1})
+        self.baseline_bins = (ib, 1, self.Nbl, {'b': Symbol('B_max')(ib), 'bcount': 1})
 
     def get_products(self, expression='Rflop', scale=1):
         """
@@ -219,7 +219,7 @@ class ParameterContainer(object):
                 results[product] = exprs[expression] / scale
         return results
 
-    def _sum_bl_bins(self, bldep, bins=None):
+    def _sum_baseline_bins(self, bldep, bins=None):
         """
         Converts a possibly baseline-dependent terms (e.g. constructed
         using "BLDep" or "blsum") into a formula by summing over
@@ -235,7 +235,7 @@ class ParameterContainer(object):
 
         # Bin defaults
         if bins is None:
-            bins = self.bl_bins
+            bins = self.baseline_bins
         known_sums = {}
         if 'bcount' in bldep.pars:
             known_sums[bldep.pars['bcount']] = self.Nbl
@@ -271,7 +271,7 @@ class ParameterContainer(object):
 
             # Baseline-dependent? Generate a sum term, otherwise just say as-is
             if isinstance(total, BLDep):
-                props[k] = self._sum_bl_bins(total, bins)
+                props[k] = self._sum_baseline_bins(total, bins)
                 props[k + "_task"] = expr
             else:
                 props[k] = total

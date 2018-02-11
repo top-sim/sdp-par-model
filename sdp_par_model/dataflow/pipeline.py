@@ -38,16 +38,16 @@ class Pipeline:
         self.baseline = Domain('Baseline')
         usedBls = tp.Nbl
         self.allBaselines = self.baseline.regions(usedBls)
-        if isinstance(tp.bl_bins, tuple):
+        if isinstance(tp.baseline_bins, tuple):
             b = Symbol("b")
             self.binBaselines = self.allBaselines.split(tp.Nbl, props={
                 'bmax': Lambda(b, Symbol("B_max")(b)),
                 'size': 1
             })
         else:
-            self.binBaselines = self.allBaselines.split(len(tp.bl_bins), props={
-                'bmax': lambda i: tp.bl_bins[i]['b'],
-                'size': lambda i: tp.bl_bins[i]['bcount']
+            self.binBaselines = self.allBaselines.split(len(tp.baseline_bins), props={
+                'bmax': lambda i: tp.baseline_bine[i]['b'],
+                'size': lambda i: tp.baseline_bine[i]['bcount']
             })
         if tp.NAProducts == 'all':
             self.kernelBaselines = self.binBaselines

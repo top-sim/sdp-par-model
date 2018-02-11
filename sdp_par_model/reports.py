@@ -52,9 +52,10 @@ RESULT_MAP = [
     ('w-stacking planes',          '',           True,    False, lambda tp: tp.Nwstack,           ),
     ('w-stacking planes predict',  '',           True,    False, lambda tp: tp.Nwstack_predict,   ),
     ('Stations/antennas',          '',           False,   False, lambda tp: tp.Na,                ),
-    ('Max Baseline [per bin]',     'km',         False,   False, lambda tp: [ bin['b'] / c.kilo for  bin in tp.bl_bins ] ),
-    ('Baseline fraction [per bin]','%',          False,   False, lambda tp: [ 100*bin['bfrac'] for  bin in tp.bl_bins ]  ),
-
+    ('Max Baseline [per bin]',     'km',         False,   False, lambda tp: [ bin['b'] / c.kilo
+                                                                              for  bin in tp.baseline_bins ] ),
+    ('Baseline fraction [per bin]','%',          False,   False, lambda tp: [ 100*bin['bfrac']
+                                                                              for  bin in tp.baseline_bins ]  ),
     ('-- Image --',                '',           True,    False, lambda tp: ''                    ),
     ('Facet FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov/c.degree,),
     ('Total FoV size',             'deg',        False,   False, lambda tp: tp.Theta_fov_total/c.degree,),
