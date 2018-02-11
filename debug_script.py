@@ -284,9 +284,9 @@ def run_experiment_1():
         print('Compute Rate\t= %g PetaFLOP/s' % results[3])
         print()
 
-    print('done.')
+    print('Done with running debug script.')
 
-def run_experiment_2():
+def built_performance_dict():
     sdp_scheduler = Scheduler()
     performance_lookup_filename = "performance_dict.data"
     if os.path.isfile(performance_lookup_filename):
@@ -309,5 +309,5 @@ def run_working_sets():
 
 if __name__ == '__main__':
     print(sys.path)
-    #run_experiment_2()
-    run_working_sets()
+    built_performance_dict()
+    #run_working_sets()

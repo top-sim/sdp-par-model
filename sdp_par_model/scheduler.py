@@ -267,23 +267,18 @@ class Scheduler:
                 tp = cfg.calc_tel_params()
                 results = iapi._compute_results(cfg, Definitions.results_map)  # TODO - refactor this method's parameter sequence
 
-                print(results)
-                raise Exception()
-
                 performance_dict[hpso]['Tobs'] = tp.Tobs  # Observation time
                 performance_dict[hpso][subtask]['ingestRate'] = results[0]
-                performance_dict[hpso][subtask]['cache'] = results[1]
-                performance_dict[hpso][subtask]['visRate'] = results[2]
-                performance_dict[hpso][subtask]['compRate'] = results[3]
+                performance_dict[hpso][subtask]['visRate'] = results[1]
+                performance_dict[hpso][subtask]['compRate'] = results[2]
 
                 print('Buffer ingest rate\t= %g TB/s' % results[0])
-                print('Cache memory\t= %g TB' % results[1])
-                print('Visibility IO rate\t= %g TB/s' % results[2])
-                print('Compute Rate\t= %g PetaFLOP/s' % results[3])
+                print('Visibility IO rate\t= %g TB/s' % results[1])
+                print('Compute Rate\t= %g PetaFLOP/s' % results[2])
                 print()
 
         self.performance_dict = performance_dict
-        print('done')
+        print('Done with building performance dictionary.')
         return performance_dict
 
     def task_letters_to_sdp_task_list(self, letter_sequence):

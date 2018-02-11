@@ -9,6 +9,7 @@ import warnings
 import numpy as np
 from scipy import optimize as opt
 from sympy import simplify, lambdify, Max, Lambda, FiniteSet, Function, Expr, Symbol
+import math
 import traceback
 import itertools
 
