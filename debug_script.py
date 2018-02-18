@@ -286,7 +286,7 @@ def run_experiment_1():
 
     print('Done with running debug script.')
 
-def built_performance_dict():
+def build_performance_dict():
     sdp_scheduler = Scheduler()
     performance_lookup_filename = "performance_dict.data"
     if os.path.isfile(performance_lookup_filename):
@@ -307,7 +307,53 @@ def run_working_sets():
                             pipeline=Pipelines.ICAL,
                             adjusts="Tobs=6*3600")
 
+def schedule_task_seq():
+    sdp_scheduler = Scheduler()
+    performance_lookup_filename = "performance_dict.data"
+    if os.path.isfile(performance_lookup_filename):
+        performance_dict = None
+        with open(performance_lookup_filename, "rb") as f:
+            performance_dict = pickle.load(f)
+        sdp_scheduler.set_performance_dictionary(performance_dict)
+    else:
+        # Create a performance dictionary and write it to file
+        performance_dict = sdp_scheduler.compute_performance_dictionary()
+        with open(performance_lookup_filename, "wb") as f:
+            pickle.dump(performance_dict, f, pickle.HIGHEST_PROTOCOL)
+
+    seqL = ('B','A','A',)+('B',)*32+ ('A', 'A',) +('B',)*73 + ('A',) +('B',)*43
+    seqM = ('B','G',)+('B',)*34 +('G','C','F',)+('B',)*110 +('F',)*91 +('G',)*2 + ('E',)*4 + ('D',)
+
+    sequence_to_simulate = seqL
+
+    task_list = sdp_scheduler.task_letters_to_sdp_task_list(sequence_to_simulate)
+    '''To show how the tasks are created, can print the sequence of Task objects.'''
+
+    #for task in task_list:
+    #    print(task)
+
+    sdp_low_flops_capacity = 13.8  # PetaFlops
+    sdp_mid_flops_capacity = 12.1  # PetaFlops
+
+    sdp_low_hot_buffer_size = 14e3  # TeraBytes
+    sdp_mid_hot_buffer_size = 14e3  # TeraBytes
+
+    sdp_low_cold_buffer_size = 15e3  # TeraBytes -- arbitrary for now
+    sdp_mid_cold_buffer_size = 15e3  # TeraBytes -- arbitrary for now
+
+    flops_cap = sdp_low_flops_capacity
+    hotbuf_cap = sdp_low_hot_buffer_size
+    coldbuf_cap = sdp_low_cold_buffer_size
+
+    schedule = sdp_scheduler.schedule(task_list, flops_cap, hotbuf_cap, coldbuf_cap,
+                                      assign_flops_fraction=0.5, assign_bw_fraction=0.5, max_nr_iterations=1000)
+    last_preservation_timestamp = sorted(schedule.preserve_deltas.keys())[-1]
+    max_t = last_preservation_timestamp
+    print("SDP task sequence completes at t = %g hrs" % (max_t / 3600))
+
+
 if __name__ == '__main__':
-    print(sys.path)
-    built_performance_dict()
+    #print(sys.path)
+    #build_performance_dict()
     #run_working_sets()
+    schedule_task_seq()
