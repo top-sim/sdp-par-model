@@ -6,6 +6,8 @@ import warnings
 
 import numpy as np
 import sympy
+import pylru
+import copy
 
 from .parameters.container import ParameterContainer, BLDep
 from .parameters import definitions as p
@@ -13,6 +15,8 @@ from .parameters.definitions import (Telescopes, Pipelines, Bands)
 from .parameters import equations as f
 # from .parameters.definitions import Constants as c
 from . import evaluate
+
+TEL_PARAM_CACHE = pylru.lrucache(1000)
 
 class PipelineConfig:
     """
@@ -200,6 +204,12 @@ class PipelineConfig:
         if clear_symbolised is None:
             clear_symbolised = (optimize_expression is not None)
 
+        # Check whether we have a cached copy
+        tel_param_desc = (cfg.describe(), str(adjusts.items()), symbolify, optimize_expression, clear_symbolised)
+        if not verbose:
+            if tel_param_desc in TEL_PARAM_CACHE:
+                return copy.deepcopy(TEL_PARAM_CACHE[tel_param_desc])
+
         telescope_params = ParameterContainer()
         p.apply_global_parameters(telescope_params)
         p.define_symbolic_variables(telescope_params)
@@ -282,6 +292,8 @@ class PipelineConfig:
         if symbolify == '' and clear_symbolised:
             telescope_params.clear_symbolised()
 
+        # Cache, return
+        TEL_PARAM_CACHE[tel_param_desc] = copy.deepcopy(telescope_params)
         return telescope_params
 
     def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):

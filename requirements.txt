@@ -6,3 +6,4 @@ notebook
 ipywidgets
 graphviz
 pymp-pypi
+pylru
