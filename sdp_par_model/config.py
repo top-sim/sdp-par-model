@@ -6,7 +6,7 @@ import warnings
 
 import numpy as np
 import sympy
-import pylru
+import pylru  # Install using pip (conda doesn't resolve this in my test)
 import copy
 
 from .parameters.container import ParameterContainer, BLDep

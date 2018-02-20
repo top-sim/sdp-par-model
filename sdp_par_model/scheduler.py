@@ -400,14 +400,14 @@ class Scheduler:
         return tasks
 
     @staticmethod
-    def sum_deltas(deltas_history, timepoint, sorted_delta_keys=None, value_min=None, value_max=None, eps=1e-15):
+    def sum_deltas(deltas_history, timepoint, sorted_delta_keys=None, val_min=None, val_max=None, eps=1e-15):
         """
         Sums all the deltas chronologically up to the timestamp t
         @param deltas_history  : a dictionary that maps wall clock timestamps to a resource's value-changes
         @param timepoint       : The time until which the values should be summed
         @param sorted_delta_keys : Optional sorted timestamps; prevents re-sorting the timestamps for efficiency
-        @param value_min       : Lowest allowable value for the resource's balance. Default zero.
-        @param value_max       : Higest allowable value for the resource's balance. Default None.
+        @param val_min         : Lowest allowable value for the resource's balance. Default zero.
+        @param val_max         : Higest allowable value for the resource's balance. Default None.
         @param eps             : Numerical rounding tolerance
         @return                : The sum of the deltas from the beginning up to (and including) the timepoint.
                                  Returns False if value_min of value_max are violated
@@ -424,10 +424,10 @@ class Scheduler:
         value_at_t = 0
         for i in range(stop_before_index):
             value_at_t += deltas_history[timestamps_sorted[i]]
-            if (((value_min is not None) and (value_at_t + eps < value_min)) or
-                    ((value_max is not None) and (value_at_t - eps > value_max))):
+            if (((val_min is not None) and (value_at_t + eps < val_min)) or
+                    ((val_max is not None) and (value_at_t - eps > val_max))):
                 warnings.warn("Sum of deltas leads to value of %g at time %g sec. Outside imposed bounds of "
-                               "[%s,%s] " % (value_at_t, timestamps_sorted[i], value_min, value_max))
+                               "[%s,%s] " % (value_at_t, timestamps_sorted[i], val_min, val_max))
 
         return value_at_t
 
@@ -544,10 +544,10 @@ class Scheduler:
         """
         :param task_list an iterable collection of SDPTask objects that need to be scheduled
         :param flops_cap the cap on the usable SDP flops (PetaFLOPS)
-        :param hotbuf_cap the capacity of the Hot Buffer (PetaBytes)
-        :param coldbuf_cap the capacity of the Cold Buffer (PetaBytes)
-        :param assign_flops_fraction fraction of the available FLOPS assigned to a task that has no fixed completion time
-        :param assign_bw_fraction
+        :param hotbuf_cap the capacity of the Hot Buffer (TeraBytes)
+        :param coldbuf_cap the capacity of the Cold Buffer (TeraBytes)
+        :param assign_flops_fraction of avail. FLOPS assigned to a task that has no fixed completion time
+        :param assign_bw_fraction of avail. bandwidth assigned to a task that has no fixed completion time
         :param minimum_flops_frac fraction of flops_cap that needs to be available to schedule a task
         :param minimum_bw_frac fraction of bandwidth that needs to be available to schedule a task
         :param max_nr_iterations self-explanatory
@@ -561,12 +561,14 @@ class Scheduler:
         for task in task_list:
             assert isinstance(task, SDPTask)
             tasks_to_be_scheduled.add(task)
+            datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]
+            datapipe_out_cap = SDPAttr.datapath_speeds[task.datapath_out]
+
             if task.dt_fixed:
                 if task.datapath_in is None:
                     assert task.datasize_in == 0
                     minimum_read_time = 0
                 else:
-                    datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]
                     assert datapipe_in_cap > 0
                     minimum_read_time = task.datasize_in / datapipe_in_cap
 
@@ -576,7 +578,6 @@ class Scheduler:
                     assert task.datasize_out == 0
                     minimum_write_time = 0
                 else:
-                    datapipe_out_cap = SDPAttr.datapath_speeds[task.datapath_out]
                     assert datapipe_out_cap > 0
                     minimum_write_time = task.datasize_out / datapipe_out_cap
 
@@ -609,12 +610,14 @@ class Scheduler:
         datalocation_to_limits_map = {SDPAttr.cold_buffer : coldbuf_cap,
                                       SDPAttr.hot_buffer  : hotbuf_cap,
                                       SDPAttr.working_mem : float('inf'),  # infinite working memory
-                                      SDPAttr.preserve    : float('inf')}  # infinite preservation memory
+                                      SDPAttr.preserve    : float('inf'),  # infinite preservation memory
+                                      None: None}
 
         datalocation_to_deltas_map = {SDPAttr.cold_buffer : schedule.cold_buffer_deltas,
                                       SDPAttr.hot_buffer  : schedule.hot_buffer_deltas,
                                       SDPAttr.working_mem : schedule.memory_deltas,
-                                      SDPAttr.preserve    : schedule.preserve_deltas}
+                                      SDPAttr.preserve    : schedule.preserve_deltas,
+                                      None : None}
 
         # Note - not all conceivable pipes exist, e.g. no pipe from cold buffer to preserve.
         datapath_to_deltas_map = {(SDPAttr.ingest_buffer, SDPAttr.working_mem) : schedule.ingest_pipe_deltas,
@@ -652,6 +655,8 @@ class Scheduler:
             # Loop across all tasks
             for task in tasks_to_be_scheduled:
                 assert isinstance(task, SDPTask)
+                datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]
+                datapipe_out_cap = SDPAttr.datapath_speeds[task.datapath_out]
 
                 # ------------------------
                 # Check if task has already been scheduled.
@@ -699,23 +704,20 @@ class Scheduler:
                 # ------------------------
 
                 # Obtain the relevant the input and output pipeline bandwidths, and their delta histories
-                bw_in_cap   = SDPAttr.datapath_speeds[task.datapath_in]
-                min_req_bw_in = bw_in_cap * minimum_bw_frac
-                datapath_in_deltas = datapath_to_deltas_map[task.datapath_in]
+                min_req_bw_in = datapipe_in_cap * minimum_bw_frac
+                datapipe_in_deltas = datapath_to_deltas_map[task.datapath_in]
 
                 min_req_flops = flops_cap * minimum_flops_frac
 
-                bw_out_cap   = SDPAttr.datapath_speeds[task.datapath_out]
-                min_req_bw_out = bw_out_cap * minimum_bw_frac
-                datapath_out_deltas = datapath_to_deltas_map[task.datapath_out]
-
-                req_free_bw_in  = min_req_bw_in  / assign_bw_fraction
-                req_free_flops  = min_req_flops  / assign_flops_fraction
-                req_free_bw_out = min_req_bw_out / assign_bw_fraction
+                min_req_bw_out = datapipe_out_cap * minimum_bw_frac
+                datapipe_out_deltas = datapath_to_deltas_map[task.datapath_out]
 
                 # Obtain the output data target's size limit and delta history
-                dataloc_out_cap    = datalocation_to_limits_map[task.datapath_out[1]]
-                dataloc_out_deltas = datalocation_to_deltas_map[task.datapath_out[1]]
+                target_out_cap    = datalocation_to_limits_map[task.datapath_out[1]]
+                target_out_deltas = datalocation_to_deltas_map[task.datapath_out[1]]
+                assigned_bw_in  = 0  # to be overwritten
+                assigned_bw_out = 0  # to be overwritten
+                assigned_flops  = 0  # to be overwritten
 
                 # -------
                 # Find a suitable times to start reading data, computing data, and writing data
@@ -724,243 +726,143 @@ class Scheduler:
                 # of available FLOPS force later completion, the start_read_t may be moved later, as long as it doesn't
                 # cause additional delay to to completion
                 # -------
+                start_t = wall_clock
                 found_suitable_schedule_time = False
+                nr_suitable_start_time_iterations = 0
+
                 if task.dt_fixed:
                     # Technically not a hard requirement, but we simplify our lives by assuming the following:
                     assert (task.streaming_in and task.streaming_out)  #TODO in future allow sequential fixed-time tasks
                     # Assign bandwidths and flops to the task. We do not take minimum rates into consideration here
                     # because the timespan of the task has primary importance
-                    assigned_bw_in  = task.datasize_in / task.dt_fixed
-                    assigned_flops = task.flopcount / task.dt_fixed
-                    assigned_bw_out = task.datasize_out / task.dt_fixed
+                    assigned_bw_in  = task.datasize_in / task.dt_fixed   # TeraBytes / sec
+                    assigned_flops = task.flopcount / task.dt_fixed      # PetaFLOP  / sec
+                    assigned_bw_out = task.datasize_out / task.dt_fixed  # TeraBytes / sec
 
-                    start_time = wall_clock
-                    nr_suitable_start_time_iterations = 0
                     while not found_suitable_schedule_time:
                         nr_suitable_start_time_iterations += 1
                         assert nr_suitable_start_time_iterations < 999  # prevent infinite loop; should never happen
 
-                        start_read_t = Scheduler.find_suitable_time(datapath_in_deltas, start_time,
-                                                                    val_max=(bw_in_cap - assigned_bw_in)
+                        start_read_t = Scheduler.find_suitable_time(datapipe_in_deltas, start_t,
+                                                                    val_max=(datapipe_in_cap - assigned_bw_in)
                                                                     , eps=epsilon)
 
-                        start_compute_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_time,
+                        start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_t,
                                                                        val_max=(flops_cap - assigned_flops),
                                                                        eps=epsilon)
 
-                        start_writepipe_t = Scheduler.find_suitable_time(datapath_out_deltas, start_time,
-                                                                         val_max=(bw_out_cap - assigned_bw_out),
+                        start_writepipe_t = Scheduler.find_suitable_time(datapipe_out_deltas, start_t,
+                                                                         val_max=(datapipe_out_cap - assigned_bw_out),
                                                                          eps=epsilon)
 
-                        start_writedest_t = Scheduler.find_suitable_time(dataloc_out_deltas, start_time,
-                                                                         val_max=(dataloc_out_cap - task.datasize_out),
+                        start_writedest_t = Scheduler.find_suitable_time(target_out_deltas, start_t,
+                                                                         val_max=(target_out_cap - task.datasize_out),
                                                                          eps=epsilon)
 
-                        if (start_read_t == start_compute_t) and (start_read_t == start_writepipe_t) \
-                                and (start_read_t == start_writedest_t):
-                            start_time = start_read_t
-                            start_write_t = start_writepipe_t
-                            read_dt = task.dt_fixed
-                            compute_dt = task.dt_fixed
-                            write_dt = task.dt_fixed
-                            end_task_t = start_time + task.dt_fixed
-
-                            found_suitable_schedule_time = True
+                        if (start_read_t != start_comp_t) or (start_read_t != start_writepipe_t) \
+                                or (start_read_t != start_writedest_t):
+                            start_t = max(start_read_t, start_comp_t, start_writepipe_t, start_writedest_t)
+                            continue  # and repeat another loop
                         else:
-                            start_time = max(start_read_t, start_compute_t, start_writepipe_t, start_writedest_t)
+                            start_read_t = start_t
+                            start_comp_t = start_t
+                            start_write_t = start_t
+                            read_dt = task.dt_fixed
+                            comp_dt = task.dt_fixed
+                            write_dt = task.dt_fixed
+                            end_task_t = start_write_t + write_dt
+                            found_suitable_schedule_time = True
 
-                else:  # Task does not have a fixed time slot and could, in principle, take any amount of time as long
-                       # as minimum bandwidth and flops rates are attained
-                    start_time = wall_clock
-                    nr_suitable_start_time_iterations = 0
+                # All other cases: task does not have a fixed time slot and could, in principle, take any amount of
+                # time as long as minimum bandwidth and flops rates are attained
+                elif task.streaming_in and task.streaming_out:
+                    start_read_t = 0
+                    start_comp_t = 0
+                    start_write_t = 0
+                    read_dt = 0
+                    comp_dt = 0
+                    write_dt = 0
+                    end_task_t = 0
+                    raise Exception("Not Implemented")
+
+                elif task.streaming_in:  # Streaming in, not out
+                    start_read_t = 0
+                    start_comp_t = 0
+                    start_write_t = 0
+                    read_dt = 0
+                    comp_dt = 0
+                    write_dt = 0
+                    end_task_t = 0
+                    raise Exception("Not Implemented")
+
+                elif task.streaming_out:  # Streaming out, not in
+                    start_read_t = 0
+                    start_comp_t = 0
+                    start_write_t = 0
+                    read_dt = 0
+                    comp_dt = 0
+                    write_dt = 0
+                    end_task_t = 0
+                    raise Exception("Not Implemented")
+
+                else:  # Neither streaming out, not streaming in
                     while not found_suitable_schedule_time:
                         nr_suitable_start_time_iterations += 1
                         assert nr_suitable_start_time_iterations < 999  # prevent infinite loop; should never happen
 
-                        if task.streaming_in and task.streaming_out:
-                            bw_in_available = bw_in_cap - Scheduler.sum_deltas(datapath_in_deltas, start_time,
-                                                                               value_max=bw_in_cap, eps=epsilon)
-                            flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_time,
-                                                                               value_max=flops_cap, eps=epsilon)
-                            bw_out_available = bw_out_cap - Scheduler.sum_deltas(datapath_out_deltas, start_time,
-                                                                                 value_max=bw_out_cap, eps=epsilon)
+                        assigned_bw_in = 0
+                        read_dt = 0
+                        start_read_t = start_t
+                        if (task.datapath_in is not None) and (task.datasize_in > 0):
+                            start_read_t = Scheduler.find_suitable_time(datapipe_in_deltas, start_t,
+                                                                        val_max=(datapipe_in_cap - min_req_bw_in),
+                                                                        eps=epsilon)
+                            bw_in_available = datapipe_in_cap - Scheduler.sum_deltas(datapipe_in_deltas, start_read_t,
+                                                                                     val_max=datapipe_in_cap, eps=epsilon)
 
-                            min_task_time = max(task.datasize_in  / (bw_in_available  * assign_bw_fraction),
-                                                task.flopcount    / (flops_available  * assign_flops_fraction),
-                                                task.datasize_out / (bw_out_available * assign_bw_fraction))
-
-                            assigned_bw_in  = task.datasize_in  / min_task_time
-                            assigned_flops  = task.flopcount    / min_task_time
-                            assigned_bw_out = task.datasize_out / min_task_time
-
-                            if (assigned_bw_in < min_req_bw_in) or \
-                                    (assigned_flops < min_req_flops) or (assigned_bw_out < min_req_bw_out):
-                                start_read_t = Scheduler.find_suitable_time(datapath_in_deltas, start_time,
-                                                                            val_max=(bw_in_cap - req_free_bw_in),
-                                                                            eps=epsilon)
-                                start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_time,
-                                                                            val_max=(flops_cap - req_free_flops),
-                                                                            eps=epsilon)
-                                start_writepipe_t = Scheduler.find_suitable_time(datapath_out_deltas, start_time,
-                                                                                 val_max=(bw_out_cap - req_free_bw_out),
-                                                                                 eps=epsilon)
-                                start_writedest_t = Scheduler.find_suitable_time(dataloc_out_deltas, start_time,
-                                                                                 val_max=(dataloc_out_cap - task.datasize_out),
-                                                                                 eps=epsilon)
-                                delay_dt = max(start_read_t, start_comp_t, start_writepipe_t, start_writedest_t) - start_time
-                                start_time += delay_dt
-                                continue
-                            else:
-                                start_read_t    = start_time
-                                start_compute_t = start_time
-                                start_write_t   = start_time
-                                end_task_t      = start_time + min_task_time
-                                read_dt         = min_task_time
-                                compute_dt      = min_task_time
-                                write_dt        = min_task_time
-                                found_suitable_schedule_time = True
-
-                        elif task.streaming_in:  # Streaming in, not out
-                            start_read_t    = start_time
-                            start_compute_t = start_time
-
-                            bw_in_available = bw_in_cap - Scheduler.sum_deltas(datapath_in_deltas, start_time,
-                                                                               value_max=bw_in_cap, eps=epsilon)
-                            flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_time,
-                                                                               value_max=flops_cap, eps=epsilon)
-
-                            min_stream_time = max(task.datasize_in / (bw_in_available * assign_bw_fraction),
-                                                  task.flopcount   / (flops_available * assign_flops_fraction))
-
-                            read_dt         = min_stream_time
-                            compute_dt      = min_stream_time
-                            assigned_bw_in  = task.datasize_in  / min_stream_time
-                            assigned_flops  = task.flopcount    / min_stream_time
-
-                            start_write_t   = start_time + min_stream_time
-                            bw_out_available = bw_out_cap - Scheduler.sum_deltas(datapath_out_deltas, start_write_t,
-                                                                                 value_max=bw_out_cap, eps=epsilon)
-                            assigned_bw_out = bw_out_available * assign_bw_fraction
-                            write_dt = task.datasize_out / assigned_bw_out
-                            end_task_t      = start_write_t + write_dt
-
-                            if (assigned_bw_in < min_req_bw_in) or \
-                                    (assigned_flops < min_req_flops) or (assigned_bw_out < min_req_bw_out):
-                                start_read_t = Scheduler.find_suitable_time(datapath_in_deltas, start_time,
-                                                                                val_max=(bw_in_cap - req_free_bw_in),
-                                                                                eps=epsilon)
-                                start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
-                                                                                val_max=(flops_cap - req_free_flops),
-                                                                                eps=epsilon)
-                                start_writepipe_t = Scheduler.find_suitable_time(datapath_out_deltas, start_write_t,
-                                                                                val_max=(bw_out_cap - req_free_bw_out),
-                                                                                eps=epsilon)
-                                start_writedest_t = Scheduler.find_suitable_time(dataloc_out_deltas, start_write_t,
-                                                                                 val_max=(dataloc_out_cap - task.datasize_out),
-                                                                                 eps=epsilon)
-
-                                delay_dt = max(max(start_read_t, start_comp_t) - start_time,
-                                               max(start_writepipe_t, start_writedest_t) - start_write_t)
-                                start_time += delay_dt
-                                continue
-                            else:
-                                found_suitable_schedule_time = True
-
-                        elif task.streaming_out:  # Streaming out, not in
-                            start_read_t    = start_time
-                            bw_in_available = bw_in_cap - Scheduler.sum_deltas(datapath_in_deltas, start_time,
-                                                                               value_max=bw_in_cap, eps=epsilon)
-                            assigned_bw_in = bw_in_available * assign_bw_fraction
+                            assigned_bw_in = max(bw_in_available * assign_bw_fraction, min_req_bw_in)
                             read_dt = task.datasize_in / assigned_bw_in
-                            start_compute_t = start_time + read_dt
-                            start_write_t   = start_compute_t
 
-                            flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
-                                                                               value_max=flops_cap, eps=epsilon)
-                            bw_out_available = bw_out_cap - Scheduler.sum_deltas(datapath_out_deltas, start_compute_t,
-                                                                                 value_max=bw_out_cap, eps=epsilon)
+                        assigned_flops = 0
+                        comp_dt = 0
+                        start_comp_t = start_t + read_dt
+                        if task.flopcount > 0:
+                            start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_comp_t,
+                                                                        val_max=(flops_cap - min_req_flops),
+                                                                        eps=epsilon)
+                            flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_comp_t,
+                                                                               val_max=flops_cap, eps=epsilon)
+                            assigned_flops = max(flops_available * assign_flops_fraction, min_req_flops)
+                            comp_dt = task.flopcount / assigned_flops
 
-                            min_stream_time = max(task.flopcount    / (flops_available * assign_flops_fraction),
-                                                  task.datasize_out / (bw_out_available * assign_bw_fraction))
+                        assigned_bw_out = 0
+                        write_dt = 0
+                        start_write_t = start_comp_t + comp_dt
+                        end_task_t = start_write_t
 
-                            assigned_flops  = task.flopcount    / min_stream_time
-                            assigned_bw_out = task.datasize_out / min_stream_time
-                            compute_dt      = min_stream_time
-                            write_dt        = min_stream_time
-                            end_task_t      = start_write_t + write_dt
+                        if (task.datapath_out is not None) and (task.datasize_out > 0):
+                            start_writepipe_t = Scheduler.find_suitable_time(datapipe_out_deltas, start_write_t,
+                                                                         val_max=(datapipe_out_cap - min_req_bw_out),
+                                                                         eps=epsilon)
+                            start_writedest_t = Scheduler.find_suitable_time(target_out_deltas, start_write_t,
+                                                                         val_max=(target_out_cap - task.datasize_out),
+                                                                         eps=epsilon)
+                            start_write_t = max(start_writepipe_t, start_writedest_t)
 
-                            if (assigned_bw_in < min_req_bw_in) or \
-                                    (assigned_flops < min_req_flops) or (assigned_bw_out < min_req_bw_out):
-                                start_read_t = Scheduler.find_suitable_time(datapath_in_deltas, start_time,
-                                                                                val_max=(bw_in_cap - req_free_bw_in),
-                                                                                eps=epsilon)
-                                start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
-                                                                                val_max=(flops_cap - req_free_flops),
-                                                                                eps=epsilon)
-                                start_writepipe_t = Scheduler.find_suitable_time(datapath_out_deltas, start_write_t,
-                                                                                val_max=(bw_out_cap - req_free_bw_out),
-                                                                                eps=epsilon)
-                                start_writedest_t = Scheduler.find_suitable_time(dataloc_out_deltas, start_write_t,
-                                                                                 val_max=(dataloc_out_cap - task.datasize_out),
-                                                                                 eps=epsilon)
-
-                                delay_dt = max(start_read_t - start_time,
-                                               max(start_comp_t, start_writepipe_t, start_writedest_t) - start_write_t)
-                                start_time += delay_dt
+                            bw_out_available = datapipe_out_cap - Scheduler.sum_deltas(datapipe_out_deltas, start_write_t,
+                                                                                       val_max=datapipe_out_cap, eps=epsilon)
+                            target_out_avail = target_out_cap - Scheduler.sum_deltas(target_out_deltas, start_write_t,
+                                                                                     val_max=target_out_cap, eps=epsilon)
+                            if (bw_out_available < min_req_bw_out) or (target_out_avail < task.datasize_out):
+                                start_t += (start_write_t - min(start_writepipe_t, start_writedest_t))
                                 continue
                             else:
+                                assigned_bw_out = max(bw_out_available * assign_bw_fraction, min_req_bw_out)
+                                write_dt = task.datasize_out / assigned_bw_out
+                                end_task_t = start_write_t + write_dt
                                 found_suitable_schedule_time = True
-
-                        else:  # Neither streaming out, not in
-                            start_read_t    = start_time
-                            if task.datapath_in is not None:
-                                bw_in_available = bw_in_cap - Scheduler.sum_deltas(datapath_in_deltas, start_time,
-                                                                                   value_max=bw_in_cap, eps=epsilon)
-                                assigned_bw_in = bw_in_available * assign_bw_fraction
-                                read_dt = task.datasize_in / assigned_bw_in
-                            else:
-                                bw_in_available = 0
-                                assigned_bw_in = 0  # Irrelevant
-                                read_dt = 0
-                            start_compute_t = start_time + read_dt
-
-                            flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_compute_t,
-                                                                               value_max=flops_cap, eps=epsilon)
-                            assigned_flops = flops_available * assign_flops_fraction
-                            compute_dt = task.flopcount / assigned_flops
-                            start_write_t = start_compute_t + compute_dt
-
-                            bw_out_available = bw_out_cap - Scheduler.sum_deltas(datapath_out_deltas, start_write_t,
-                                                                                 value_max=bw_out_cap, eps=epsilon)
-                            assigned_bw_out = bw_out_available * assign_bw_fraction
-                            write_dt = task.datasize_out / assigned_bw_out
-                            end_task_t = start_write_t + write_dt
-
-                            if ((task.datapath_in is not None) and (assigned_bw_in < min_req_bw_in)) or \
-                                    (assigned_flops < min_req_flops) or (assigned_bw_out < min_req_bw_out):
-                                if task.datapath_in is not None:
-                                    start_read_t = Scheduler.find_suitable_time(datapath_in_deltas, start_time,
-                                                                                    val_max=(bw_in_cap - req_free_bw_in),
-                                                                                    eps=epsilon)
-                                else:
-                                    start_read_t = start_time
-
-                                start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_compute_t,
-                                                                                val_max=(flops_cap - req_free_flops),
-                                                                                eps=epsilon)
-                                start_writepipe_t = Scheduler.find_suitable_time(datapath_out_deltas, start_write_t,
-                                                                                val_max=(bw_out_cap - req_free_bw_out),
-                                                                                eps=epsilon)
-                                start_writedest_t = Scheduler.find_suitable_time(dataloc_out_deltas, start_write_t,
-                                                                                 val_max=(dataloc_out_cap - task.datasize_out),
-                                                                                 eps=epsilon)
-
-                                delay_dt = max(start_read_t - start_time, start_comp_t - start_compute_t,
-                                               max(start_writepipe_t, start_writedest_t) - start_write_t)
-                                start_time += delay_dt
-                                continue
-                            else:
-                                found_suitable_schedule_time = True
+                        else:
+                            found_suitable_schedule_time = True
 
                 if verbose:
                     print('-- > found suitable schedule after %d iterations' % nr_suitable_start_time_iterations)
@@ -972,50 +874,28 @@ class Scheduler:
                 # to the relevant delta sequences
                 # ---------------------------------------------------------------------------
 
-                # Assign the flops and bandwidths actually used (assuming they're constant during execution)
-                if read_dt == 0:
-                    assert task.datasize_in == 0
-                    bandwidth_in_used = 0
-                else:
-                    bandwidth_in_used = task.datasize_in / read_dt
-
-                if compute_dt == 0:
-                    assert task.flopcount == 0
-                    flops_used = 0
-                else:
-                    flops_used = task.flopcount / compute_dt
-
-                if write_dt == 0:
-                    assert task.datasize_out == 0
-                    bandwidth_out_used = 0
-                else:
-                    bandwidth_out_used = task.datasize_out / write_dt
-
-                Scheduler.add_delta(schedule.memory_deltas, task.memsize, start_read_t, end_task_t,
-                                    value_min=0)
-                if task.datapath_in is not None:
-                    Scheduler.add_delta(datapath_in_deltas, bandwidth_in_used, start_read_t, (start_read_t + read_dt),
-                                        value_min=0, value_max=datapipe_in_cap)
-                Scheduler.add_delta(schedule.flops_deltas, flops_used, start_compute_t, (start_compute_t + compute_dt),
+                Scheduler.add_delta(schedule.memory_deltas, task.memsize, start_read_t, end_task_t, value_min=0)
+                Scheduler.add_delta(schedule.flops_deltas, assigned_flops, start_comp_t, (start_comp_t + comp_dt),
                                     value_min=0, value_max=flops_cap)
-                Scheduler.add_delta(datapath_out_deltas, bandwidth_out_used, start_write_t, end_task_t,
-                                    value_min=0, value_max=datapipe_in_cap)
+                if task.datapath_in is not None:
+                    Scheduler.add_delta(datapipe_in_deltas, assigned_bw_in, start_read_t, (start_read_t + read_dt),
+                                        value_min=0, value_max=datapipe_in_cap)
+                if task.datapath_out is not None:
+                    Scheduler.add_delta(datapipe_out_deltas, assigned_bw_out, start_write_t, end_task_t,
+                                        value_min=0, value_max=datapipe_out_cap)
+                    # preallocate full data size at start of write
+                    Scheduler.add_delta(target_out_deltas, task.datasize_out, start_write_t, value_min=0,
+                                        value_max=target_out_cap)
 
-                # Assign delta to the data target (preallocate full data size at start of write)
-                dataloc_out_deltas = datalocation_to_deltas_map[task.datapath_out[1]]
-                Scheduler.add_delta(dataloc_out_deltas, task.datasize_out, start_write_t, value_min=0)
-
-                # Purge Data at the end of the whole thing, if so specified
+                # Purge specified amount of data from the output pipe's source at the end of the task's completion
                 if task.purge_data > 0:
-                    if verbose:
-                        print("Purging %g from %s" % (task.purge_data, task.datapath_out[0]))
-                    dataloc_out_deltas = datalocation_to_deltas_map[task.datapath_out[0]]
-                    Scheduler.add_delta(dataloc_out_deltas, -task.purge_data, end_task_t, value_min=0)
+                    Scheduler.add_delta(datalocation_to_deltas_map[task.datapath_out[0]], -task.purge_data,
+                                        end_task_t, value_min=0)
 
                 # Add this task to the 'task_completion_times' and 'timestamps_to_tasks' mappings
                 schedule.task_completion_times[task] = end_task_t
                 if verbose:
-                    print('* Scheduled Task %d at wall clock = %g sec. Ends at t=%g sec. ' %
+                    print('* Scheduled Task %d to start at wall clock = %g sec. Ends at t=%g sec. ' %
                           (task.uid, start_read_t, end_task_t))
                 nr_tasks_scheduled_this_iteration += 1
 

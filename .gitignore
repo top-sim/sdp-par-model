@@ -1,4 +1,3 @@
-
 *.pyc
 *.orig
 *.rej
@@ -8,6 +7,7 @@
 /*.egg-info
 /_build
 /docs/_build
+/data
 
 /iPython/.ipynb_checkpoints
 /iPython/out
@@ -15,3 +15,5 @@
 .idea
 @Historical
 @Obsolete
+
+performance_dict.data

@@ -323,8 +323,9 @@ def schedule_task_seq():
 
     seqL = ('B','A','A',)+('B',)*32+ ('A', 'A',) +('B',)*73 + ('A',) +('B',)*43
     seqM = ('B','G',)+('B',)*34 +('G','C','F',)+('B',)*110 +('F',)*91 +('G',)*2 + ('E',)*4 + ('D',)
+    seqSmall = ('A', 'A')
 
-    sequence_to_simulate = seqL
+    sequence_to_simulate = seqSmall
 
     task_list = sdp_scheduler.task_letters_to_sdp_task_list(sequence_to_simulate)
     '''To show how the tasks are created, can print the sequence of Task objects.'''
@@ -341,9 +342,9 @@ def schedule_task_seq():
     sdp_low_cold_buffer_size = 15e3  # TeraBytes -- arbitrary for now
     sdp_mid_cold_buffer_size = 15e3  # TeraBytes -- arbitrary for now
 
-    flops_cap = sdp_low_flops_capacity
-    hotbuf_cap = sdp_low_hot_buffer_size
-    coldbuf_cap = sdp_low_cold_buffer_size
+    flops_cap = 5
+    hotbuf_cap = 12e3
+    coldbuf_cap = 15e3
 
     schedule = sdp_scheduler.schedule(task_list, flops_cap, hotbuf_cap, coldbuf_cap,
                                       assign_flops_fraction=0.5, assign_bw_fraction=0.5, max_nr_iterations=1000)
