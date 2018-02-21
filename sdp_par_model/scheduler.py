@@ -472,8 +472,6 @@ class Scheduler:
                     ((val_max is not None) and (value_at_t - eps > val_max))):
                 return new_timepoint
 
-        # Otherwise, no valid timepoint has been found!
-        raise Exception("No valid time point found!")
         return None
 
     @staticmethod
@@ -727,7 +725,7 @@ class Scheduler:
                 # cause additional delay to to completion
                 # -------
                 start_t = wall_clock
-                found_suitable_schedule_time = False
+                found_suitable_schedule_time = False  # True iff a suitable schedule time has been found
                 nr_suitable_start_time_iterations = 0
 
                 if task.dt_fixed:
@@ -759,7 +757,9 @@ class Scheduler:
                                                                          val_max=(target_out_cap - task.datasize_out),
                                                                          eps=epsilon)
 
-                        if (start_read_t != start_comp_t) or (start_read_t != start_writepipe_t) \
+                        if (start_read_t is None) or (start_comp_t is None) or (start_writepipe_t is None) or (start_writedest_t is None):
+                            break
+                        elif (start_read_t != start_comp_t) or (start_read_t != start_writepipe_t) \
                                 or (start_read_t != start_writedest_t):
                             start_t = max(start_read_t, start_comp_t, start_writepipe_t, start_writedest_t)
                             continue  # and repeat another loop
@@ -817,6 +817,8 @@ class Scheduler:
                             start_read_t = Scheduler.find_suitable_time(datapipe_in_deltas, start_t,
                                                                         val_max=(datapipe_in_cap - min_req_bw_in),
                                                                         eps=epsilon)
+                            if start_read_t is None:
+                                break
                             bw_in_available = datapipe_in_cap - Scheduler.sum_deltas(datapipe_in_deltas, start_read_t,
                                                                                      val_max=datapipe_in_cap, eps=epsilon)
 
@@ -830,6 +832,8 @@ class Scheduler:
                             start_comp_t = Scheduler.find_suitable_time(schedule.flops_deltas, start_comp_t,
                                                                         val_max=(flops_cap - min_req_flops),
                                                                         eps=epsilon)
+                            if start_comp_t is None:
+                                break
                             flops_available = flops_cap - Scheduler.sum_deltas(schedule.flops_deltas, start_comp_t,
                                                                                val_max=flops_cap, eps=epsilon)
                             assigned_flops = max(flops_available * assign_flops_fraction, min_req_flops)
@@ -847,6 +851,8 @@ class Scheduler:
                             start_writedest_t = Scheduler.find_suitable_time(target_out_deltas, start_write_t,
                                                                          val_max=(target_out_cap - task.datasize_out),
                                                                          eps=epsilon)
+                            if (start_writepipe_t is None) or (start_writedest_t is None):
+                                break
                             start_write_t = max(start_writepipe_t, start_writedest_t)
 
                             bw_out_available = datapipe_out_cap - Scheduler.sum_deltas(datapipe_out_deltas, start_write_t,
@@ -864,10 +870,14 @@ class Scheduler:
                         else:
                             found_suitable_schedule_time = True
 
-                if verbose:
-                    print('-- > found suitable schedule after %d iterations' % nr_suitable_start_time_iterations)
-
-                task.set_param("t_end", end_task_t)
+                if not found_suitable_schedule_time:
+                    if verbose:
+                        print('-- > did not found suitable schedule time for task %d; postponing' % task.uid)
+                    continue
+                else:
+                    if verbose:
+                        print('-- > found suitable schedule after %d iterations' % nr_suitable_start_time_iterations)
+                    task.set_param("t_end", end_task_t)
 
                 # ---------------------------------------------------------------------------
                 # Now we have the timings for reading, computing and writing. All that remains is to add their effects
