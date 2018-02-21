@@ -38,8 +38,8 @@ class Definitions:
 
     # The following results map was copied from examples used by Peter Wortmann. It defines values we wish to calculate.
     #               Title                      Unit       Default? Sum?             Expression
-    results_map =[('Total buffer ingest rate','TeraBytes/s',True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
-                  ('Visibility I/O Rate',     'TeraBytes/s',True, True,  lambda tp: tp.Rio/c.tera,        ),
+    results_map =[('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
+                  ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio/c.tera,        ),
                   ('Total Compute Rate',       'PetaFLOP/s', True, True,  lambda tp: tp.Rflop/c.peta,      )]
 
 
@@ -52,8 +52,6 @@ class SDPAttr:
     cold_buffer   = "coldbuffer"
     hot_buffer    = "hotbuffer"
     preserve      = "preserve"
-
-    sdp_flops = 22.8  # PetaFLOP/s
 
     data_locations = {ingest_buffer, working_mem, cold_buffer, hot_buffer, preserve}
 
@@ -312,7 +310,7 @@ class Scheduler:
             datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
             dt_observe = performance_dict[hpso]['Tobs']
-            datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_subtasks[0]]['ingestRate']
+            datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_subtasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
             datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
 
             memsize = 0  # TODO - must be replaced by working set
@@ -542,8 +540,8 @@ class Scheduler:
         """
         :param task_list an iterable collection of SDPTask objects that need to be scheduled
         :param flops_cap the cap on the usable SDP flops (PetaFLOPS)
-        :param hotbuf_cap the capacity of the Hot Buffer (TeraBytes)
-        :param coldbuf_cap the capacity of the Cold Buffer (TeraBytes)
+        :param hotbuf_cap the capacity of the Hot Buffer (PetaBytes)
+        :param coldbuf_cap the capacity of the Cold Buffer (PetaBytes)
         :param assign_flops_fraction of avail. FLOPS assigned to a task that has no fixed completion time
         :param assign_bw_fraction of avail. bandwidth assigned to a task that has no fixed completion time
         :param minimum_flops_frac fraction of flops_cap that needs to be available to schedule a task
@@ -733,9 +731,9 @@ class Scheduler:
                     assert (task.streaming_in and task.streaming_out)  #TODO in future allow sequential fixed-time tasks
                     # Assign bandwidths and flops to the task. We do not take minimum rates into consideration here
                     # because the timespan of the task has primary importance
-                    assigned_bw_in  = task.datasize_in / task.dt_fixed   # TeraBytes / sec
+                    assigned_bw_in  = task.datasize_in * (c.peta / c.tera) / task.dt_fixed   # TeraBytes / sec
                     assigned_flops = task.flopcount / task.dt_fixed      # PetaFLOP  / sec
-                    assigned_bw_out = task.datasize_out / task.dt_fixed  # TeraBytes / sec
+                    assigned_bw_out = task.datasize_out * (c.peta / c.tera) / task.dt_fixed  # TeraBytes / sec
 
                     while not found_suitable_schedule_time:
                         nr_suitable_start_time_iterations += 1
@@ -823,7 +821,7 @@ class Scheduler:
                                                                                      val_max=datapipe_in_cap, eps=epsilon)
 
                             assigned_bw_in = max(bw_in_available * assign_bw_fraction, min_req_bw_in)
-                            read_dt = task.datasize_in / assigned_bw_in
+                            read_dt = task.datasize_in * (c.peta / c.tera) / assigned_bw_in
 
                         assigned_flops = 0
                         comp_dt = 0
@@ -864,7 +862,7 @@ class Scheduler:
                                 continue
                             else:
                                 assigned_bw_out = max(bw_out_available * assign_bw_fraction, min_req_bw_out)
-                                write_dt = task.datasize_out / assigned_bw_out
+                                write_dt = task.datasize_out * (c.peta / c.tera) / assigned_bw_out
                                 end_task_t = start_write_t + write_dt
                                 found_suitable_schedule_time = True
                         else:
