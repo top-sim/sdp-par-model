@@ -921,5 +921,4 @@ class Scheduler:
                 elif verbose:
                     print("Warning! No tasks scheduled, and wall clock not advanced!")
 
-        print('Done!')
         return schedule
