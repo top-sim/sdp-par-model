@@ -877,8 +877,8 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
     configs = []
     for hpso in sorted(hpsos):
         # Is it an HPSOs with defined subtasks?
-        if hpso in HPSOs.hpso_subtasks:
-            for subtask in HPSOs.hpso_subtasks[hpso]:
+        if hpso in HPSOs.hpso_tasks:
+            for subtask in HPSOs.hpso_tasks[hpso]:
                 cfg = PipelineConfig(hpso=hpso, hpso_subtask=subtask, adjusts=adjusts)
                 configs.append(cfg)
         # If not, it may be one like "hpso_max_Low_c" that does not have subtasks defined

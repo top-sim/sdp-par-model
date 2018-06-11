@@ -252,7 +252,7 @@ class Scheduler:
             if not hpso in performance_dict:
                 performance_dict[hpso] = {}
 
-            for subtask in HPSOs.hpso_subtasks[hpso]:
+            for subtask in HPSOs.hpso_tasks[hpso]:
                 print('subtask -> %s' % subtask)
                 if not subtask in performance_dict[hpso]:
                     performance_dict[hpso][subtask] = {}
@@ -281,9 +281,9 @@ class Scheduler:
         print('Done with building performance dictionary.')
         return performance_dict
 
-    def task_letters_to_sdp_task_list(self, letter_sequence):
+    def hpso_letters_to_sdp_task_list(self, letter_sequence):
         """
-        Converts a list of task letters into a list of SDPTask objects
+        Converts a list of HPSO scheduling block letters into a list of SDPTask objects
         :param letter_sequence : a sequence of HPSOs, defined by Rosie's lettering scheme ('A'..'G' )
         """
         if self.performance_dict is None:
@@ -296,11 +296,10 @@ class Scheduler:
 
         for task_letter in letter_sequence:
             hpso = Definitions.hpso_lookup[task_letter]
-            hpso_subtasks = HPSOs.hpso_subtasks[hpso]
-            nr_subtasks = len(hpso_subtasks)
+            hpso_tasks = HPSOs.hpso_tasks[hpso]
 
-            assert nr_subtasks >= 2  # We assume that the tast as *at least* an Ingest and an RCal component
-            if not (hpso_subtasks[0] in HPSOs.ingest_subtasks) and (hpso_subtasks[1] in HPSOs.rcal_subtasks):
+            assert len(hpso_tasks) >= 2  # We assume that the tast as *at least* an Ingest and an RCal component
+            if not (hpso_tasks[0] in HPSOs.ingest_tasks) and (hpso_tasks[1] in HPSOs.rcal_tasks):
                 # this is assumed true for all HPSOs - hence raising an assertion error if not
                 raise AssertionError("Assumption was wrong - some HPSO apparently doesn't involve Ingest + RCal")
 
@@ -310,12 +309,12 @@ class Scheduler:
             datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
             dt_observe = performance_dict[hpso]['Tobs']
-            datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_subtasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
+            datasize_in  = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_tasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
             datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
 
             memsize = 0  # TODO - must be replaced by working set
-            flopcount = performance_dict[hpso]['Tobs'] * (performance_dict[hpso][hpso_subtasks[0]]['compRate'] +
-                                                          performance_dict[hpso][hpso_subtasks[1]]['compRate'])
+            flopcount = performance_dict[hpso]['Tobs'] * (performance_dict[hpso][hpso_tasks[0]]['compRate'] +
+                                                          performance_dict[hpso][hpso_tasks[1]]['compRate'])
             preq_task = set()
             if prev_ingest_task is not None:
                 preq_task = {prev_ingest_task}  # previous ingest task needs to be complete before this one can start
@@ -354,8 +353,8 @@ class Scheduler:
             ical_task = None
             ical_dprep_tasks = set()
 
-            for i in range(2, nr_subtasks):
-                subtask = hpso_subtasks[i]
+            for i in range(2, len(hpso_tasks)):
+                subtask = hpso_tasks[i]
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
@@ -368,10 +367,10 @@ class Scheduler:
                 hotbuffer_data_size += datasize_out
 
                 if i == 2:
-                    assert subtask in HPSOs.ical_subtasks  # Assumed that this is an ical subtask
+                    assert subtask in HPSOs.ical_tasks  # Assumed that this is an ical subtask
                     t.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
                     ical_task = t  # Remember this task, as DPrep tasks depend on it
-                elif subtask in HPSOs.dprep_subtasks:
+                elif subtask in HPSOs.dprep_tasks:
                     assert ical_task is not None
                     t.preq_tasks.add(ical_task)
                 else:

@@ -197,7 +197,7 @@ class HPSOs:
                        hpso_max_band5_Mid_s : Telescopes.SKA1_Mid
                        }
 
-    # Define all HPSO subtasks
+    # Define all HPSO tasks
     hpsoMaxLowC_DprepA = 'hpso_maxLow_c_DprepA'
     hpso_maxLowS_DprepC = 'hpso_maxLow_s_DprepC'
 
@@ -299,8 +299,8 @@ class HPSOs:
     hpso38bDPrepA = 'hpso38bDPrepA'
     hpso38bDPrepB = 'hpso38bDPrepB'
 
-    # Map each HPSO to its subtasks
-    hpso_subtasks = {
+    # Map each HPSO to its constituent tasks
+    hpso_tasks = {
         hpso_max_Low_c : (hpsoMaxLowC_DprepA,),
         hpso_max_Low_s : (hpso_maxLowS_DprepC,),
         hpso_max_Mid_c : (hpsoMaxMidC_DprepA,),
@@ -323,40 +323,40 @@ class HPSOs:
         hpso38a : (hpso38aIngest, hpso38aRCAL, hpso38aICAL, hpso38aDPrepA, hpso38aDPrepB),
         hpso38b : (hpso38bIngest, hpso38bRCAL, hpso38bICAL, hpso38bDPrepA, hpso38bDPrepB) }
 
-    # Associate subtasks with their relevant pipeline types
-    ingest_subtasks = {hpso01Ingest, hpso02aIngest, hpso02bIngest, hpso04cIngest, hpso13Ingest, hpso13Ingest,
-                       hpso14Ingest, hpso15Ingest, hpso22Ingest, hpso27Ingest, hpso32Ingest, hpso37aIngest,
-                       hpso37bIngest, hpso37cIngest, hpso38aIngest, hpso38bIngest}
+    # Associate tasks with their relevant pipeline types
+    ingest_tasks = {hpso01Ingest, hpso02aIngest, hpso02bIngest, hpso04cIngest, hpso13Ingest, hpso13Ingest,
+                    hpso14Ingest, hpso15Ingest, hpso22Ingest, hpso27Ingest, hpso32Ingest, hpso37aIngest,
+                    hpso37bIngest, hpso37cIngest, hpso38aIngest, hpso38bIngest}
 
-    rcal_subtasks =  {hpso01RCAL, hpso02aRCAL, hpso02bRCAL, hpso04cRCAL, hpso13RCAL, hpso13RCAL,
-                      hpso14RCAL, hpso15RCAL, hpso22RCAL, hpso27RCAL, hpso32RCAL, hpso37aRCAL,
-                      hpso37bRCAL, hpso37cRCAL, hpso38aRCAL, hpso38bRCAL}
+    rcal_tasks =  {hpso01RCAL, hpso02aRCAL, hpso02bRCAL, hpso04cRCAL, hpso13RCAL, hpso13RCAL,
+                   hpso14RCAL, hpso15RCAL, hpso22RCAL, hpso27RCAL, hpso32RCAL, hpso37aRCAL,
+                   hpso37bRCAL, hpso37cRCAL, hpso38aRCAL, hpso38bRCAL}
 
-    ical_subtasks =  {hpso01ICAL, hpso02aICAL, hpso02bICAL, hpso13ICAL, hpso13ICAL,
-                      hpso14ICAL, hpso15ICAL, hpso22ICAL, hpso27ICAL, hpso32ICAL, hpso37aICAL,
-                      hpso37bICAL, hpso37cICAL, hpso38aICAL, hpso38bICAL}
+    ical_tasks =  {hpso01ICAL, hpso02aICAL, hpso02bICAL, hpso13ICAL, hpso13ICAL,
+                   hpso14ICAL, hpso15ICAL, hpso22ICAL, hpso27ICAL, hpso32ICAL, hpso37aICAL,
+                   hpso37bICAL, hpso37cICAL, hpso38aICAL, hpso38bICAL}
 
-    dprepA_subtasks =  {hpso22DPrepA, hpsoMaxLowC_DprepA, hpsoMaxMidC_DprepA, hpsoMaxBand5C_DprepA}  # HPSO22 is Non-imaging?
+    dprepA_tasks =  {hpso22DPrepA, hpsoMaxLowC_DprepA, hpsoMaxMidC_DprepA, hpsoMaxBand5C_DprepA}  # HPSO22 is Non-imaging?
 
-    dprepA_Image_subtasks =  {hpso01DPrepA, hpso02aDPrepA, hpso02bDPrepA, hpso13DPrepA, hpso13DPrepA,
-                              hpso14DPrepA, hpso15DPrepA, hpso27DPrepA, hpso37aDPrepA,
-                              hpso37bDPrepA, hpso37cDPrepA, hpso38aDPrepA, hpso38bDPrepA}
+    dprepA_Image_tasks =  {hpso01DPrepA, hpso02aDPrepA, hpso02bDPrepA, hpso13DPrepA, hpso13DPrepA,
+                           hpso14DPrepA, hpso15DPrepA, hpso27DPrepA, hpso37aDPrepA,
+                           hpso37bDPrepA, hpso37cDPrepA, hpso38aDPrepA, hpso38bDPrepA}
 
-    dprepB_subtasks =  {hpso01DPrepB, hpso02aDPrepB, hpso02bDPrepB, hpso13DPrepB, hpso13DPrepB,
-                        hpso14DPrepB, hpso15DPrepB, hpso22DPrepB, hpso27DPrepB, hpso32DPrepB, hpso37aDPrepB,
-                        hpso37bDPrepB, hpso37cDPrepB, hpso38aDPrepB, hpso38bDPrepB}
+    dprepB_tasks =  {hpso01DPrepB, hpso02aDPrepB, hpso02bDPrepB, hpso13DPrepB, hpso13DPrepB,
+                     hpso14DPrepB, hpso15DPrepB, hpso22DPrepB, hpso27DPrepB, hpso32DPrepB, hpso37aDPrepB,
+                     hpso37bDPrepB, hpso37cDPrepB, hpso38aDPrepB, hpso38bDPrepB}
 
-    dprepC_subtasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
-                        hpso14DPrepC, hpso15DPrepC, hpso_maxLowS_DprepC, hpso_maxMidS_DprepC, hpso_maxBand5S_DprepC}
+    dprepC_tasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
+                     hpso14DPrepC, hpso15DPrepC, hpso_maxLowS_DprepC, hpso_maxMidS_DprepC, hpso_maxBand5S_DprepC}
 
-    dprep_subtasks = set.union(dprepA_subtasks, dprepA_Image_subtasks, dprepB_subtasks, dprepC_subtasks)
+    dprep_tasks = set.union(dprepA_tasks, dprepA_Image_tasks, dprepB_tasks, dprepC_tasks)
 
-    all_subtasks = set.union(ingest_subtasks, rcal_subtasks, ical_subtasks, dprep_subtasks)  #TODO: add fast_img
+    all_tasks = set.union(ingest_tasks, rcal_tasks, ical_tasks, dprep_tasks)  #TODO: add fast_img
 
-    # Assert that we didn't forget to group subtasks to the relevant type
-    for hpso in hpso_subtasks.keys():
-        for subtask in hpso_subtasks[hpso]:
-            assert subtask in all_subtasks
+    # Assert that we didn't forget to include any task in the "all_tasks" set
+    for hpso in hpso_tasks.keys():
+        for task in hpso_tasks[hpso]:
+            assert task in all_tasks
 
     # HPSOs that are currently supported (will show up in notebooks).
     # The High Priority Science Objective list below includes the
@@ -903,14 +903,14 @@ def apply_pipeline_parameters(o, pipeline):
 
     return o
 
-def apply_hpso_parameters(o, hpso, hpso_subtask):
+def apply_hpso_parameters(o, hpso, hpso_task):
     """
     Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
     serves only one specialised pipeline and one HPSO
 
     :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
     :param hpso: The HPSO
-    :param hpso_subtask: subtask (can be None?)
+    :param hpso_task: SDPTask (can be None?)
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
@@ -920,23 +920,23 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
     o.set_param('hpso', hpso)
     o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
 
-    if hpso_subtask is not None:
-        assert hpso_subtask in HPSOs.all_subtasks
-        assert hpso_subtask in HPSOs.hpso_subtasks[hpso]  # make sure a valid subtask has been defined for this HPSO
+    if hpso_task is not None:
+        assert hpso_task in HPSOs.all_tasks
+        assert hpso_task in HPSOs.hpso_tasks[hpso]  # make sure a valid task has been defined for this HPSO
 
-        if hpso_subtask in HPSOs.ingest_subtasks:
+        if hpso_task in HPSOs.ingest_tasks:
             o.pipeline = Pipelines.Ingest
-        elif hpso_subtask in HPSOs.rcal_subtasks:
+        elif hpso_task in HPSOs.rcal_tasks:
             o.pipeline = Pipelines.RCAL
-        elif hpso_subtask in HPSOs.ical_subtasks:
+        elif hpso_task in HPSOs.ical_tasks:
             o.pipeline = Pipelines.ICAL
-        elif hpso_subtask in HPSOs.dprepA_subtasks:
+        elif hpso_task in HPSOs.dprepA_tasks:
             o.pipeline = Pipelines.DPrepA
-        elif hpso_subtask in HPSOs.dprepA_Image_subtasks:
+        elif hpso_task in HPSOs.dprepA_Image_tasks:
             o.pipeline = Pipelines.DPrepA_Image
-        elif hpso_subtask in HPSOs.dprepB_subtasks:
+        elif hpso_task in HPSOs.dprepB_tasks:
             o.pipeline = Pipelines.DPrepB
-        elif hpso_subtask in HPSOs.dprepC_subtasks:
+        elif hpso_task in HPSOs.dprepC_tasks:
             o.pipeline = Pipelines.DPrepC
     else:
         o.pipeline = Pipelines.all  # TODO: this is incorrect, but what else do we assume?
@@ -950,13 +950,13 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso01ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso01ICAL:
             o.Qfov = 2.7
-        elif hpso_subtask == HPSOs.hpso01DPrepB:
+        elif hpso_task == HPSOs.hpso01DPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_subtask == HPSOs.hpso01DPrepC:
+        elif hpso_task == HPSOs.hpso01DPrepC:
             o.Nf_out = 1500  # 1500 channels in output
             o.Npp = 4
 
@@ -969,13 +969,13 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso02aICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso02aICAL:
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso02aDPrepB:
+        elif hpso_task == HPSOs.hpso02aDPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_subtask == HPSOs.hpso02aDPrepC:
+        elif hpso_task == HPSOs.hpso02aDPrepC:
             o.Nf_out = 1500  # 1500 channels in output
             o.Npp = 4
 
@@ -988,13 +988,13 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso02bICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso02bICAL:
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso02bDPrepB:
+        elif hpso_task == HPSOs.hpso02bDPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_subtask == HPSOs.hpso02bDPrepC:
+        elif hpso_task == HPSOs.hpso02bDPrepC:
             o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
             o.Npp = 4
 
@@ -1018,14 +1018,14 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 40000  # m
         o.Texp = 5000 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso13ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso13ICAL:
             o.Qfov = 2.7
-        elif hpso_subtask == HPSOs.hpso13DPrepB:
+        elif hpso_task == HPSOs.hpso13DPrepB:
             o.Nf_max = 65536
             o.Nf_out = 500 #500 channel pseudo continuum
             o.Npp = 2
-        elif hpso_subtask == HPSOs.hpso13DPrepC:
+        elif hpso_task == HPSOs.hpso13DPrepC:
             o.Nf_max = 65536
             o.Nf_out = 3200
             o.Npp = 2
@@ -1039,16 +1039,16 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 25000  # m (25km set by experiment)
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso14ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso14ICAL:
             o.Nf_out = 500
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso14DPrepB:
+        elif hpso_task == HPSOs.hpso14DPrepB:
             o.freq_max = 1.5e9
             o.Nf_max = 100  # 300 channel pseudo continuum (small BW)
             o.Bmax = 25000  # m
             o.Npp = 2
-        elif hpso_subtask == HPSOs.hpso14DPrepC:
+        elif hpso_task == HPSOs.hpso14DPrepC:
             o.freq_min = 1.3e9
             o.freq_max = 1.4e9
             o.Nf_max = 5000  # Only 5,000 spectral line channels.
@@ -1063,14 +1063,14 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 15000 #13000  # m (Experiment needs 13, use 15 (round up to nearest 5km) for ICAL as part of Science roll out work)
         o.Texp = 12600 * 3600.0  # sec
         o.Tpoint = 4.4 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso15ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso15ICAL:
             o.Nf_out = 500
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso15DPrepB:
+        elif hpso_task == HPSOs.hpso15DPrepB:
             o.Nf_out = 300 # 300 channels pseudo continuum
             o.Npp = 2
-        elif hpso_subtask == HPSOs.hpso15DPrepC:
+        elif hpso_task == HPSOs.hpso15DPrepC:
             o.freq_min = 1.415e9
             o.freq_max = 1.425e9
             o.Nf_max = 2500  # Only 2,500 spectral line channels.
@@ -1085,10 +1085,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 150000  # m
         o.Texp = 6000 * 3600.0  # sec
         o.Tpoint = 600 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso22ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso22ICAL:
             o.Qfov = 2.7
-        elif hpso_subtask == HPSOs.hpso22DPrepB:
+        elif hpso_task == HPSOs.hpso22DPrepB:
             o.Nf_out = 500  # 500 channel continuum observation - band 5.
             o.Tpoint = 600 * 3600.0  # sec
             o.Npp = 4
@@ -1102,10 +1102,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 50000  # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 0.123 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso27ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso27ICAL:
             o.Qfov = 1.0
-        elif hpso_subtask == HPSOs.hpso27DPrepB:
+        elif hpso_task == HPSOs.hpso27DPrepB:
             o.Nf_out = 500 # continuum experiment with 500 output channels
             o.Npp = 4
 
@@ -1118,10 +1118,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 20000  # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 2.2 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso32ICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso32ICAL:
             o.Qfov = 1.0
-        elif hpso_subtask == HPSOs.hpso32DPrepB:
+        elif hpso_task == HPSOs.hpso32DPrepB:
             o.Nf_out = 700  # 700 channels required in output continuum cubes
             o.Npp = 2
 
@@ -1133,11 +1133,11 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 150000  # m
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 95 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso37aICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso37aICAL:
             o.Nf_out = 500  # 700 channels required in output continuum cubes
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso37aDPrepB:
+        elif hpso_task == HPSOs.hpso37aDPrepB:
             o.Nf_out = 700  # 700 channels required in output continuum cubes
             o.Npp = 4
 
@@ -1149,10 +1149,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 150000  # m
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 2000 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso37bICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso37bICAL:
             o.Qfov = 2.7
-        elif hpso_subtask == HPSOs.hpso37bDPrepB:
+        elif hpso_task == HPSOs.hpso37bDPrepB:
             o.Nf_out = 700  # 700 channels required in output continuum cubes
             o.Npp = 4
 
@@ -1164,10 +1164,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 95000 # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 95 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso37cICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso37cICAL:
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso37cDPrepB:
+        elif hpso_task == HPSOs.hpso37cDPrepB:
             o.Nf_out = 700  # 700 channels required in output continuum cubes
             o.Npp = 4
 
@@ -1179,10 +1179,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 150000  # m
         o.Texp = 1000 * 3600.0  # sec
         o.Tpoint = 16.4 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso38aICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso38aICAL:
             o.Qfov = 1.8
-        elif hpso_subtask == HPSOs.hpso38aDPrepB:
+        elif hpso_task == HPSOs.hpso38aDPrepB:
             o.Nf_out = 1000 #
             o.Npp = 4
 
@@ -1194,10 +1194,10 @@ def apply_hpso_parameters(o, hpso, hpso_subtask):
         o.Bmax = 150000  # m
         o.Texp = 1000 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_subtask is not None
-        if hpso_subtask == HPSOs.hpso38bICAL:
+        assert hpso_task is not None
+        if hpso_task == HPSOs.hpso38bICAL:
             o.Qfov = 2.7
-        elif hpso_subtask == HPSOs.hpso38bDPrepB:
+        elif hpso_task == HPSOs.hpso38bDPrepB:
             o.Nf_out = 1000 #
             o.Npp = 4
 
