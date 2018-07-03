@@ -151,8 +151,10 @@ class HPSOs:
     """
     hpso_max_Low_c = 'max_LOW_continuum'
     hpso_max_Low_s = 'max_LOW_spectral'
+    hpso_max_Low_v = 'max_LOW_visibility'
     hpso_max_Mid_c = 'max_MID_continuum'
     hpso_max_Mid_s = 'max_MID_spectral'
+    hpso_max_Mid_v = 'max_MID_visibility'
     hpso_max_band5_Mid_c = 'max_Band5_MID_continuum'
     hpso_max_band5_Mid_s = 'max_Band5_MID_spectral'
     hpso01ICAL = '01ICAL'
@@ -229,7 +231,8 @@ class HPSOs:
                        hpso37cICAL, hpso37cDPrepA, hpso37cDPrepB,
                        hpso38aICAL, hpso38aDPrepA, hpso38aDPrepB,
                        hpso38bICAL, hpso38bDPrepA, hpso38bDPrepB]
-    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s,
+    available_hpsos = [hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v,
+                       hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_Mid_v,
                        hpso_max_band5_Mid_c, hpso_max_band5_Mid_s] + hpsos
 
 
@@ -843,6 +846,18 @@ def apply_hpso_parameters(o, hpso):
         o.Bmax = 65000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
+    elif hpso == HPSOs.hpso_max_Low_v: #"Maximal" case for LOW
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 50e6
+        o.freq_max = 350e6
+        o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 65536 // 4 # allow some visibility averaging
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 65000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
     elif hpso == HPSOs.hpso_max_Mid_c:
         o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.DPrepA
@@ -862,6 +877,18 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 1.05e9
         o.Nbeam = 1
         o.Nf_out = 65536
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+    elif hpso == HPSOs.hpso_max_Mid_v:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 350e6
+        o.freq_max = 1.05e9
+        o.Nbeam = 1
+        o.Nf_out = 65536 // 4 # allow some visibility averaging
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
         o.Bmax = 150000  # m
