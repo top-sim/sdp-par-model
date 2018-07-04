@@ -161,14 +161,14 @@ class HPSOs:
     hpso01DPrepA = '01DPrepA'
     hpso01DPrepB = '01DPrepB'
     hpso01DPrepC = '01DPrepC'
-    hpso02AICAL = '02AICAL'
-    hpso02ADprepA = '02ADPrepA'
-    hpso02ADPrepB = '02ADPrepB'
-    hpso02ADPrepC = '02ADPrepC'
-    hpso02BICAL = '02BICAL'
-    hpso02BDPrepA = '02BDPrepA'
-    hpso02BDPrepB = '02BDPrepB'
-    hpso02BDPrepC = '02BDPrepC'
+    hpso02aICAL = '02aICAL'
+    hpso02aDprepA = '02aDPrepA'
+    hpso02aDPrepB = '02aDPrepB'
+    hpso02aDPrepC = '02aDPrepC'
+    hpso02bICAL = '02bICAL'
+    hpso02bDPrepA = '02bDPrepA'
+    hpso02bDPrepB = '02bDPrepB'
+    hpso02bDPrepC = '02bDPrepC'
     hpso13ICAL = '13ICAL'
     hpso13DPrepA = '13DPrepA'
     hpso13DPrepB = '13DPrepB'
@@ -206,7 +206,7 @@ class HPSOs:
     hpso38bDPrepB = '38bDPrepB'
 
     # group the HPSOs according to which telescope they refer to
-    #    hpsos_using_SKA1Low = {hpso01, hpso02A, hpso02B}
+    #    hpsos_using_SKA1Low = {hpso01, hpso02a, hpso02b}
     #hpsos_using_SKA1Mid = {hpso19, hpso22, hpso37a, hpso37b, hpso38a,
 #hpso38b, hpso14c, hpso14s, hpso14sfull}
     #hpsos_originally_for_SKA1Sur = {hpso13, hpso15, hpso27c, hpso27s, hpso33, hpso35, hpso37c, hpso13c, hpso13s, hpso15c, hpso15s}
@@ -218,8 +218,8 @@ class HPSOs:
     # HPSOs that were originally intended for The Survey
     # telescope. These have since been reassigned to Mid.
     hpsos = [          hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
-                       hpso02AICAL, hpso02ADprepA, hpso02ADPrepB, hpso02ADPrepC,
-                       hpso02BICAL, hpso02BDPrepA, hpso02BDPrepB, hpso02BDPrepC,
+                       hpso02aICAL, hpso02aDprepA, hpso02aDPrepB, hpso02aDPrepC,
+                       hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC,
                        hpso13ICAL, hpso13DPrepA, hpso13DPrepB, hpso13DPrepC,
                        hpso14ICAL, hpso14DPrepA, hpso14DPrepB, hpso14DPrepC,
                        hpso15ICAL, hpso15DPrepA, hpso15DPrepB, hpso15DPrepC,
@@ -967,7 +967,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
         o.Npp = 4
-    elif hpso == HPSOs.hpso02AICAL:
+    elif hpso == HPSOs.hpso02aICAL:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.ICAL
         o.freq_min = 50e6
@@ -979,7 +979,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
         o.Qfov = 1.8
-    elif hpso == HPSOs.hpso02ADprepA:
+    elif hpso == HPSOs.hpso02aDprepA:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepA_Image
         o.freq_min = 50e6
@@ -990,7 +990,7 @@ def apply_hpso_parameters(o, hpso):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
-    elif hpso == HPSOs.hpso02ADPrepB:
+    elif hpso == HPSOs.hpso02aDPrepB:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepB
         o.freq_min = 50e6
@@ -1003,7 +1003,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
         o.Npp = 4
-    elif hpso == HPSOs.hpso02ADPrepC:
+    elif hpso == HPSOs.hpso02aDPrepC:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 50e6
@@ -1016,7 +1016,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
         o.Npp = 4
-    elif hpso == HPSOs.hpso02BICAL:
+    elif hpso == HPSOs.hpso02bICAL:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.ICAL
         o.freq_min = 50e6
@@ -1028,7 +1028,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
         o.Qfov = 1.8
-    elif hpso == HPSOs.hpso02BDPrepA:
+    elif hpso == HPSOs.hpso02bDPrepA:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepA_Image
         o.freq_min = 50e6
@@ -1039,7 +1039,7 @@ def apply_hpso_parameters(o, hpso):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
-    elif hpso == HPSOs.hpso02BDPrepB:
+    elif hpso == HPSOs.hpso02bDPrepB:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepB
         o.freq_min = 50e6
@@ -1052,7 +1052,7 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
         o.Npp = 4
-    elif hpso == HPSOs.hpso02BDPrepC:
+    elif hpso == HPSOs.hpso02bDPrepC:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 50e6
@@ -1247,7 +1247,6 @@ def apply_hpso_parameters(o, hpso):
         o.Nf_out = 500  # 500 channel continuum observation - band 5.
         o.Bmax = 150000  # m
         o.Texp = 6000 * 3600.0  # sec
-        o.Tpoint = 600 * 3600.0  # sec
         o.Tpoint = 600 * 3600.0  # sec
         o.Npp = 4
     elif hpso == HPSOs.hpso27ICAL:
