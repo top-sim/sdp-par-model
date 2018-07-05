@@ -161,14 +161,17 @@ class HPSOs:
     hpso01DPrepA = '01DPrepA'
     hpso01DPrepB = '01DPrepB'
     hpso01DPrepC = '01DPrepC'
+    hpso01DPrepD = '01DPrepD'
     hpso02aICAL = '02aICAL'
     hpso02aDprepA = '02aDPrepA'
     hpso02aDPrepB = '02aDPrepB'
     hpso02aDPrepC = '02aDPrepC'
+    hpso02aDPrepD = '02aDPrepD'
     hpso02bICAL = '02bICAL'
     hpso02bDPrepA = '02bDPrepA'
     hpso02bDPrepB = '02bDPrepB'
     hpso02bDPrepC = '02bDPrepC'
+    hpso02bDPrepD = '02bDPrepD'
     hpso13ICAL = '13ICAL'
     hpso13DPrepA = '13DPrepA'
     hpso13DPrepB = '13DPrepB'
@@ -217,9 +220,9 @@ class HPSOs:
     # The High Priority Science Objective list below includes the
     # HPSOs that were originally intended for The Survey
     # telescope. These have since been reassigned to Mid.
-    hpsos = [          hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC,
-                       hpso02aICAL, hpso02aDprepA, hpso02aDPrepB, hpso02aDPrepC,
-                       hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC,
+    hpsos = [          hpso01ICAL, hpso01DPrepA, hpso01DPrepB, hpso01DPrepC, hpso01DPrepD,
+                       hpso02aICAL, hpso02aDprepA, hpso02aDPrepB, hpso02aDPrepC, hpso02aDPrepD,
+                       hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC, hpso02bDPrepD,
                        hpso13ICAL, hpso13DPrepA, hpso13DPrepB, hpso13DPrepC,
                        hpso14ICAL, hpso14DPrepA, hpso14DPrepB, hpso14DPrepC,
                        hpso15ICAL, hpso15DPrepA, hpso15DPrepB, hpso15DPrepC,
@@ -304,6 +307,7 @@ def apply_global_parameters(o):
     o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
     o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
     #o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
+    o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
     o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
     o.Naa = 9  # Support Size of the A Kernel, in (linear) Pixels.
     o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
@@ -329,8 +333,7 @@ def apply_global_parameters(o):
     o.NB_parameters = 500 # Number of terms in B parametrization
     o.r_facet_base = 0.2 #fraction of overlap (linear) in adjacent facets.
     o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
-    o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
-    o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
+    o.buffer_factor = 1  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
     o.Qfov_ICAL = 2.7 #Put the Qfov factor for the ICAL pipeline in here. It is used to calculate the correlator dump rate for instances where the maximum baseline used for an experiment is smaller than the maximum possible for the array. In that case, we might be able to request a longer correlator integration time in the correlator.
     o.Qmax_wproject = 1 # Maximum w-distance to use w-projection on (use w-stacking otherwise)
 
@@ -967,6 +970,19 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
         o.Npp = 4
+    elif hpso == HPSOs.hpso01DPrepD:
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 50e6
+        o.freq_max = 200e6
+        o.Nbeam = 2  # using 2 beams as per HPSO request...
+        o.Nf_out = 1500  # 1500 channels in output
+        o.Tobs = 6 * 3600.0
+        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Bmax = 65000  # m
+        o.Texp = 2500 * 3600.0  # sec
+        o.Tpoint = 1000 * 3600.0  # sec
+        o.Npp = 4
     elif hpso == HPSOs.hpso02aICAL:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.ICAL
@@ -1010,7 +1026,20 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_out = 1500  # 1500 channels in output
+        o.Bmax = 65000  # m
+        o.Texp = 2500 * 3600.0  # sec
+        o.Tpoint = 100 * 3600.0  # sec
+        o.Npp = 4
+    elif hpso == HPSOs.hpso02aDPrepD:
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 50e6
+        o.freq_max = 200e6
+        o.Nbeam = 2  # using 2 beams as per HPSO request...
+        o.Tobs = 6 * 3600.0  # sec
+        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
         o.Nf_out = 1500  # 1500 channels in output
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
@@ -1055,6 +1084,19 @@ def apply_hpso_parameters(o, hpso):
     elif hpso == HPSOs.hpso02bDPrepC:
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepC
+        o.freq_min = 50e6
+        o.freq_max = 200e6
+        o.Nbeam = 2  # using 2 beams as per HPSO request...
+        o.Tobs = 6 * 3600.0  # sec
+        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
+        o.Bmax = 65000  # m
+        o.Texp = 2500 * 3600.0  # sec
+        o.Tpoint = 10 * 3600.0  # sec
+        o.Npp = 4
+    elif hpso == HPSOs.hpso02bDPrepD:
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepD
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -1282,8 +1324,6 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 0.123 * 3600.0  # sec
         o.Npp = 4
-    
-    
     elif hpso == HPSOs.hpso32ICAL: #defintions for interferometry support for SUC 32 are work in progress...
         o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.ICAL
@@ -1308,8 +1348,6 @@ def apply_hpso_parameters(o, hpso):
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 2.2 * 3600.0  # sec
         o.Npp=2
-    
-    
     elif hpso == HPSOs.hpso37aICAL:
         o.set_param('telescope', Telescopes.SKA1_Mid)
         o.pipeline = Pipelines.ICAL
