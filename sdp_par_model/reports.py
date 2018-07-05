@@ -46,6 +46,8 @@ RESULT_MAP = [
     ('Max Baseline',               'km',         True,    False, lambda tp: tp.Bmax / c.kilo      ),
     ('Dump time',                  's',          False,   False, lambda tp: tp.Tint_used,         ),
     ('Observation Time',           's',          False,   False, lambda tp: tp.Tobs,              ),
+    ('Pointing Time',              's',          False,   False, lambda tp: tp.Tpoint,            ),
+    ('Total Time',                 's',          False,   False, lambda tp: tp.Texp,              ),
     ('Snapshot Time',              's',          True,    False, lambda tp: tp.Tsnap,             ),
     ('Facets',                     '',           True,    False, lambda tp: tp.Nfacet,            ),
     ('w-stacking planes',          '',           True,    False, lambda tp: tp.Nwstack,           ),

@@ -838,7 +838,12 @@ def _apply_io_equations(o):
     # factor for double-buffering
     #
     # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
-    o.Mbuf_vis = o.buffer_factor * o.Npp * o.Rvis_ingest * o.Nbeam * o.Mvis * o.Tobs
+    #
+    # WARNING: This number will not be correct if Npp for a particular
+    # pipeline less than the number of polarisation states
+    # ingested for the project (usually all 4).
+    #
+    o.Mbuf_vis = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
 
     # Visibility read rate
     #
@@ -882,9 +887,13 @@ def _apply_io_equations(o):
                  o.Nsubbands * o.Nfacet ** 2
 
     # Size of output
-    if o.pipeline == Pipelines.DPrepA:
-        o.Mout = o.Nf_out * o.Ntt * o.Npp * o.Mpx * o.Npix_linear_fov_total**2
-    if o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC, Pipelines.Fast_Img]:
-        o.Mout = o.Nf_out * o.Npp * o.Mpx * o.Npix_linear_fov_total**2
-    if o.pipeline == Pipelines.DPrepD:
-        o.Mout = o.Npp * o.Rvis.eval_sum(o.bl_bins) * o.Nbeam * o.Mvis * o.Tobs
+    if o.pipeline in [Pipelines.DPrepA, Pipelines.DPrepA_Image]:
+        o.Mout = o.Nbeam * o.Nf_out * o.Ntt * o.Npp * o.Npix_linear_fov_total**2 * o.Mpx
+    elif o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC]:
+        o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2  * o.Mpx
+    elif o.pipeline == Pipelines.DPrepD:
+        #o.Mout = o.Nbeam * o.Npp * o.Rvis.eval_sum(o.bl_bins) * o.Mvis * o.Tobs
+        # Assume compression by a factor of 40 for the time being.
+        o.Mout = o.Mbuf_vis / 40.0
+    else:
+        o.Mout = 0.0
