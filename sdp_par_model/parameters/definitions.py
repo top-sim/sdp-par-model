@@ -781,6 +781,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1 
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+        o.Tint_out = o.Tint_min # Integration time for averaged visibilities
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
@@ -823,27 +824,27 @@ def apply_hpso_parameters(o, hpso):
     assert isinstance(o, ParameterContainer)
     o.band = 'HPSO ' + str(hpso)
     o.hpso = hpso
-    if  hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
+    if hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 50e6
         o.freq_max = 350e6
         o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 500  #
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 500
         o.Bmax = 65000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
-    elif  hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
+    elif hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 50e6
         o.freq_max = 350e6
         o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 65536  #
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 65536
         o.Bmax = 65000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -853,9 +854,12 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 50e6
         o.freq_max = 350e6
         o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 65536 // 4 # allow some visibility averaging
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = o.Nf_max // 4 # allow some visibility averaging
+        # Integration time for averaged visibilities, equivalent to
+        # o.Tint_out = o.Tint_min * 10.0
+        o.Tint_out = 9.0
         o.Bmax = 65000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -865,9 +869,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 350e6
         o.freq_max = 1.05e9
         o.Nbeam = 1
-        o.Nf_out = 500
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 500
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -877,9 +881,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 350e6
         o.freq_max = 1.05e9
         o.Nbeam = 1
-        o.Nf_out = 65536
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 65536
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -889,9 +893,12 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 350e6
         o.freq_max = 1.05e9
         o.Nbeam = 1
-        o.Nf_out = 65536 // 4 # allow some visibility averaging
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = o.Nf_max // 4 # allow some visibility averaging
+        # Integration time for averaged visibilities, equivalent to
+        # o.Tint_out = o.Tint_min * 10.0
+        o.Tint_out = 1.4
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -901,9 +908,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9
         o.Nbeam = 1
-        o.Nf_out = 500
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 500
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -913,9 +920,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9
         o.Nbeam = 1
-        o.Nf_out = 65536
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
+        o.Nf_out = 65536
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
@@ -926,7 +933,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
@@ -938,7 +945,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
@@ -948,9 +955,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
-        o.Nf_out = 500  #
         o.Tobs = 6 * 3600.0
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
+        o.Nf_out = 500
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
@@ -961,9 +968,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
-        o.Nf_out = 1500  # 1500 channels in output
         o.Tobs = 6 * 3600.0
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
+        o.Nf_out = 1500  # 1500 channels in output
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
@@ -974,9 +981,10 @@ def apply_hpso_parameters(o, hpso):
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
-        o.Nf_out = 1500  # 1500 channels in output
         o.Tobs = 6 * 3600.0
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
+        o.Nf_out = o.Nf_max // 4
+        o.Tint_out = 9.0
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
@@ -988,7 +996,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
@@ -1000,7 +1008,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
@@ -1011,7 +1019,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max    = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Nf_out = 500  # 500 channel pseudo continuum output
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
@@ -1024,7 +1032,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Nf_out = 1500  # 1500 channels in output
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
@@ -1037,8 +1045,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
-        o.Nf_out = 1500  # 1500 channels in output
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
+        o.Nf_out = o.Nf_max // 4
+        o.Tint_out = 9.0
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
@@ -1050,7 +1059,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
@@ -1062,7 +1071,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
@@ -1073,7 +1082,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Nf_out = 500  # 500 channel pseudo continuum
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
@@ -1086,7 +1095,7 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
         o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
@@ -1099,8 +1108,9 @@ def apply_hpso_parameters(o, hpso):
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
         o.Tobs = 6 * 3600.0  # sec
-        o.Nf_max = 65536/o.Nbeam #only half the number of channels when Nbeam is doubled
-        o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
+        o.Nf_max = 65536 // o.Nbeam # only half the number of channels when Nbeam is doubled
+        o.Nf_out = o.Nf_max // 4
+        o.Tint_out = 9.0
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
