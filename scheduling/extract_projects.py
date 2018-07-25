@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Extract information about the projects (HPSOs) on each telescope
+# from the parametric model CSV file.
 
 import scheduling as sched
 

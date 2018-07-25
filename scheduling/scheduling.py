@@ -64,7 +64,7 @@ dtype_seq = np.dtype([('uid',     'i8' ),
                       ('mout',    'f8' )])
 
 def write_projects(ofile, projects):
-    '''Write projects to file'''
+    '''Write list of projects to file'''
     header = 'name Tpoint Texp Rflop_r Rflop_b Rinp Rout Mout'
     fmt = '%s' + 7 * ' %e'
     np.savetxt(ofile, projects, header=header, fmt=fmt)
@@ -171,7 +171,8 @@ def generate_sequence(projects, tsched, tseq, allow_short_tobs=False):
         tobs_mean = np.sum(prob * tobs)
         nsched = np.ceil(2.0 * tseq / tobs_mean).astype(int)
 
-        # Draw sequence until it is long enough, then truncate it to the right length.
+        # Draw sequence until it is long enough, then truncate it to
+        # the right length.
 
         ttot = 0.0
         while ttot < tseq:

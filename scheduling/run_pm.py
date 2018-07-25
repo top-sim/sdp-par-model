@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+#
+# Run parametric model to generate CSV output for the HPSOs.
 
 import sys
 sys.path.append('..')

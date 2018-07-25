@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Generate a sequence of observations for each telescope from the
+# corresponding list of projects (HPSOs).
 
 import numpy as np
 import scheduling as sched
@@ -7,6 +10,9 @@ iform = 'hpsos_{t}.txt'
 oform = 'sequence_{t}.txt'
 
 tele = ['low', 'mid']
+
+# Set the length of a scheduling block and the length of the sequence
+# to generate.
 
 tsched = 6.0 * 3600.0
 tseq = 10.0 * 24.0 * 3600.0
