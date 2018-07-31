@@ -193,8 +193,10 @@ class HPSOs:
                        hpso38b : Telescopes.SKA1_Mid,
                        hpso_max_Low_c : Telescopes.SKA1_Low,
                        hpso_max_Low_s : Telescopes.SKA1_Low,
+                       hpso_max_Low_v: Telescopes.SKA1_Low,
                        hpso_max_Mid_c : Telescopes.SKA1_Mid,
                        hpso_max_Mid_s : Telescopes.SKA1_Mid,
+                       hpso_max_Mid_v: Telescopes.SKA1_Mid,
                        hpso_max_band5_Mid_c : Telescopes.SKA1_Mid,
                        hpso_max_band5_Mid_s : Telescopes.SKA1_Mid
                        }
@@ -215,6 +217,7 @@ class HPSOs:
     hpso01DPrepA  = 'hpso01DPrepA'
     hpso01DPrepB  = 'hpso01DPrepB'
     hpso01DPrepC  = 'hpso01DPrepC'
+    hpso01DPrepD  = 'hpso01DPrepD'
 
     hpso02aIngest = 'hpso02aIngest'
     hpso02aRCAL   = 'hpso02aRCAL'
@@ -947,7 +950,6 @@ def apply_hpso_parameters(o, hpso, hpso_task):
             o.pipeline = Pipelines.DPrepD
 
     elif hpso == HPSOs.hpso_max_Low_v: #"Maximal" case for LOW
-        o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepD
         o.freq_min = 50e6
         o.freq_max = 350e6
@@ -992,18 +994,13 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
     elif hpso == HPSOs.hpso_max_band5_Mid_s:
-        o.pipeline = Pipelines.DPrepC
+        o.pipeline = Pipelines.DPrepC  #TODO: please check
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9
         o.Nbeam = 1
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
         o.Nf_out = 65536
-            o.pipeline = Pipelines.DPrepA_Image
-        elif hpso_task in HPSOs.dprepB_tasks:
-            o.pipeline = Pipelines.DPrepB
-        elif hpso_task in HPSOs.dprepC_tasks:
-            o.pipeline = Pipelines.DPrepC
     else:
         o.pipeline = Pipelines.all  # TODO: this is incorrect, but what else do we assume?
 
@@ -1071,7 +1068,8 @@ def apply_hpso_parameters(o, hpso, hpso_task):
             o.Npp = 4
         elif hpso_task == HPSOs.hpso02bDPrepC:
             o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
-            o.Npp = 4        
+            o.Npp = 4        
+
         elif hpso_task == HPSOs.hpso02bDPrepD:
             o.Nf_out = o.Nf_max // 4
             o.Tint_out = 9.0
@@ -1173,7 +1171,6 @@ def apply_hpso_parameters(o, hpso, hpso_task):
             o.Npp = 4
 
     elif hpso == HPSOs.hpso27:
-        o.set_param('telescope', Telescopes.SKA1_Mid)
         o.freq_min = 1.0e9
         o.freq_max = 1.5e9
         o.Tobs = 0.123 * 3600.0  # sec
