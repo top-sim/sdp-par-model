@@ -222,6 +222,7 @@ class HPSOs:
     hpso02aDPrepA = 'hpso02aDPrepA'
     hpso02aDPrepB = 'hpso02aDPrepB'
     hpso02aDPrepC = 'hpso02aDPrepC'
+    hpso02aDPrepD = 'hpso02aDPrepD'
 
     hpso02bIngest = 'hpso02bIngest'
     hpso02bRCAL   = 'hpso02bRCAL'
@@ -229,7 +230,8 @@ class HPSOs:
     hpso02bDPrepA = 'hpso02bDPrepA'
     hpso02bDPrepB = 'hpso02bDPrepB'
     hpso02bDPrepC = 'hpso02bDPrepC'
-
+    hpso02bDPrepD = 'hpso02bDPrepD'
+    
     hpso04cIngest = 'hpso04cIngest'
     hpso04cRCAL   = 'hpso04cRCAL'
 
@@ -309,9 +311,9 @@ class HPSOs:
         hpso_max_Mid_s : (hpso_maxMidS_DprepC,),
         hpso_max_band5_Mid_c : (hpsoMaxBand5C_DprepA,),
         hpso_max_band5_Mid_s : (hpso_maxBand5S_DprepC,),
-        hpso01  : (hpso01Ingest,  hpso01RCAL,  hpso01ICAL,  hpso01DPrepA,  hpso01DPrepB,  hpso01DPrepC),
-        hpso02a : (hpso02aIngest, hpso02aRCAL, hpso02aICAL, hpso02aDPrepA, hpso02aDPrepB, hpso02aDPrepC),
-        hpso02b : (hpso02bIngest, hpso02bRCAL, hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC),
+        hpso01  : (hpso01Ingest,  hpso01RCAL,  hpso01ICAL,  hpso01DPrepA,  hpso01DPrepB,  hpso01DPrepC, hpso01DPrepD),
+        hpso02a : (hpso02aIngest, hpso02aRCAL, hpso02aICAL, hpso02aDPrepA, hpso02aDPrepB, hpso02aDPrepC, hpso02aDPrepD),
+        hpso02b : (hpso02bIngest, hpso02bRCAL, hpso02bICAL, hpso02bDPrepA, hpso02bDPrepB, hpso02bDPrepC, hpso02bDPrepD),
         hpso04c : (hpso04cIngest, hpso04cRCAL),
         hpso13  : (hpso13Ingest,  hpso13RCAL,  hpso13ICAL,  hpso13DPrepA,  hpso13DPrepB,  hpso13DPrepC),
         hpso14  : (hpso14Ingest,  hpso14RCAL,  hpso14ICAL,  hpso14DPrepA,  hpso14DPrepB,  hpso14DPrepC),
@@ -351,7 +353,9 @@ class HPSOs:
     dprepC_tasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
                      hpso14DPrepC, hpso15DPrepC, hpso_maxLowS_DprepC, hpso_maxMidS_DprepC, hpso_maxBand5S_DprepC}
 
-    dprep_tasks = set.union(dprepA_tasks, dprepA_Image_tasks, dprepB_tasks, dprepC_tasks)
+    dprepD_tasks =  {hpso01DPrepD, hpso02aDPrepD, hpso02bDPrepD}
+                     
+    dprep_tasks = set.union(dprepA_tasks, dprepA_Image_tasks, dprepB_tasks, dprepC_tasks, dprepD_tasks)
 
     all_tasks = set.union(ingest_tasks, rcal_tasks, ical_tasks, dprep_tasks)  #TODO: add fast_img
 
@@ -437,6 +441,7 @@ def apply_global_parameters(o):
     o.R_Earth = 6378136  # Radius if the Earth in meters (equal to astropy.const.R_earth.value)
     o.epsilon_w = 0.01  # Amplitude level of w-kernels to include
     #o.Mvis = 10.0  # Memory size of a single visibility datum in bytes. Set at 10 on 26 Jan 2016 (Ferdl Graser, CSP ICD)
+    o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
     o.Mjones = 64.0  # Memory size of a Jones matrix (taken from Ronald's calibration calculations)
     o.Naa = 9  # Support Size of the A Kernel, in (linear) Pixels.
     o.Nmm = 4  # Mueller matrix Factor: 1 is for diagonal terms only, 4 includes off-diagonal terms too.
@@ -462,8 +467,7 @@ def apply_global_parameters(o):
     o.NB_parameters = 500 # Number of terms in B parametrization
     o.r_facet_base = 0.2 #fraction of overlap (linear) in adjacent facets.
     o.max_subband_freq_ratio = 1.35 #maximum frequency ratio supported within each subband. 1.35 comes from Jeff Wagg SKAO ("30% fractional bandwidth in subbands").
-    o.buffer_factor = 2  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
-    o.Mvis = 12  # Memory size of a single visibility datum in bytes. See below. Estimated value may change (again).
+    o.buffer_factor = 1  # The factor by which the buffer will be oversized. Factor 2 = "double buffering".
     o.Qfov_ICAL = 2.7 #Put the Qfov factor for the ICAL pipeline in here. It is used to calculate the correlator dump rate for instances where the maximum baseline used for an experiment is smaller than the maximum possible for the array. In that case, we might be able to request a longer correlator integration time in the correlator.
     o.Qmax_wproject = 1 # Maximum w-distance to use w-projection on (use w-stacking otherwise)
 
@@ -933,6 +937,14 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         elif hpso_task in HPSOs.ical_tasks:
             o.pipeline = Pipelines.ICAL
         elif hpso_task in HPSOs.dprepA_tasks:
+            o.pipeline = Pipelines.DPrepA
+        elif hpso_task in HPSOs.dprepB_tasks:
+            o.pipeline = Pipelines.DPrepB
+        elif hpso_task in HPSOs.dprepC_tasks:
+            o.pipeline = Pipelines.DPrepC
+        elif hpso_task in HPSOs.dprepD_tasks:
+            o.pipeline = Pipelines.DPrepD
+
     elif hpso == HPSOs.hpso_max_Low_v: #"Maximal" case for LOW
         o.set_param('telescope', Telescopes.SKA1_Low)
         o.pipeline = Pipelines.DPrepD
@@ -982,7 +994,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         elif hpso_task == HPSOs.hpso01DPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_task == HPSOs.hpso01DPrepC:
+        elif hpso_task in (HPSOs.hpso01DPrepC, HPSOs.hpso01DPrepD):
             o.Nf_out = 1500  # 1500 channels in output
             o.Npp = 4
 
@@ -1001,7 +1013,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         elif hpso_task == HPSOs.hpso02aDPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_task == HPSOs.hpso02aDPrepC:
+        elif hpso_task in (HPSOs.hpso02aDPrepC, HPSOs.hpso02aDPrepD): #TODO: DPrepC and DPrepD identical?
             o.Nf_out = 1500  # 1500 channels in output
             o.Npp = 4
 
@@ -1020,7 +1032,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         elif hpso_task == HPSOs.hpso02bDPrepB:
             o.Nf_out = 500  #
             o.Npp = 4
-        elif hpso_task == HPSOs.hpso02bDPrepC:
+        elif hpso_task in (HPSOs.hpso02bDPrepC, HPSOs.hpso02bDPrepD):  #TODO: DPrepC and DPrepD identical?
             o.Nf_out = 1500  # 1500 channels in output - test to see if this is cheaper than 500cont+1500spec
             o.Npp = 4
 
