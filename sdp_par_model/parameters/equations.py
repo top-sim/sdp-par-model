@@ -840,7 +840,7 @@ def _apply_io_equations(o):
     # TODO: The o.Nbeam factor in eqn below is not mentioned in PDR05 eq 49. Why? It is in eqn.2 though.
     #
     # WARNING: This number will not be correct if Npp for a particular
-    # pipeline less than the number of polarisation states
+    # pipeline is less than the number of polarisation states
     # ingested for the project (usually all 4).
     #
     o.Mbuf_vis = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
@@ -892,8 +892,6 @@ def _apply_io_equations(o):
     elif o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC]:
         o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2  * o.Mpx
     elif o.pipeline == Pipelines.DPrepD:
-        #o.Mout = o.Nbeam * o.Npp * o.Rvis.eval_sum(o.bl_bins) * o.Mvis * o.Tobs
-        # Assume compression by a factor of 40 for the time being.
-        o.Mout = o.Mbuf_vis / 40.0
+        o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Nbl * o.Mvis * o.Tobs / o.Tint_out
     else:
         o.Mout = 0.0
