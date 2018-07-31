@@ -152,8 +152,10 @@ class HPSOs:
     # Not quite HPSOs (I think), but can be seen as maximal usecases and are treated like HPSOs #TODO check
     hpso_max_Low_c = 'max_LOW_continuum'
     hpso_max_Low_s = 'max_LOW_spectral'
+    hpso_max_Low_v = 'max_LOW_visibility'
     hpso_max_Mid_c = 'max_MID_continuum'
     hpso_max_Mid_s = 'max_MID_spectral'
+    hpso_max_Mid_v = 'max_MID_visibility'
     hpso_max_band5_Mid_c = 'max_Band5_MID_continuum'
     hpso_max_band5_Mid_s = 'max_Band5_MID_spectral'
 
@@ -365,7 +367,7 @@ class HPSOs:
     hpsos = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b,
              hpso37c, hpso38a, hpso38b}
     available_hpsos = hpsos.union(
-        {hpso_max_Low_c, hpso_max_Low_s, hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
+        {hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v, hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_band5_Mid_c, hpso_max_band5_Mid_s, hpso_max_Mid_v})
 
 def define_symbolic_variables(o):
     """
@@ -931,6 +933,30 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         elif hpso_task in HPSOs.ical_tasks:
             o.pipeline = Pipelines.ICAL
         elif hpso_task in HPSOs.dprepA_tasks:
+    elif hpso == HPSOs.hpso_max_Low_v: #"Maximal" case for LOW
+        o.set_param('telescope', Telescopes.SKA1_Low)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 50e6
+        o.freq_max = 350e6
+        o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 65536 // 4 # allow some visibility averaging
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 65000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+    elif hpso == HPSOs.hpso_max_Mid_v:
+        o.set_param('telescope', Telescopes.SKA1_Mid)
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 350e6
+        o.freq_max = 1.05e9
+        o.Nbeam = 1
+        o.Nf_out = 65536 // 4 # allow some visibility averaging
             o.pipeline = Pipelines.DPrepA
         elif hpso_task in HPSOs.dprepA_Image_tasks:
             o.pipeline = Pipelines.DPrepA_Image
