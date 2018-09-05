@@ -123,7 +123,8 @@ def extract_projects(ifile, tele):
     tpoint = pmout[i]['tpoint']
     texp = pmout[i]['texp']
     mvis = pmout[i]['mvis']
-    
+    npoint = np.ceil(tobs/tpoint).astype(int)
+
     proj = np.zeros(len(name), dtype=dtype_proj)
 
     proj['name'] = name
@@ -141,7 +142,7 @@ def extract_projects(ifile, tele):
         j = (pmout['pipe'] == 'DPrepD')
         proj[k]['rflop_b'] = np.sum(pmout[i]['rflop'])
         proj[k]['rout'] = np.sum(pmout[i & j]['mout']) / tobs[k]
-        proj[k]['mout'] = np.sum(pmout[i & ~j]['mout'])
+        proj[k]['mout'] = np.sum(pmout[i & ~j]['mout']) / npoint[k]
             
     return proj
 
