@@ -888,10 +888,30 @@ def _apply_io_equations(o):
 
     # Size of output
     if o.pipeline in [Pipelines.DPrepA, Pipelines.DPrepA_Image]:
-        o.Mout = o.Nbeam * o.Nf_out * o.Ntt * o.Npp * o.Npix_linear_fov_total**2 * o.Mpx
+        # Continuum image in Taylor terms, with one set per subband.
+        # npoint is number of pointings in one observation.  factor
+        # accounts for all products: 2 images (clean image and
+        # residuals) and 2 uv-grids (visibilities and weights).
+        if o.Tpoint < o.Tobs:
+            npoint = ceiling(o.Tobs / o.Tpoint)
+        else:
+            npoint = 1
+        factor = 2 + 2 * (1 + o.r_facet)**2
+        o.Mout = npoint * factor * o.Nbeam * o.Nsubbands * o.Ntt * o.Npp * o.Npix_linear_fov_total**2 * o.Mpx
     elif o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC]:
-        o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2  * o.Mpx
+        # Spectral image.  npoint is number of pointings in one
+        # observation.  factor accounts for all data products: 3
+        # images (continuum-subtracted image, clean image and
+        # residuals) and 2 uv-grids (visbilities and weights).
+        if o.Tpoint < o.Tobs:
+            npoint = ceiling(o.Tobs / o.Tpoint)
+        else:
+            npoint = 1
+        factor = 3 + 2 * (1 + o.r_facet)**2
+        o.Mout = npoint * factor * o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2  * o.Mpx
     elif o.pipeline == Pipelines.DPrepD:
+        # Averaged visibilities.
         o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Nbl * o.Mvis * o.Tobs / o.Tint_out
     else:
+        # No output.
         o.Mout = 0.0
