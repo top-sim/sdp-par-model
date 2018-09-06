@@ -97,7 +97,7 @@ class PipelineConfig:
         """ Returns a name that identifies this configuration. """
 
         # Identify by either HPSO or telescope+band+pipeline name
-        if self.hpso is not None:
+        if hasattr(self, "hpso"):
             name = self.hpso
         else:
             name = self.pipeline + ' (' + self.band + ')'

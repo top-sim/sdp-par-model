@@ -46,8 +46,8 @@ class Pipeline:
             })
         else:
             self.binBaselines = self.allBaselines.split(len(tp.baseline_bins), props={
-                'bmax': lambda i: tp.baseline_bine[i]['b'],
-                'size': lambda i: tp.baseline_bine[i]['bcount']
+                'bmax': lambda i: tp.baseline_bins[i]['b'],
+                'size': lambda i: tp.baseline_bins[i]['bcount']
             })
         if tp.NAProducts == 'all':
             self.kernelBaselines = self.binBaselines
