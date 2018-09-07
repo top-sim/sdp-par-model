@@ -14,6 +14,7 @@ from __future__ import print_function
 
 from sympy import symbols
 import numpy as np
+import warnings
 
 from .container import ParameterContainer
 
@@ -915,8 +916,7 @@ def apply_pipeline_parameters(o, pipeline):
 
 def apply_hpso_parameters(o, hpso, hpso_task):
     """
-    Applies the parameters that apply to the supplied HPSO to the parameter container object o. Each Telescope
-    serves only one specialised pipeline and one HPSO
+    Applies the parameters that apply to the supplied HPSO to the parameter container object o.
 
     :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
     :param hpso: The HPSO
@@ -1277,7 +1277,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
             o.Nf_out = 1000 #
             o.Npp = 4
 
-    elif hpso == HPSOs.hpso_max_Low_c: #"Maximal" case for LOW
+    elif hpso == HPSOs.hpso_max_Low_c:  # "Maximal" case for LOW - Continuum
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 50e6
         o.freq_max = 350e6
@@ -1289,7 +1289,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
 
-    elif hpso == HPSOs.hpso_max_Low_s: #"Maximal" case for LOW
+    elif hpso == HPSOs.hpso_max_Low_s:  # "Maximal" case for LOW - Spectral
         o.pipeline = Pipelines.DPrepC
         o.freq_min = 50e6
         o.freq_max = 350e6
@@ -1301,7 +1301,21 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
 
-    elif hpso == HPSOs.hpso_max_Mid_c:
+    elif hpso == HPSOs.hpso_max_Low_v:  # "Maximal case for LOW - Visibilities"
+        #TODO this may be incorrect; copied it from hpso_max_Low_s. UPDATE!
+        warnings.warn("Parameters for hpso_max_Low_v not yet correctly defined? TODO: fix")
+        o.pipeline = Pipelines.DPrepD
+        o.freq_min = 50e6
+        o.freq_max = 350e6
+        o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 65536  #
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 65000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_Mid_c:  # "Maximal" case for MID - Continuum
         o.pipeline = Pipelines.DPrepA
         o.freq_min = 350e6
         o.freq_max = 1.05e9
@@ -1313,8 +1327,22 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
 
-    elif hpso == HPSOs.hpso_max_Mid_s:
+    elif hpso == HPSOs.hpso_max_Mid_s:  # "Maximal" case for MID - Spectral
         o.pipeline = Pipelines.DPrepC
+        o.freq_min = 350e6
+        o.freq_max = 1.05e9
+        o.Nbeam = 1
+        o.Nf_out = 65536
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
+
+    elif hpso == HPSOs.hpso_max_Mid_v:  # "Maximal" case for MID - Visibilities
+        #TODO this may be incorrect; copied it from hpso_max_Mid_s. UPDATE!
+        warnings.warn("Parameters for hpso_max_Mid_v not yet correctly defined? TODO: fix")
+        o.pipeline = Pipelines.DPrepD
         o.freq_min = 350e6
         o.freq_max = 1.05e9
         o.Nbeam = 1
