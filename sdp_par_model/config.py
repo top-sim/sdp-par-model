@@ -24,14 +24,14 @@ class PipelineConfig:
     to parameterise a pipeline.
     """
 
-    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None, hpso_subtask=None,
+    def __init__(self, telescope=None, pipeline=None, band=None, hpso=None, hpso_task=None,
                  adjusts={}, **kwargs):
         """
         :param telescope: Telescope to use (can be omitted if HPSO specified)
         :param pipeline: Pipeline mode (can be omitted if HPSO specified)
         :param band: Frequency band (can be omitted if HPSO specified)
         :param hpso: High Priority Science Objective ID (can be omitted if telescope, pipeline and band specified)
-        :param hpso_subtask: The specific subtask of the HPSO for which results are to be calculated
+        :param hpso_task: The specific task of the HPSO for which results are to be calculated
         :param adjusts: Values that should be adjusted in the
           telescope parameters. Keyword arguments get added to the
           adjustments automatically. Can be a string of the the form
@@ -42,17 +42,16 @@ class PipelineConfig:
         # Load HPSO parameters
         if hpso is not None:
             assert hpso in p.HPSOs.hpso_telescopes
-            if hpso_subtask is None:
-                warnings.warn("HPSO == %s but HPSO subtask is 'None'." % str(hpso))
+            assert hpso_task is not None
             if not ((telescope is None) and (band is None) and (pipeline is None)):
                 raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
 
             self.hpso = hpso
-            self.hpso_subtask = hpso_subtask
+            self.hpso_task = hpso_task
             self.telescope = p.HPSOs.hpso_telescopes[hpso]
 
             p.apply_telescope_parameters(params, self.telescope)
-            p.apply_hpso_parameters(params, hpso, hpso_subtask)
+            p.apply_hpso_parameters(params, hpso, hpso_task)
             if hasattr(params, 'pipeline'):
                 pipeline = params.pipeline
         else:
@@ -224,12 +223,12 @@ class PipelineConfig:
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
 
         if hasattr(cfg, "hpso"):
-            hpso_subtask = None
-            if hasattr(cfg, "hpso_subtask"):
-                hpso_subtask = cfg.hpso_subtask
+            hpso_task = None
+            if hasattr(cfg, "hpso_task"):
+                hpso_task = cfg.hpso_task
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
             p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
-            p.apply_hpso_parameters(telescope_params, cfg.hpso, hpso_subtask)
+            p.apply_hpso_parameters(telescope_params, cfg.hpso, hpso_task)
         elif hasattr(cfg, "band"):
             p.apply_band_parameters(telescope_params, cfg.band)
             p.apply_pipeline_parameters(telescope_params, cfg.pipeline)

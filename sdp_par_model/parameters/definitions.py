@@ -150,7 +150,7 @@ class HPSOs:
     """
     Enumerate the pipelines of each High Priority Science Objectives (used in :meth:`apply_hpso_parameters`)
     """
-    # Not quite HPSOs (I think), but can be seen as maximal usecases and are treated like HPSOs #TODO check
+    # Not quite HPSOs as originally defined, but can be seen as maximal use cases and are treated like HPSOs
     hpso_max_Low_c = 'max_LOW_continuum'
     hpso_max_Low_s = 'max_LOW_spectral'
     hpso_max_Low_v = 'max_LOW_visibility'
@@ -205,9 +205,11 @@ class HPSOs:
     # Define all HPSO tasks
     hpsoMaxLowC_DprepA = 'hpso_maxLow_c_DprepA'
     hpso_maxLowS_DprepC = 'hpso_maxLow_s_DprepC'
+    hpso_maxLowV_DprepD = 'hpso_maxLow_v_DprepD'
 
     hpsoMaxMidC_DprepA = 'hpso_maxMid_c_DprepA'
     hpso_maxMidS_DprepC = 'hpso_maxMid_s_DprepC'
+    hpso_maxMidV_DprepD = 'hpso_maxMid_v_DprepD'
 
     hpsoMaxBand5C_DprepA = 'hpso_maxBand5_DprepA'
     hpso_maxBand5S_DprepC = 'hpso_maxBand5_DprepC'
@@ -311,8 +313,10 @@ class HPSOs:
     hpso_tasks = {
         hpso_max_Low_c : (hpsoMaxLowC_DprepA,),
         hpso_max_Low_s : (hpso_maxLowS_DprepC,),
+        hpso_max_Low_v: (hpso_maxLowV_DprepD,),
         hpso_max_Mid_c : (hpsoMaxMidC_DprepA,),
         hpso_max_Mid_s : (hpso_maxMidS_DprepC,),
+        hpso_max_Mid_v: (hpso_maxMidV_DprepD,),
         hpso_max_band5_Mid_c : (hpsoMaxBand5C_DprepA,),
         hpso_max_band5_Mid_s : (hpso_maxBand5S_DprepC,),
         hpso01  : (hpso01Ingest,  hpso01RCAL,  hpso01ICAL,  hpso01DPrepA,  hpso01DPrepB,  hpso01DPrepC, hpso01DPrepD),
@@ -344,11 +348,13 @@ class HPSOs:
                    hpso14ICAL, hpso15ICAL, hpso22ICAL, hpso27ICAL, hpso32ICAL, hpso37aICAL,
                    hpso37bICAL, hpso37cICAL, hpso38aICAL, hpso38bICAL}
 
-    dprepA_tasks =  {hpso22DPrepA, hpsoMaxLowC_DprepA, hpsoMaxMidC_DprepA, hpsoMaxBand5C_DprepA}  # HPSO22 is Non-imaging?
+    dprepA_nonImage_tasks =  {hpso22DPrepA, hpsoMaxLowC_DprepA, hpsoMaxMidC_DprepA, hpsoMaxBand5C_DprepA}  # HPSO22 is Non-imaging?
 
     dprepA_Image_tasks =  {hpso01DPrepA, hpso02aDPrepA, hpso02bDPrepA, hpso13DPrepA, hpso13DPrepA,
                            hpso14DPrepA, hpso15DPrepA, hpso27DPrepA, hpso37aDPrepA,
                            hpso37bDPrepA, hpso37cDPrepA, hpso38aDPrepA, hpso38bDPrepA}
+
+    dprepA_tasks = dprepA_nonImage_tasks.union(dprepA_Image_tasks)
 
     dprepB_tasks =  {hpso01DPrepB, hpso02aDPrepB, hpso02bDPrepB, hpso13DPrepB, hpso13DPrepB,
                      hpso14DPrepB, hpso15DPrepB, hpso22DPrepB, hpso27DPrepB, hpso32DPrepB, hpso37aDPrepB,
@@ -357,7 +363,7 @@ class HPSOs:
     dprepC_tasks =  {hpso01DPrepC, hpso02aDPrepC, hpso02bDPrepC, hpso13DPrepC, hpso13DPrepC,
                      hpso14DPrepC, hpso15DPrepC, hpso_maxLowS_DprepC, hpso_maxMidS_DprepC, hpso_maxBand5S_DprepC}
 
-    dprepD_tasks =  {hpso01DPrepD, hpso02aDPrepD, hpso02bDPrepD}
+    dprepD_tasks =  {hpso01DPrepD, hpso02aDPrepD, hpso02bDPrepD, hpso_maxLowV_DprepD, hpso_maxMidV_DprepD}
                      
     dprep_tasks = set.union(dprepA_tasks, dprepA_Image_tasks, dprepB_tasks, dprepC_tasks, dprepD_tasks)
 
@@ -368,14 +374,14 @@ class HPSOs:
         for task in hpso_tasks[hpso]:
             assert task in all_tasks
 
-    # HPSOs that are currently supported (will show up in notebooks).
-    # The High Priority Science Objective list below includes the
-    # HPSOs that were originally intended for The Survey
-    # telescope. These have since been reassigned to Mid.
-    hpsos = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32, hpso37a, hpso37b,
-             hpso37c, hpso38a, hpso38b}
-    available_hpsos = hpsos.union(
-        {hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v, hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_band5_Mid_c, hpso_max_band5_Mid_s, hpso_max_Mid_v})
+    # HPSOs that are currently supported (and which will show up in notebooks) are unified into an iterable set below.
+    # The HPSOs originally intended for The Survey telescope are included and have been reassigned to Mid.
+    # The expanded set of HPSOs include the "maximal use cases" which aren't strictly HPSOs but work similarly
+    hpsos_original = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32,
+                      hpso37a, hpso37b, hpso37c, hpso38a, hpso38b}
+    hpsos_expanded = hpsos_original.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v,
+                                           hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_Mid_v,
+                                           hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
 
 def define_symbolic_variables(o):
     """
@@ -920,91 +926,93 @@ def apply_hpso_parameters(o, hpso, hpso_task):
 
     :param o: The supplied ParameterContainer object, to which the symbolic variables are appended (in-place)
     :param hpso: The HPSO
-    :param hpso_task: SDPTask (can be None?)
+    :param hpso_task: The specific subroutine of the relevant HPSO (i.e. SDPTask) whose parameters we are applying
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
-    assert hpso in HPSOs.available_hpsos  # Check that the HPSO is listed as being available for calculation
+    assert hpso in HPSOs.hpsos_expanded  # Check that the HPSO is listed as being available for calculation
     assert hpso in HPSOs.hpso_telescopes.keys()  # Check that this lookup has been defined
 
     o.set_param('hpso', hpso)
     o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
 
-    if hpso_task is not None:
-        assert hpso_task in HPSOs.all_tasks
-        assert hpso_task in HPSOs.hpso_tasks[hpso]  # make sure a valid task has been defined for this HPSO
+    assert hpso_task in HPSOs.all_tasks
+    assert hpso_task in HPSOs.hpso_tasks[hpso]  # make sure a valid task has been defined for this HPSO
 
-        if hpso_task in HPSOs.ingest_tasks:
-            o.pipeline = Pipelines.Ingest
-        elif hpso_task in HPSOs.rcal_tasks:
-            o.pipeline = Pipelines.RCAL
-        elif hpso_task in HPSOs.ical_tasks:
-            o.pipeline = Pipelines.ICAL
-        elif hpso_task in HPSOs.dprepA_tasks:
-            o.pipeline = Pipelines.DPrepA
-        elif hpso_task in HPSOs.dprepB_tasks:
-            o.pipeline = Pipelines.DPrepB
-        elif hpso_task in HPSOs.dprepC_tasks:
-            o.pipeline = Pipelines.DPrepC
-        elif hpso_task in HPSOs.dprepD_tasks:
-            o.pipeline = Pipelines.DPrepD
-
-    elif hpso == HPSOs.hpso_max_Low_v: #"Maximal" case for LOW
+    if hpso_task in HPSOs.ingest_tasks:
+        o.pipeline = Pipelines.Ingest
+    elif hpso_task in HPSOs.rcal_tasks:
+        o.pipeline = Pipelines.RCAL
+    elif hpso_task in HPSOs.ical_tasks:
+        o.pipeline = Pipelines.ICAL
+    elif hpso_task in HPSOs.dprepA_tasks:
+        o.pipeline = Pipelines.DPrepA
+    elif hpso_task in HPSOs.dprepB_tasks:
+        o.pipeline = Pipelines.DPrepB
+    elif hpso_task in HPSOs.dprepC_tasks:
+        o.pipeline = Pipelines.DPrepC
+    elif hpso_task in HPSOs.dprepD_tasks:
         o.pipeline = Pipelines.DPrepD
+    else:
+        raise Exception("HPSO_task %s is not currently recognized." % hpso_task)
+
+    if hpso in {HPSOs.hpso_max_Low_c, HPSOs.hpso_max_Low_s, HPSOs.hpso_max_Low_v}:
+        # "Maximal" case for LOW - Continuum / Spectral / Visibilities
         o.freq_min = 50e6
         o.freq_max = 350e6
         o.Nbeam = 1  # only 1 beam here
+        o.Nf_out = 500  #
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
-        o.Nf_out = o.Nf_max // 4 # allow some visibility averaging
-        # Integration time for averaged visibilities, equivalent to
-        # o.Tint_out = o.Tint_min * 10.0
-        o.Tint_out = 9.0
         o.Bmax = 65000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_Mid_v:
-        o.pipeline = Pipelines.DPrepD
+
+        if hpso == HPSOs.hpso_max_Low_s:
+            o.Nf_out = 65536
+
+        elif hpso == HPSOs.hpso_max_Low_v:
+            o.Nf_out = o.Nf_max // 4  # allow some visibility averaging
+            # Integration time for averaged visibilities, equivalent to
+            # o.Tint_out = o.Tint_min * 10.0
+            o.Tint_out = 9.0
+
+    elif hpso in {HPSOs.hpso_max_Mid_c, HPSOs.hpso_max_Mid_s, HPSOs.hpso_max_Mid_v}:
+        # "Maximal" case for MID - Continuum / Spectral / Visibilities
         o.freq_min = 350e6
         o.freq_max = 1.05e9
         o.Nbeam = 1
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Nf_out = o.Nf_max // 4 # allow some visibility averaging
-        # Integration time for averaged visibilities, equivalent to
-        # o.Tint_out = o.Tint_min * 10.0
-        o.Tint_out = 1.4
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_band5_Mid_c:
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 8.5e9
-        o.freq_max = 13.5e9
-        o.Nbeam = 1
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
         o.Nf_out = 500
+        o.Tobs = 1.0 * 3600.0
+        o.Nf_max = 65536
         o.Bmax = 150000  # m
         o.Texp = 6 * 3600.0  # sec
         o.Tpoint = 6 * 3600.0  # sec
-    elif hpso == HPSOs.hpso_max_band5_Mid_s:
-        o.pipeline = Pipelines.DPrepC  #TODO: please check
+
+        if hpso == HPSOs.hpso_max_Mid_s:
+            o.Nf_out = 65536
+
+        elif hpso == HPSOs.hpso_max_Mid_v:
+            o.Nf_out = o.Nf_max // 4  # allow some visibility averaging
+            # Integration time for averaged visibilities, equivalent to
+            # o.Tint_out = o.Tint_min * 10.0
+            o.Tint_out = 1.4
+
+    elif hpso in {HPSOs.hpso_max_band5_Mid_c, HPSOs.hpso_max_band5_Mid_s}:
         o.freq_min = 8.5e9
         o.freq_max = 13.5e9
         o.Nbeam = 1
+        o.Nf_out = 500
         o.Tobs = 1.0 * 3600.0
         o.Nf_max = 65536
-        o.Nf_out = 65536
-    else:
-        o.pipeline = Pipelines.all  # TODO: this is incorrect, but what else do we assume?
+        o.Bmax = 150000  # m
+        o.Texp = 6 * 3600.0  # sec
+        o.Tpoint = 6 * 3600.0  # sec
 
-    if hpso == HPSOs.hpso01:
+        if hpso == HPSOs.hpso_max_band5_Mid_s:
+            o.Nf_out = 65536
+
+    elif hpso == HPSOs.hpso01:
         o.freq_min = 50e6
         o.freq_max = 200e6
         o.Nbeam = 2  # using 2 beams as per HPSO request...
@@ -1013,7 +1021,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso01ICAL:
             o.Qfov = 2.7
         elif hpso_task == HPSOs.hpso01DPrepB:
@@ -1038,7 +1046,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 100 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso02aICAL:
             o.Qfov = 1.8
         elif hpso_task == HPSOs.hpso02aDPrepB:
@@ -1060,7 +1068,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 65000  # m
         o.Texp = 2500 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso02bICAL:
             o.Qfov = 1.8
         elif hpso_task == HPSOs.hpso02bDPrepB:
@@ -1095,7 +1103,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 40000  # m
         o.Texp = 5000 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso13ICAL:
             o.Qfov = 2.7
         elif hpso_task == HPSOs.hpso13DPrepB:
@@ -1116,7 +1124,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 25000  # m (25km set by experiment)
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 10 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso14ICAL:
             o.Nf_out = 500
             o.Qfov = 1.8
@@ -1140,7 +1148,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 15000 #13000  # m (Experiment needs 13, use 15 (round up to nearest 5km) for ICAL as part of Science roll out work)
         o.Texp = 12600 * 3600.0  # sec
         o.Tpoint = 4.4 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso15ICAL:
             o.Nf_out = 500
             o.Qfov = 1.8
@@ -1162,7 +1170,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 150000  # m
         o.Texp = 6000 * 3600.0  # sec
         o.Tpoint = 600 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso22ICAL:
             o.Qfov = 2.7
         elif hpso_task == HPSOs.hpso22DPrepB:
@@ -1178,7 +1186,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 50000  # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 0.123 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso27ICAL:
             o.Qfov = 1.0
         elif hpso_task == HPSOs.hpso27DPrepB:
@@ -1194,7 +1202,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 20000  # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 2.2 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso32ICAL:
             o.Qfov = 1.0
         elif hpso_task == HPSOs.hpso32DPrepB:
@@ -1209,7 +1217,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 150000  # m
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 95 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso37aICAL:
             o.Nf_out = 500  # 700 channels required in output continuum cubes
             o.Qfov = 1.8
@@ -1225,7 +1233,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 150000  # m
         o.Texp = 2000 * 3600.0  # sec
         o.Tpoint = 2000 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso37bICAL:
             o.Qfov = 2.7
         elif hpso_task == HPSOs.hpso37bDPrepB:
@@ -1240,7 +1248,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 95000 # m
         o.Texp = 10000 * 3600.0  # sec
         o.Tpoint = 95 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso37cICAL:
             o.Qfov = 1.8
         elif hpso_task == HPSOs.hpso37cDPrepB:
@@ -1255,7 +1263,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 150000  # m
         o.Texp = 1000 * 3600.0  # sec
         o.Tpoint = 16.4 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso38aICAL:
             o.Qfov = 1.8
         elif hpso_task == HPSOs.hpso38aDPrepB:
@@ -1270,112 +1278,12 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 150000  # m
         o.Texp = 1000 * 3600.0  # sec
         o.Tpoint = 1000 * 3600.0  # sec
-        assert hpso_task is not None
+
         if hpso_task == HPSOs.hpso38bICAL:
             o.Qfov = 2.7
         elif hpso_task == HPSOs.hpso38bDPrepB:
             o.Nf_out = 1000 #
             o.Npp = 4
-
-    elif hpso == HPSOs.hpso_max_Low_c:  # "Maximal" case for LOW - Continuum
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 50e6
-        o.freq_max = 350e6
-        o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 500  #
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 65000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_Low_s:  # "Maximal" case for LOW - Spectral
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 50e6
-        o.freq_max = 350e6
-        o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 65536  #
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 65000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_Low_v:  # "Maximal case for LOW - Visibilities"
-        #TODO this may be incorrect; copied it from hpso_max_Low_s. UPDATE!
-        warnings.warn("Parameters for hpso_max_Low_v not yet correctly defined? TODO: fix")
-        o.pipeline = Pipelines.DPrepD
-        o.freq_min = 50e6
-        o.freq_max = 350e6
-        o.Nbeam = 1  # only 1 beam here
-        o.Nf_out = 65536  #
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 65000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_Mid_c:  # "Maximal" case for MID - Continuum
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 350e6
-        o.freq_max = 1.05e9
-        o.Nbeam = 1
-        o.Nf_out = 500
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_Mid_s:  # "Maximal" case for MID - Spectral
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 350e6
-        o.freq_max = 1.05e9
-        o.Nbeam = 1
-        o.Nf_out = 65536
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_Mid_v:  # "Maximal" case for MID - Visibilities
-        #TODO this may be incorrect; copied it from hpso_max_Mid_s. UPDATE!
-        warnings.warn("Parameters for hpso_max_Mid_v not yet correctly defined? TODO: fix")
-        o.pipeline = Pipelines.DPrepD
-        o.freq_min = 350e6
-        o.freq_max = 1.05e9
-        o.Nbeam = 1
-        o.Nf_out = 65536
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_band5_Mid_c:
-        o.pipeline = Pipelines.DPrepA
-        o.freq_min = 8.5e9
-        o.freq_max = 13.5e9
-        o.Nbeam = 1
-        o.Nf_out = 500
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
-
-    elif hpso == HPSOs.hpso_max_band5_Mid_s:
-        o.pipeline = Pipelines.DPrepC
-        o.freq_min = 8.5e9
-        o.freq_max = 13.5e9
-        o.Nbeam = 1
-        o.Nf_out = 65536
-        o.Tobs = 1.0 * 3600.0
-        o.Nf_max = 65536
-        o.Bmax = 150000  # m
-        o.Texp = 6 * 3600.0  # sec
-        o.Tpoint = 6 * 3600.0  # sec
 
     else:
         raise Exception('Unknown HPSO %s!' % hpso)

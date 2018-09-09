@@ -268,7 +268,7 @@ def run_experiment_1():
 
     for subtask in HPSOs.hpso_subtasks[hpso]:
         print('subtask -> %s' % subtask)
-        cfg = PipelineConfig(hpso=hpso, hpso_subtask=subtask)
+        cfg = PipelineConfig(hpso=hpso, hpso_task=subtask)
 
         (valid, msgs) = cfg.is_valid()
         if not valid:

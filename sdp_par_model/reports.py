@@ -879,10 +879,10 @@ def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
     # Make configuration list
     configs = []
     for hpso in sorted(hpsos):
-        # Is it an HPSOs with defined subtasks?
+        # Is it an HPSOs with defined tasks?
         if hpso in HPSOs.hpso_tasks:
-            for subtask in HPSOs.hpso_tasks[hpso]:
-                cfg = PipelineConfig(hpso=hpso, hpso_subtask=subtask, adjusts=adjusts)
+            for task in HPSOs.hpso_tasks[hpso]:
+                cfg = PipelineConfig(hpso=hpso, hpso_task=task, adjusts=adjusts)
                 configs.append(cfg)
         # If not, it may be one like "hpso_max_Low_c" that does not have subtasks defined
         else:

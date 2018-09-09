@@ -11,4 +11,4 @@ from sdp_par_model.parameters.definitions import HPSOs
 ofile = 'hpsos.csv'
 parallel = 4
 
-iapi.write_csv_hpsos(ofile, HPSOs.hpsos, parallel=parallel)
+iapi.write_csv_hpsos(ofile, HPSOs.hpsos_original, parallel=parallel)

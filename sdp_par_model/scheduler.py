@@ -257,7 +257,7 @@ class Scheduler:
                 if not subtask in performance_dict[hpso]:
                     performance_dict[hpso][subtask] = {}
 
-                cfg = PipelineConfig(hpso=hpso, hpso_subtask=subtask)
+                cfg = PipelineConfig(hpso=hpso, hpso_task=subtask)
                 (valid, msgs) = cfg.is_valid()
                 if not valid:
                     print("Invalid configuration!")
