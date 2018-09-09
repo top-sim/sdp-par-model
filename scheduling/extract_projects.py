@@ -6,7 +6,7 @@
 import scheduling as sched
 
 ifile = 'hpsos.csv'
-oform = 'hpsos_{t}.txt'
+oform = 'hpsos_{t}.csv'
 
 tele = [('low', 'SKA1_Low'),
         ('mid', 'SKA1_Mid')]

@@ -6,8 +6,8 @@
 import numpy as np
 import scheduling as sched
 
-iform = 'hpsos_{t}.txt'
-oform = 'sequence_{t}.txt'
+iform = 'hpsos_{t}.csv'
+oform = 'sequence_{t}.csv'
 
 tele = ['low', 'mid']
 

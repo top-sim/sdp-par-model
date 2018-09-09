@@ -281,10 +281,24 @@ class Scheduler:
         print('Done with building performance dictionary.')
         return performance_dict
 
-    def hpso_letters_to_sdp_task_list(self, letter_sequence, keep_data_in_coldbuf=False):
+    @staticmethod
+    def hpso_letters_to_hpsos(letter_sequence):
+        """
+        Translates a 'HPSO letter sequence' to a sequence of HPSO objects that can be used more logically
+        :param letter_sequence:
+        :return:
+        """
+        hpso_list = []
+        for task_letter in letter_sequence:
+            hpso = Definitions.hpso_lookup[task_letter]
+            hpso_list.append(hpso)
+
+        return hpso_list
+
+    def hpsos_to_sdp_task_list(self, hpso_list, keep_data_in_coldbuf=False):
         """
         Converts a list of HPSO scheduling block letters into a list of SDPTask objects
-        :param letter_sequence : a sequence of HPSOs, defined by Rosie's lettering scheme ('A'..'G' )
+        :param hpso_list : a list of HPSOs that need to be executed in sequence
         :param keep_data_in_coldbuf : Default false. If true, a copy of visibility data is kept in cold buffer until processing completes
         """
         if self.performance_dict is None:
@@ -295,8 +309,7 @@ class Scheduler:
         tasks = []  # the list of task objects
         prev_ingest_task = None
 
-        for task_letter in letter_sequence:
-            hpso = Definitions.hpso_lookup[task_letter]
+        for hpso in hpso_list:
             hpso_tasks = HPSOs.hpso_tasks[hpso]
 
             assert len(hpso_tasks) >= 2  # We assume that the tast as *at least* an Ingest and an RCal component

@@ -870,7 +870,7 @@ def write_csv_pipelines(filename, telescopes, bands, pipelines, adjusts="",
     _write_csv(filename, results, rows)
 
 
-def write_csv_hpsos(filename, hpsos,adjusts="",verbose=False,parallel=0):
+def write_csv_hpsos(filename, hpsos, adjusts="", verbose=False, parallel=0):
     """
     Evaluates all valid configurations of this telescope and dumps the
     result as a CSV file.
@@ -980,7 +980,7 @@ def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detai
         # Check that the configuration is valid, skip if it isn't
         (okay, msgs) = cfg.is_valid()
         if not okay:
-            # display(HTML('<p>Skipping %s (%s)</p>' % (cfg.describe(), ", ".join(msgs))))
+            display(HTML('<p>Skipping %s (%s)</p>' % (cfg.describe(), ", ".join(msgs))))
             continue
 
         # Compute, add to results

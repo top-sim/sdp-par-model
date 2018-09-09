@@ -2,12 +2,14 @@
 *.orig
 *.rej
 *.stackdump
+*.csv
 
 /.eggs
 /*.egg-info
 /_build
 /docs/_build
 /data
+/relevant_code
 
 /iPython/.ipynb_checkpoints
 /iPython/out
