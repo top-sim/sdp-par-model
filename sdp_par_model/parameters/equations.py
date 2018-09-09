@@ -892,7 +892,7 @@ def _apply_io_equations(o):
         # npoint is number of pointings in one observation.  factor
         # accounts for all products: 2 images (clean image and
         # residuals) and 2 uv-grids (visibilities and weights).
-        if o.Tpoint < o.Tobs:
+        if hasattr(o, "Tpoint") and (o.Tpoint < o.Tobs):
             npoint = ceiling(o.Tobs / o.Tpoint)
         else:
             npoint = 1
@@ -903,7 +903,7 @@ def _apply_io_equations(o):
         # observation.  factor accounts for all data products: 3
         # images (continuum-subtracted image, clean image and
         # residuals) and 2 uv-grids (visbilities and weights).
-        if o.Tpoint < o.Tobs:
+        if hasattr(o, "Tpoint") and  (o.Tpoint < o.Tobs):
             npoint = ceiling(o.Tobs / o.Tpoint)
         else:
             npoint = 1

@@ -1093,6 +1093,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
         o.Bmax = 10000  # m # TODO: check assumption about Bmax here - visibility data just used to correct phase in RCAL
         o.freq_min = 150e6  # TODO: placeholder value; please update
         o.freq_max = 350e6 # TODO: placeholder value; please update
+        o.Tpoint = 1000 * 3600.0  # sec # TODO: placeholder value; please update
 
     elif hpso == HPSOs.hpso13:
         o.comment = 'HI, limited BW'

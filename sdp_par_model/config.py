@@ -67,7 +67,7 @@ class PipelineConfig:
         if isinstance(pipeline, list):
             self.relevant_pipelines = pipeline
         else:
-            self.relevant_pipelines = [pipeline]
+            self.relevant_pipelines = [pipeline,]
         self.pipeline = pipeline  # Only relevant_pipelines is used (?), so this may probably be omitted
 
         # Adjustments from keyword arguments
