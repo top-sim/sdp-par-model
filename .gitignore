@@ -7,7 +7,6 @@
 /*.egg-info
 /_build
 /docs/_build
-/data
 
 /iPython/.ipynb_checkpoints
 /iPython/out
@@ -15,5 +14,7 @@
 .idea
 @Historical
 @Obsolete
+legacy_code_comparison
+scheduling/*.csv
 
 performance_dict.data
