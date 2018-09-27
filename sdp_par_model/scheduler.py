@@ -36,14 +36,17 @@ class Definitions:
                    'F': HPSOs.hpso27,
                    'G': HPSOs.hpso37c}
 
-    # The following results map was copied from examples used by Peter Wortmann. It defines values we wish to calculate.
-    #               Title                      Unit       Default? Sum?             Expression
-    results_map =[('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
-                  ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio/c.tera),
-                  ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop/c.peta),
-                  ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: 0 /c.peta),
-                  ('Output Size',             'TeraBytes',   True, True,  lambda tp: 0 /c.tera)]
-
+    # The is a subset of RESULT_MAP in reports.py -- It defines values we wish to calculate for scheduling purposes.
+    #               Title                      Unit           Default? Sum?             Expression
+    perf_reslt_map =[('Observation time',        'sec',        False, False, lambda tp: tp.Tobs),
+                     ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
+                     ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
+                     ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
+                     ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.peta),
+                     ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
+                     ('Pointing Time',            'sec',       False, False, lambda tp: tp.Tpoint),
+                     ('Total Time',               'sec',       False, False, lambda tp: tp.Texp)
+                     ]
 
 class SDPAttr:
     """
@@ -258,16 +261,21 @@ class Scheduler:
                     for msg in msgs:
                         print(msg)
                     raise AssertionError("Invalid config")
-                tp = cfg.calc_tel_params()
-                results = reports._compute_results(cfg, Definitions.results_map)  # TODO - refactor this method's parameter sequence
 
-                performance_dict[hpso]['Tobs']             = tp.Tobs  # Observation time
-                performance_dict[hpso][task]['ingestRate'] = results[0]
-                performance_dict[hpso][task]['visRate']    = results[1]
-                performance_dict[hpso][task]['compRate']   = results[2]
-                performance_dict[hpso][task]['visBuf']     = results[3]
-                performance_dict[hpso][task]['outputSize'] = results[4]
+                results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
 
+                performance_dict[hpso][task]['tObs']       = results[0]
+                performance_dict[hpso][task]['ingestRate'] = results[1]
+                performance_dict[hpso][task]['visRate']    = results[2]
+                performance_dict[hpso][task]['compRate']   = results[3]
+                performance_dict[hpso][task]['visBuf']     = results[4]
+                performance_dict[hpso][task]['outputSize'] = results[5]
+                performance_dict[hpso][task]['tPoint']     = results[6]
+                performance_dict[hpso][task]['tTotal']     = results[7]
+
+                print('Observation time\t= %g sec'        % performance_dict[hpso][task]['tObs'])
+                print('Pointing time\t= %g sec' % performance_dict[hpso][task]['tPoint'])
+                print('Total time\t= %g sec' % performance_dict[hpso][task]['tTotal'])
                 print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][task]['ingestRate'])
                 print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][task]['visRate'])
                 print('Visibility Buffer\t= %g PetaBytes' % performance_dict[hpso][task]['visBuf'])
