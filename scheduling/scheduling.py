@@ -64,20 +64,20 @@ dtype_seq = np.dtype([('uid',     'i8' ),
                       ('mout',    'f8' )])
 
 def write_projects(ofile, projects):
-    '''Write list of projects to file'''
-    header = 'name Tpoint Texp Rflop_r Rflop_b Rinp Rout Mout'
-    fmt = '%s' + 7 * ' %e'
+    '''Write csv list of projects to file'''
+    header = 'name,Tpoint,Texp,Rflop_r,Rflop_b,Rinp,Rout,Mout'
+    fmt = '%s' + 7 * ',%e'
     np.savetxt(ofile, projects, header=header, fmt=fmt)
 
 def read_projects(ifile):
     '''Read list of projects from file'''
-    projects = np.loadtxt(ifile, dtype=dtype_proj)
+    projects = np.loadtxt(ifile, dtype=dtype_proj, delimiter=',')
     return projects
 
 def write_sequence(ofile, sequence):
-    '''Write sequence of observations to file'''
-    header = 'uid name Tobs Rflop_r Rflop_b Minp Mout'
-    fmt = '%d %s' + 5 * ' %f'
+    '''Write csv sequence of observations to file'''
+    header = 'uid,name,Tobs,Rflop_r,Rflop_b,Minp,Mout'
+    fmt = '%d,%s' + 5 * ',%f'
     np.savetxt(ofile, sequence, header=header, fmt=fmt)
 
 def extract_projects(ifile, tele):
@@ -91,7 +91,9 @@ def extract_projects(ifile, tele):
         pmout = np.zeros(len(l)-1, dtype=dtype_pmout)
         pmout['name'] = [x.split()[0] for x in l[1:]]
         for l in r:
-            if l[0] == 'Telescope':
+            if len(l) == 0:
+                pass  # empty line; skip
+            elif l[0] == 'Telescope':
                 pmout['tele'] = l[1:]
             elif l[0] == 'Pipeline':
                 pmout['pipe'] = l[1:]

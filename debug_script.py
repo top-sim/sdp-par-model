@@ -352,9 +352,12 @@ def schedule_task_seq():
     max_t = last_preservation_timestamp
     print("SDP task sequence completes at t = %g hrs" % (max_t / 3600))
 
+def test_tp():
+    performance_dictionary = Scheduler.compute_performance_dictionary()
 
 if __name__ == '__main__':
     #print(sys.path)
     #build_performance_dict()
     #run_working_sets()
-    schedule_task_seq()
+    #schedule_task_seq()
+    test_tp()

@@ -379,9 +379,9 @@ class HPSOs:
     # The expanded set of HPSOs include the "maximal use cases" which aren't strictly HPSOs but work similarly
     hpsos_original = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32,
                       hpso37a, hpso37b, hpso37c, hpso38a, hpso38b}
-    hpsos_expanded = hpsos_original.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v,
-                                           hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_Mid_v,
-                                           hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
+    available_hpsos = hpsos_original.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v,
+                                            hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_Mid_v,
+                                            hpso_max_band5_Mid_c, hpso_max_band5_Mid_s})
 
 def define_symbolic_variables(o):
     """
@@ -930,7 +930,7 @@ def apply_hpso_parameters(o, hpso, hpso_task):
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
-    assert hpso in HPSOs.hpsos_expanded  # Check that the HPSO is listed as being available for calculation
+    assert hpso in HPSOs.available_hpsos  # Check that the HPSO is listed as being available for calculation
     assert hpso in HPSOs.hpso_telescopes.keys()  # Check that this lookup has been defined
 
     o.set_param('hpso', hpso)

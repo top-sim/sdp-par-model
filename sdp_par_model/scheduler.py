@@ -17,7 +17,7 @@ using the Scheduler.sum_deltas() method with maximum and minimum allowable value
 from .parameters.definitions import Constants as c
 from .parameters.definitions import HPSOs
 from .config import PipelineConfig
-from . import reports as iapi  # PyCharm doesn't like this import statement but it is correct
+from . import reports  # PyCharm doesn't like this import statement but it is correct
 import warnings
 import bisect
 
@@ -36,12 +36,17 @@ class Definitions:
                    'F': HPSOs.hpso27,
                    'G': HPSOs.hpso37c}
 
-    # The following results map was copied from examples used by Peter Wortmann. It defines values we wish to calculate.
-    #               Title                      Unit       Default? Sum?             Expression
-    results_map =[('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
-                  ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio/c.tera,        ),
-                  ('Total Compute Rate',       'PetaFLOP/s', True, True,  lambda tp: tp.Rflop/c.peta,      )]
-
+    # The is a subset of RESULT_MAP in reports.py -- It defines values we wish to calculate for scheduling purposes.
+    #               Title                      Unit           Default? Sum?             Expression
+    perf_reslt_map =[('Observation time',        'sec',        False, False, lambda tp: tp.Tobs),
+                     ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
+                     ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
+                     ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
+                     ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.peta),
+                     ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
+                     ('Pointing Time',            'sec',       False, False, lambda tp: tp.Tpoint),
+                     ('Total Time',               'sec',       False, False, lambda tp: tp.Texp)
+                     ]
 
 class SDPAttr:
     """
@@ -225,81 +230,91 @@ class SDPSchedule:
 
 
 class Scheduler:
-    # TODO : it may be better to logically split the Scheduler and 'SDP Simulation' into separate classes.
+    # TODO : it may be better to logically split the Scheduler and 'SDP Simulation' into separate classes, where the
+    # latter can be an instantiated object. For now, we treat the Scheduler as a class with static methods only
 
-    def __init__(self):
-        self.performance_dict = None
-
-    def set_performance_dictionary(self, performance_dictionary):
-        assert isinstance(performance_dictionary, dict)
-        if self.performance_dict is not None:
-            warnings.warn("Performance Dictionary has already been assigned! Overwriting...")
-        self.performance_dict = performance_dictionary
-
-    def compute_performance_dictionary(self):
+    @staticmethod
+    def compute_performance_dictionary():
         """
-        Builds a lookup table that maps each HPSO to its Subtasks, and Subtasks to to Performance Requirements.
+        Builds a lookup table that maps each HPSO to its tasks, and each Task to its Performance Requirements.
         Useful when doing scheduling so that values do not need to be computed more than once
-        :return: A dictionary of dictionaries. Maps each HPSO to a dictionary of subtasks that each maps to a performance value accordint to
+        :return: A dictionary of dictionaries. Each HPSO -> dictionary of Tasks -> performance values
         """
-        assert self.performance_dict is None
         performance_dict = {}
 
         # As a test we loop over all HPSOs we wish to handle, computing results for each
-        for task_letter in sorted(Definitions.hpso_lookup.keys()):
-            hpso = Definitions.hpso_lookup[task_letter]
-            print('*** Processing task type %s => %s ***\n' % (task_letter, hpso))
+        for hpso in HPSOs.hpso_telescopes.keys():
+            print('*** Computing performance reqs for HPSO %s ***\n' % hpso)
             if not hpso in performance_dict:
                 performance_dict[hpso] = {}
 
-            for subtask in HPSOs.hpso_tasks[hpso]:
-                print('subtask -> %s' % subtask)
-                if not subtask in performance_dict[hpso]:
-                    performance_dict[hpso][subtask] = {}
+            assert hpso in HPSOs.hpso_tasks
+            for task in HPSOs.hpso_tasks[hpso]:
+                print('task -> %s' % task)
+                if not task in performance_dict[hpso]:
+                    performance_dict[hpso][task] = {}
 
-                cfg = PipelineConfig(hpso=hpso, hpso_task=subtask)
+                cfg = PipelineConfig(hpso=hpso, hpso_task=task)
                 (valid, msgs) = cfg.is_valid()
                 if not valid:
                     print("Invalid configuration!")
                     for msg in msgs:
                         print(msg)
                     raise AssertionError("Invalid config")
-                tp = cfg.calc_tel_params()
-                results = iapi._compute_results(cfg, Definitions.results_map)  # TODO - refactor this method's parameter sequence
 
-                performance_dict[hpso]['Tobs'] = tp.Tobs  # Observation time
-                performance_dict[hpso][subtask]['ingestRate'] = results[0]
-                performance_dict[hpso][subtask]['visRate'] = results[1]
-                performance_dict[hpso][subtask]['compRate'] = results[2]
+                results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
 
-                print('Buffer ingest rate\t= %g TB/s' % results[0])
-                print('Visibility IO rate\t= %g TB/s' % results[1])
-                print('Compute Rate\t= %g PetaFLOP/s' % results[2])
+                performance_dict[hpso][task]['tObs']       = results[0]
+                performance_dict[hpso][task]['ingestRate'] = results[1]
+                performance_dict[hpso][task]['visRate']    = results[2]
+                performance_dict[hpso][task]['compRate']   = results[3]
+                performance_dict[hpso][task]['visBuf']     = results[4]
+                performance_dict[hpso][task]['outputSize'] = results[5]
+                performance_dict[hpso][task]['tPoint']     = results[6]
+                performance_dict[hpso][task]['tTotal']     = results[7]
+
+                print('Observation time\t= %g sec'        % performance_dict[hpso][task]['tObs'])
+                print('Pointing time\t= %g sec' % performance_dict[hpso][task]['tPoint'])
+                print('Total time\t= %g sec' % performance_dict[hpso][task]['tTotal'])
+                print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][task]['ingestRate'])
+                print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][task]['visRate'])
+                print('Visibility Buffer\t= %g PetaBytes' % performance_dict[hpso][task]['visBuf'])
+                print('Compute Rate\t= %g PetaFLOP/s'     % performance_dict[hpso][task]['compRate'])
+                print('Data output size \t= %g TeraBytes' % performance_dict[hpso][task]['outputSize'])
                 print()
 
-        self.performance_dict = performance_dict
         print('Done with building performance dictionary.')
         return performance_dict
 
-    def hpso_letters_to_sdp_task_list(self, letter_sequence, keep_data_in_coldbuf=False):
+    @staticmethod
+    def hpso_letters_to_hpsos(letter_sequence):
+        """
+        Translates a 'HPSO letter sequence' to a sequence of HPSO objects that can be used more logically
+        :param letter_sequence:
+        :return:
+        """
+        hpso_list = []
+        for task_letter in letter_sequence:
+            hpso = Definitions.hpso_lookup[task_letter]
+            hpso_list.append(hpso)
+
+        return hpso_list
+
+    @staticmethod
+    def hpsos_to_sdp_task_list(hpso_list, performance_dict, keep_data_in_coldbuf=False):
         """
         Converts a list of HPSO scheduling block letters into a list of SDPTask objects
-        :param letter_sequence : a sequence of HPSOs, defined by Rosie's lettering scheme ('A'..'G' )
+        :param hpso_list : a list of HPSOs that need to be executed in sequence
+        :param performance_dict : The performance dictionary supplying the costs and requirements of performing a task
         :param keep_data_in_coldbuf : Default false. If true, a copy of visibility data is kept in cold buffer until processing completes
         """
-        if self.performance_dict is None:
-            print("Performance Dictionary has not yet been initialized. Initializing now.")
-            self.compute_performance_dictionary()
-        performance_dict = self.performance_dict
-
         tasks = []  # the list of task objects
         prev_ingest_task = None
 
-        for task_letter in letter_sequence:
-            hpso = Definitions.hpso_lookup[task_letter]
+        for hpso in hpso_list:
             hpso_tasks = HPSOs.hpso_tasks[hpso]
 
-            assert len(hpso_tasks) >= 2  # We assume that the tast as *at least* an Ingest and an RCal component
+            assert len(hpso_tasks) >= 2  # We assume that the hpso has *at least* an Ingest and an RCal task
             if not (hpso_tasks[0] in HPSOs.ingest_tasks) and (hpso_tasks[1] in HPSOs.rcal_tasks):
                 # this is assumed true for all HPSOs - hence raising an assertion error if not
                 raise AssertionError("Assumption was wrong - some HPSO apparently doesn't involve Ingest + RCal")
@@ -325,7 +340,7 @@ class Scheduler:
 
             tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, dt_fixed=dt_observe,
                         streaming_in=True, streaming_out=True, preq_tasks=preq_task, description='Ingest+RCal')
-            prev_ingest_task = tsk  # current (ingest+rcal) task remembered; subtasks may only start once this completes
+            prev_ingest_task = tsk  # current (ingest+rcal) task remembered; subsequent tasks may only start once this completes
             tasks.append(tsk)
 
             # -----------------------------
@@ -357,33 +372,33 @@ class Scheduler:
             # -----------------------------
 
             # -----------------------------
-            # Now handle the ICal subtask (if there is any) and DPrep subtasks (if there are any)
+            # Now handle the ICal Task (if there is any) and DPrep Tasks (if there are any)
             # -----------------------------
             ical_task = None
             ical_dprep_tasks = set()
 
             for i in range(2, len(hpso_tasks)):
-                subtask = hpso_tasks[i]
+                task = hpso_tasks[i]
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
                 memsize   = 0  # TODO: must be replaced by working set
-                flopcount = performance_dict[hpso]['Tobs'] * performance_dict[hpso][subtask]['compRate']
+                flopcount = performance_dict[hpso]['Tobs'] * performance_dict[hpso][task]['compRate']
                 datasize_in   = memsize  # TODO: is this correct? No idea.
                 datasize_out  = memsize  # TODO: Replace by ICal & Dprep output data sizes (when we know what it is)
                 tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
-                            description=str(subtask))  # TODO: are these streaming tasks? We assume not.
+                            description=str(task))  # TODO: are these streaming tasks? We assume not.
                 datasize_in_hotbuf += datasize_out
 
                 if i == 2:
-                    assert subtask in HPSOs.ical_tasks  # Assumed that this is an ical subtask
+                    assert task in HPSOs.ical_tasks  # Assumed that this is an ical task
                     tsk.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
                     ical_task = tsk  # Remember this task, as DPrep tasks depend on it
-                elif subtask in HPSOs.dprep_tasks:
+                elif task in HPSOs.dprep_tasks:
                     assert ical_task is not None
                     tsk.preq_tasks.add(ical_task)
                 else:
-                    raise Exception("Unknown subtask type!")
+                    raise Exception("Unknown task type!")
 
                 ical_dprep_tasks.add(tsk)
                 tasks.append(tsk)
@@ -556,7 +571,7 @@ class Scheduler:
             else:
                 deltas_history[t_end] = -delta
 
-    def schedule(self, task_list, flops_cap, hotbuf_cap, coldbuf_cap, assign_flops_fraction=0.5, verbose=False,
+    def schedule(task_list, flops_cap, hotbuf_cap, coldbuf_cap, assign_flops_fraction=0.5, verbose=False,
                  assign_bw_fraction=0.8, minimum_flops_frac=0.05, minimum_bw_frac=0.1,
                  max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
