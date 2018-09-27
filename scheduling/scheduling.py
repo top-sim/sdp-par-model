@@ -91,7 +91,9 @@ def extract_projects(ifile, tele):
         pmout = np.zeros(len(l)-1, dtype=dtype_pmout)
         pmout['name'] = [x.split()[0] for x in l[1:]]
         for l in r:
-            if l[0] == 'Telescope':
+            if len(l) == 0:
+                pass  # empty line; skip
+            elif l[0] == 'Telescope':
                 pmout['tele'] = l[1:]
             elif l[0] == 'Pipeline':
                 pmout['pipe'] = l[1:]
