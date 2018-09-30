@@ -421,7 +421,7 @@ class Scheduler:
         :param tobs_list: (Optional) List of obervation times to use for each hpso, instead of defaults
         :param keep_data_in_coldbuf : Default false. If true, a copy of visibility data is kept in cold buffer until processing completes
         """
-        tasks = []  # the list of task objects
+        tasks = []  # the list of SDPTask objects
         prev_ingest_task = None
 
         nr_hpsos = len(hpso_list)
@@ -463,10 +463,10 @@ class Scheduler:
             else:
                 preq_task = set()  # no prerequisite tasks
 
-            tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, dt_fixed=dt_observe,
+            task = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount, dt_fixed=dt_observe,
                         streaming_in=True, streaming_out=True, preq_tasks=preq_task, description='Ingest+RCal')
-            prev_ingest_task = tsk  # current (ingest+rcal) task remembered; subsequent tasks may only start once this completes
-            tasks.append(tsk)
+            prev_ingest_task = task  # current (ingest+rcal) task remembered; subsequent tasks may only start once this completes
+            tasks.append(task)
 
             # -----------------------------
             # Creates transfer task to get the data from cold to the hot buffer.
@@ -479,12 +479,12 @@ class Scheduler:
                 data_to_purge = 0
             else:
                 data_to_purge = datasize_in_coldbuf
-            tsk = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks={prev_ingest_task},
-                          purge_data=data_to_purge, description='Transfer visibility data cold-hot (keep copy = %s)' %
-                                                                keep_data_in_coldbuf)
+            task = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks={prev_ingest_task},
+                           purge_data=data_to_purge, description='Transfer visibility data cold-hot (keep copy = %s)' %
+                                                                 keep_data_in_coldbuf)
             datasize_in_hotbuf = datasize_out
-            prev_transfer_task = tsk
-            tasks.append(tsk)
+            prev_transfer_task = task
+            tasks.append(task)
 
             # -----------------------------
             # We assume transfer from hot buffer to RAM is essentially without any delay (hence no transfer task).
@@ -502,31 +502,34 @@ class Scheduler:
             ical_task = None
             ical_dprep_tasks = set()
 
+            imageDataSize = 0  # In TB
+
             for i in range(2, len(hpso_tasks)):
-                task = hpso_tasks[i]
+                task_label = hpso_tasks[i]
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
-                memsize   = performance_dict[hpso][task]['memSize']
-                flopcount = dt_obs * performance_dict[hpso][task]['compRate']
-                datasize_in   = performance_dict[hpso][task]['visBuf']
-                datasize_out  = performance_dict[hpso][task]['outputSize']
-                tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
-                            description=str(task))  # TODO: are these streaming tasks? We assume not.
+                memsize   = performance_dict[hpso][task_label]['memSize']
+                flopcount = dt_obs * performance_dict[hpso][task_label]['compRate']
+                datasize_in   = performance_dict[hpso][task_label]['visBuf']
+                datasize_out  = performance_dict[hpso][task_label]['outputSize']
+                task = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
+                               description=str(task_label))  # TODO: are these streaming tasks? We assume not.
                 datasize_in_hotbuf += datasize_out
 
                 if i == 2:
-                    assert task in HPSOs.ical_tasks  # Assumed that this is an ical task
-                    tsk.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
-                    ical_task = tsk  # Remember this task, as DPrep tasks depend on it
-                elif task in HPSOs.dprep_tasks:
+                    assert task_label in HPSOs.ical_tasks  # Assumed that this is an ical task
+                    task.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
+                    ical_task = task  # Remember this task, as DPrep tasks depend on it
+                elif task_label in HPSOs.dprep_tasks:
                     assert ical_task is not None
-                    tsk.preq_tasks.add(ical_task)
+                    imageDataSize += performance_dict[hpso][task_label]['imCubeSize']
+                    task.preq_tasks.add(ical_task)
                 else:
                     raise Exception("Unknown task type!")
 
-                ical_dprep_tasks.add(tsk)
-                tasks.append(tsk)
+                ical_dprep_tasks.add(task)
+                tasks.append(task)
 
             # -----------------------------
             # A last task to flush out the results to Preservation, and then we're done
@@ -535,15 +538,15 @@ class Scheduler:
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
             datapath_out = (SDPAttr.hot_buffer, SDPAttr.preserve)
-            datasize_out = performance_dict[hpso][task]['imCubeSize']
+            datasize_out = imageDataSize
             if len(ical_dprep_tasks) > 0:
                 preq_tasks = ical_dprep_tasks
             else:
                 preq_tasks = {prev_transfer_task}
-            tsk = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=preq_tasks,
-                        purge_data=datasize_in_hotbuf, description='Transfer hot-preserve')
-            preservation_task = tsk
-            tasks.append(tsk)
+            task = SDPTask(None, datapath_out, 0, datasize_out, memsize, flopcount, preq_tasks=preq_tasks,
+                           purge_data=datasize_in_hotbuf, description='Transfer hot-preserve')
+            preservation_task = task
+            tasks.append(task)
 
             if keep_data_in_coldbuf:
                 memsize = 0  # We assume it takes no working memory to delete data from the cold buffer
@@ -553,9 +556,9 @@ class Scheduler:
                     preq_tasks = ical_dprep_tasks
                 else:
                     preq_tasks = {prev_transfer_task}
-                tsk = SDPTask(None, datapath_out, 0, 0, memsize, flopcount, preq_tasks={preservation_task},
+                task = SDPTask(None, datapath_out, 0, 0, memsize, flopcount, preq_tasks={preservation_task},
                               purge_data=datasize_in_coldbuf, description='Delete visibility data in cold buffer')
-                tasks.append(tsk)
+                tasks.append(task)
 
         return tasks
 
