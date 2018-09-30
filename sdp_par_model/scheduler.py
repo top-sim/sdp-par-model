@@ -20,6 +20,7 @@ from .config import PipelineConfig
 from . import reports  # PyCharm doesn't like this import statement but it is correct
 import warnings
 import bisect
+import numpy as np
 
 class Definitions:
     """
@@ -29,7 +30,7 @@ class Definitions:
 
     # Needs some refactoring methinks; idea would be to specify HPSOs instead of "letters".
     hpso_lookup = {'A': HPSOs.hpso01,
-                   'B': HPSOs.hpso04c,  # TODO: This task non-imaging. Interesting use case.
+                   'B': HPSOs.hpso04c,  # TODO: This task non-imaging. Interesting use case. Not properly defined?
                    'C': HPSOs.hpso13,
                    'D': HPSOs.hpso14,
                    'E': HPSOs.hpso15,
@@ -243,39 +244,55 @@ class Scheduler:
         performance_dict = {}
 
         # As a test we loop over all HPSOs we wish to handle, computing results for each
-        for hpso in HPSOs.hpso_telescopes.keys():
+        for hpso in HPSOs.available_hpsos:
             print('*** Computing performance reqs for HPSO %s ***\n' % hpso)
             if not hpso in performance_dict:
                 performance_dict[hpso] = {}
 
             assert hpso in HPSOs.hpso_tasks
             for task in HPSOs.hpso_tasks[hpso]:
-                print('task -> %s' % task)
                 if not task in performance_dict[hpso]:
                     performance_dict[hpso][task] = {}
 
                 cfg = PipelineConfig(hpso=hpso, hpso_task=task)
                 (valid, msgs) = cfg.is_valid()
                 if not valid:
-                    print("Invalid configuration!")
                     for msg in msgs:
                         print(msg)
                     raise AssertionError("Invalid config")
 
                 results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
 
-                performance_dict[hpso][task]['tObs']       = results[0]
+                # The contents of the results array are determined by Definitions.perf_reslt_map. Refer for details.
                 performance_dict[hpso][task]['ingestRate'] = results[1]
                 performance_dict[hpso][task]['visRate']    = results[2]
                 performance_dict[hpso][task]['compRate']   = results[3]
                 performance_dict[hpso][task]['visBuf']     = results[4]
                 performance_dict[hpso][task]['outputSize'] = results[5]
-                performance_dict[hpso][task]['tPoint']     = results[6]
-                performance_dict[hpso][task]['tTotal']     = results[7]
 
-                print('Observation time\t= %g sec'        % performance_dict[hpso][task]['tObs'])
-                print('Pointing time\t= %g sec' % performance_dict[hpso][task]['tPoint'])
-                print('Total time\t= %g sec' % performance_dict[hpso][task]['tTotal'])
+                # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
+                # task attributes. Assign them to the HPSO instead of to the (sub)task
+                # Although they are computed anew for ech task, it should return the same value every time
+                if not 'tObs' in performance_dict[hpso]:
+                    performance_dict[hpso]['tObs'] = results[0]
+                    print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
+                else:
+                    assert performance_dict[hpso]['tObs'] == results[0]
+
+                if not 'tPoint' in performance_dict[hpso]:
+                    performance_dict[hpso]['tPoint'] = results[6]
+                    print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
+                else:
+                    assert performance_dict[hpso]['tPoint'] == results[6]
+
+                if not 'tTotal' in performance_dict[hpso]:
+                    performance_dict[hpso]['tTotal'] = results[7]
+                    print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
+                else:
+                    assert performance_dict[hpso]['tTotal'] == results[7]
+
+                print('\ntask -> %s' % task)
+
                 print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][task]['ingestRate'])
                 print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][task]['visRate'])
                 print('Visibility Buffer\t= %g PetaBytes' % performance_dict[hpso][task]['visBuf'])
@@ -301,17 +318,103 @@ class Scheduler:
         return hpso_list
 
     @staticmethod
-    def hpsos_to_sdp_task_list(hpso_list, performance_dict, keep_data_in_coldbuf=False):
+    def generate_sequence(hpso_set, performance_dict, dt_block, dt_seq, allow_short_tobs=False):
+        """
+        Generate sequence of observations from a performance dictionary.
+        Based on and refactored from Mark Ashdown's code in scheduling.py. Uses existing data Scheduler data structures
+        instead of the text files and custom data structures he used.
+        :param hpso_set: the set of HPSOs to include in the sequence
+        :param performance_dict: Performance dictionary that maps all HPSOs to tasks to requirements and values
+        :param dt_block: the duration of a single scheduling block in seconds (or max length if allow_short_tobs == True)
+        :param dt_seq: duration floor of the complete schedule sequence, in seconds
+        :param allow_short_tobs: allows short observations for suitable projects (default False)
+        """
+
+        hpso_list = sorted(list(hpso_set))  # Indexed array so that we can assign probailities by index
+        nr_hpsos = len(hpso_list)
+        dt_exp_list       = np.zeros(nr_hpsos)
+        dt_obs_list_model = np.zeros(nr_hpsos)
+        dt_point_list     = np.zeros(nr_hpsos)
+        hpso_prob_list    = np.zeros(nr_hpsos)
+
+        hpso_to_index = {}
+        for i in range(nr_hpsos):
+            hpso = hpso_list[i]
+            hpso_to_index[hpso]  = i
+            dt_exp_list[i]       = performance_dict[hpso]['tTotal']
+            dt_obs_list_model[i] = performance_dict[hpso]['tObs']
+            dt_point_list[i]     = performance_dict[hpso]['tPoint']
+
+        # We build up a random sequence of hpso observations, based on their statistical likelihood of occurring,
+        # which we assume is based on how long they take to execute (?)
+
+        seq_hpsos = []  # Sequence of HPSOs
+        seq_tobs  = []  # Sequence of observation times corresponding to HPSOs (same array length)
+
+        if allow_short_tobs:
+            # This case allows short observations for suitable HPSOs:
+            # if an HPSO has tpoint less than tsched, then its observations will be of length tpoint,
+            # otherwise they will be of length tsched.
+            dt_obs_list = np.where(dt_point_list < dt_block, dt_point_list, dt_block)
+            if max(dt_obs_list < dt_obs_list_model):  # True if any element is true
+                warnings.warn("At least one HPSO's 'short observation time' is shorter than performance model's 'Observation Time'!")
+
+            # Probability for each HPSO, normalized to sum to 1.0
+            hpso_prob = dt_exp_list / dt_obs_list
+            hpso_prob /= np.sum(hpso_prob)
+
+            # Iteratively choose an HPSO until the required elapsed-time is reached. Slower than Mark's vectorized code,
+            # but still fast to compute. Avoids possible bias against 'unlucky' draws containing many short observations
+            ttot = 0.0
+            while ttot <= dt_seq:
+                hpso = np.random.choice(hpso_list, p=hpso_prob)
+                i = hpso_to_index[hpso]
+                tobs = dt_obs_list[i]
+                ttot += tobs
+
+                seq_hpsos.append(hpso)
+                seq_tobs.append(tobs)
+        else:
+            # This case generates scheduling blocks which are all of
+            # length tsched.
+
+            # Probability for each project.
+            hpso_prob_list = dt_exp_list / np.sum(dt_exp_list)
+
+            # Calculate number of scheduling blocks.
+
+            nsched = np.ceil(dt_seq / dt_block).astype(int)
+
+            # Create a random sequence of HPSOs. Each HPSO has a constant t_obs = dt_block.
+
+            seq_hpsos = np.random.choice(hpso_list, size=nsched, p=hpso_prob_list)
+            seq_tobs = np.ones(nsched) * dt_block
+
+        return (seq_hpsos, seq_tobs)
+
+    @staticmethod
+    def hpsos_to_sdp_task_list(hpso_list, performance_dict, tobs_list=None, keep_data_in_coldbuf=False):
         """
         Converts a list of HPSO scheduling block letters into a list of SDPTask objects
         :param hpso_list : a list of HPSOs that need to be executed in sequence
         :param performance_dict : The performance dictionary supplying the costs and requirements of performing a task
+        :param tobs_list: (Optional) List of obervation times to use for each hpso, instead of defaults
         :param keep_data_in_coldbuf : Default false. If true, a copy of visibility data is kept in cold buffer until processing completes
         """
         tasks = []  # the list of task objects
         prev_ingest_task = None
 
-        for hpso in hpso_list:
+        nr_hpsos = len(hpso_list)
+        if tobs_list is not None:
+            assert len(tobs_list) == nr_hpsos
+
+        for i in range(nr_hpsos):
+            hpso = hpso_list[i]
+            if tobs_list is not None:
+                dt_obs = tobs_list[i]
+            else:
+                dt_obs = performance_dict[hpso]['Tobs']
+
             hpso_tasks = HPSOs.hpso_tasks[hpso]
 
             assert len(hpso_tasks) >= 2  # We assume that the hpso has *at least* an Ingest and an RCal task
@@ -326,13 +429,12 @@ class Scheduler:
             datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
             memsize = 0  # TODO - must be replaced by working set
-            dt_observe = performance_dict[hpso]['Tobs']
-            datasize_in = performance_dict[hpso]['Tobs'] * performance_dict[hpso][hpso_tasks[0]]['ingestRate'] * \
-                          (c.tera / c.peta)  # PetaBytes
+            dt_observe = dt_obs
+            datasize_in = dt_obs * performance_dict[hpso][hpso_tasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
             datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
             datasize_in_coldbuf = datasize_out  # we use this later
-            flopcount = performance_dict[hpso]['Tobs'] * (performance_dict[hpso][hpso_tasks[0]]['compRate'] +
-                                                          performance_dict[hpso][hpso_tasks[1]]['compRate'])
+            flopcount = dt_obs * (performance_dict[hpso][hpso_tasks[0]]['compRate'] +
+                                  performance_dict[hpso][hpso_tasks[1]]['compRate'])
             if prev_ingest_task is not None:
                 preq_task = {prev_ingest_task}  # previous ingest task needs to be complete before this one can start
             else:
@@ -383,7 +485,7 @@ class Scheduler:
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
                 memsize   = 0  # TODO: must be replaced by working set
-                flopcount = performance_dict[hpso]['Tobs'] * performance_dict[hpso][task]['compRate']
+                flopcount = dt_obs * performance_dict[hpso][task]['compRate']
                 datasize_in   = memsize  # TODO: is this correct? No idea.
                 datasize_out  = memsize  # TODO: Replace by ICal & Dprep output data sizes (when we know what it is)
                 tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
