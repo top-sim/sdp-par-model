@@ -377,7 +377,7 @@ class HPSOs:
     # HPSOs that are currently supported (and which will show up in notebooks) are unified into an iterable set below.
     # The HPSOs originally intended for The Survey telescope are included and have been reassigned to Mid.
     # The expanded set of HPSOs include the "maximal use cases" which aren't strictly HPSOs but work similarly
-    hpsos_original = {hpso01, hpso02a, hpso02b, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32,
+    hpsos_original = {hpso01, hpso02a, hpso02b, hpso04c, hpso13, hpso14, hpso15, hpso22, hpso27, hpso32,
                       hpso37a, hpso37b, hpso37c, hpso38a, hpso38b}
     available_hpsos = hpsos_original.union({hpso_max_Low_c, hpso_max_Low_s, hpso_max_Low_v,
                                             hpso_max_Mid_c, hpso_max_Mid_s, hpso_max_Mid_v,

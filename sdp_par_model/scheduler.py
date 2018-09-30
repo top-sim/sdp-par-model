@@ -38,15 +38,19 @@ class Definitions:
                    'G': HPSOs.hpso37c}
 
     # The is a subset of RESULT_MAP in reports.py -- It defines values we wish to calculate for scheduling purposes.
+    # Units are standardised as TB and PFlop for consistency between different calculations
     #               Title                      Unit           Default? Sum?             Expression
     perf_reslt_map =[('Observation time',        'sec',        False, False, lambda tp: tp.Tobs),
                      ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
                      ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
                      ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
-                     ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.peta),
+                     ('Visibility Buffer',       'TeraBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.tera),
+                     ('Working (cache) memory',  'TeraBytes',   True, True,  lambda tp: tp.Mw_cache / c.tera,),
                      ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
                      ('Pointing Time',            'sec',       False, False, lambda tp: tp.Tpoint),
-                     ('Total Time',               'sec',       False, False, lambda tp: tp.Texp)
+                     ('Total Time',               'sec',       False, False, lambda tp: tp.Texp),
+                     ('Image cube size',          'TB',         True, False, lambda tp: tp.Mimage_cube / c.tera),
+                     ('Calibration output',       'TB',         True, False, lambda tp: tp.Mcal_out / c.tera),
                      ]
 
 class SDPAttr:
@@ -268,7 +272,12 @@ class Scheduler:
                 performance_dict[hpso][task]['visRate']    = results[2]
                 performance_dict[hpso][task]['compRate']   = results[3]
                 performance_dict[hpso][task]['visBuf']     = results[4]
-                performance_dict[hpso][task]['outputSize'] = results[5]
+                try:
+                    memsize = float(results[5])
+                except:
+                    memsize = 0
+                performance_dict[hpso][task]['memSize']    = memsize
+                performance_dict[hpso][task]['outputSize'] = results[6]
 
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
                 # task attributes. Assign them to the HPSO instead of to the (sub)task
@@ -280,24 +289,34 @@ class Scheduler:
                     assert performance_dict[hpso]['tObs'] == results[0]
 
                 if not 'tPoint' in performance_dict[hpso]:
-                    performance_dict[hpso]['tPoint'] = results[6]
+                    performance_dict[hpso]['tPoint'] = results[7]
                     print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
                 else:
-                    assert performance_dict[hpso]['tPoint'] == results[6]
+                    assert performance_dict[hpso]['tPoint'] == results[7]
 
+                try:
+                    t_total = float(results[8])
+                except:
+                    t_total = 0
                 if not 'tTotal' in performance_dict[hpso]:
-                    performance_dict[hpso]['tTotal'] = results[7]
+                    performance_dict[hpso]['tTotal'] = t_total
                     print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
                 else:
-                    assert performance_dict[hpso]['tTotal'] == results[7]
+                    assert performance_dict[hpso]['tTotal'] == t_total
+
+                performance_dict[hpso][task]['imCubeSize']  = results[9]
+                performance_dict[hpso][task]['calDataSize'] = results[10]
 
                 print('\ntask -> %s' % task)
 
+                print('Compute Rate\t\t= %g PetaFLOP/s'   % performance_dict[hpso][task]['compRate'])
                 print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][task]['ingestRate'])
                 print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][task]['visRate'])
-                print('Visibility Buffer\t= %g PetaBytes' % performance_dict[hpso][task]['visBuf'])
-                print('Compute Rate\t= %g PetaFLOP/s'     % performance_dict[hpso][task]['compRate'])
-                print('Data output size \t= %g TeraBytes' % performance_dict[hpso][task]['outputSize'])
+                print('Visibility Buffer\t= %g TB'        % performance_dict[hpso][task]['visBuf'])
+                print('Working Memory \t\t= %g TB'        % performance_dict[hpso][task]['memSize'])
+                print('Data output size \t= %g TB'        % performance_dict[hpso][task]['outputSize'])
+                print('Image Cube output size \t= %g TB'  % performance_dict[hpso][task]['imCubeSize'])
+                print('Calibration data output = %g TB'   % performance_dict[hpso][task]['calDataSize'])
                 print()
 
         print('Done with building performance dictionary.')
@@ -307,6 +326,7 @@ class Scheduler:
     def hpso_letters_to_hpsos(letter_sequence):
         """
         Translates a 'HPSO letter sequence' to a sequence of HPSO objects that can be used more logically
+        This is an outdated way of doing things; can probably be removed soon.
         :param letter_sequence:
         :return:
         """
@@ -428,10 +448,13 @@ class Scheduler:
             # TODO: does ingest need allocation of SDP working memory? i.e. is the data path below correct?
             datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
-            memsize = 0  # TODO - must be replaced by working set
+            memsize = performance_dict[hpso][hpso_tasks[0]]['memSize'] + performance_dict[hpso][hpso_tasks[1]]['memSize']
             dt_observe = dt_obs
             datasize_in = dt_obs * performance_dict[hpso][hpso_tasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
-            datasize_out = datasize_in  # TODO: Add RCal's data output size to this when we know what it is
+            datasize_out = datasize_in + performance_dict[hpso][hpso_tasks[0]]['outputSize'] + \
+                                         performance_dict[hpso][hpso_tasks[1]]['outputSize'] + \
+                                         performance_dict[hpso][hpso_tasks[0]]['calDataSize'] + \
+                                         performance_dict[hpso][hpso_tasks[1]]['calDataSize']
             datasize_in_coldbuf = datasize_out  # we use this later
             flopcount = dt_obs * (performance_dict[hpso][hpso_tasks[0]]['compRate'] +
                                   performance_dict[hpso][hpso_tasks[1]]['compRate'])
@@ -484,10 +507,10 @@ class Scheduler:
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
-                memsize   = 0  # TODO: must be replaced by working set
+                memsize   = performance_dict[hpso][task]['memSize']
                 flopcount = dt_obs * performance_dict[hpso][task]['compRate']
-                datasize_in   = memsize  # TODO: is this correct? No idea.
-                datasize_out  = memsize  # TODO: Replace by ICal & Dprep output data sizes (when we know what it is)
+                datasize_in   = performance_dict[hpso][task]['visBuf']
+                datasize_out  = performance_dict[hpso][task]['outputSize']
                 tsk = SDPTask(datapath_in, datapath_out, datasize_in, datasize_out, memsize, flopcount,
                             description=str(task))  # TODO: are these streaming tasks? We assume not.
                 datasize_in_hotbuf += datasize_out
@@ -512,7 +535,7 @@ class Scheduler:
             memsize = 0    # We assume it takes no working memory to perform a transfer
             flopcount = 0  # We assume it takes no flops to perform a transfer
             datapath_out = (SDPAttr.hot_buffer, SDPAttr.preserve)
-            datasize_out = 0  # TODO: Replace by Image preservation data size when known (from Working_Sets.ipynb)
+            datasize_out = performance_dict[hpso][task]['imCubeSize']
             if len(ical_dprep_tasks) > 0:
                 preq_tasks = ical_dprep_tasks
             else:
