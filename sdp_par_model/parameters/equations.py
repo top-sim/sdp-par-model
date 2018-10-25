@@ -237,7 +237,7 @@ def _apply_channel_equations(o, symbolify):
     if o.pipeline == Pipelines.DPrepA:
         o.Nf_FFT_backward = o.Ntt * o.Nf_out
         o.Nf_FFT_predict = o.Ntt * o.Nf_out
-    if o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC, Pipelines.Fast_Img]:
+    if o.pipeline in [Pipelines.DPrepB, Pipelines.DPrepC, Pipelines.FastImg]:
         o.Nf_FFT_backward = o.Nf_out
         o.Nf_FFT_predict = Min(o.Ntt * o.Nf_min, o.Nf_out)
 
@@ -485,7 +485,7 @@ def _apply_reprojection_equations(o):
     References: SKA-TEL-SDP-0000040 01D section 3.6.14 - Reprojection
     """
 
-    if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.Fast_Img:
+    if o.pipeline in Pipelines.imaging and o.pipeline != Pipelines.FastImg:
         o.set_product(Products.Reprojection,
             T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_backward * o.Nfacet**2,
