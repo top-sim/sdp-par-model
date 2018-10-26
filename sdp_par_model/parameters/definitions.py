@@ -594,8 +594,8 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajor = 10
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Nf_out = min(o.Nf_min, o.Nf_max)
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.08
@@ -610,6 +610,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
@@ -625,6 +626,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tint_out = o.Tint_min # Integration time for averaged visibilities
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
@@ -1018,7 +1020,6 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepB:
             # 300 channel pseudo-continuum (small BW)
             o.Nf_out = 100
-            o.Bmax = 25000
             o.Npp = 2
         elif hpso_pipe == Pipelines.DPrepC:
             o.freq_min = 1.3e9
@@ -1077,9 +1078,9 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_max = 12.0e9
         o.Nf_max = 65536
         o.Bmax = 150000
-        o.Tobs = 8 * 3600.0  # sec
-        o.Tpoint = 600 * 3600.0  # sec
-        o.Texp = 6000 * 3600.0  # sec
+        o.Tobs = 8 * 3600.0
+        o.Tpoint = 600 * 3600.0
+        o.Texp = 6000 * 3600.0
 
         if hpso_pipe == Pipelines.ICAL:
             o.Qfov = 2.7
