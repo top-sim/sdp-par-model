@@ -698,10 +698,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 9.0
 
     elif hpso == HPSOs.max_mid_band1:
@@ -722,10 +719,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.max_mid_band2:
@@ -746,10 +740,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.max_mid_band5a_1:
@@ -770,10 +761,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.max_mid_band5a_2:
@@ -794,10 +782,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.max_mid_band5b_1:
@@ -818,10 +803,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.max_mid_band5b_2:
@@ -842,10 +824,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 65536
         elif hpso_pipe == Pipelines.DPrepD:
-            # Allow some visibility averaging
             o.Nf_out = o.Nf_max // 4
-            # Integration time for averaged visibilities, equivalent to
-            # o.Tint_out = o.Tint_min * 10.0
             o.Tint_out = 1.4
 
     elif hpso == HPSOs.hpso01:
@@ -871,7 +850,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Nf_out = 1500
             o.Npp = 4
         elif hpso_pipe == Pipelines.DPrepD:
-            o.Nf_out = 1500
+            o.Nf_out = o.Nf_max // 4
             o.Tint_out = 9.0
             o.Npp = 4
 
@@ -895,7 +874,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Nf_out = 500
             o.Npp = 4
         elif hpso_pipe == Pipelines.DPrepC:
-            o.Nf_max = 1500
+            o.Nf_out = 1500
             o.Npp = 4
         elif hpso_pipe == Pipelines.DPrepD:
             o.Nf_out = o.Nf_max // 4
@@ -1037,7 +1016,6 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         if hpso_pipe == Pipelines.ICAL:
             o.Qfov = 1.8
         elif hpso_pipe == Pipelines.DPrepB:
-            o.freq_max = 1.5e9
             # 300 channel pseudo-continuum (small BW)
             o.Nf_out = 100
             o.Bmax = 25000
@@ -1113,8 +1091,8 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
     elif hpso == HPSOs.hpso27and33:
 
         # Combination of two HPSOs done commensally.
-        # HPSO-27: Magnetism - RM Grid.
-        # HPSO-33: Cosmology - ISW, Dipole
+        # 27: Magnetism - RM Grid.
+        # 33: Cosmology - ISW, Dipole
 
         o.band = Bands.Mid2
         o.freq_min = 1.0e9
