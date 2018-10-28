@@ -15,7 +15,7 @@ using the Scheduler.sum_deltas() method with maximum and minimum allowable value
 """
 
 from .parameters.definitions import Constants as c
-from .parameters.definitions import HPSOs
+from .parameters.definitions import Pipelines, HPSOs
 from .config import PipelineConfig
 from . import reports  # PyCharm doesn't like this import statement but it is correct
 import warnings
@@ -30,11 +30,11 @@ class Definitions:
 
     # Needs some refactoring methinks; idea would be to specify HPSOs instead of "letters".
     hpso_lookup = {'A': HPSOs.hpso01,
-                   'B': HPSOs.hpso04c,  # TODO: This task non-imaging. Interesting use case. Not properly defined?
+                   'B': HPSOs.hpso04c,
                    'C': HPSOs.hpso13,
                    'D': HPSOs.hpso14,
                    'E': HPSOs.hpso15,
-                   'F': HPSOs.hpso27,
+                   'F': HPSOs.hpso27and33,
                    'G': HPSOs.hpso37c}
 
     # The is a subset of RESULT_MAP in reports.py -- It defines values we wish to calculate for scheduling purposes.
@@ -253,12 +253,12 @@ class Scheduler:
             if not hpso in performance_dict:
                 performance_dict[hpso] = {}
 
-            assert hpso in HPSOs.hpso_tasks
-            for task in HPSOs.hpso_tasks[hpso]:
+            assert hpso in HPSOs.hpso_pipelines
+            for task in HPSOs.hpso_pipelines[hpso]:
                 if not task in performance_dict[hpso]:
                     performance_dict[hpso][task] = {}
 
-                cfg = PipelineConfig(hpso=hpso, hpso_task=task)
+                cfg = PipelineConfig(hpso=hpso, hpso_pipe=task)
                 (valid, msgs) = cfg.is_valid()
                 if not valid:
                     for msg in msgs:
@@ -281,7 +281,7 @@ class Scheduler:
 
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
                 # task attributes. Assign them to the HPSO instead of to the (sub)task
-                # Although they are computed anew for ech task, it should return the same value every time
+                # Although they are computed anew for each task, it should return the same value every time
                 if not 'tObs' in performance_dict[hpso]:
                     performance_dict[hpso]['tObs'] = results[0]
                     print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
@@ -435,10 +435,10 @@ class Scheduler:
             else:
                 dt_obs = performance_dict[hpso]['Tobs']
 
-            hpso_tasks = HPSOs.hpso_tasks[hpso]
+            hpso_tasks = HPSOs.hpso_pipelines[hpso]
 
             assert len(hpso_tasks) >= 2  # We assume that the hpso has *at least* an Ingest and an RCal task
-            if not (hpso_tasks[0] in HPSOs.ingest_tasks) and (hpso_tasks[1] in HPSOs.rcal_tasks):
+            if not (hpso_tasks[0] == Pipelines.Ingest) and (hpso_tasks[1] == Pipelines.RCAL):
                 # this is assumed true for all HPSOs - hence raising an assertion error if not
                 raise AssertionError("Assumption was wrong - some HPSO apparently doesn't involve Ingest + RCal")
 
@@ -518,10 +518,10 @@ class Scheduler:
                 datasize_in_hotbuf += datasize_out
 
                 if i == 2:
-                    assert task_label in HPSOs.ical_tasks  # Assumed that this is an ical task
+                    assert task_label == Pipelines.ICAL  # Assumed that this is an ical task
                     task.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
                     ical_task = task  # Remember this task, as DPrep tasks depend on it
-                elif task_label in HPSOs.dprep_tasks:
+                elif task_label[0:5] == 'DPrep':
                     assert ical_task is not None
                     imageDataSize += performance_dict[hpso][task_label]['imCubeSize']
                     task.preq_tasks.add(ical_task)
