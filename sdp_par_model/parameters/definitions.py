@@ -670,8 +670,8 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
     assert hpso_pipe in HPSOs.hpso_pipelines[hpso]
 
     o.set_param('hpso', hpso)
-    o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
-    o.set_param('pipeline', hpso_pipe)
+    o.telescope = HPSOs.hpso_telescopes[hpso]
+    o.pipeline = hpso_pipe
 
     if hpso == HPSOs.max_low:
 
