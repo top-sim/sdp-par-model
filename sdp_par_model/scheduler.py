@@ -450,7 +450,7 @@ class Scheduler:
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
             memsize = performance_dict[hpso][hpso_tasks[0]]['memSize'] + performance_dict[hpso][hpso_tasks[1]]['memSize']
             dt_observe = dt_obs
-            datasize_in = dt_obs * performance_dict[hpso][hpso_tasks[0]]['ingestRate'] * (c.tera / c.peta)  # PetaBytes
+            datasize_in  = dt_obs * performance_dict[hpso][hpso_tasks[0]]['ingestRate']  # TeraBytes
             datasize_out = datasize_in + performance_dict[hpso][hpso_tasks[0]]['outputSize'] + \
                                          performance_dict[hpso][hpso_tasks[1]]['outputSize'] + \
                                          performance_dict[hpso][hpso_tasks[0]]['calDataSize'] + \
@@ -722,8 +722,8 @@ class Scheduler:
         for task in task_list:
             assert isinstance(task, SDPTask)
             tasks_to_be_scheduled.add(task)
-            datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]
-            datapipe_out_cap = SDPAttr.datapath_speeds[task.datapath_out]
+            datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]    # TB/s
+            datapipe_out_cap = SDPAttr.datapath_speeds[task.datapath_out]  # TB/s
 
             if task.dt_fixed:
                 if task.datapath_in is None:
@@ -812,6 +812,8 @@ class Scheduler:
                 break
             if verbose:
                 print("-= Starting iteration %d =-" % nr_iterations)
+                if nr_iterations == 7:
+                    print('reached')  # TODO remove
 
             # Loop across all tasks
             for task in tasks_to_be_scheduled:
@@ -896,9 +898,9 @@ class Scheduler:
                     assert (task.streaming_in and task.streaming_out)  #TODO in future allow sequential fixed-time tasks
                     # Assign bandwidths and flops to the task. We do not take minimum rates into consideration here
                     # because the timespan of the task has primary importance
-                    assigned_bw_in  = task.datasize_in * (c.peta / c.tera) / task.dt_fixed   # TeraBytes / sec
+                    assigned_bw_in  = task.datasize_in / task.dt_fixed   # TeraBytes / sec
                     assigned_flops = task.flopcount / task.dt_fixed      # PetaFLOP  / sec
-                    assigned_bw_out = task.datasize_out * (c.peta / c.tera) / task.dt_fixed  # TeraBytes / sec
+                    assigned_bw_out = task.datasize_out / task.dt_fixed  # TeraBytes / sec
 
                     while not found_suitable_schedule_time:
                         nr_suitable_start_time_iterations += 1
@@ -986,7 +988,7 @@ class Scheduler:
                                                                                      val_max=datapipe_in_cap, eps=epsilon)
 
                             assigned_bw_in = max(bw_in_available * assign_bw_fraction, min_req_bw_in)
-                            read_dt = task.datasize_in * (c.peta / c.tera) / assigned_bw_in
+                            read_dt = task.datasize_in / assigned_bw_in
 
                         assigned_flops = 0
                         comp_dt = 0
@@ -1027,7 +1029,7 @@ class Scheduler:
                                 continue
                             else:
                                 assigned_bw_out = max(bw_out_available * assign_bw_fraction, min_req_bw_out)
-                                write_dt = task.datasize_out * (c.peta / c.tera) / assigned_bw_out
+                                write_dt = task.datasize_out / assigned_bw_out
                                 end_task_t = start_write_t + write_dt
                                 found_suitable_schedule_time = True
                         else:
