@@ -908,7 +908,7 @@ def _apply_io_equations(o):
         else:
             npoint = 1
         factor = 3 + 2 * (1 + o.r_facet)**2
-        o.Mout = npoint * factor * o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2  * o.Mpx
+        o.Mout = npoint * factor * o.Nbeam * o.Nf_out * o.Npp * o.Npix_linear_fov_total**2 * o.Mpx
     elif o.pipeline == Pipelines.DPrepD:
         # Averaged visibilities.
         o.Mout = o.Nbeam * o.Nf_out * o.Npp * o.Nbl * o.Mvis * o.Tobs / o.Tint_out
