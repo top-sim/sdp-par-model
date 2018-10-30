@@ -433,7 +433,7 @@ class Scheduler:
             if tobs_list is not None:
                 dt_obs = tobs_list[i]
             else:
-                dt_obs = performance_dict[hpso]['Tobs']
+                dt_obs = performance_dict[hpso]['tObs']
 
             hpso_tasks = HPSOs.hpso_tasks[hpso]
 
@@ -699,11 +699,12 @@ class Scheduler:
             else:
                 deltas_history[t_end] = -delta
 
-    def schedule(task_list, flops_cap, hotbuf_cap, coldbuf_cap, assign_flops_fraction=0.5, verbose=False,
+    @staticmethod
+    def schedule(tasks, flops_cap, hotbuf_cap, coldbuf_cap, assign_flops_fraction=0.5, verbose=False,
                  assign_bw_fraction=0.8, minimum_flops_frac=0.05, minimum_bw_frac=0.1,
                  max_nr_iterations=9999, epsilon=Definitions.epsilon):
         """
-        :param task_list an iterable collection of SDPTask objects that need to be scheduled
+        :param tasks = an iterable collection of SDPTask objects that need to be scheduled
         :param flops_cap the cap on the usable SDP flops (PetaFLOPS)
         :param hotbuf_cap the capacity of the Hot Buffer (PetaBytes)
         :param coldbuf_cap the capacity of the Cold Buffer (PetaBytes)
@@ -719,7 +720,7 @@ class Scheduler:
         # First, assert that the SDP has enough capability to handle all of the tasks. Raise exception if not.
         # -----------------------------------------------------------------------------------------------
         tasks_to_be_scheduled = set()
-        for task in task_list:
+        for task in tasks:
             assert isinstance(task, SDPTask)
             tasks_to_be_scheduled.add(task)
             datapipe_in_cap = SDPAttr.datapath_speeds[task.datapath_in]    # TB/s

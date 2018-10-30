@@ -1264,7 +1264,7 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
                       save=save)
 
 
-def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="", ylabel="", colour='b'):
+def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="", ylabel="", colour='b', factor=1.0):
     """
     Plots the evolution of a variable, as defined by a series of 'deltas'
     :param deltas: A dictionary that maps timestamps (in wall clock units) to changes to the parameter
@@ -1278,31 +1278,42 @@ def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="
     """
 
     timestamps_sorted = sorted(deltas.keys())
-    x_axis = []
-    y_axis = []
+    x_values = []
+    y_values = []
 
     value = 0
+    last_time = 0
     for t in timestamps_sorted:
+        if (max_t is not None) and (t > max_t):
+            break
+
+        last_time = t
         time_hours = t / 3600
-        x_axis.append(time_hours)
-        y_axis.append(value)
-        value += deltas[t]
-        x_axis.append(time_hours)
-        y_axis.append(value)
+        x_values.append(time_hours)
+        y_values.append(value)
+        value += deltas[t] * factor
+        x_values.append(time_hours)
+        y_values.append(value)
+
+    # If the delta sequence stops before the end time, we extend a horizontal plot line to the end time
+    if last_time < max_t:
+        time_hours = max_t / 3600
+        x_values.append(time_hours)
+        y_values.append(value)
 
     plt.figure()
-    plt.plot(x_axis, y_axis, colour)
+    plt.plot(x_values, y_values, colour)
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
 
     if xrange is None:
-        plt.xlim(min(x_axis), max(x_axis) * 1.05)
+        plt.xlim(min(x_values), max(x_values) * 1.05)
     else:
         plt.ylim(xrange[0], xrange[1])
 
     if yrange is None:
-        plt.ylim(min(y_axis), max(y_axis) * 1.05)
+        plt.ylim(min(y_values), max(y_values) * 1.05)
     else:
         plt.ylim(yrange[0], yrange[1])
 
