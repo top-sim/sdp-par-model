@@ -33,7 +33,6 @@ class Constants:
     arcminute = np.pi / 180 / 60
     arcsecond = np.pi / 180 / 60 / 60
 
-
 class Telescopes:
     """
     Enumerate the possible telescopes to choose from (used in
@@ -255,7 +254,6 @@ class HPSOs:
                     max_mid_band5b_1, max_mid_band5b_2}
     available_hpsos = all_hpsos | all_maxcases
 
-
 def define_symbolic_variables(o):
     """
     This method defines the *symbolic* variables that we will use during computations
@@ -270,7 +268,6 @@ def define_symbolic_variables(o):
     o.DeltaW_stack = symbols("DeltaW_stack", positive=True)
 
     return o
-
 
 def define_design_equations_variables(o):
     """
@@ -309,7 +306,6 @@ def define_design_equations_variables(o):
     o.MspecBufVis = symbols("M^spec_buf\,vis", positive=True)
     o.McontBufVis = symbols("M^cont_buf\,vis", positive=True)
     return o
-
 
 def apply_global_parameters(o):
     """
@@ -407,7 +403,6 @@ def apply_global_parameters(o):
     o.image_gridding = 0  # Pixels to pad to allow image-plane gridding
 
     return o
-
 
 def apply_telescope_parameters(o, telescope):
     """
@@ -511,14 +506,12 @@ def apply_band_parameters(o, band):
 
     return o
 
-
 def define_pipeline_products(o, pipeline, named_pipeline_products=[]):
     o.pipeline = pipeline
     o.products = {}
     for product in named_pipeline_products:
         o.products[product] = {'Rflop':0, 'Rio':0.0, 'Rinteract':0.0, 'MW_cache':0}
     return o
-
 
 def apply_pipeline_parameters(o, pipeline):
     """
@@ -594,14 +587,13 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajor = 10
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
-        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Nf_out = min(o.Nf_min, o.Nf_max)
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tobs = 1. * 3600.0  # in seconds
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.08
         elif o.telescope == Telescopes.SKA1_Mid:
             o.amp_f_max = 1.034
-
 
     elif pipeline == Pipelines.DPrepC:
         o.Qfov = 1.0  # Field of view factor
@@ -610,6 +602,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
             o.amp_f_max = 1.02
@@ -625,6 +618,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
         o.Qpix = 2.5  # Quality factor of synthesised beam oversampling
         o.Nf_out = o.Nf_max  # The same as the maximum number of channels
+        o.Npp = 4 # We want Stokes I, Q, U, V
         o.Tint_out = o.Tint_min # Integration time for averaged visibilities
         o.Tobs = 1. * 3600
         if o.telescope == Telescopes.SKA1_Low:
@@ -676,8 +670,8 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
     assert hpso_pipe in HPSOs.hpso_pipelines[hpso]
 
     o.set_param('hpso', hpso)
-    o.set_param('telescope', HPSOs.hpso_telescopes[hpso])
-    o.set_param('pipeline', hpso_pipe)
+    o.telescope = HPSOs.hpso_telescopes[hpso]
+    o.pipeline = hpso_pipe
 
     if hpso == HPSOs.max_low:
 
@@ -1018,7 +1012,6 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         elif hpso_pipe == Pipelines.DPrepB:
             # 300 channel pseudo-continuum (small BW)
             o.Nf_out = 100
-            o.Bmax = 25000
             o.Npp = 2
         elif hpso_pipe == Pipelines.DPrepC:
             o.freq_min = 1.3e9
@@ -1077,9 +1070,9 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_max = 12.0e9
         o.Nf_max = 65536
         o.Bmax = 150000
-        o.Tobs = 8 * 3600.0  # sec
-        o.Tpoint = 600 * 3600.0  # sec
-        o.Texp = 6000 * 3600.0  # sec
+        o.Tobs = 8 * 3600.0
+        o.Tpoint = 600 * 3600.0
+        o.Texp = 6000 * 3600.0
 
         if hpso_pipe == Pipelines.ICAL:
             o.Qfov = 2.7
@@ -1203,7 +1196,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_max = 11.0e9
         o.Nf_max = 65536
         o.Bmax = 150000
-        o.Tobs = 6 * 3600.0
+        o.Tobs = 8 * 3600.0
         o.Tpoint = 16.4 * 3600.0
         o.Texp = 1000 * 3600.0
 
@@ -1222,9 +1215,9 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_max = 11.0e9
         o.Nf_max = 65536
         o.Bmax = 150000
-        o.Tobs = 6 * 3600.0
-        o.Texp = 1000 * 3600.0
+        o.Tobs = 8 * 3600.0
         o.Tpoint = 1000 * 3600.0
+        o.Texp = 1000 * 3600.0
 
         if hpso_pipe == Pipelines.ICAL:
             o.Qfov = 2.7
