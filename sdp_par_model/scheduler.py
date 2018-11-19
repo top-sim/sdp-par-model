@@ -254,11 +254,11 @@ class Scheduler:
                 performance_dict[hpso] = {}
 
             assert hpso in HPSOs.hpso_pipelines
-            for task in HPSOs.hpso_pipelines[hpso]:
-                if not task in performance_dict[hpso]:
-                    performance_dict[hpso][task] = {}
+            for pipeline in HPSOs.hpso_pipelines[hpso]:
+                if not pipeline in performance_dict[hpso]:
+                    performance_dict[hpso][pipeline] = {}
 
-                cfg = PipelineConfig(hpso=hpso, hpso_pipe=task)
+                cfg = PipelineConfig(hpso=hpso, hpso_pipe=pipeline)
                 (valid, msgs) = cfg.is_valid()
                 if not valid:
                     for msg in msgs:
@@ -268,16 +268,16 @@ class Scheduler:
                 results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
 
                 # The contents of the results array are determined by Definitions.perf_reslt_map. Refer for details.
-                performance_dict[hpso][task]['ingestRate'] = results[1]
-                performance_dict[hpso][task]['visRate']    = results[2]
-                performance_dict[hpso][task]['compRate']   = results[3]
-                performance_dict[hpso][task]['visBuf']     = results[4]
+                performance_dict[hpso][pipeline]['ingestRate'] = results[1]
+                performance_dict[hpso][pipeline]['visRate']    = results[2]
+                performance_dict[hpso][pipeline]['compRate']   = results[3]
+                performance_dict[hpso][pipeline]['visBuf']     = results[4]
                 try:
                     memsize = float(results[5])
                 except:
                     memsize = 0
-                performance_dict[hpso][task]['memSize']    = memsize
-                performance_dict[hpso][task]['outputSize'] = results[6]
+                performance_dict[hpso][pipeline]['memSize']    = memsize
+                performance_dict[hpso][pipeline]['outputSize'] = results[6]
 
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
                 # task attributes. Assign them to the HPSO instead of to the (sub)task
@@ -304,19 +304,19 @@ class Scheduler:
                 else:
                     assert performance_dict[hpso]['tTotal'] == t_total
 
-                performance_dict[hpso][task]['imCubeSize']  = results[9]
-                performance_dict[hpso][task]['calDataSize'] = results[10]
+                performance_dict[hpso][pipeline]['imCubeSize']  = results[9]
+                performance_dict[hpso][pipeline]['calDataSize'] = results[10]
 
-                print('\ntask -> %s' % task)
+                print('\ntask -> %s' % pipeline)
 
-                print('Compute Rate\t\t= %g PetaFLOP/s'   % performance_dict[hpso][task]['compRate'])
-                print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][task]['ingestRate'])
-                print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][task]['visRate'])
-                print('Visibility Buffer\t= %g TB'        % performance_dict[hpso][task]['visBuf'])
-                print('Working Memory \t\t= %g TB'        % performance_dict[hpso][task]['memSize'])
-                print('Data output size \t= %g TB'        % performance_dict[hpso][task]['outputSize'])
-                print('Image Cube output size \t= %g TB'  % performance_dict[hpso][task]['imCubeSize'])
-                print('Calibration data output = %g TB'   % performance_dict[hpso][task]['calDataSize'])
+                print('Compute Rate\t\t= %g PetaFLOP/s'   % performance_dict[hpso][pipeline]['compRate'])
+                print('Buffer ingest rate\t= %g TB/s'     % performance_dict[hpso][pipeline]['ingestRate'])
+                print('Visibility IO rate\t= %g TB/s'     % performance_dict[hpso][pipeline]['visRate'])
+                print('Visibility Buffer\t= %g TB'        % performance_dict[hpso][pipeline]['visBuf'])
+                print('Working Memory \t\t= %g TB'        % performance_dict[hpso][pipeline]['memSize'])
+                print('Data output size \t= %g TB'        % performance_dict[hpso][pipeline]['outputSize'])
+                print('Image Cube output size \t= %g TB'  % performance_dict[hpso][pipeline]['imCubeSize'])
+                print('Calibration data output = %g TB'   % performance_dict[hpso][pipeline]['calDataSize'])
                 print()
 
         print('Done with building performance dictionary.')
@@ -435,10 +435,10 @@ class Scheduler:
             else:
                 dt_obs = performance_dict[hpso]['tObs']
 
-            hpso_tasks = HPSOs.hpso_pipelines[hpso]
+            hpso_pipelines = HPSOs.hpso_pipelines[hpso]
 
-            assert len(hpso_tasks) >= 2  # We assume that the hpso has *at least* an Ingest and an RCal task
-            if not (hpso_tasks[0] == Pipelines.Ingest) and (hpso_tasks[1] == Pipelines.RCAL):
+            assert len(hpso_pipelines) >= 2  # We assume that the hpso has *at least* an Ingest and an RCal task
+            if not (hpso_pipelines[0] == Pipelines.Ingest) and (hpso_pipelines[1] == Pipelines.RCAL):
                 # this is assumed true for all HPSOs - hence raising an assertion error if not
                 raise AssertionError("Assumption was wrong - some HPSO apparently doesn't involve Ingest + RCal")
 
@@ -448,16 +448,16 @@ class Scheduler:
             # TODO: does ingest need allocation of SDP working memory? i.e. is the data path below correct?
             datapath_in  = (SDPAttr.ingest_buffer, SDPAttr.working_mem)
             datapath_out = (SDPAttr.working_mem, SDPAttr.cold_buffer)
-            memsize = performance_dict[hpso][hpso_tasks[0]]['memSize'] + performance_dict[hpso][hpso_tasks[1]]['memSize']
+            memsize = performance_dict[hpso][hpso_pipelines[0]]['memSize'] + performance_dict[hpso][hpso_pipelines[1]]['memSize']
             dt_observe = dt_obs
-            datasize_in  = dt_obs * performance_dict[hpso][hpso_tasks[0]]['ingestRate']  # TeraBytes
-            datasize_out = datasize_in + performance_dict[hpso][hpso_tasks[0]]['outputSize'] + \
-                                         performance_dict[hpso][hpso_tasks[1]]['outputSize'] + \
-                                         performance_dict[hpso][hpso_tasks[0]]['calDataSize'] + \
-                                         performance_dict[hpso][hpso_tasks[1]]['calDataSize']
+            datasize_in  = dt_obs * performance_dict[hpso][hpso_pipelines[0]]['ingestRate']  # TeraBytes
+            datasize_out = datasize_in + performance_dict[hpso][hpso_pipelines[0]]['outputSize'] + \
+                                         performance_dict[hpso][hpso_pipelines[1]]['outputSize'] + \
+                                         performance_dict[hpso][hpso_pipelines[0]]['calDataSize'] + \
+                                         performance_dict[hpso][hpso_pipelines[1]]['calDataSize']
             datasize_in_coldbuf = datasize_out  # we use this later
-            flopcount = dt_obs * (performance_dict[hpso][hpso_tasks[0]]['compRate'] +
-                                  performance_dict[hpso][hpso_tasks[1]]['compRate'])
+            flopcount = dt_obs * (performance_dict[hpso][hpso_pipelines[0]]['compRate'] +
+                                  performance_dict[hpso][hpso_pipelines[1]]['compRate'])
             if prev_ingest_task is not None:
                 preq_task = {prev_ingest_task}  # previous ingest task needs to be complete before this one can start
             else:
@@ -504,8 +504,8 @@ class Scheduler:
 
             imageDataSize = 0  # In TB
 
-            for i in range(2, len(hpso_tasks)):
-                task_label = hpso_tasks[i]
+            for i in range(2, len(hpso_pipelines)):
+                task_label = hpso_pipelines[i]
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
