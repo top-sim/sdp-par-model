@@ -11,7 +11,7 @@ import warnings
 
 from numpy import pi, round
 import sympy
-from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin
+from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin, Function
 
 from .definitions import Pipelines, Products
 from .container import ParameterContainer, BLDep, blsum
@@ -334,9 +334,9 @@ def _apply_geometry_equations(o, symbolify):
     o.DeltaW_SShot = BLDep(b, b * sin(o.Omega_E * o.Tsnap) / (2. * o.wl))
     o.DeltaW_max = BLDep(b, o.Qw * Max(o.DeltaW_SShot(b), o.DeltaW_Earth(b)))
     if symbolify == 'helper':
-        o.DeltaW_Earth = Symbol(o.make_symbol_name('DeltaW_Earth'))
-        o.DeltaW_SShot = Symbol(o.make_symbol_name('DeltaW_SShot'))
-        o.DeltaW_max = Symbol(o.make_symbol_name('DeltaW_max'))
+        o.DeltaW_Earth = Function(o.make_symbol_name('DeltaW_Earth'))
+        o.DeltaW_SShot = Function(o.make_symbol_name('DeltaW_SShot'))
+        o.DeltaW_max = Function(o.make_symbol_name('DeltaW_max'))
     o.DeltaW_wproj = BLDep(b, Min(o.DeltaW_stack, o.DeltaW_max(b)))
 
     # Eq. 25, w-kernel support size. Note possible difference in
