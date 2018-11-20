@@ -25,7 +25,7 @@ except:
     HAVE_PYMP=False
 
 
-from .parameters.definitions import HPSOs
+from .parameters.definitions import HPSOs, Pipelines
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
 from .parameters.container import ParameterContainer
@@ -1064,7 +1064,7 @@ def _read_csv(filename):
 def compare_csv(result_file, ref_file,
                 ignore_modifiers=True, ignore_units=True,
                 row_threshold=0.01,
-                export_html=''):
+                export_html='', return_diffs=False):
     """
     Read and compare two CSV files with telescope parameters
 
@@ -1079,7 +1079,29 @@ def compare_csv(result_file, ref_file,
     ref = dict(_read_csv(ref_file))
 
     # Strip modifiers from rows
+    p_old = re.compile('(\d\d)(\w)?(DPrep.|ICAL)')
+    p_old_max = re.compile('max_([\w_]+)_(spectral|continuum)')
     def strip_modifiers(head, do_it=True):
+
+        # Pipeline renamings
+        head = head.replace('Fast_Img', Pipelines.FastImg)
+
+        # Does it match the old HPSO naming scheme? Convert
+        m = p_old.match(head)
+        if m:
+            hpso = m.group(1)
+            if m.group(2) is not None:
+                hpso += m.group(2).lower()
+            head = "hpso%s (%s)" % (hpso, m.group(3))
+        m = p_old_max.match(head)
+        if m:
+            band = m.group(1)
+            if band == 'Band5_MID':
+                band = 'mid_band5a_1'
+            pipeline = ('DPrepC' if m.group(2) == 'spectral' else 'DPrepA')
+            head = 'max_%s (%s)' % (band, pipeline)
+
+        head = head.lower()
         if do_it:
             return re.sub('\[[^\]]*\]', '', head).strip(' ')
         return head
@@ -1198,7 +1220,8 @@ def compare_csv(result_file, ref_file,
         display(HTML('<h3>Comparison:</h3>'))
         display(HTML(stbl))
 
-    return all_diff_sums
+    if return_diffs:
+        return all_diff_sums
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
