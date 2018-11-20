@@ -10,11 +10,11 @@ import warnings
 
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
-# from ipywidgets import FloatProgress
+from ipywidgets import FloatProgress
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from matplotlib import cm
-# from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sympy
 
