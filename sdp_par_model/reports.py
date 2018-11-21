@@ -737,42 +737,18 @@ def seconds_to_hms(seconds):
     return (h, m, s)
 
 
-def evaluate_hpso_optimized(hpso_key, blcoal=True,
-                            on_the_fly=False,
-                            scale_predict_by_facet=True,
+def evaluate_hpso_optimized(hpso, hpso_pipe, adjusts='',
                             verbosity='Overview'):
     """
     Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
 
-    :param hpso:
-    :param blcoal: Baseline dependent coalescing (before gridding)
-    :param on_the_fly:
+    :param hpso: HPSO pipeline to evaluate
     :param verbosity:
     """
 
-    tp_default = ParameterContainer()
-    ParameterDefinitions.apply_global_parameters(tp_default)
-    ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
-    telescope = tp_default.telescope
-    hpso_pipeline = tp_default.pipeline
-
-    # First we plot a table with all the provided parameters
-    param_titles = ('HPSO Number', 'Telescope', 'Pipeline', 'Max Baseline', 'Max # of channels', 'Observation time',
-                    'Texp (not used in calc)', 'Tpoint (not used in calc)')
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tobs)
-    Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Texp)
-    Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tpoint)
-    Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    param_values = (hpso_key, telescope, hpso_pipeline, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
-                    Tpoint_string)
-    param_units = ('', '', '', 'm', '', '', '', '')
-    show_table('Parameters', param_titles, param_values, param_units)
-
     # Make and check pipeline configuration
-    cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly,
-                         scale_predict_by_facet=scale_predict_by_facet)
+    display(HTML('<font color="blue">Evaluating...</font>'))
+    cfg = PipelineConfig(hpso=hpso, hpso_pipe=hpso_pipe, adjusts=adjusts)
     if not check_pipeline_config(cfg, pure_pipelines=True): return
 
     # Determine which rows to calculate & show
@@ -789,7 +765,8 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
     # Show pie graph of FLOP counts
     values = result_values[-1]  # the last value
     colours = default_rflop_plotting_colours(set(values))
-    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
+    plot_pie('FLOP breakdown for %s' % HPSOs.hpso_telescopes[hpso],
+             values.keys(), list(values.values()), colours)
 
 
 def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
