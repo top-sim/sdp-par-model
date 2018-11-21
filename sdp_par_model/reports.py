@@ -1237,8 +1237,9 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
     # Make configuration list
     configs = []
     for hpso in hpsos:
-        cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
-        configs.append(cfg)
+        for hpso_pipe in HPSOs.hpso_pipelines[hpso]:
+            cfg = PipelineConfig(hpso=hpso, hpso_pipe=hpso_pipe, adjusts=adjusts)
+            configs.append(cfg)
 
     rows = [RESULT_MAP[-1]] # Products only
     results = _batch_compute_results(configs, rows, parallel)
