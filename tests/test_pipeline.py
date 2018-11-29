@@ -240,7 +240,7 @@ class PipelineTestsRCAL(PipelineTestsImaging):
 
 class PipelineTestsFastImg(PipelineTestsImaging):
     def setUp(self):
-        self.df = self._loadTelParams(Pipelines.Fast_Img)
+        self.df = self._loadTelParams(Pipelines.FastImg)
 
 class PipelineTestsDPrepA(PipelineTestsImaging):
     def setUp(self):

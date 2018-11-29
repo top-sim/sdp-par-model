@@ -9,7 +9,7 @@ values and variables that constitute the inputs and outputs of
 computations.
 """
 
-from sympy import Symbol, Expr, Lambda, Mul, Add, Sum
+from sympy import Symbol, Expr, Lambda, Mul, Add, Sum, Function
 import warnings
 
 
@@ -190,11 +190,12 @@ class ParameterContainer(object):
 
         # Replace all values and expressions with symbols
         for name, v in self.__dict__.items():
-            sym = Symbol(self.make_symbol_name(name), real=True, positive=True)
             # Do not use isinstance, as otherwise bool will get symbolised
             if type(v) == int or isinstance(v, float) or isinstance(v, Expr):
+                sym = Symbol(self.make_symbol_name(name), real=True, positive=True)
                 self.__dict__[name] = sym
             elif isinstance(v, BLDep):
+                sym = Function(self.make_symbol_name(name), real=True, positive=True)
                 # SymPy cannot pass parameters by dictionary, so make a list instead
                 pars = [v.pars[n] for n in sorted(v.pars.keys())]
                 self.__dict__[name] = BLDep(v.pars, sym(*pars), defaults=v.defaults)
@@ -207,7 +208,7 @@ class ParameterContainer(object):
         # Replace baseline bins with symbolic expression as well (see
         # BLDep#eval_sum for what the tuple means)
         ib = Symbol('i')
-        self.baseline_bins = (ib, 1, self.Nbl, {'b': Symbol('B_max')(ib), 'bcount': 1})
+        self.baseline_bins = (ib, 1, self.Nbl, {'b': Function('B_max')(ib), 'bcount': 1})
 
     def get_products(self, expression='Rflop', scale=1):
         """
@@ -406,8 +407,9 @@ class BLDep(object):
         # Known sum?
         expr = self.term
         for p, result in known_sums.items():
-            if p == expr:
-                return result
+            if isinstance(expr, Symbol):
+                if str(p) == str(expr):
+                    return result
 
         # Small bit of ad-hoc formula optimisation: Exploit
         # independent factors. Makes for smaller terms, which is good

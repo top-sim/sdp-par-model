@@ -10,11 +10,11 @@ import warnings
 
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
-# from ipywidgets import FloatProgress
+from ipywidgets import FloatProgress
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from matplotlib import cm
-# from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sympy
 
@@ -25,7 +25,7 @@ except:
     HAVE_PYMP=False
 
 
-from .parameters.definitions import HPSOs
+from .parameters.definitions import HPSOs, Pipelines
 from .parameters import definitions as ParameterDefinitions
 from .parameters.definitions import Constants as c
 from .parameters.container import ParameterContainer
@@ -737,42 +737,18 @@ def seconds_to_hms(seconds):
     return (h, m, s)
 
 
-def evaluate_hpso_optimized(hpso_key, blcoal=True,
-                            on_the_fly=False,
-                            scale_predict_by_facet=True,
+def evaluate_hpso_optimized(hpso, hpso_pipe, adjusts='',
                             verbosity='Overview'):
     """
     Evaluates a High Priority Science Objective by optimizing NFacet and Tsnap to minimize the total FLOP rate
 
-    :param hpso:
-    :param blcoal: Baseline dependent coalescing (before gridding)
-    :param on_the_fly:
+    :param hpso: HPSO pipeline to evaluate
     :param verbosity:
     """
 
-    tp_default = ParameterContainer()
-    ParameterDefinitions.apply_global_parameters(tp_default)
-    ParameterDefinitions.apply_hpso_parameters(tp_default, hpso_key)
-    telescope = tp_default.telescope
-    hpso_pipeline = tp_default.pipeline
-
-    # First we plot a table with all the provided parameters
-    param_titles = ('HPSO Number', 'Telescope', 'Pipeline', 'Max Baseline', 'Max # of channels', 'Observation time',
-                    'Texp (not used in calc)', 'Tpoint (not used in calc)')
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tobs)
-    Tobs_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Texp)
-    Texp_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    (hours, minutes, seconds) = seconds_to_hms(tp_default.Tpoint)
-    Tpoint_string = '%d hr %d min %d sec' % (hours, minutes, seconds)
-    param_values = (hpso_key, telescope, hpso_pipeline, tp_default.Bmax, tp_default.Nf_max, Tobs_string, Texp_string,
-                    Tpoint_string)
-    param_units = ('', '', '', 'm', '', '', '', '')
-    show_table('Parameters', param_titles, param_values, param_units)
-
     # Make and check pipeline configuration
-    cfg = PipelineConfig(hpso=hpso_key, blcoal=blcoal, on_the_fly=on_the_fly,
-                         scale_predict_by_facet=scale_predict_by_facet)
+    display(HTML('<font color="blue">Evaluating...</font>'))
+    cfg = PipelineConfig(hpso=hpso, hpso_pipe=hpso_pipe, adjusts=adjusts)
     if not check_pipeline_config(cfg, pure_pipelines=True): return
 
     # Determine which rows to calculate & show
@@ -789,7 +765,8 @@ def evaluate_hpso_optimized(hpso_key, blcoal=True,
     # Show pie graph of FLOP counts
     values = result_values[-1]  # the last value
     colours = default_rflop_plotting_colours(set(values))
-    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
+    plot_pie('FLOP breakdown for %s' % HPSOs.hpso_telescopes[hpso],
+             values.keys(), list(values.values()), colours)
 
 
 def evaluate_telescope_optimized(telescope, band, pipeline, max_baseline="default", Nf_max="default",
@@ -1064,7 +1041,7 @@ def _read_csv(filename):
 def compare_csv(result_file, ref_file,
                 ignore_modifiers=True, ignore_units=True,
                 row_threshold=0.01,
-                export_html=''):
+                export_html='', return_diffs=False):
     """
     Read and compare two CSV files with telescope parameters
 
@@ -1079,7 +1056,29 @@ def compare_csv(result_file, ref_file,
     ref = dict(_read_csv(ref_file))
 
     # Strip modifiers from rows
+    p_old = re.compile('(\d\d)(\w)?(DPrep.|ICAL)')
+    p_old_max = re.compile('max_([\w_]+)_(spectral|continuum)')
     def strip_modifiers(head, do_it=True):
+
+        # Pipeline renamings
+        head = head.replace('Fast_Img', Pipelines.FastImg)
+
+        # Does it match the old HPSO naming scheme? Convert
+        m = p_old.match(head)
+        if m:
+            hpso = m.group(1)
+            if m.group(2) is not None:
+                hpso += m.group(2).lower()
+            head = "hpso%s (%s)" % (hpso, m.group(3))
+        m = p_old_max.match(head)
+        if m:
+            band = m.group(1)
+            if band == 'Band5_MID':
+                band = 'mid_band5a_1'
+            pipeline = ('DPrepC' if m.group(2) == 'spectral' else 'DPrepA')
+            head = 'max_%s (%s)' % (band, pipeline)
+
+        head = head.lower()
         if do_it:
             return re.sub('\[[^\]]*\]', '', head).strip(' ')
         return head
@@ -1198,7 +1197,8 @@ def compare_csv(result_file, ref_file,
         display(HTML('<h3>Comparison:</h3>'))
         display(HTML(stbl))
 
-    return all_diff_sums
+    if return_diffs:
+        return all_diff_sums
 
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
@@ -1237,8 +1237,9 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
     # Make configuration list
     configs = []
     for hpso in hpsos:
-        cfg = PipelineConfig(hpso=hpso, adjusts=adjusts)
-        configs.append(cfg)
+        for hpso_pipe in HPSOs.hpso_pipelines[hpso]:
+            cfg = PipelineConfig(hpso=hpso, hpso_pipe=hpso_pipe, adjusts=adjusts)
+            configs.append(cfg)
 
     rows = [RESULT_MAP[-1]] # Products only
     results = _batch_compute_results(configs, rows, parallel)

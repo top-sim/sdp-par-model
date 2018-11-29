@@ -1,7 +1,7 @@
 
 import unittest
 
-from sympy import Lambda, Symbol
+from sympy import Lambda, Symbol, Function
 
 from ..parameters.definitions import Pipelines, Products
 from ..parameters.container import BLDep
@@ -41,7 +41,7 @@ class Pipeline:
         if isinstance(tp.baseline_bins, tuple):
             b = Symbol("b")
             self.binBaselines = self.allBaselines.split(tp.Nbl, props={
-                'bmax': Lambda(b, Symbol("B_max")(b)),
+                'bmax': Lambda(b, Function("B_max")(b)),
                 'size': 1
             })
         else:

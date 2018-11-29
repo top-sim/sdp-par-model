@@ -2,7 +2,7 @@
 import unittest
 
 from sdp_par_model.parameters.container import *
-from sympy import Mul
+from sympy import Mul, Function
 
 class ContainerTests(unittest.TestCase):
 
@@ -81,8 +81,8 @@ class ContainerTests(unittest.TestCase):
         # Check symbolic sum
         i = Symbol('i')
         n = Symbol('n')
-        B = Symbol('B')
-        Bcount = Symbol('bcount')
+        B = Function('B')
+        Bcount = Function('bcount')
         Bsum = Symbol('Bsum')
         symbins = (i, 1, n, {'b': B(i), 'bcount': Bcount(i) })
         known_sum = { Bcount: Bsum }
