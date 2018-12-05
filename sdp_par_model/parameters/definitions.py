@@ -453,8 +453,12 @@ def apply_telescope_parameters(o, telescope):
         o.Tint_min = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
         o.B_dump_ref = 150000  # m
         # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
+        # MID_SKA-TEL-INSA-0000537_Rev05.txt
         o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
-        o.baseline_bin_distribution = np.array(( 6.14890420e+01,   5.06191389e+00 ,  2.83923113e+00 ,  5.08781928e+00, 7.13952645e+00,   3.75628206e+00,   5.73545412e+00,   5.48158127e+00, 1.73566136e+00,   1.51805606e+00,   1.08802653e-01 ,  4.66297083e-02))#July2-15 post-rebaselining, from Rebaselined_15July2015_SKA-SA.wgs84.197x4.txt % of baselines within each baseline bin
+        o.baseline_bin_distribution = np.array((
+            6.13698772e+01, 5.16553546e+00, 2.87031760e+00, 4.98419771e+00,
+            6.32609709e+00, 4.66297083e+00, 5.71472981e+00, 5.49712450e+00,
+            1.84964510e+00, 1.40407233e+00, 1.08802653e-01, 4.66297083e-02))
         #o.baseline_bins = np.array((150000,)) #single bin
         #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
         #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
