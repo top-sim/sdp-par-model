@@ -17,6 +17,8 @@ from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sympy
+import subprocess
+import os
 
 try:
     import pymp
@@ -1014,7 +1016,7 @@ def _write_csv(filename, results, rows):
     display(HTML('<font color="blue">Results written to %s.</font>' % filename))
 
 
-def _read_csv(filename):
+def read_csv(filename):
     """
     Reads pipeline calculation results from a CSV file as written by _write_csv.
     """
@@ -1037,6 +1039,65 @@ def _read_csv(filename):
 
         return results
 
+# Strip modifiers from rows
+_convert_old = re.compile('(\d\d)(\w)?(DPrep.|ICAL)')
+_convert_old_max = re.compile('max_([\w_]+)_(spectral|continuum)')
+def _strip_modifiers(head, do_it=True):
+
+    # Pipeline renamings
+    head = head.replace('Fast_Img', Pipelines.FastImg)
+
+    # Does it match the old HPSO naming scheme? Convert
+    m = _convert_old.match(head)
+    if m:
+        hpso = m.group(1)
+        if m.group(2) is not None:
+            hpso += m.group(2).lower()
+        head = "hpso%s (%s)" % (hpso, m.group(3))
+    m = _convert_old_max.match(head)
+    if m:
+        band = m.group(1)
+        if band == 'Band5_MID':
+            band = 'mid_band5a_1'
+        pipeline = ('DPrepC' if m.group(2) == 'spectral' else 'DPrepA')
+        head = 'max_%s (%s)' % (band, pipeline)
+
+    head = head.lower()
+    if do_it:
+        return re.sub('\[[^\]]*\]', '', head).strip(' ')
+    return head
+
+def lookup_csv(results, column_name, row_name,
+               ignore_units=True, ignore_modifiers=True):
+    """
+    Lookup a value in a CSV table
+
+    :param results: CSV table as returned by read_csv
+    :param column_name: Column (pipeline/HPSO name) to look up
+    :param row_name: Row (parameter name) to look up
+    :param ignore_units: Ignore units when matching rows (say, [s])
+    :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
+    :returns: Value if found, None otherwise
+    """
+    
+    # Strip row name
+    row_name = _strip_modifiers(row_name, ignore_units)
+    column_name = _strip_modifiers(column_name, ignore_modifiers)
+    for row_name2, row in results:
+    
+        # Right row?
+        if row_name != _strip_modifiers(row_name2, ignore_units):
+            continue
+        
+        # Find column
+        for column_name2, val in row:
+            if column_name != _strip_modifiers(column_name2, ignore_modifiers):
+                continue
+                
+            # Found!
+            return val
+    
+    return None
 
 def compare_csv(result_file, ref_file,
                 ignore_modifiers=True, ignore_units=True,
@@ -1045,44 +1106,20 @@ def compare_csv(result_file, ref_file,
     """
     Read and compare two CSV files with telescope parameters
 
-    :param result_file: CVS file with telescope parameters
-    :param ref_file: CVS file with reference parameters
+    :param result_file: CSV file with telescope parameters
+    :param ref_file: CSV file with reference parameters
     :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
-    :returns: Sum of differences found in specified rows
+    :param ignore_units: Ignore units when matching rows (say, [s])
+    :param export_html: File to write table to. If empty, will be shown inline.
+    :param return_diffs: Whether to also return differences as a dictionary
+    :returns: Sum of differences found in specified rows, if requested
     """
 
     # Read results and reference. Make lookup dictionary for the latter.
-    results = _read_csv(result_file)
-    ref = dict(_read_csv(ref_file))
+    results = read_csv(result_file)
+    ref = dict(read_csv(ref_file))
 
-    # Strip modifiers from rows
-    p_old = re.compile('(\d\d)(\w)?(DPrep.|ICAL)')
-    p_old_max = re.compile('max_([\w_]+)_(spectral|continuum)')
-    def strip_modifiers(head, do_it=True):
-
-        # Pipeline renamings
-        head = head.replace('Fast_Img', Pipelines.FastImg)
-
-        # Does it match the old HPSO naming scheme? Convert
-        m = p_old.match(head)
-        if m:
-            hpso = m.group(1)
-            if m.group(2) is not None:
-                hpso += m.group(2).lower()
-            head = "hpso%s (%s)" % (hpso, m.group(3))
-        m = p_old_max.match(head)
-        if m:
-            band = m.group(1)
-            if band == 'Band5_MID':
-                band = 'mid_band5a_1'
-            pipeline = ('DPrepC' if m.group(2) == 'spectral' else 'DPrepA')
-            head = 'max_%s (%s)' % (band, pipeline)
-
-        head = head.lower()
-        if do_it:
-            return re.sub('\[[^\]]*\]', '', head).strip(' ')
-        return head
-    ref = { strip_modifiers(name, ignore_units): row
+    ref = { _strip_modifiers(name, ignore_units): row
             for (name, row) in ref.items() }
 
     # Headings
@@ -1107,14 +1144,14 @@ def compare_csv(result_file, ref_file,
         diffs = []
 
         # Locate reference results
-        refRow = ref.get(strip_modifiers(row_name, ignore_units), [])
-        refRow = map(lambda h_v: (strip_modifiers(h_v[0], ignore_modifiers), h_v[1]), refRow)
+        refRow = ref.get(_strip_modifiers(row_name, ignore_units), [])
+        refRow = map(lambda h_v: (_strip_modifiers(h_v[0], ignore_modifiers), h_v[1]), refRow)
         refRow = dict(refRow)
 
         # Loop through values
         s = ""
         for head, val in row:
-            head = strip_modifiers(head, ignore_modifiers)
+            head = _strip_modifiers(head, ignore_modifiers)
 
             # Number?
             try:
@@ -1200,6 +1237,38 @@ def compare_csv(result_file, ref_file,
     if return_diffs:
         return all_diff_sums
 
+def find_csvs(csv_path = "../data/csv"):
+    """
+    Returns a map of all CSV files currently checked into the Git repository.
+    :returns: A dictionary of (rev, hpsos/pipelines) pairs to file names
+    """
+
+    # Get all reference files from Git history
+    refs = subprocess.check_output(["git", "log", "--pretty=format:", "--name-only", "--reverse", csv_path]).split()
+    refs = list(map(lambda r: os.path.relpath(r.decode(), "iPython"), reversed(refs)))
+        
+    csv_map = {}
+    p = re.compile("[\d\-]*\-([a-z0-9]+)_(pipelines|hpsos)\.")
+    for ref in refs:
+        m = p.match(os.path.basename(ref))
+        if m and m.group(1) != "costing":
+            csv_map[(m.group(1), m.group(2))] = ref
+    return csv_map
+           
+def newest_csv(csv_map, typ = 'hpsos', rev = 'HEAD'):
+    """
+    Finds the CSV closest to the given revision according to the Git history
+    :param csv_map: CSV map, see find_csvs
+    :param typ: Type of CSV to look for (hpsos/pipelines)
+    :param rev: Git revision to start from
+    :return: CSV file name if found, None otherwise
+    """
+
+    parents = subprocess.check_output(["git", "log", "--format=%h", rev]).split()
+    for parent in parents:
+        if (parent.decode(), typ) in csv_map:
+            return csv_map[(parent.decode(), typ)]
+    return None
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,
                          adjusts={}, parallel=0,

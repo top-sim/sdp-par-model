@@ -43,7 +43,7 @@ class Definitions:
     perf_reslt_map =[('Observation time',        'sec',        False, False, lambda tp: tp.Tobs),
                      ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
                      ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
-                     ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
+                     ('Total Compute Requirement','PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
                      ('Visibility Buffer',       'TeraBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.tera),
                      ('Working (cache) memory',  'TeraBytes',   True, True,  lambda tp: tp.Mw_cache / c.tera,),
                      ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
@@ -239,10 +239,11 @@ class Scheduler:
     # latter can be an instantiated object. For now, we treat the Scheduler as a class with static methods only
 
     @staticmethod
-    def compute_performance_dictionary():
+    def compute_performance_dictionary(results_csv = None):
         """
         Builds a lookup table that maps each HPSO to its tasks, and each Task to its Performance Requirements.
         Useful when doing scheduling so that values do not need to be computed more than once
+        :param results_csv: Previously created CSV table to read values from (see read_csv in reports)
         :return: A dictionary of dictionaries. Each HPSO -> dictionary of Tasks -> performance values
         """
         performance_dict = {}
@@ -265,18 +266,28 @@ class Scheduler:
                         print(msg)
                     raise AssertionError("Invalid config")
 
-                results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
+                # Generate fresh if no CSV results were given
+                if results_csv is None:
+                    results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
+                else:
+                    cfg_name = cfg.describe()
+                    results = list([reports.lookup_csv(results_csv, cfg_name, row[0])
+                                    for row in Definitions.perf_reslt_map])
+                
+                # We only expect float values - set everything else to zero
+                def float_or_0(val):
+                    try:
+                        return float(val)
+                    except:
+                        return 0
+                results = list([float_or_0(val) for val in results])
 
                 # The contents of the results array are determined by Definitions.perf_reslt_map. Refer for details.
                 performance_dict[hpso][pipeline]['ingestRate'] = results[1]
                 performance_dict[hpso][pipeline]['visRate']    = results[2]
                 performance_dict[hpso][pipeline]['compRate']   = results[3]
                 performance_dict[hpso][pipeline]['visBuf']     = results[4]
-                try:
-                    memsize = float(results[5])
-                except:
-                    memsize = 0
-                performance_dict[hpso][pipeline]['memSize']    = memsize
+                performance_dict[hpso][pipeline]['memSize']    = results[5]
                 performance_dict[hpso][pipeline]['outputSize'] = results[6]
 
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
@@ -295,7 +306,7 @@ class Scheduler:
                     assert performance_dict[hpso]['tPoint'] == results[7]
 
                 try:
-                    t_total = float(results[8])
+                    t_total = results[8]
                 except:
                     t_total = 0
                 if not 'tTotal' in performance_dict[hpso]:
