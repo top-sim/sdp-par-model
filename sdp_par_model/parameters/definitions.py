@@ -413,7 +413,8 @@ def apply_telescope_parameters(o, telescope):
     :returns: ParameterContainer
     """
     assert isinstance(o, ParameterContainer)
-    o.set_param('telescope', telescope)
+    if not hasattr(o, 'telescope') or o.telescope != telescope:
+        o.set_param('telescope', telescope)
 
     if telescope == Telescopes.SKA1_Low:
         o.Bmax = 65000  # Actually constructed max baseline in *m*
@@ -673,7 +674,8 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
     # Check that a valid pipeline has been defined for this HPSO
     assert hpso_pipe in HPSOs.hpso_pipelines[hpso]
 
-    o.set_param('hpso', hpso)
+    if not hasattr(o,'hpso') or o.hpso != hpso:
+        o.set_param('hpso', hpso)
     o.telescope = HPSOs.hpso_telescopes[hpso]
     o.pipeline = hpso_pipe
 
