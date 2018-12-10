@@ -2,15 +2,19 @@
 
 pipeline {
     agent {label 'sdp-ci-01'}
+    // Master branch gets built daily, otherwise only after GitHub push
+    triggers { 
+        cron(env.BRANCH_NAME == 'master' ? '@daily' : '')
+        githubPush()
+    }    
     environment {
         MPLBACKEND='agg'
     }
     options { timestamps() }
-    
     stages { 
     
         stage('Setup') {
-            steps {
+            steps { ansiColor('xterm') {
                 sh '''
 # Set up fresh Python virtual environment
 virtualenv -p `which python3` --no-site-packages _build
@@ -23,17 +27,17 @@ pip install pymp-pypi
 jupyter nbextension enable --py widgetsnbextension
 pip install pytest pytest-xdist pytest-cov
 '''
-            }
+            } }
         }
         stage('Test') {
-            steps {
+            steps { ansiColor('xterm') {
                 sh '''
 cd $WORKSPACE
 . _build/bin/activate
 
-py.test -n 4 --verbose tests
+py.test -n 4 --verbose --color=yes tests
 '''
-            }
+            } }
         }
 
        stage('Run Notebooks') {
