@@ -5,7 +5,10 @@ pipeline {
     environment {
         MPLBACKEND='agg'
     }
-    stages {
+    options { timestamps() }
+    
+    stages { 
+    
         stage('Setup') {
             steps {
                 sh '''
@@ -34,7 +37,8 @@ py.test -n 4 --verbose tests
         }
 
        stage('Run Notebooks') {
-           steps {
+           // Jupyter generates coloured output - set up conversion
+           steps { ansiColor('xterm') {
                sh '''
 cd $WORKSPACE
 . $WORKSPACE/_build/bin/activate
@@ -45,7 +49,7 @@ mkdir -p out
 cp -R $WORKSPACE/iPython/out $WORKSPACE/out || true
 cp -R $WORKSPACE/compare_* $WORKSPACE/out || true
 '''
-           }
+           } }
        }
         stage ('Publish Results') {
             when { branch 'master'}
