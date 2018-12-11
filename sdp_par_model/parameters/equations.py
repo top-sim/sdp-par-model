@@ -51,7 +51,8 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     assert hasattr(o, "c")  # Checks initialization by proxy of whether the speed of light is defined
 
     # Store parameters
-    o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
+    if not hasattr(o, 'pipeline') or o.pipeline != pipeline:
+        o.set_param('pipeline', pipeline)  # e.g. ICAL, DPprepA
 
     # Check parameters
     if hasattr(o, 'Tobs') and (o.Tobs < 10.0):
