@@ -44,13 +44,13 @@ class Definitions:
                      ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
                      ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
                      ('Total Compute Requirement','PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
-                     ('Visibility Buffer',       'TeraBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.tera),
+                     ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.peta),
                      ('Working (cache) memory',  'TeraBytes',   True, True,  lambda tp: tp.Mw_cache / c.tera,),
                      ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
                      ('Pointing Time',            'sec',       False, False, lambda tp: tp.Tpoint),
                      ('Total Time',               'sec',       False, False, lambda tp: tp.Texp),
-                     ('Image cube size',          'TB',         True, False, lambda tp: tp.Mimage_cube / c.tera),
-                     ('Calibration output',       'TB',         True, False, lambda tp: tp.Mcal_out / c.tera),
+                     ('Image cube size',          'GB',         True, False, lambda tp: tp.Mimage_cube / c.giga),
+                     ('Calibration output',       'GB',         True, False, lambda tp: tp.Mcal_out / c.giga),
                      ]
 
 class SDPAttr:
@@ -286,7 +286,7 @@ class Scheduler:
                 performance_dict[hpso][pipeline]['ingestRate'] = results[1]
                 performance_dict[hpso][pipeline]['visRate']    = results[2]
                 performance_dict[hpso][pipeline]['compRate']   = results[3]
-                performance_dict[hpso][pipeline]['visBuf']     = results[4]
+                performance_dict[hpso][pipeline]['visBuf']     = results[4] * 1000
                 performance_dict[hpso][pipeline]['memSize']    = results[5]
                 performance_dict[hpso][pipeline]['outputSize'] = results[6]
 
@@ -315,8 +315,8 @@ class Scheduler:
                 else:
                     assert performance_dict[hpso]['tTotal'] == t_total
 
-                performance_dict[hpso][pipeline]['imCubeSize']  = results[9]
-                performance_dict[hpso][pipeline]['calDataSize'] = results[10]
+                performance_dict[hpso][pipeline]['imCubeSize']  = results[9] / 1000
+                performance_dict[hpso][pipeline]['calDataSize'] = results[10] / 1000
 
                 print('\ntask -> %s' % pipeline)
 
