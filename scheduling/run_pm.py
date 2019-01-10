@@ -5,10 +5,11 @@
 import sys
 sys.path.append('..')
 
-from sdp_par_model import reports as iapi
+from sdp_par_model import reports
 from sdp_par_model.parameters.definitions import HPSOs
 
 ofile = 'hpsos.csv'
-parallel = 4
+parallel = 0
 
-iapi.write_csv_hpsos(ofile, HPSOs.hpsos_original, parallel=parallel)
+reports.write_csv_hpsos(ofile, HPSOs.all_hpsos, parallel=parallel,
+                        verbose=True)

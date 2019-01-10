@@ -23,8 +23,8 @@ The list of projects has fields:
 - name     name of project (HPSO-x)
 - tpoint   time to observe a single pointing [s]
 - texp     total observation time (length of project) [s]
-- rflop_r  real-time compute rate [PFLOP/s]
-- rflop_b  batch compute rate [PFLOP/s]
+- r_rflop  real-time compute rate [PFLOP/s]
+- b_rflop  batch compute rate [PFLOP/s]
 - rinp     input visibility data rate [TB/s]
 - rout     output data rate for data produced continuously (averaged visibilities) [TB/s]
 - mout     output data size for data produced per pointing (images) [TB]
@@ -52,7 +52,7 @@ The list of observations has fields:
 - uid      unique ID (set to the index in the sequence)
 - name     name of project
 - tobs     observation time [s]
-- rflop_r  real-time compute rate [PFLOP/s]
-- rflop_b  batch compute rate [PFLOP/s]
+- r_rflop  real-time compute rate [PFLOP/s]
+- b_rflop  batch compute rate [PFLOP/s]
 - minp     input data size (visibilities) [TB]
 - mout     output data size (images and averaged visibilities) [TB]
