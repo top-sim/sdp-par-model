@@ -913,16 +913,14 @@ def _compute_results(pipelineConfig, result_map, verbose=False, detailed=False, 
 
     # Loop through pipeliness to collect result values
     result_value_array = []
-    for pipeline in pipelineConfig.relevant_pipelines:
 
-        # Calculate the telescope parameters
-        pipelineConfig.pipeline = pipeline
-        tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
+    # Calculate the telescope parameters
+    tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
 
-        # Evaluate expressions from map
-        result_expressions = get_result_expressions(result_map, tp)
-        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
-        result_value_array.append(results_for_pipeline)
+    # Evaluate expressions from map
+    result_expressions = get_result_expressions(result_map, tp)
+    results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
+    result_value_array.append(results_for_pipeline)
 
     # Now transpose, then sum up results from pipelines per row
     result_values = []
@@ -1108,24 +1106,24 @@ def lookup_csv(results, column_name, row_name,
     :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
     :returns: Value if found, None otherwise
     """
-    
+
     # Strip row name
     row_name = _strip_modifiers(row_name, ignore_units)
     column_name = _strip_modifiers(column_name, ignore_modifiers)
     for row_name2, row in results:
-    
+
         # Right row?
         if row_name != _strip_modifiers(row_name2, ignore_units):
             continue
-        
+
         # Find column
         for column_name2, val in row:
             if column_name != _strip_modifiers(column_name2, ignore_modifiers):
                 continue
-                
+
             # Found!
             return val
-    
+
     return None
 
 def compare_csv(result_file, ref_file,

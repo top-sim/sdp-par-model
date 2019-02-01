@@ -152,7 +152,7 @@ class PipelineConfig:
         # Only pure pipelines supported?
         if pure_pipelines:
             if self.pipeline not in Pipelines.pure_pipelines:
-                messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(pipeline))
+                messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(self.pipeline))
                 okay = False
 
         # Band compatibility. Can skip for HPSOs, as they override the
