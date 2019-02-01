@@ -38,36 +38,37 @@ class PipelineConfig:
         """
         params = ParameterContainer()
 
+        # Alias for now
+        if hpso_pipe is not None:
+            pipeline = hpso_pipe
+
         # Load HPSO parameters
+        if pipeline is None:
+            raise ValueError("pipeline must be set!")
         if hpso is not None:
             assert hpso in p.HPSOs.hpso_telescopes
-            assert hpso_pipe is not None
-            if not ((telescope is None) and (band is None) and (pipeline is None)):
-                raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
+            assert pipeline is not None
+            if telescope is not None or band is not None:
+                raise Exception("(telescope + band) *XOR* hpso need to be set (i.e. not both)")
 
             self.hpso = hpso
-            self.hpso_pipe = hpso_pipe
+            self.hpso_pipe = pipeline
+            self.pipeline = pipeline
             self.telescope = p.HPSOs.hpso_telescopes[hpso]
 
             p.apply_telescope_parameters(params, self.telescope)
-            p.apply_hpso_parameters(params, hpso, hpso_pipe)
+            p.apply_hpso_parameters(params, hpso, pipeline)
             if hasattr(params, 'pipeline'):
                 pipeline = params.pipeline
         else:
             # This may be a bit of an outdated case; we mainly work in terms of HPSOs
-            if (telescope is None) or (band is None) or (pipeline is None):
-                raise Exception("(telescope + band + pipeline) *XOR* hpso need to be set (i.e. not both)")
+            if (telescope is None) or (band is None):
+                raise Exception("(telescope + band) *XOR* hpso need to be set (i.e. not both)")
             self.band = band
             self.telescope = telescope
+            self.pipeline = pipeline
             p.apply_telescope_parameters(params, self.telescope)
             p.apply_band_parameters(params, self.band)
-
-        # Determine relevant pipelines
-        if isinstance(pipeline, list):
-            self.relevant_pipelines = pipeline
-        else:
-            self.relevant_pipelines = [pipeline,]
-        self.pipeline = pipeline  # Only relevant_pipelines is used (?), so this may probably be omitted
 
         # Adjustments from keyword arguments
         if type(adjusts) == str:
@@ -94,9 +95,9 @@ class PipelineConfig:
     def describe(self):
         """ Returns a name that identifies this configuration. """
 
-        # Identify by either (HPSO + hpso_pipe), or (pipeline + band)
+        # Identify by either (HPSO + pipeline), or (pipeline + band)
         if hasattr(self, "hpso"):
-            name = self.hpso + ' (' + self.hpso_pipe + ')'
+            name = self.hpso + ' (' + self.pipeline + ')'
         else:
             name = self.pipeline + ' (' + self.band + ')'
 
@@ -150,10 +151,9 @@ class PipelineConfig:
 
         # Only pure pipelines supported?
         if pure_pipelines:
-            for pipeline in self.relevant_pipelines:
-                if pipeline not in Pipelines.pure_pipelines:
-                    messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(pipeline))
-                    okay = False
+            if self.pipeline not in Pipelines.pure_pipelines:
+                messages.append("ERROR: The '%s' imaging pipeline is currently not supported" % str(pipeline))
+                okay = False
 
         # Band compatibility. Can skip for HPSOs, as they override the
         # band manually.
@@ -214,12 +214,9 @@ class PipelineConfig:
         # Includes frequency range, Observation time, number of cycles, quality factor, number of channels, etc.
 
         if hasattr(cfg, "hpso"):
-            hpso_pipe = None
-            if hasattr(cfg, "hpso_pipe"):
-                hpso_pipe = cfg.hpso_pipe
             # Note the ordering; HPSO parameters get applied last, and therefore have the final say
             p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
-            p.apply_hpso_parameters(telescope_params, cfg.hpso, hpso_pipe)
+            p.apply_hpso_parameters(telescope_params, cfg.hpso, cfg.pipeline)
         elif hasattr(cfg, "band"):
             p.apply_band_parameters(telescope_params, cfg.band)
             p.apply_pipeline_parameters(telescope_params, cfg.pipeline)
@@ -289,44 +286,20 @@ class PipelineConfig:
 
     def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
         """
-        Evaluate a parameter sum over all relevant pipelines
+        Evaluate a parameter sum
 
         :param pipelineConfig: Pipeline configuration to use
         :param expression_string: Expression to evaluate as string
         :param verbose: Verbosity to use for `calc_tel_params`
         """
 
-        result = 0
-        for pipeline in pipelineConfig.relevant_pipelines:
-            pipelineConfig.pipeline = pipeline
-            tp = pipelineConfig.calc_tel_params(verbose)
-            result += evaluate.evaluate_expression(tp.get(expression_string), tp)
-
-        return result
-
-
-    def eval_product(pipelineConfig, product, expression='Rflop', verbose=False):
-        """
-        Evaluate a product parameter sum over all relevant pipelines
-
-        :param pipelineConfig: Pipeline configuration to use
-        :param product: Product to evaluate
-        :param expression: Product parameter to evaluate
-        :param verbose: Verbosity to use for `calc_tel_params`
-        """
-
-        result = 0
-        for pipeline in pipelineConfig.relevant_pipelines:
-            pipelineConfig.pipeline = pipeline
-            tp = pipelineConfig.calc_tel_params(verbose)
-            result += evaluate.evaluate_expression(tp.get(expression), tp)
-
-        return result
+        tp = pipelineConfig.calc_tel_params(verbose)
+        return evaluate.evaluate_expression(tp.get(expression_string), tp)
 
 
     def eval_expression_products(pipelineConfig, expression='Rflop', verbose=False):
         """
-        Evaluate a parameter sum over all relevant pipelines, for each product
+        Evaluate a parameter sum for each product
 
         :param pipelineConfig:  Pipeline configuration to use
         :param expression: Procuct parameter to evaluate
@@ -334,15 +307,13 @@ class PipelineConfig:
         """
 
         values={}
-        for pipeline in pipelineConfig.relevant_pipelines:
-            pipelineConfig.pipeline = pipeline
-            tp = pipelineConfig.calc_tel_params(verbose)
+        tp = pipelineConfig.calc_tel_params(verbose)
 
-            # Loop through defined products, add to result
-            for name, product in tp.products.items():
-                if expression in product:
-                    values[name] = values.get(name, 0) + \
-                        evaluate.evaluate_expression(product[expression], tp)
+        # Loop through defined products, add to result
+        for name, product in tp.products.items():
+            if expression in product:
+                values[name] = values.get(name, 0) + \
+                               evaluate.evaluate_expression(product[expression], tp)
 
         return values
 
