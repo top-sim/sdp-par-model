@@ -59,6 +59,9 @@ class Task(object):
 
 class Resources:
 
+    # Pseudo-capacities
+    Observatory = "observatory"
+
     # Compute capacities
     BatchCompute = "batch-compute" # costing FLOP/s
     RealtimeCompute = "realtime-compute" # costing FLOP/s
@@ -135,7 +138,8 @@ def make_receive_rt(csv, cfg):
 
     receive_rt = Task(
         " + ".join(pips), "Measurements", Tobs,
-        { Resources.RealtimeCompute: Rflop,
+        { Resources.Observatory: 1,
+          Resources.RealtimeCompute: Rflop,
           Resources.ColdBufferRate: Ringest,
           Resources.IngestRate: Ringest},
         { Resources.InputBuffer: Mbuf_vis
@@ -187,18 +191,26 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
         Tobs = lookup_csv(csv, cfg_name, Lookup.Tobs)
         Rflop = lookup_csv(csv, cfg_name, Lookup.Rflop)
         Rio = lookup_csv(csv, cfg_name, Lookup.Rio)
-        Mout = lookup_csv(csv, cfg_name, Lookup.Mout)
+        cfg_output[pipeline] = lookup_csv(csv, cfg_name, Lookup.Mout)
+
+        # We assume that DPrepD does not actually need to read
+        # visibilities itself as long as it is not the only non-ICAL
+        # pipeline. The idea is that it is cheap enough that we could
+        # just have any other pipeline emit averaged visibilities as a
+        # side-effect, skipping re-reading the visibility set.
+        if pipeline == Pipelines.DPrepD:
+            Rio = 0
 
         # Scale from observation time (Rflop) to computation time
         # (flop_rate).
-        if pipeline != Pipelines.DPrepD:
-            scale = max(Rflop / flop_rate, Rio / hot_buffer_rate)
-            cfg_iorate[pipeline] = Rio / scale
+        if Rflop / flop_rate > Rio / hot_buffer_rate:
+            cfg_floprate[pipeline] = flop_rate
+            cfg_time[pipeline] = int(Tobs * Rflop / flop_rate)
+            cfg_iorate[pipeline] = int(Rio / Rflop * flop_rate)
         else:
-            scale = Rflop / flop_rate
-        cfg_time[pipeline] = Tobs * scale
-        cfg_floprate[pipeline] = Rflop / scale
-        cfg_output[pipeline] = Mout
+            cfg_iorate[pipeline] = hot_buffer_rate
+            cfg_time[pipeline] = int(Tobs * Rio / hot_buffer_rate)
+            cfg_floprate[pipeline] = int(Rflop / Rio * hot_buffer_rate)
 
     offline = Task(
         " + ".join(cfg_time.keys()), "Data Products",
