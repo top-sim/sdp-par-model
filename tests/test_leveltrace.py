@@ -144,6 +144,10 @@ class TestLevelTrace(unittest.TestCase):
         self.assertEqual(trace.find_period_below(1.5, 3, 1, 0.5), 1.5)
         self.assertEqual(trace.find_period_below(1.6, 3, 1, 0.5), 2.5)
         self.assertEqual(trace.find_period_below(1.6, 5, 0, 0.5), 3)
+        self.assertEqual(trace.find_period_below(0, 2, 1, 2), 0)
+        self.assertIsNone(trace.find_period_below(0, 4.5, 1, 2.125))
+        self.assertEqual(trace.find_period_below(0, 4.625, 1, 2.125), 2.5)
+        self.assertEqual((-trace).find_period_below(0, 4, -1, 1.5), 1.5)
 
     def test_zipwith(self):
 

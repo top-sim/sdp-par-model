@@ -7,3 +7,4 @@ ipywidgets
 graphviz
 pymp-pypi
 pylru
+sortedcontainers
