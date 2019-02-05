@@ -9,7 +9,7 @@ class TestLevelTrace(unittest.TestCase):
 
     def setUp(self):
         self.tasks = {
-            i : Task(str(i), '', 1, {}, {})
+            i : Task(str(i), '', '', 1, {}, {})
             for i in range(10)
         }
         self.tasks[1].depend(self.tasks[0])
