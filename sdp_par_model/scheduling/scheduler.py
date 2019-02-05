@@ -99,7 +99,11 @@ def schedule(tasks, capacities, verbose=False):
         while not finished:
             finished = True
             for cost, amount in task.all_cost().items():
-                new_time = usage[cost].find_period_below(time, end_of_time, capacities[cost] - amount, task.time)
+                if amount > capacities[cost]:
+                    raise ValueError('Task {} ({}) impossible, {} cost {} is over capacity {}!'.format(
+                        task.name, task.hpso, cost, amount, capacities[cost]))
+                new_time = usage[cost].find_period_below(
+                    time, end_of_time, capacities[cost] - amount, task.time)
                 if new_time > time:
                     if verbose:
                         print("{} for {} ({} s): Amount {} @ {}".format(
@@ -115,6 +119,9 @@ def schedule(tasks, capacities, verbose=False):
             task_edge_end_time[d] = max(task_edge_end_time[d], task_end_time)
             # Check that we have enough capacity to do this
             for cost,amount in d.edge_cost.items():
+                if amount > capacities[cost]:
+                    raise ValueError('Task {} ({}) impossible, {} edge cost {} is over capacity {}!'.format(
+                        task.name, task.hpso, cost, amount, capacities[cost]))
                 max_use = usage[cost].maximum(task_time[d], task_edge_end_time[d])
                 # Over maximum usage? Note, but add anyway so we don't need to
                 # remember what costs we added
