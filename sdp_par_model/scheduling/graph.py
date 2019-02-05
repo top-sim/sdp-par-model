@@ -9,7 +9,7 @@ from sdp_par_model.parameters.definitions import \
 
 class Task(object):
 
-    def __init__(self, name, result_name, time, cost, edge_cost):
+    def __init__(self, name, hpso, result_name, time, cost, edge_cost):
         """Creates a new task to include in a task graph.
 
         :param name: Display name for the task
@@ -24,6 +24,7 @@ class Task(object):
 
         self.id = uuid.uuid4()
         self.name = name
+        self.hpso = hpso
         self.result_name = result_name
         self.time = time
         self.cost = cost
@@ -34,8 +35,9 @@ class Task(object):
         self.rev_deps = set()
 
     def __repr__(self):
-        return "Task({}, {}, time={}, cost={}, edge_cost={})".format(
-            repr(self.name), repr(self.result_name), self.time, self.cost, self.edge_cost)
+        return "Task({}, {}, {}, time={}, cost={}, edge_cost={})".format(
+            repr(self.name), repr(self.hpso), repr(self.result_name),
+            self.time, self.cost, self.edge_cost)
 
     def depend(self, other):
         self.deps.add(other)
@@ -82,6 +84,19 @@ class Resources:
             InputBuffer, HotBuffer, OutputBuffer,
             IngestRate, ColdBufferRate, HotBufferRate, DeliveryRate, LTSRate
     ]
+
+    units = {
+        BatchCompute: ("PFLOP/s", c.peta),
+        RealtimeCompute: ("PFLOP/s", c.peta),
+        InputBuffer: ("PB", c.peta),
+        HotBuffer: ("PB", c.peta),
+        OutputBuffer: ("PB", c.peta),
+        IngestRate: ("TB/s", c.tera),
+        ColdBufferRate: ("TB/s", c.tera),
+        HotBufferRate: ("TB/s", c.tera),
+        DeliveryRate: ("TB/s", c.tera),
+        LTSRate: ("TB/s", c.tera),
+    }
 
 class Lookup:
     """ Data to extract data from CSV in format of original telescope parameters.
@@ -137,7 +152,7 @@ def make_receive_rt(csv, cfg):
     assert Tobs is not None, "No ingest pipeline for HPSO {}?".format(cfg['hpso'])
 
     receive_rt = Task(
-        " + ".join(pips), "Measurements", Tobs,
+        " + ".join(pips), cfg['hpso'], "Measurements", Tobs,
         { Resources.Observatory: 1,
           Resources.RealtimeCompute: Rflop,
           Resources.ColdBufferRate: Ringest,
@@ -156,7 +171,7 @@ def make_stage_buffer(inp, transfer_rate):
 
     stage_size = inp.edge_cost[Resources.InputBuffer]
     stage = Task(
-        "Stage {}".format(inp.result_name), inp.result_name,
+        "Stage {}".format(inp.result_name), inp.hpso, inp.result_name,
         stage_size / transfer_rate,
         { Resources.ColdBufferRate: transfer_rate,
           Resources.HotBufferRate: transfer_rate }, # Some compute for staging resources?
@@ -213,7 +228,7 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
             cfg_floprate[pipeline] = int(Rflop / Rio * hot_buffer_rate)
 
     offline = Task(
-        " + ".join(cfg_time.keys()), "Data Products",
+        " + ".join(cfg_time.keys()), cfg['hpso'], "Data Products",
         sum(cfg_time.values()),
         {
             Resources.BatchCompute: max(*cfg_floprate.values()),
@@ -230,7 +245,7 @@ def make_deliver(csv, inp, delivery_rate):
 
     deliver_size = inp.edge_cost[Resources.OutputBuffer]
     deliver = Task(
-        "Deliver {}".format(inp.result_name), inp.result_name,
+        "Deliver {}".format(inp.result_name), inp.hpso, inp.result_name,
         deliver_size / delivery_rate,
         { Resources.ColdBufferRate: delivery_rate,
           Resources.DeliveryRate: delivery_rate },
@@ -259,3 +274,79 @@ def make_graph(csv, cfg,
     deliver = make_deliver(csv, offline[-1], delivery_rate)
 
     return receive_rt + stage + offline + deliver
+
+def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
+    """Generates a sequence of HPSOs of the given minimal observation
+    length. HPSOs appear roughly as often in the sequence as they
+    would be scheduled on given the telescope - but not necessarily in
+    a very sensible order.
+
+    :param telescope: HPSO telescope
+    :param Tsequence: Minimal length of sequence
+    :param Tobs_min: Minimal length of individual observations
+       (prevents short observations)
+    :return: HPSO sequence, actual sum of observation lengths
+    """
+
+    Texp = {}; Tobs = {}; Rflop = {}
+    for hpso in HPSOs.all_hpsos:
+        if HPSOs.hpso_telescopes[hpso] == telescope:
+            tp = PipelineConfig(hpso=hpso, pipeline=Pipelines.Ingest).calc_tel_params()
+            Texp[hpso] = tp.Texp; Tobs[hpso] = max(tp.Tobs, Tobs_min)
+
+    Texp_total = sum(Texp.values())
+    hpso_sequence = []
+    Rflop_sum = 0; Tobs_sum = 0
+    for hpso in HPSOs.all_hpsos:
+        if HPSOs.hpso_telescopes[hpso] == telescope:
+            count = int(math.ceil(Tsequence * Texp[hpso] / Tobs[hpso] / Texp_total))
+            if verbose:
+                print("{} x {} (Tobs={:.1f}h, Texp={:.1f}h)".format(
+                    count, hpso, Tobs[hpso]/3600, Texp[hpso]/3600))
+            hpso_sequence.extend(count * [hpso])
+            Tobs_sum += count * Tobs[hpso]
+
+    return hpso_sequence, Tobs_sum
+
+def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
+                           Tobs_min = 0, force_order = True):
+    """ Convert sequence of HPSO to a (multi-)graph of nodes
+
+    :param csv: Cached pipeline performance data
+    :param hpso_sequence: List of HPSO names
+    :param capacities: Capacities to size graph cost for
+    :param Tobs_min: Minimum observation length. Re-size ingest to match if necessary.
+    :param force_order: Force ingests to execute exactly in the given order
+    :return: List of nodes and total observation time
+    """
+
+    # Derive parameters for graph generation from capacities
+    cold_transfer_rate = max(1 * c.giga, capacities[Resources.ColdBufferRate]
+        - capacities[Resources.IngestRate] - capacities[Resources.DeliveryRate])
+    offline_flop_rate = capacities[Resources.BatchCompute]
+    hot_buffer_rate = capacities[Resources.HotBufferRate] - cold_transfer_rate
+    delivery_rate = capacities[Resources.DeliveryRate]
+
+    # Now collect graph nodes
+    nodes = []; last_ingest = None
+    for hpso in hpso_sequence:
+
+        # Make pipeline nodes. Adjust ingest length if necessary (a bit hack-y)
+        hnodes = make_graph(
+            csv, {'hpso': hpso},
+            cold_transfer_rate, offline_flop_rate, hot_buffer_rate, delivery_rate)
+        ingest = hnodes[0]
+        if ingest.time < Tobs_min:
+            ingest.time = Tobs_min
+
+        # Introduce order constraint node if requested
+        if force_order and last_ingest is not None:
+            connect = Task("Sequence", last_ingest.hpso, "", 0, {}, {})
+            ingest.depend(connect); connect.depend(last_ingest)
+            nodes.append(connect)
+        last_ingest = ingest
+
+        # Collect up
+        nodes.extend(hnodes)
+
+    return nodes
