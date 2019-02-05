@@ -1107,9 +1107,17 @@ def lookup_csv(results, column_name, row_name,
     :returns: Value if found, None otherwise
     """
 
-    # Strip row name
+    # Strip names
     row_name = _strip_modifiers(row_name, ignore_units)
     column_name = _strip_modifiers(column_name, ignore_modifiers)
+
+    # Lookup table? Short-cut
+    if isinstance(results, dict):
+        row = results.get(row_name)
+        if row is None:
+            return None
+        return row.get(column_name)
+
     for row_name2, row in results:
 
         # Right row?
@@ -1125,6 +1133,17 @@ def lookup_csv(results, column_name, row_name,
             return val
 
     return None
+
+def strip_csv(csv, ignore_units=True, ignore_modifiers=True):
+
+    return {
+        _strip_modifiers(row_name, ignore_units) : {
+            _strip_modifiers(column_name, ignore_modifiers) : v
+            for column_name, v in cols
+            }
+        for row_name, cols in csv
+        }
+
 
 def compare_csv(result_file, ref_file,
                 ignore_modifiers=True, ignore_units=True,
