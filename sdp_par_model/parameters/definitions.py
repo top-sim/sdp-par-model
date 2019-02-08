@@ -434,7 +434,7 @@ def apply_telescope_parameters(o, telescope):
             #(60.22065697,   7.72434788,   7.05826222,  10.72169655,   7.36441056, 5.15572168   1.66138048   0.09352366)) #OLD 753 ECP
 
         o.baseline_bins = np.array((o.Bmax/16., o.Bmax/8., o.Bmax/4., o.Bmax/2., o.Bmax)) #neater baseline binning!
-        o.baseline_bin_distribution = np.array((49.3626883, 13.32914111, 13.65062318, 17.10107961, 6.5564678))#LOW ECP 160015 Abs length only
+        o.baseline_bin_distribution = np.array((46.56232318, 13.09849678, 14.81580597, 18.61437769,  6.90899638)) # LOW_SKA-TEL-SKO-0000422, rev 03
 
         #o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
