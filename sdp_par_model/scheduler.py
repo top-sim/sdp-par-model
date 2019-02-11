@@ -293,27 +293,31 @@ class Scheduler:
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
                 # task attributes. Assign them to the HPSO instead of to the (sub)task
                 # Although they are computed anew for each task, it should return the same value every time
-                if not 'tObs' in performance_dict[hpso]:
-                    performance_dict[hpso]['tObs'] = results[0]
-                    print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
-                else:
-                    assert performance_dict[hpso]['tObs'] == results[0]
 
-                if not 'tPoint' in performance_dict[hpso]:
-                    performance_dict[hpso]['tPoint'] = results[7]
-                    print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
-                else:
-                    assert performance_dict[hpso]['tPoint'] == results[7]
+                # Ignore fast imaging for this, as it is a simple
+                # repeated task that needs to run along real-time processing
+                if pipeline != Pipelines.FastImg:
+                    if not 'tObs' in performance_dict[hpso]:
+                        performance_dict[hpso]['tObs'] = results[0]
+                        print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
+                    else:
+                        assert performance_dict[hpso]['tObs'] == results[0]
 
-                try:
-                    t_total = results[8]
-                except:
-                    t_total = 0
-                if not 'tTotal' in performance_dict[hpso]:
-                    performance_dict[hpso]['tTotal'] = t_total
-                    print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
-                else:
-                    assert performance_dict[hpso]['tTotal'] == t_total
+                    if not 'tPoint' in performance_dict[hpso]:
+                        performance_dict[hpso]['tPoint'] = results[7]
+                        print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
+                    else:
+                        assert performance_dict[hpso]['tPoint'] == results[7]
+
+                    try:
+                        t_total = results[8]
+                    except:
+                        t_total = 0
+                    if not 'tTotal' in performance_dict[hpso]:
+                        performance_dict[hpso]['tTotal'] = t_total
+                        print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
+                    else:
+                        assert performance_dict[hpso]['tTotal'] == t_total
 
                 performance_dict[hpso][pipeline]['imCubeSize']  = results[9] / 1000
                 performance_dict[hpso][pipeline]['calDataSize'] = results[10] / 1000
@@ -515,8 +519,10 @@ class Scheduler:
 
             imageDataSize = 0  # In TB
 
-            for i in range(2, len(hpso_pipelines)):
+            for i in range(len(hpso_pipelines)):
                 task_label = hpso_pipelines[i]
+                if task_label in Pipelines.realtime:
+                    continue
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
@@ -528,8 +534,7 @@ class Scheduler:
                                description=str(task_label))  # TODO: are these streaming tasks? We assume not.
                 datasize_in_hotbuf += datasize_out
 
-                if i == 2:
-                    assert task_label == Pipelines.ICAL  # Assumed that this is an ical task
+                if task_label == Pipelines.ICAL:
                     task.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
                     ical_task = task  # Remember this task, as DPrep tasks depend on it
                 elif task_label[0:5] == 'DPrep':
