@@ -425,13 +425,15 @@ def apply_telescope_parameters(o, telescope):
 
     if telescope == Telescopes.SKA1_Low:
         o.Bmax = 65000  # Actually constructed max baseline in *m*
+        # Effective station diameter defined to be 38 metres in ECP-170049.
         o.Ds = 38  # station diameter in metres
         o.Na = 512  # number of stations
         o.Nbeam = 1  # number of beams
         o.Nf_max = 65536  # maximum number of channels
         o.B_dump_ref = 65000  # m
         o.Tint_min = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
-        # Baseline length distribution calculated from SKA-TEL-SKO-0000422, Rev 03 (ECP-170049),
+        # Baseline length distribution calculated from layout in
+        # SKA-TEL-SKO-0000422, Rev 03 (corresponding to ECP-170049),
         # see Absolute_Baseline_length_distribution.ipynb
         o.baseline_bins = np.array((o.Bmax/16., o.Bmax/8., o.Bmax/4., o.Bmax/2., o.Bmax))
         o.baseline_bin_distribution = np.array((46.30065759, 13.06774736, 14.78360606, 18.58770454, 7.26028445))
@@ -452,9 +454,12 @@ def apply_telescope_parameters(o, telescope):
         o.Nf_max = 65536  # maximum number of channels
         o.Tint_min = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
         o.B_dump_ref = 150000  # m
-        # Basline length distribution calculated from SKA-TEL-INSA-0000537, Rev 04 (ECP-1800002),
+        # Baseline length distribution calculated from layout in
+        # SKA-TEL-INSA-0000537, Rev 04 (corresponding to ECP-1800002),
         # see Absolute_Baseline_length_distribution.ipynb
-        o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000))
+        o.baseline_bins = np.array((5000.0, 7500.0, 10000.0, 15000.0, 25000.0,
+                                    35000.0, 55000.0, 75000.0, 90000.0, 110000.0,
+                                    130000.0, 150000.0))
         o.baseline_bin_distribution = np.array((
             6.13646961e+01, 5.16553546e+00, 2.87031760e+00, 4.98937879e+00,
             6.32609709e+00, 4.63706544e+00, 5.73545412e+00, 5.50230558e+00,
