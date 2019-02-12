@@ -7,6 +7,10 @@
 #   2) Longitude (degrees)
 #   3) Latitude (degrees)
 #
+# Note the first entry is the position of the centre of the array
+# (assumed to be the same as antenna M000).
+#
+Centre	21.4438031	-30.7129252
 M000	21.4438031	-30.7129252
 M001	21.4439009	-30.7126053
 M002	21.4435544	-30.7130784
