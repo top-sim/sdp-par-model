@@ -1246,15 +1246,17 @@ def find_csvs(csv_path = "../data/csv"):
     # Get all reference files from Git history
     refs = subprocess.check_output(["git", "log", "--pretty=format:", "--name-only", "--reverse", csv_path]).split()
     refs = list(map(lambda r: os.path.relpath(r.decode(), "iPython"), reversed(refs)))
-        
+
     csv_map = {}
     p = re.compile("[\d\-]*\-([a-z0-9]+)_(pipelines|hpsos)\.")
     for ref in refs:
+        if not os.path.isfile(ref):
+            continue
         m = p.match(os.path.basename(ref))
         if m and m.group(1) != "costing":
             csv_map[(m.group(1), m.group(2))] = ref
     return csv_map
-           
+
 def newest_csv(csv_map, typ = 'hpsos', rev = 'HEAD'):
     """
     Finds the CSV closest to the given revision according to the Git history
