@@ -368,6 +368,23 @@ def sum_deltas(deltas):
 
     return tmp
 
+def buffer_max(buff):
+    '''Get maximum buffer usage.'''
+
+    return buff.s.max()
+
+def buffer_cumfrac(buff, size):
+    '''Compute fraction of time buffer usage is below each size value.'''
+
+    dt = buff.t[1:] - buff.t[:-1]
+    s = buff.s[:-1]
+    frac = np.zeros_like(size)
+    for i, t in enumerate(size):
+        frac[i] = np.sum(dt[s < t])
+    frac /= np.sum(dt)
+
+    return frac
+
 def steps_for_plot(buff, tmin=None, tmax=None):
     '''Turn size as a function of time into lines for plotting.'''
 

@@ -4,7 +4,7 @@ scheduling
 The scheduling module contains functions to generate a sequence of
 observations from a list of projects (HPSOs).
 
-There are two principal functions:
+There are three principal functions:
 
 extract_projects
 ----------------
@@ -12,10 +12,13 @@ extract_projects
 Extracts projects and their relevant parameters from the parametric
 model output.
 
-projects = extract_projects(input_file, telescope_name)
+projects = extract_projects(input_file, telescope_name, prefix)
 
     input_file: name of CSV file containing parametric model output
 telescope_name: name of telescope ('SKA1_Low' or 'SKA1_Mid')
+        prefix: output only the projects with this prefix, e.g. 'hpso'
+	        (optional, default is None)
+
       projects: list of projects (numpy structured array)
 
 The list of projects has fields:
@@ -40,6 +43,7 @@ sequence = generate_sequence(projects, tsched, tseq, allow_short_tobs)
           tsched: maximum length of scheduling block [s]
             tseq: length of sequence to generate [s]
 allow_short_tobs: allow observations with short duration (default is False)
+
         sequence: list of observations (numpy structured array)
 
 If allow_short_tobs is False, then all of the observations will be of
@@ -56,3 +60,34 @@ The list of observations has fields:
 - b_rflop  batch compute rate [PFLOP/s]
 - minp     input data size (visibilities) [TB]
 - mout     output data size (images and averaged visibilities) [TB]
+
+schedule_simple
+---------------
+
+Schedule the processing of a sequence of observations in the simplest
+possible way.
+
+schedule, cb, hb, tb = schedule_simple(r_rflop, b_rflop, sequence)
+
+ r_rflop: real-time compute capacity [PFLOP/s]
+ b_rflop: batch compute capacity [PFLOP/s]
+sequence: list of observations to schedule (numpy structured array)
+
+schedule: list of scheduled observations (numpy structured array)
+      cb: cold buffer size as a function of time (numpy structured array)
+      hb: hot buffer size as a function of time (numpy structured array)
+      tb: total buffer size as a function of time (numpy structured array)
+
+The list of scheduled observations has fields:
+
+- uid    unique ID of scheduling block (same as in the input sequence)
+- name   name of project (same as in the input sequence)
+- r_beg  beginning of real-time processing [s]
+- r_end  end of real-time processing [s]
+- b_beg  beginning of batch processing [s]
+- b_end  end of batch processing [s]
+
+The buffer sizes have fields:
+
+- t  time [s]
+- s  size [TB]

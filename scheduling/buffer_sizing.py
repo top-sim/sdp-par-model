@@ -1,29 +1,31 @@
 #!/usr/bin/env python3
 #
-# Generate a random sequence of observations from the corresponding
-# list of projects (HPSOs) and calculate how the buffer usage changes
-# over time.
+# Generate a random observation sequence from the list of projects
+# (HPSOs) and calculate how the buffer usage changes over time with
+# different batch computing capacities.
 
-import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import scheduling as sched
 
-if len(sys.argv) < 3:
-    print('Usage: {} telescope batch_factor'.format(sys.argv[0]))
-    sys.exit()
-
-tele = sys.argv[1]
-batch_factor = map(float, sys.argv[2:])
+parser = argparse.ArgumentParser()
+parser.add_argument('telescope', type=str, help='name of telescope (low/mid)')
+parser.add_argument('batch_factor', type=float, nargs='+', help='multiplier for batch capacity')
+args = parser.parse_args()
 
 iform = 'hpsos_{t}.csv'
+nbin = 101
+buff_max = 100.0
 
-if tele == 'low':
-    tnam = 'SKA1-Low'
+if args.telescope == 'low':
+    tname = 'SKA1-Low'
     tsched_hours = 5.0
-elif tele == 'mid':
-    tnam = 'SKA1-Mid'
+elif args.telescope == 'mid':
+    tname = 'SKA1-Mid'
     tsched_hours = 8.0
+else:
+    raise ValueError('Unknown telescope {}'.format(args.telescope))
 
 # Set the length of a scheduling block and the length of the sequence
 # to generate.
@@ -32,7 +34,7 @@ tsched = tsched_hours * 3600.0
 tseq = 100.0 * 24.0 * 3600.0
 allow_short_tobs = False
 
-ifile = iform.format(t=tele)
+ifile = iform.format(t=args.telescope)
 
 # Read list of projects.
 
@@ -56,10 +58,13 @@ seq = sched.generate_sequence(proj, tsched, tseq,
 
 # Loop over batch_factor values.
 
-for bf in batch_factor:
+buff_size = np.linspace(0.0, buff_max, nbin)
+buff_frac = np.zeros((len(args.batch_factor), nbin))
+
+for i, bf in enumerate(args.batch_factor):
 
     b_rflop = bf * b_rflop_avg
-    print('batch compute set to:', b_rflop, 'PFLOPS')
+    print('batch capacity set to:', b_rflop, 'PFLOPS')
 
     # Generate schedule.
 
@@ -88,10 +93,14 @@ for bf in batch_factor:
     tb.t /= 3600
     tb.s /= 1000
 
+    # Get fraction of time buffer usage is below each size value.
+
+    buff_frac[i, :] = sched.buffer_cumfrac(tb, buff_size)
+
     # Plot.
 
     fig, ax = plt.subplots(3, sharex=True)
-    fig.suptitle('{} buffer usage (batch_factor = {})'.format(tnam, bf))
+    fig.suptitle('{} buffer usage (batch_factor = {})'.format(tname, bf))
     ax[0].set_ylabel('Cold buffer / PB')
     ax[0].axvline(x=r_beg, color='grey', linestyle=':', linewidth=1.0)
     ax[0].axvline(x=r_end, color='grey', linestyle=':', linewidth=1.0)
@@ -108,5 +117,14 @@ for bf in batch_factor:
     ax[2].axvline(x=r_end, color='grey', linestyle=':', linewidth=1.0)
     t, s = sched.steps_for_plot(tb, tmin=tmin, tmax=tmax)
     ax[2].plot(t, s)
+
+plt.figure()
+plt.title('{} buffer usage'.format(tname))
+for i, bf in enumerate(args.batch_factor):
+    plt.plot(buff_size, buff_frac[i, :], label=bf)
+plt.legend(title='batch_factor', loc='lower right')
+plt.ylim(-0.05, 1.05)
+plt.xlabel('Total buffer size / PB')
+plt.ylabel('Fraction of sequence accommodated')
 
 plt.show()
