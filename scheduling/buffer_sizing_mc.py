@@ -7,7 +7,7 @@ import numpy as np
 import scheduling as sched
 
 iform = 'hpsos_{t}.csv'
-oform = 'cb_max_{t}.npz'
+oform = 'buffer_mc_{t}.npz'
 
 tlist = [('low', 5.0),
          ('mid', 8.0)]
@@ -16,13 +16,13 @@ tseq = 100.0 * 24.0 * 3600.0
 allow_short_tobs = False
 nreal = 1000
 
-batch_size = np.array([0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 1.25, 1.30,
-                       1.40, 1.50, 2.00])
-nbs = len(batch_size)
+batch_factor = np.array([1.00, 1.05, 1.10, 1.15, 1.20, 1.25, 1.30, 1.40,
+                       1.50, 2.00])
+nbf = len(batch_factor)
 
-print('batch sizes:', batch_size)
+print('batch factors:', batch_factor)
 
-for tele, tsched_hours in tlist: 
+for tele, tsched_hours in tlist:
 
     # Set the length of a scheduling block and the length of the sequence
     # to generate.
@@ -50,7 +50,9 @@ for tele, tsched_hours in tlist:
 
     # Generate sequence of observations.
 
-    cb_max = np.zeros((nreal, nbs))
+    cb_max = np.zeros((nreal, nbf))
+    hb_max = np.zeros((nreal, nbf))
+    tb_max = np.zeros((nreal, nbf))
 
     for ireal in range(nreal):
 
@@ -59,10 +61,13 @@ for tele, tsched_hours in tlist:
         seq = sched.generate_sequence(proj, tsched, tseq,
                                       allow_short_tobs=allow_short_tobs)
 
-        for ibs in range(nbs):
+        for ibf in range(nbf):
 
-            b_rflop_max = batch_size[ibs] * b_rflop_avg
-            sc, cb, hb = sched.schedule_simple(r_rflop_max, b_rflop_max, seq)
-            cb_max[ireal, ibs] = np.max(cb.s)
+            b_rflop = batch_factor[ibf] * b_rflop_avg
+            sc, cb, hb, tb = sched.schedule_simple(r_rflop_max, b_rflop, seq)
+            cb_max[ireal, ibf] = np.max(cb.s)
+            hb_max[ireal, ibf] = np.max(hb.s)
+            tb_max[ireal, ibf] = np.max(tb.s)
 
-    np.savez(ofile, batch_size=batch_size, cb_max=cb_max)
+    np.savez(ofile, batch_factor=batch_factor, cb_max=cb_max,
+             hb_max=hb_max, tb_max=tb_max)

@@ -8,37 +8,48 @@ import matplotlib as mpl
 mpl.use('agg')
 import matplotlib.pyplot as plt
 
-iform = 'cb_max_{t}.npz'
-oform = 'cb_hist_{t}.png'
+iform = 'buffer_mc_{t}.npz'
+oform = 'buffer_mc_{t}_{b}.png'
 
 tlist = [('low', 'SKA1-Low'),
          ('mid', 'SKA1-Mid')]
 
-for tele, tnam in tlist:
+nbin = 101
+buff_size = np.linspace(0.0, 100.0, nbin)
+
+for tele, tname in tlist:
 
     ifile = iform.format(t=tele)
-    ofile = oform.format(t=tele)
 
     with np.load(ifile) as data:
-        batch_size = data['batch_size']
+        batch_factor = data['batch_factor']
         cb_max = data['cb_max']
+        hb_max = data['hb_max']
+        tb_max = data['tb_max']
 
     cb_max /= 1000
+    hb_max /= 1000
+    tb_max /= 1000
 
-    nbs = len(batch_size)
-    nbin = 101
-    cb_size = np.linspace(0.0, 100.0, nbin)
-    cb_frac = np.zeros(nbin)
+    nbf = len(batch_factor)
+    blist = [('cb', cb_max, 'Cold buffer' ),
+             ('tb', tb_max, 'Total buffer')]
 
-    plt.figure()
-    plt.title(tnam)
-    for ibs in range(nbs):
-        for ibin in range(nbin):
-            s = cb_size[ibin]
-            cb_frac[ibin] = np.mean(cb_max[:, ibs] < s)
-        plt.plot(cb_size, cb_frac, label=batch_size[ibs])
-    plt.legend()
-    plt.xlabel('Cold buffer size / PB')
-    plt.ylabel('Fraction of sequences accommodated')
-    plt.savefig(ofile)
-    plt.close()
+    for buff, bmax, btitle in blist:
+
+        ofile = oform.format(t=tele, b=buff)
+
+        buff_frac = np.zeros(nbin)
+
+        plt.figure()
+        plt.title(tname)
+        for ibf in range(nbf):
+            for ibin in range(nbin):
+                s = buff_size[ibin]
+                buff_frac[ibin] = np.mean(bmax[:, ibf] < s)
+            plt.plot(buff_size, buff_frac, label=batch_factor[ibf])
+        plt.legend(title='batch_factor', loc='upper left')
+        plt.xlabel('{} size / PB'.format(btitle))
+        plt.ylabel('Fraction of sequences accommodated')
+        plt.savefig(ofile)
+        plt.close()

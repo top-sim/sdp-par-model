@@ -272,10 +272,10 @@ def generate_sequence(projects, tsched, tseq, allow_short_tobs=False):
 
     return seq
 
-def schedule_simple(r_rflop_max, b_rflop_max, seq):
+def schedule_simple(r_rflop, b_rflop, seq):
     '''Do scheduling in simplest possible fashion.'''
 
-    if np.any(seq.r_rflop > r_rflop_max):
+    if np.any(seq.r_rflop > r_rflop):
         print('Error: maximum flops for real-time processing exceeded')
 
     n = len(seq)
@@ -287,6 +287,7 @@ def schedule_simple(r_rflop_max, b_rflop_max, seq):
 
     cb_tmp = []
     hb_tmp = []
+    tb_tmp = []
 
     r_end = 0.0
     b_end = 0.0
@@ -294,8 +295,7 @@ def schedule_simple(r_rflop_max, b_rflop_max, seq):
     for i in range(n):
 
         tobs = seq[i].tobs
-        r_rflop = seq[i].r_rflop
-        b_rflop = seq[i].b_rflop
+        brfl = seq[i].b_rflop
         minp = seq[i].minp
 
         # Real-time processing.
@@ -306,7 +306,7 @@ def schedule_simple(r_rflop_max, b_rflop_max, seq):
         sched[i].r_beg = r_beg
         sched[i].r_end = r_end
 
-        if b_rflop == 0.0:
+        if brfl == 0.0:
 
             # This is a non-imaging pipeline. Visibilities are not
             # stored (so no change to buffers) and there is no batch
@@ -320,7 +320,7 @@ def schedule_simple(r_rflop_max, b_rflop_max, seq):
             # This is an imaging pipeline.
 
             b_beg = max(r_end, b_end)
-            b_end = b_beg + tobs * b_rflop / b_rflop_max
+            b_end = b_beg + tobs * brfl / b_rflop
 
             sched[i].b_beg = b_beg
             sched[i].b_end = b_end
@@ -329,14 +329,18 @@ def schedule_simple(r_rflop_max, b_rflop_max, seq):
             cb_tmp.append((b_beg, -minp))
             hb_tmp.append((b_beg, minp))
             hb_tmp.append((b_end, -minp))
+            tb_tmp.append((r_beg, minp))
+            tb_tmp.append((b_end, -minp))
 
     cb_deltas = np.array(cb_tmp, dtype=dtype_buff).view(np.recarray)
     hb_deltas = np.array(hb_tmp, dtype=dtype_buff).view(np.recarray)
+    tb_deltas = np.array(tb_tmp, dtype=dtype_buff).view(np.recarray)
 
     cb_size = sum_deltas(cb_deltas)
     hb_size = sum_deltas(hb_deltas)
+    tb_size = sum_deltas(tb_deltas)
 
-    return sched, cb_size, hb_size
+    return sched, cb_size, hb_size, tb_size
 
 def sum_deltas(deltas):
     '''Sum deltas to get size as a function of time.'''

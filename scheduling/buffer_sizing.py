@@ -58,12 +58,12 @@ seq = sched.generate_sequence(proj, tsched, tseq,
 
 for bf in batch_factor:
 
-    b_rflop_max = bf * b_rflop_avg
-    print('batch max set to:', b_rflop_max, 'PFLOPS')
+    b_rflop = bf * b_rflop_avg
+    print('batch compute set to:', b_rflop, 'PFLOPS')
 
     # Generate schedule.
 
-    sc, cb, hb = sched.schedule_simple(r_rflop_max, b_rflop_max, seq)
+    sc, cb, hb, tb = sched.schedule_simple(r_rflop_max, b_rflop, seq)
 
     # Convert time to hours and sizes to PB for plotting.
 
@@ -85,20 +85,28 @@ for bf in batch_factor:
     hb.t /= 3600
     hb.s /= 1000
 
+    tb.t /= 3600
+    tb.s /= 1000
+
     # Plot.
 
-    fig, ax = plt.subplots(2, sharex=True)
+    fig, ax = plt.subplots(3, sharex=True)
     fig.suptitle('{} buffer usage (batch_factor = {})'.format(tnam, bf))
     ax[0].set_ylabel('Cold buffer / PB')
-    t, s = sched.steps_for_plot(cb, tmin=tmin, tmax=tmax)
     ax[0].axvline(x=r_beg, color='grey', linestyle=':', linewidth=1.0)
     ax[0].axvline(x=r_end, color='grey', linestyle=':', linewidth=1.0)
+    t, s = sched.steps_for_plot(cb, tmin=tmin, tmax=tmax)
     ax[0].plot(t, s)
-    ax[1].set_xlabel('Time / hours')
     ax[1].set_ylabel('Hot buffer / PB')
     ax[1].axvline(x=r_beg, color='grey', linestyle=':', linewidth=1.0)
     ax[1].axvline(x=r_end, color='grey', linestyle=':', linewidth=1.0)
     t, s = sched.steps_for_plot(hb, tmin=tmin, tmax=tmax)
     ax[1].plot(t, s)
+    ax[2].set_xlabel('Time / hours')
+    ax[2].set_ylabel('Total buffer / PB')
+    ax[2].axvline(x=r_beg, color='grey', linestyle=':', linewidth=1.0)
+    ax[2].axvline(x=r_end, color='grey', linestyle=':', linewidth=1.0)
+    t, s = sched.steps_for_plot(tb, tmin=tmin, tmax=tmax)
+    ax[2].plot(t, s)
 
 plt.show()

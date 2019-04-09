@@ -24,4 +24,3 @@ for t, tinp in tele:
     # Write list of projects.
 
     sched.write_projects(ofile, proj)
-
