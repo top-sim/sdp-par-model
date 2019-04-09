@@ -15,7 +15,7 @@ import numpy as np
 
 dtype_pmout = np.dtype([('name',   'U30'),
                         ('tele',   'U10'),
-                        ('pipe',   'U10'),
+                        ('pipe',   'U12'),
                         ('tobs',   'f8' ),
                         ('tpoint', 'f8' ),
                         ('texp',   'f8' ),
@@ -36,7 +36,7 @@ dtype_pmout = np.dtype([('name',   'U30'),
 # - mout: output data size per pointing [TB] (for fixed-size data
 #         objects, like images)
 
-dtype_proj = np.dtype([('name',    'U12'),
+dtype_proj = np.dtype([('name',    'U20'),
                        ('tpoint',  'f8' ),
                        ('texp',    'f8' ),
                        ('r_rflop', 'f8' ),
@@ -104,7 +104,7 @@ def write_sequence(ofile, sequence):
     fmt = '%d,%s' + 5 * ',%f'
     np.savetxt(ofile, sequence, header=header, fmt=fmt)
 
-def extract_projects(ifile, tele):
+def extract_projects(ifile, tele, prefix=None):
     '''Extract list of projects from parametric model output'''
 
     # Read data from parametric model output CSV file.
@@ -143,6 +143,9 @@ def extract_projects(ifile, tele):
     # pipelines (times and visibility data size).
 
     i = (pmout.tele == tele) & (pmout.pipe == 'Ingest')
+    if prefix is not None:
+        # Restrict to projects with the desired prefix.
+        i = i & (np.char.find(pmout.name, prefix) == 0)
     ninp = [x.split()[0] for x in pmout.name[i]]
     name = [x.replace('hpso', 'HPSO-') for x in ninp]
     tobs = pmout[i].tobs

@@ -19,7 +19,7 @@ for t, tinp in tele:
 
     # Extract project information.
 
-    proj = sched.extract_projects(ifile, tinp)
+    proj = sched.extract_projects(ifile, tinp, prefix='hpso')
 
     # Write list of projects.
 
