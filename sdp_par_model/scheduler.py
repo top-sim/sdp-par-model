@@ -43,14 +43,14 @@ class Definitions:
     perf_reslt_map =[('Observation time',        'sec',        False, False, lambda tp: tp.Tobs),
                      ('Total buffer ingest rate','TeraBytes/s', True, False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis / c.tera),
                      ('Visibility I/O Rate',     'TeraBytes/s', True, True,  lambda tp: tp.Rio / c.tera),
-                     ('Total Compute Rate',      'PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
-                     ('Visibility Buffer',       'TeraBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.tera),
+                     ('Total Compute Requirement','PetaFLOP/s',  True, True,  lambda tp: tp.Rflop / c.peta),
+                     ('Visibility Buffer',       'PetaBytes',   True, True,  lambda tp: tp.Mbuf_vis / c.peta),
                      ('Working (cache) memory',  'TeraBytes',   True, True,  lambda tp: tp.Mw_cache / c.tera,),
                      ('Output Size',             'TeraBytes',   True, True,  lambda tp: tp.Mout /c.tera),
                      ('Pointing Time',            'sec',       False, False, lambda tp: tp.Tpoint),
                      ('Total Time',               'sec',       False, False, lambda tp: tp.Texp),
-                     ('Image cube size',          'TB',         True, False, lambda tp: tp.Mimage_cube / c.tera),
-                     ('Calibration output',       'TB',         True, False, lambda tp: tp.Mcal_out / c.tera),
+                     ('Image cube size',          'GB',         True, False, lambda tp: tp.Mimage_cube / c.giga),
+                     ('Calibration output',       'GB',         True, False, lambda tp: tp.Mcal_out / c.giga),
                      ]
 
 class SDPAttr:
@@ -239,10 +239,11 @@ class Scheduler:
     # latter can be an instantiated object. For now, we treat the Scheduler as a class with static methods only
 
     @staticmethod
-    def compute_performance_dictionary():
+    def compute_performance_dictionary(results_csv = None):
         """
         Builds a lookup table that maps each HPSO to its tasks, and each Task to its Performance Requirements.
         Useful when doing scheduling so that values do not need to be computed more than once
+        :param results_csv: Previously created CSV table to read values from (see read_csv in reports)
         :return: A dictionary of dictionaries. Each HPSO -> dictionary of Tasks -> performance values
         """
         performance_dict = {}
@@ -265,47 +266,61 @@ class Scheduler:
                         print(msg)
                     raise AssertionError("Invalid config")
 
-                results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
+                # Generate fresh if no CSV results were given
+                if results_csv is None:
+                    results = reports._compute_results(cfg, Definitions.perf_reslt_map)  # TODO - refactor this method's parameter sequence
+                else:
+                    cfg_name = cfg.describe()
+                    results = list([reports.lookup_csv(results_csv, cfg_name, row[0])
+                                    for row in Definitions.perf_reslt_map])
+                
+                # We only expect float values - set everything else to zero
+                def float_or_0(val):
+                    try:
+                        return float(val)
+                    except:
+                        return 0
+                results = list([float_or_0(val) for val in results])
 
                 # The contents of the results array are determined by Definitions.perf_reslt_map. Refer for details.
                 performance_dict[hpso][pipeline]['ingestRate'] = results[1]
                 performance_dict[hpso][pipeline]['visRate']    = results[2]
                 performance_dict[hpso][pipeline]['compRate']   = results[3]
-                performance_dict[hpso][pipeline]['visBuf']     = results[4]
-                try:
-                    memsize = float(results[5])
-                except:
-                    memsize = 0
-                performance_dict[hpso][pipeline]['memSize']    = memsize
+                performance_dict[hpso][pipeline]['visBuf']     = results[4] * 1000
+                performance_dict[hpso][pipeline]['memSize']    = results[5]
                 performance_dict[hpso][pipeline]['outputSize'] = results[6]
 
                 # Observation, Pointing & Total times (tObs, tPoint, tTotal) are HPSO attributes instead of
                 # task attributes. Assign them to the HPSO instead of to the (sub)task
                 # Although they are computed anew for each task, it should return the same value every time
-                if not 'tObs' in performance_dict[hpso]:
-                    performance_dict[hpso]['tObs'] = results[0]
-                    print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
-                else:
-                    assert performance_dict[hpso]['tObs'] == results[0]
 
-                if not 'tPoint' in performance_dict[hpso]:
-                    performance_dict[hpso]['tPoint'] = results[7]
-                    print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
-                else:
-                    assert performance_dict[hpso]['tPoint'] == results[7]
+                # Ignore fast imaging for this, as it is a simple
+                # repeated task that needs to run along real-time processing
+                if pipeline != Pipelines.FastImg:
+                    if not 'tObs' in performance_dict[hpso]:
+                        performance_dict[hpso]['tObs'] = results[0]
+                        print('Observation time\t= %g sec' % performance_dict[hpso]['tObs'])
+                    else:
+                        assert performance_dict[hpso]['tObs'] == results[0]
 
-                try:
-                    t_total = float(results[8])
-                except:
-                    t_total = 0
-                if not 'tTotal' in performance_dict[hpso]:
-                    performance_dict[hpso]['tTotal'] = t_total
-                    print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
-                else:
-                    assert performance_dict[hpso]['tTotal'] == t_total
+                    if not 'tPoint' in performance_dict[hpso]:
+                        performance_dict[hpso]['tPoint'] = results[7]
+                        print('Pointing time\t= %g sec' % performance_dict[hpso]['tPoint'])
+                    else:
+                        assert performance_dict[hpso]['tPoint'] == results[7]
 
-                performance_dict[hpso][pipeline]['imCubeSize']  = results[9]
-                performance_dict[hpso][pipeline]['calDataSize'] = results[10]
+                    try:
+                        t_total = results[8]
+                    except:
+                        t_total = 0
+                    if not 'tTotal' in performance_dict[hpso]:
+                        performance_dict[hpso]['tTotal'] = t_total
+                        print('Total time\t= %g sec' % performance_dict[hpso]['tTotal'])
+                    else:
+                        assert performance_dict[hpso]['tTotal'] == t_total
+
+                performance_dict[hpso][pipeline]['imCubeSize']  = results[9] / 1000
+                performance_dict[hpso][pipeline]['calDataSize'] = results[10] / 1000
 
                 print('\ntask -> %s' % pipeline)
 
@@ -504,8 +519,10 @@ class Scheduler:
 
             imageDataSize = 0  # In TB
 
-            for i in range(2, len(hpso_pipelines)):
+            for i in range(len(hpso_pipelines)):
                 task_label = hpso_pipelines[i]
+                if task_label in Pipelines.realtime:
+                    continue
 
                 datapath_in  = (SDPAttr.hot_buffer, SDPAttr.working_mem)
                 datapath_out = (SDPAttr.working_mem, SDPAttr.hot_buffer)
@@ -517,8 +534,7 @@ class Scheduler:
                                description=str(task_label))  # TODO: are these streaming tasks? We assume not.
                 datasize_in_hotbuf += datasize_out
 
-                if i == 2:
-                    assert task_label == Pipelines.ICAL  # Assumed that this is an ical task
+                if task_label == Pipelines.ICAL:
                     task.preq_tasks.add(prev_transfer_task)  # Associated ingest task must complete before this one can start
                     ical_task = task  # Remember this task, as DPrep tasks depend on it
                 elif task_label[0:5] == 'DPrep':
