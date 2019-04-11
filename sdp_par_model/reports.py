@@ -1257,19 +1257,27 @@ def find_csvs(csv_path = "../data/csv"):
             csv_map[(m.group(1), m.group(2))] = ref
     return csv_map
 
-def newest_csv(csv_map, typ = 'hpsos', rev = 'HEAD'):
+def newest_csv(csv_map, typ = 'hpsos', rev = 'HEAD', ignore_rev = False):
     """
     Finds the CSV closest to the given revision according to the Git history
     :param csv_map: CSV map, see find_csvs
     :param typ: Type of CSV to look for (hpsos/pipelines)
     :param rev: Git revision to start from
+    :param ignore_rev: Don't return "rev" itself, begin search with parents
     :return: CSV file name if found, None otherwise
     """
 
-    parents = subprocess.check_output(["git", "log", "--format=%h", rev]).split()
-    for parent in parents:
-        if (parent.decode(), typ) in csv_map:
-            return csv_map[(parent.decode(), typ)]
+    # Obtain list of all ancestors, sorted hierarchically and by date.
+    # This means that we go by graph order for commits that appear in
+    # the same history, but by date if commits appear in separate
+    # branches.
+    ancestors = subprocess.check_output(
+        ["git", "log", "--date-order", "--format=%h", rev]).decode().split()
+
+    # Find first ancestor that has a CSV
+    for ancestor in (ancestors[1:] if ignore_rev else ancestors):
+        if (ancestor, typ) in csv_map:
+            return csv_map[(ancestor, typ)]
     return None
 
 def stack_bars_pipelines(title, telescopes, bands, pipelines,

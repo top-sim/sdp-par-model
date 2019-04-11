@@ -16,5 +16,7 @@
 @Obsolete
 legacy_code_comparison
 scheduling/*.csv
+scheduling/*.npz
+scheduling/*.png
 
 performance_dict.data
