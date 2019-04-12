@@ -425,24 +425,18 @@ def apply_telescope_parameters(o, telescope):
 
     if telescope == Telescopes.SKA1_Low:
         o.Bmax = 65000  # Actually constructed max baseline in *m*
-        o.Ds = 35  # station "diameter" in metres
-        o.Na = 512  # number of antennas
+        # Effective station diameter defined to be 38 metres in ECP-170049.
+        o.Ds = 38  # station diameter in metres
+        o.Na = 512  # number of stations
         o.Nbeam = 1  # number of beams
         o.Nf_max = 65536  # maximum number of channels
         o.B_dump_ref = 65000  # m
         o.Tint_min = 0.9  # Minimum correlator integration time (dump time) in *sec* - in reference design
-        #o.baseline_bins = np.array((4900, 7100, 10400, 15100, 22100, 32200, 47000, 65000))  # m
-        #o.baseline_bin_distribution = np.array(
-            #(52.42399198, 7.91161595, 5.91534571, 9.15027832, 7.39594812, 10.56871804, 6.09159108, 0.54251081))#OLD 753 ECP Abs length only
-            #(49.79516935, 7.2018153,  6.30406311, 9.87679703, 7.89016813, 11.59539474, 6.67869761, 0.65789474))#LOW ECP 160015 Abs length only
-            #These layouts have been foreshortened with elevations of 50,60,70 degrees, and a range of azimuthal angles.
-            #(56.96094258,   8.22266894,   7.55474842,  11.56658646,   8.05191328, 5.67275575,   1.85699165,   0.11339293)) #LOW ECP 160015
-            #(60.31972106,   7.7165451,    6.92064107,  10.73309147,   7.3828517, 5.17047626,   1.6627458,    0.09392754)) #4a array
-            #(60.22065697,   7.72434788,   7.05826222,  10.72169655,   7.36441056, 5.15572168   1.66138048   0.09352366)) #OLD 753 ECP
-
-        o.baseline_bins = np.array((o.Bmax/16., o.Bmax/8., o.Bmax/4., o.Bmax/2., o.Bmax)) #neater baseline binning!
-        o.baseline_bin_distribution = np.array((46.56232318, 13.09849678, 14.81580597, 18.61437769,  6.90899638)) # LOW_SKA-TEL-SKO-0000422, rev 03
-
+        # Baseline length distribution calculated from layout in
+        # SKA-TEL-SKO-0000422, Rev 03 (corresponding to ECP-170049),
+        # see Absolute_Baseline_length_distribution.ipynb
+        o.baseline_bins = np.array((o.Bmax/16., o.Bmax/8., o.Bmax/4., o.Bmax/2., o.Bmax))
+        o.baseline_bin_distribution = np.array((46.30065759, 13.06774736, 14.78360606, 18.58770454, 7.26028445))
         #o.amp_f_max = 1.08  # Added by Rosie Bolton, 1.02 is consistent with the dump time of 0.08s at 200km BL.
         # o.NAProducts = o.nr_baselines # We must model the ionosphere for each station
         o.NAProducts = 'all' # We must model the ionosphere for each station
@@ -454,21 +448,22 @@ def apply_telescope_parameters(o, telescope):
 
     elif telescope == Telescopes.SKA1_Mid:
         o.Bmax = 150000  # Actually constructed max baseline in *m*
-        o.Ds = 13.5  # station "diameter" in metres, assume 13.5 as this matches the MeerKat antennas
-        o.Na = 133 + 64  # number of antennas (expressed as the sum between new and Meerkat antennas)
+        o.Ds = 13.5  # dish diameter in metres, assume 13.5 as this matches the MeerKAT dishes
+        o.Na = 64 + 133 # number of dishes (expressed as the sum of MeerKAT and new dishes)
         o.Nbeam = 1  # number of beams
         o.Nf_max = 65536  # maximum number of channels
         o.Tint_min = 0.14  # Minimum correlator integration time (dump time) in *sec* - in reference design
         o.B_dump_ref = 150000  # m
-        # Rosie's conservative, ultra simple numbers (see Absolute_Baseline_length_distribution.ipynb)
-        # MID_SKA-TEL-INSA-0000537_Rev05.txt
-        o.baseline_bins = np.array((5000.,7500.,10000.,15000.,25000.,35000.,55000.,75000.,90000.,110000.,130000.,150000)) #"sensible" baseline bins
+        # Baseline length distribution calculated from layout in
+        # SKA-TEL-INSA-0000537, Rev 04 (corresponding to ECP-1800002),
+        # see Absolute_Baseline_length_distribution.ipynb
+        o.baseline_bins = np.array((5000.0, 7500.0, 10000.0, 15000.0, 25000.0,
+                                    35000.0, 55000.0, 75000.0, 90000.0, 110000.0,
+                                    130000.0, 150000.0))
         o.baseline_bin_distribution = np.array((
-            6.13698772e+01, 5.16553546e+00, 2.87031760e+00, 4.98419771e+00,
-            6.32609709e+00, 4.66297083e+00, 5.71472981e+00, 5.49712450e+00,
-            1.84964510e+00, 1.40407233e+00, 1.08802653e-01, 4.66297083e-02))
-        #o.baseline_bins = np.array((150000,)) #single bin
-        #o.baseline_bin_distribution = np.array((100,))#single bin, handy for debugging tests
+            6.13646961e+01, 5.16553546e+00, 2.87031760e+00, 4.98937879e+00,
+            6.32609709e+00, 4.63706544e+00, 5.73545412e+00, 5.50230558e+00,
+            1.80301539e+00, 1.45070204e+00, 1.08802653e-01, 4.66297083e-02))
         #o.NAProducts = 3 # Most antennas can be modelled as the same. [deactivated for now]
         o.tRCAL_G = 10.0
         o.tICAL_G = 1.0 # Solution interval for Antenna gains
