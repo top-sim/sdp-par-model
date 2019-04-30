@@ -334,6 +334,7 @@ def apply_global_parameters(o):
     o.Npp = 4  # Number of polarization products
     o.Nw = 2  # Bytes per value
     o.Mpx = 8.0  # Memory size of an image pixel in bytes
+    o.Mpx_out = 4.0  # Memory size of an output image pixel in bytes
     o.Mcpx = 16.0  # Memory size of a complex grid pixel in bytes
     o.NAteam = 10 # Number of A-team sources used in demixing
     # o.Qbw = 4.3 #changed from 1 to give 0.34 uv cells as the bw smearing limit. Should be investigated and linked to depend on amp_f_max, or grid_cell_error
