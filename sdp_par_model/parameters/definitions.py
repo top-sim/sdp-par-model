@@ -984,9 +984,9 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.band = Bands.Mid1
         o.freq_min = 0.79e9
         o.freq_max = 0.95e9
-        # 41k comes from assuming 3.9 kHz width over 790-950 MHz.
-        o.Nf_max = 41000
-        o.Bmax = 40000
+        # 40k comes from assuming 4 kHz width over 790-950 MHz.
+        o.Nf_max = 40000
+        o.Bmax = 35000
         o.Tobs = 8 * 3600.0
         o.Tpoint = 1000 * 3600.0
         o.Texp = 5000 * 3600.0
@@ -994,7 +994,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         if hpso_pipe == Pipelines.ICAL:
             o.Qfov = 2.7
         elif hpso_pipe == Pipelines.DPrepB:
-            o.Nf_out = 500
+            o.Nf_out = 160
             o.Npp = 2
         elif hpso_pipe == Pipelines.DPrepC:
             o.Nf_out = 3200
@@ -1019,7 +1019,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Qfov = 1.8
         elif hpso_pipe == Pipelines.DPrepB:
             # 300 channel pseudo-continuum (small BW)
-            o.Nf_out = 100
+            o.Nf_out = 300
             o.Npp = 2
         elif hpso_pipe == Pipelines.DPrepC:
             o.freq_min = 1.3e9
@@ -1047,7 +1047,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Qfov = 1.8
         elif hpso_pipe == Pipelines.DPrepB:
             # 300 channels pseudo-continuum.
-            o.Nf_out = 300
+            o.Nf_out = 260
             o.Npp = 2
         elif hpso_pipe == Pipelines.DPrepC:
             o.freq_min = 1.415e9
@@ -1086,7 +1086,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Qfov = 2.7
         elif hpso_pipe == Pipelines.DPrepB:
             # 500-channel continuum observation.
-            o.Nf_out = 500
+            o.Nf_out = 1000
             o.Npp = 4
 
     elif hpso == HPSOs.hpso27and33:
@@ -1099,7 +1099,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_min = 1.0e9
         o.freq_max = 1.7e9
         o.Nf_max = 65536
-        o.Bmax = 50000
+        o.Bmax = 30000
         o.Tobs = 7.4 * 60.0
         o.Tpoint = 7.4 * 60.0
         o.Texp = 10000 * 3600.0
@@ -1108,7 +1108,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
             o.Qfov = 1.0
         elif hpso_pipe == Pipelines.DPrepB:
             # Continuum experiment with 500 output channels.
-            o.Nf_out = 500
+            o.Nf_out = 700
             o.Npp = 4
 
     elif hpso == HPSOs.hpso32:
@@ -1143,7 +1143,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_min = 1.0e9
         o.freq_max = 1.7e9
         o.Nf_max = 65536
-        o.Bmax = 150000
+        o.Bmax = 120000
         o.Tobs = 3.8 * 3600.0
         o.Tpoint = 3.8 * 3600.0
         o.Texp = 10000 * 3600.0
@@ -1163,7 +1163,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_min = 1.0e9
         o.freq_max = 1.7e9
         o.Nf_max = 65536
-        o.Bmax = 150000
+        o.Bmax = 120000
         o.Tobs = 8 * 3600.0
         o.Tpoint = 95 * 3600.0
         o.Texp = 2000 * 3600.0
@@ -1183,7 +1183,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.freq_min = 1.0e9
         o.freq_max = 1.7e9
         o.Nf_max = 65536
-        o.Bmax = 95000
+        o.Bmax = 120000
         o.Tobs = 8 * 3600.0
         o.Tpoint = 2000 * 3600.0
         o.Texp = 2000 * 3600.0
