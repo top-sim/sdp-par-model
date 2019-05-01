@@ -184,7 +184,6 @@ ranked in order of decreasing importance:
 .. toctree::
    toplevel
    parameters
-   dataflow
    :maxdepth: 2
 
 
