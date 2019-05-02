@@ -1,6 +1,5 @@
 
 from sdp_par_model.config import PipelineConfig
-from sdp_par_model.dataflow.pipeline import *
 from sdp_par_model.parameters.container import ParameterContainer
 from sdp_par_model.parameters.definitions import Telescopes, Bands
 from sdp_par_model.evaluate import *
