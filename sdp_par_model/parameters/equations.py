@@ -935,10 +935,10 @@ def _apple_nonimaging_equations(o):
         o.Nbyte = 1 # Apparantly?
         o.Mcand = o.Nf_out * o.Nbin * o.Tobs / o.Tint_used * o.Nbyte
         o.Mmeta = 10000
-        o.Minput = o.Nbeam * o.Ncand * (o.Mcand + o.Mmeta)
+        o.Minput = o.Ntiedbeam * o.Ncand * (o.Mcand + o.Mmeta)
         o.Rinput = o.Minput / o.Tobs
-        o.Nunique = 0.1 * o.Nbeam * o.Ncand
-        o.Mout = o.Nunique * o.Mcand + o.Nbeam * o.Ncand * o.Mmeta
+        o.Nunique = 0.1 * o.Ntiedbeam * o.Ncand
+        o.Mout = o.Nunique * o.Mcand + o.Ntiedbeam * o.Ncand * o.Mmeta
         o.Rflop = 500.88 * Constants.giga
 
     elif o.pipeline == Pipelines.Pulse:
@@ -949,9 +949,9 @@ def _apple_nonimaging_equations(o):
         o.Nbyte = 1 # Apparantly?
         o.Mburst = o.Nsample * o.Nf_out * o.Npp * o.Nbyte
         o.Mmeta = 10000
-        o.Minput = o.Nburst * o.Nbeam * (o.Mburst + o.Mmeta)
+        o.Minput = o.Nburst * o.Ntiedbeam * (o.Mburst + o.Mmeta)
         o.Rinput = o.Minput / o.Tint_used
-        o.Mout = (o.Nunique * o.Mburst + o.Nbeam * o.Nburst * o.Mmeta) * o.Tobs / o.Tint_used
+        o.Mout = (o.Nunique * o.Mburst + o.Ntiedbeam * o.Nburst * o.Mmeta) * o.Tobs / o.Tint_used
         o.Rflop = 4 * Constants.giga
 
     elif o.pipeline == Pipelines.PST:
@@ -961,7 +961,7 @@ def _apple_nonimaging_equations(o):
         o.Nsubint = 180
         o.Nbyte = 4
         o.Mpulsar = o.Nbin * o.Nf_out * o.Nsubint * o.Npp * o.Nbyte
-        o.Mout = o.Nbeam * o.Mpulsar
+        o.Mout = o.Ntiedbeam * o.Mpulsar
         o.Rflop = 495.9 * Constants.giga / 1800
 
     else:

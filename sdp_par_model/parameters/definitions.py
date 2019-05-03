@@ -667,23 +667,23 @@ def apply_pipeline_parameters(o, pipeline):
 
     elif pipeline == Pipelines.PSS:
         if o.telescope == Telescopes.SKA1_Low:
-            o.Nbeam = 500
+            o.Ntiedbeam = 500
         elif o.telescope == Telescopes.SKA1_Mid:
-            o.Nbeam = 1500
+            o.Ntiedbeam = 1500
         o.Nf_out = 128
         o.Tobs = 600
 
     elif pipeline == Pipelines.Pulse:
         if o.telescope == Telescopes.SKA1_Low:
-            o.Nbeam = 500
+            o.Ntiedbeam = 500
         elif o.telescope == Telescopes.SKA1_Mid:
-            o.Nbeam = 1500
+            o.Ntiedbeam = 1500
         o.Nf_out = 1024
         o.Npp = 4
         o.Tobs = 600
 
     elif pipeline == Pipelines.PST:
-        o.Nbeam = 16
+        o.Ntiedbeam = 16
         o.Nf_out = 4096
         o.Npp = 4
         o.Tobs = 1800
@@ -999,6 +999,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.Tobs = 40 * 60.0
         o.Tpoint = 40 * 60.0
         o.Texp = 4300 * 3600.0
+        o.Ntiedbeam = 1
 
     elif hpso == HPSOs.hpso05b:
 
@@ -1012,6 +1013,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.Tobs = 15 * 60.0
         o.Tpoint = 15 * 60.0
         o.Texp = 1600 * 3600.0
+        o.Ntiedbeam = 1
 
     elif hpso == HPSOs.hpso13:
 
