@@ -274,6 +274,7 @@ class PipelineConfig:
         # Free symbols to minimise?
         if symbolify == '' and optimize_expression is not None and \
            telescope_params.get(optimize_expression) is not None and \
+           isinstance(telescope_params.get(optimize_expression), sympy.Expr) and \
            len(telescope_params.get(optimize_expression).free_symbols) > 0:
 
             # Minimise

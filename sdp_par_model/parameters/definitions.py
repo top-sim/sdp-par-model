@@ -110,11 +110,17 @@ class Pipelines:
     DPrepC = 'DPrepC'             # Produce fine spectral resolution image cubes un I,Q,U,V (with Nf_out channels)
     DPrepD = 'DPrepD'             # Produce calibrated, averaged (In time and freq) visibility data
 
+    PSS = 'PSS'                   # Sieved Pulsars
+    PST = 'PST'                   # Pulsar Timing Solutions
+    Pulse = 'Pulse'               # Transient Buffer Data
+
     input = [Ingest]
     realtime = [Ingest, RCAL, FastImg]
     imaging = [RCAL, FastImg, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC]
-    output = [FastImg, DPrepA, DPrepA_Image, DPrepB, DPrepC]
-    all = [Ingest, RCAL, FastImg, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD]
+    nonimaging = [PSS, PST, Pulse]
+    output = [FastImg, DPrepA, DPrepA_Image, DPrepB, DPrepC, PSS, PST, Pulse]
+    all = [Ingest, RCAL, FastImg, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD,
+           PSS, PST, Pulse]
     pure_pipelines = all
 
     # Pipelines that are currently supported (will show up in notebooks)
@@ -204,11 +210,16 @@ class HPSOs:
         hpso02b: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
                   Pipelines.ICAL, Pipelines.DPrepA,
                   Pipelines.DPrepB, Pipelines.DPrepC, Pipelines.DPrepD),
-        hpso04a: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg),
-        hpso04b: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg),
-        hpso04c: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg),
-        hpso05a: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg),
-        hpso05b: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg),
+        hpso04a: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.PSS),
+        hpso04b: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.PSS),
+        hpso04c: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.PSS),
+        hpso05a: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.PST),
+        hpso05b: (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.PST),
         hpso13:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
                   Pipelines.ICAL, Pipelines.DPrepA,
                   Pipelines.DPrepB, Pipelines.DPrepC),
@@ -218,7 +229,8 @@ class HPSOs:
         hpso15:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
                   Pipelines.ICAL, Pipelines.DPrepA,
                   Pipelines.DPrepB, Pipelines.DPrepC),
-        hpso18:  (Pipelines.Ingest, Pipelines.RCAL),
+        hpso18:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
+                  Pipelines.Pulse),
         hpso22:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
                   Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepB),
         hpso27and33:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
@@ -652,6 +664,29 @@ def apply_pipeline_parameters(o, pipeline):
             o.amp_f_max = 1.02
 
         o.Nmm = 1 # Off diagonal terms probably not needed?
+
+    elif pipeline == Pipelines.PSS:
+        if o.telescope == Telescopes.SKA1_Low:
+            o.Nbeam = 500
+        elif o.telescope == Telescopes.SKA1_Mid:
+            o.Nbeam = 1500
+        o.Nf_out = 128
+        o.Tobs = 600
+
+    elif pipeline == Pipelines.Pulse:
+        if o.telescope == Telescopes.SKA1_Low:
+            o.Nbeam = 500
+        elif o.telescope == Telescopes.SKA1_Mid:
+            o.Nbeam = 1500
+        o.Nf_out = 1024
+        o.Npp = 4
+        o.Tobs = 600
+
+    elif pipeline == Pipelines.PST:
+        o.Nbeam = 16
+        o.Nf_out = 4096
+        o.Npp = 4
+        o.Tobs = 1800
 
     else:
         raise Exception('Unknown pipeline: %s' % str(pipeline))
