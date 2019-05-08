@@ -70,7 +70,7 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
 
     # Non-imaging pipelines are handled separately
     if o.pipeline in Pipelines.nonimaging:
-        _apple_nonimaging_equations(o)
+        _apply_nonimaging_equations(o)
         return o
 
     # This set of methods must be executed in the defined sequence since
@@ -923,7 +923,7 @@ def _apply_io_equations(o):
         o.Mout = 0.0
 
 
-def _apple_nonimaging_equations(o):
+def _apply_nonimaging_equations(o):
     """
     Compute requirements for non-imaging pipelines.
     """
@@ -941,7 +941,7 @@ def _apple_nonimaging_equations(o):
         o.Mout = o.Nunique * o.Mcand + o.Ntiedbeam * o.Ncand * o.Mmeta
         o.Rflop = 500.88 * Constants.giga
 
-    elif o.pipeline == Pipelines.Pulse:
+    elif o.pipeline == Pipelines.SinglePulse:
         o.Nburst = 1
         o.Nsample = 640
         o.Tint_used = 10

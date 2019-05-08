@@ -112,15 +112,15 @@ class Pipelines:
 
     PSS = 'PSS'                   # Sieved Pulsars
     PST = 'PST'                   # Pulsar Timing Solutions
-    Pulse = 'Pulse'               # Transient Buffer Data
+    SinglePulse = 'SinglePulse'   # Transient Buffer Data
 
     input = [Ingest]
     realtime = [Ingest, RCAL, FastImg]
     imaging = [RCAL, FastImg, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC]
-    nonimaging = [PSS, PST, Pulse]
-    output = [FastImg, DPrepA, DPrepA_Image, DPrepB, DPrepC, PSS, PST, Pulse]
+    nonimaging = [PSS, PST, SinglePulse]
+    output = [FastImg, DPrepA, DPrepA_Image, DPrepB, DPrepC, PSS, PST, SinglePulse]
     all = [Ingest, RCAL, FastImg, ICAL, DPrepA, DPrepA_Image, DPrepB, DPrepC, DPrepD,
-           PSS, PST, Pulse]
+           PSS, PST, SinglePulse]
     pure_pipelines = all
 
     # Pipelines that are currently supported (will show up in notebooks)
@@ -230,7 +230,7 @@ class HPSOs:
                   Pipelines.ICAL, Pipelines.DPrepA,
                   Pipelines.DPrepB, Pipelines.DPrepC),
         hpso18:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
-                  Pipelines.Pulse),
+                  Pipelines.SinglePulse),
         hpso22:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
                   Pipelines.ICAL, Pipelines.DPrepA, Pipelines.DPrepB),
         hpso27and33:  (Pipelines.Ingest, Pipelines.RCAL, Pipelines.FastImg,
@@ -673,7 +673,7 @@ def apply_pipeline_parameters(o, pipeline):
         o.Nf_out = 128
         o.Tobs = 600
 
-    elif pipeline == Pipelines.Pulse:
+    elif pipeline == Pipelines.SinglePulse:
         if o.telescope == Telescopes.SKA1_Low:
             o.Ntiedbeam = 500
         elif o.telescope == Telescopes.SKA1_Mid:
@@ -999,7 +999,6 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.Tobs = 40 * 60.0
         o.Tpoint = 40 * 60.0
         o.Texp = 4300 * 3600.0
-        o.Ntiedbeam = 1
 
     elif hpso == HPSOs.hpso05b:
 
@@ -1013,7 +1012,6 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
         o.Tobs = 15 * 60.0
         o.Tpoint = 15 * 60.0
         o.Texp = 1600 * 3600.0
-        o.Ntiedbeam = 1
 
     elif hpso == HPSOs.hpso13:
 
