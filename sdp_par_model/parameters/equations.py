@@ -944,7 +944,7 @@ def _apply_nonimaging_equations(o):
         o.Mcand = o.Nf_out * o.Nbin * o.Tobs / o.Tint_used * o.Nbyte
         o.Mmeta = 10000
         o.Minput = o.Ntiedbeam * o.Ncand * (o.Mcand + o.Mmeta)
-        o.Rinput = o.Minput / o.Tobs
+        o.Rio = o.Minput / o.Tobs
         o.Nunique = 0.1 * o.Ntiedbeam * o.Ncand
         o.Mout = o.Nunique * o.Mcand + o.Ntiedbeam * o.Ncand * o.Mmeta
         o.Rflop = 500.88 * Constants.giga
@@ -958,7 +958,7 @@ def _apply_nonimaging_equations(o):
         o.Mburst = o.Nsample * o.Nf_out * o.Npp * o.Nbyte
         o.Mmeta = 10000
         o.Minput = o.Nburst * o.Ntiedbeam * (o.Mburst + o.Mmeta)
-        o.Rinput = o.Minput / o.Tint_used
+        o.Rio = o.Minput / o.Tint_used
         o.Mout = (o.Nunique * o.Mburst + o.Ntiedbeam * o.Nburst * o.Mmeta) * o.Tobs / o.Tint_used
         o.Rflop = 4 * Constants.giga
 
@@ -970,6 +970,7 @@ def _apply_nonimaging_equations(o):
         o.Nbyte = 4
         o.Mpulsar = o.Nbin * o.Nf_out * o.Nsubint * o.Npp * o.Nbyte
         o.Minput = o.Ntiedbeam * o.Mpulsar
+        o.Rio = o.Minput / o.Tobs
         o.Mout = o.Minput # again, worst case
         o.Rflop = 495.9 * Constants.giga / 1800
 

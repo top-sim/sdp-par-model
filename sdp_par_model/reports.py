@@ -143,7 +143,7 @@ RESULT_MAP = [
     ('Output size',                'TB',         True,    True,  lambda tp: tp.Mout / c.tera      ),
 
     ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera)),
-    ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera         ),
+    ('Buffer Read Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera         ),
     ('Facet visibility rate',      'TeraBytes/s',True,    False, lambda tp: tp.Rfacet_vis/c.tera  ),
     ('Image Write Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rimage/c.tera      ),
 
