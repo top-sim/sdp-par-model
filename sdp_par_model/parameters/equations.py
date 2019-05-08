@@ -961,7 +961,8 @@ def _apply_nonimaging_equations(o):
         o.Nsubint = 180
         o.Nbyte = 4
         o.Mpulsar = o.Nbin * o.Nf_out * o.Nsubint * o.Npp * o.Nbyte
-        o.Mout = o.Ntiedbeam * o.Mpulsar
+        o.Minput = o.Ntiedbeam * o.Mpulsar
+        o.Mout = o.Minput # again, worst case
         o.Rflop = 495.9 * Constants.giga / 1800
 
     else:
