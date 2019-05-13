@@ -105,7 +105,7 @@ class Lookup:
 
     Tobs = ('Observation time', 1)
     Ringest_total = ('Total buffer ingest rate', c.tera)
-    Rio = ('Visibility I/O Rate', c.tera)
+    Rio = ('Buffer Read Rate', c.tera)
     Rflop = ('Total Compute Requirement', c.peta)
     Mbuf_vis = ('Visibility Buffer', c.peta)
     Mw_cache = ('Working (cache) memory', c.tera)
@@ -231,8 +231,8 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
         " + ".join(cfg_time.keys()), cfg['hpso'], "Data Products",
         sum(cfg_time.values()),
         {
-            Resources.BatchCompute: max(*cfg_floprate.values()),
-            Resources.HotBufferRate: max(*cfg_iorate.values()),
+            Resources.BatchCompute: max(0, *cfg_floprate.values()),
+            Resources.HotBufferRate: max(0, *cfg_iorate.values()),
         }, # Some compute for staging resources?
         {
             Resources.OutputBuffer: sum(cfg_output.values())
