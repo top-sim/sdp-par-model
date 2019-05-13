@@ -28,6 +28,68 @@ class TestLevelTrace(unittest.TestCase):
         self.assertEqual(trace.get(2), 1)
         self.assertEqual(trace.get(3), 0)
         self.assertEqual(trace.get(1e15), 0)
+        self.assertEqual(trace[1], 0)
+        self.assertEqual(trace[2], 1)
+        self.assertEqual(trace[3], 0)
+
+    def test_set(self):
+        trace = LevelTrace()
+
+        trace.set(0, 1, 1)
+        self.assertEqual(trace, LevelTrace({0:1,1:0}))
+        trace.set(1, 2, 1)
+        self.assertEqual(trace, LevelTrace({0:1,2:0}))
+        trace.set(0, 2, 0)
+        self.assertEqual(trace, LevelTrace())
+
+        trace.set(0, 1, 1)
+        self.assertEqual(trace, LevelTrace({0:1,1:0}))
+        trace.set(2, 3, 1)
+        self.assertEqual(trace, LevelTrace({0:1,1:0,2:1,3:0}))
+        trace.set(1, 2, 1)
+        self.assertEqual(trace, LevelTrace({0:1,3:0}))
+        trace.set(0, 3, 0)
+        self.assertEqual(trace, LevelTrace())
+
+        trace.set(0, 1, 1)
+        trace.set(2, 3, 2)
+        trace.set(1.5, 2.5, 1)
+        self.assertEqual(trace, LevelTrace({0:1,1:0,1.5:1,2.5:2,3:0}))
+        trace.set(1, 2, 1)
+        self.assertEqual(trace, LevelTrace({0:1,2.5:2,3:0}))
+        trace.set(1, 2.5, 2)
+        self.assertEqual(trace, LevelTrace({0:1,1:2,3:0}))
+        trace.set(0, 3, -1)
+        self.assertEqual(trace, LevelTrace({0:-1,3:0}))
+        trace.set(-1, 4, 0)
+        self.assertEqual(trace, LevelTrace())
+
+    def test_getslice(self):
+        trace = LevelTrace({0:1,1:0,2:1,3:0})
+        self.assertEqual(trace[0:3], trace)
+        self.assertEqual(trace[0:5], trace)
+        self.assertEqual(trace[0:], trace)
+        self.assertEqual(trace[:3], trace)
+        self.assertEqual(trace[:], trace)
+        self.assertEqual(trace[0:2], LevelTrace({0:1,1:0}))
+        self.assertEqual(trace[:1], LevelTrace({0:1,1:0}))
+        self.assertEqual(trace[:1.4], LevelTrace({0:1,1:0}))
+        self.assertEqual(trace[:0.5], LevelTrace({0:1,0.5:0}))
+
+        self.assertEqual(trace[1:3], LevelTrace({1:1,2:0}))
+        self.assertEqual(trace[1:], LevelTrace({1:1,2:0}))
+        self.assertEqual(trace[-1:], LevelTrace({1:1,2:0,3:1,4:0}))
+        self.assertEqual(trace[1:2], LevelTrace())
+        self.assertEqual(trace[2:3], LevelTrace({0:1,1:0}))
+        self.assertEqual(trace[2.5:], LevelTrace({0:1,0.5:0}))
+
+        self.assertEqual(LevelTrace()[1:2], LevelTrace())
+        self.assertEqual(LevelTrace()[:2], LevelTrace())
+        self.assertEqual(LevelTrace()[1:], LevelTrace())
+        self.assertEqual(LevelTrace()[:], LevelTrace())
+
+        with self.assertRaises(ValueError): trace[1:2:3]
+        with self.assertRaises(ValueError): trace[::3]
 
     def test_add(self):
         trace = LevelTrace()
@@ -56,6 +118,33 @@ class TestLevelTrace(unittest.TestCase):
         self.assertEqual(trace, LevelTrace({0:1,1:0,1.5:1,2:2,2.5:1,3:0}))
         trace.add(0, 3, -1)
         self.assertEqual(trace, LevelTrace({1:-1,1.5:0,2:1,2.5:0}))
+
+    def test_setslice(self):
+
+        trace = LevelTrace({0:1,1:0,2:1,3:0})
+        del trace[1:2]
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1:0,2:1,3:0}))
+        trace[1:2] = 0
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1:0,2:1,3:0}))
+        trace[1:2] = 1
+        self.assertEqual(trace[0:3], LevelTrace({0:1,3:0}))
+        trace[1:2] = LevelTrace()
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1:0,2:1,3:0}))
+        trace[1:2] = LevelTrace({0.5:2,1:0})
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1:0,1.5:2,2:1,3:0}))
+        trace[1:2] = LevelTrace({0:1,0.5:2,1:0})
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1.5:2,2:1,3:0}))
+        trace[1:] = LevelTrace({0:1,0.5:2,1:0})
+        self.assertEqual(trace[0:3], LevelTrace({0:1,1.5:2,2:0}))
+        trace[:1] = LevelTrace({0:1,0.5:2,1:0})
+        self.assertEqual(trace[0:3], LevelTrace({0:1,0.5:2,1:1,1.5:2,2:0}))
+        trace[:] = LevelTrace({0:1,0.5:2,1:0})
+        self.assertEqual(trace[0:3], LevelTrace({0:1,0.5:2,1:0}))
+
+        with self.assertRaises(ValueError): trace[1:2:3] = 0
+        with self.assertRaises(ValueError): trace[::3] = 0
+        with self.assertRaises(ValueError): trace[1:2] = LevelTrace({1:1, 1.1:0})
+        with self.assertRaises(ValueError): trace[1:2] = LevelTrace({-.1:1, 1:0})
 
     def test_minmax(self):
         trace = LevelTrace({0:1,1:0,1.5:1,2:2,2.5:1,3:0})

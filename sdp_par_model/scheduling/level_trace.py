@@ -38,9 +38,15 @@ class LevelTrace(object):
         return self.zip_with(other, operator.add)
 
     def start(self):
+        """ Returns first non-null point in trace """
+        if len(self._trace) == 0:
+            return 0
         return self._trace.keys()[0]
 
     def end(self):
+        """ Returns first point in trace that is null and only followed by nulls """
+        if len(self._trace) == 0:
+            return 0
         return self._trace.keys()[-1]
 
     def length(self):
@@ -55,6 +61,78 @@ class LevelTrace(object):
         else:
             (_, lvl) = self._trace.peekitem(ix)
             return lvl
+
+    def map(self, fn):
+        return LevelTrace({t: fn(v) for t, v in self._trace.items()})
+    def map_key(self, fn):
+        return LevelTrace(dict(fn(t, v) for t, v in self._trace.items()))
+
+    def shift(self, time):
+        return self.map_key(lambda t, v: (t + time, v))
+
+    def __getitem__(self, where):
+
+        # For non-slices defaults to get
+        if not isinstance(where, slice):
+            return self.get(where)
+        if where.step is not None:
+            raise ValueError("Stepping meaningless for LevelTrace!")
+
+        # Limit
+        res = LevelTrace(self)
+        if where.start is not None and where.start > res.start():
+            res.set(res.start(), where.start, 0)
+        if where.stop is not None and where.stop < res.end():
+            res.set(where.stop, res.end(), 0)
+
+        # Shift, if necessary
+        if where.start is not None:
+            res = res.shift(-where.start)
+        return res
+
+    def set(self, start, end, level):
+        """ Sets the level for some time range
+        :param start: Start of range
+        :param end: End of range
+        :aram amount: Level to set
+        """
+
+        # Check errors, no-ops
+        if start >= end:
+            return
+
+        # Determine levels at start (and before start)
+        start_ix = self._trace.bisect_right(start) - 1
+        prev_lvl = lvl = 0
+        if start_ix >= 0:
+            (t, lvl) = self._trace.peekitem(start_ix)
+            # If we have no entry exactly at our start point, the
+            # level was constant at this point before
+            if start > t:
+                prev_lvl = lvl
+            # Otherwise look up previous level. Default 0 (see above)
+            elif start_ix > 0:
+                (_, prev_lvl) = self._trace.peekitem(start_ix-1)
+
+        # Prepare start
+        if prev_lvl == level:
+            if start in self._trace:
+                del self._trace[start]
+        else:
+            self._trace[start] = level
+
+        # Remove all in-between states
+        for time in list(self._trace.irange(start, end, inclusive=(False, False))):
+            lvl = self._trace[time]
+            del self._trace[time]
+
+        # Add or remove end, if necessary
+        if end not in self._trace:
+            if lvl != level:
+                self._trace[end] = lvl
+        elif level == self._trace[end]:
+            del self._trace[end]
+
 
     def add(self, start, end, amount):
         """ Increases the level for some time range
@@ -89,11 +167,7 @@ class LevelTrace(object):
             self._trace[start] = lvl + amount
 
         # Update all in-between states
-        insert_start = True
-        last_level = None
         for time in self._trace.irange(start, end, inclusive=(False, False)):
-            if time == start:
-                insert_start = False
             lvl = self._trace[time]
             self._trace[time] = lvl + amount
 
@@ -102,6 +176,48 @@ class LevelTrace(object):
             self._trace[end] = lvl
         elif lvl + amount == self._trace[end]:
             del self._trace[end]
+
+    def __delitem__(self, where):
+
+        # Cannot set single values
+        if not isinstance(where, slice):
+            raise ValueError("Cannot set level for single point, pass an interval!")
+        if where.step is not None:
+            raise ValueError("Stepping meaningless for LevelTrace!")
+
+        # Set range to zero
+        start = (where.start if where.start is not None else self.start())
+        end = (where.stop if where.stop is not None else self.end())
+        self.set(start, end, 0)
+
+    def __setitem__(self, where, value):
+
+        # Cannot set single values
+        if not isinstance(where, slice):
+            raise ValueError("Cannot set level for single point, pass an interval!")
+        if where.step is not None:
+            raise ValueError("Stepping meaningless for LevelTrace!")
+
+        # Setting a level trace?
+        if isinstance(value, LevelTrace):
+
+            # Remove existing data
+            del self[where]
+            if where.start is not None:
+                if value.start() < 0:
+                    raise ValueError("Level trace starts before 0!")
+                value = value.shift(where.start)
+            if where.stop is not None:
+                if value.end() > where.stop:
+                    raise ValueError("Level trace to set is larger than slice!")
+            self._trace = (self + value)._trace
+
+        else:
+
+            # Otherwise set constant value
+            start = (where.start if where.start is not None else self.start())
+            end = (where.stop if where.stop is not None else self.end())
+            self.set(start, end, value)
 
     def foldl1(self, start, end, fn):
         """
@@ -248,10 +364,6 @@ class LevelTrace(object):
 
         # Nothing found
         return None
-
-    def map(self, fn):
-
-        return LevelTrace({t: fn(v) for t, v in self._trace.items()})
 
     def zip_with(self, other, fn):
 
