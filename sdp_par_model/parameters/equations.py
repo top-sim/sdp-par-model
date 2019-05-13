@@ -13,7 +13,7 @@ from numpy import pi, round
 import sympy
 from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin, Function
 
-from .definitions import Pipelines, Products
+from .definitions import Pipelines, Products, Constants
 from .container import ParameterContainer, BLDep, blsum
 
 # Check sympy compatibility
@@ -67,6 +67,11 @@ def apply_imaging_equations(telescope_parameters, pipeline, bins, binfracs, verb
     # so product equations are purely symbolic.
     if symbolify == 'all':
         o.symbolify()
+
+    # Non-imaging pipelines are handled separately
+    if o.pipeline in Pipelines.nonimaging:
+        _apply_nonimaging_equations(o)
+        return o
 
     # This set of methods must be executed in the defined sequence since
     # some values in sequence. This is ugly and we should fix it one day.
@@ -916,3 +921,49 @@ def _apply_io_equations(o):
     else:
         # No output.
         o.Mout = 0.0
+
+
+def _apply_nonimaging_equations(o):
+    """
+    Compute requirements for non-imaging pipelines.
+    """
+
+    if o.pipeline == Pipelines.PSS:
+        o.Ncand = 1000
+        o.Nbin = 128
+        o.Tint_used = 600 / 64
+        o.Nbyte = 1 # Apparantly?
+        o.Mcand = o.Nf_out * o.Nbin * o.Tobs / o.Tint_used * o.Nbyte
+        o.Mmeta = 10000
+        o.Minput = o.Ntiedbeam * o.Ncand * (o.Mcand + o.Mmeta)
+        o.Rinput = o.Minput / o.Tobs
+        o.Nunique = 0.1 * o.Ntiedbeam * o.Ncand
+        o.Mout = o.Nunique * o.Mcand + o.Ntiedbeam * o.Ncand * o.Mmeta
+        o.Rflop = 500.88 * Constants.giga
+
+    elif o.pipeline == Pipelines.SinglePulse:
+        o.Nburst = 1
+        o.Nsample = 640
+        o.Tint_used = 10
+        o.Nunique = 20
+        o.Nbyte = 1 # Apparantly?
+        o.Mburst = o.Nsample * o.Nf_out * o.Npp * o.Nbyte
+        o.Mmeta = 10000
+        o.Minput = o.Nburst * o.Ntiedbeam * (o.Mburst + o.Mmeta)
+        o.Rinput = o.Minput / o.Tint_used
+        o.Mout = (o.Nunique * o.Mburst + o.Ntiedbeam * o.Nburst * o.Mmeta) * o.Tobs / o.Tint_used
+        o.Rflop = 4 * Constants.giga
+
+    elif o.pipeline == Pipelines.PST:
+        # We use the worst case - 16 Pulsar Timing Array beams
+        o.Nbin = 4096
+        o.Nf = 4096
+        o.Nsubint = 180
+        o.Nbyte = 4
+        o.Mpulsar = o.Nbin * o.Nf_out * o.Nsubint * o.Npp * o.Nbyte
+        o.Minput = o.Ntiedbeam * o.Mpulsar
+        o.Mout = o.Minput # again, worst case
+        o.Rflop = 495.9 * Constants.giga / 1800
+
+    else:
+        raise Exception('Unknown non-imaging pipeline: %s' % str(o.pipeline))
