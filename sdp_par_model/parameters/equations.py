@@ -849,7 +849,7 @@ def _apply_io_equations(o):
     # pipeline is less than the number of polarisation states
     # ingested for the project (usually all 4).
     #
-    o.Mbuf_vis = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
+    o.Minput = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
 
     # Visibility read rate
     #

@@ -107,7 +107,7 @@ class Lookup:
     Ringest_total = ('Total buffer ingest rate', c.tera)
     Rio = ('Buffer Read Rate', c.tera)
     Rflop = ('Total Compute Requirement', c.peta)
-    Mbuf_vis = ('Visibility Buffer', c.peta)
+    Minput = ('Input Buffer Size', c.peta)
     Mw_cache = ('Working (cache) memory', c.tera)
     Mout = ('Output Size', c.tera)
     Tpoint = ('Pointing Time', 1)
@@ -137,6 +137,7 @@ def make_receive_rt(csv, cfg):
     Tobs = None
     Rflop = 0
     pips = []
+    Minput = 0
     for pipeline in HPSOs.hpso_pipelines[cfg['hpso']]:
         if pipeline not in Pipelines.realtime:
             continue
@@ -147,8 +148,9 @@ def make_receive_rt(csv, cfg):
         if pipeline == Pipelines.Ingest:
             Tobs = lookup_csv(csv, cfg_name, Lookup.Tobs)
             Ringest = lookup_csv(csv, cfg_name, Lookup.Ringest_total)
-            Mbuf_vis = lookup_csv(csv, cfg_name, Lookup.Mbuf_vis)
         Rflop += lookup_csv(csv, cfg_name, Lookup.Rflop)
+        if pipeline not in Pipelines.realtime:
+            Minput = max(Minput, lookup_csv(csv, cfg_name, Lookup.Minput))
     assert Tobs is not None, "No ingest pipeline for HPSO {}?".format(cfg['hpso'])
 
     receive_rt = Task(
@@ -157,7 +159,7 @@ def make_receive_rt(csv, cfg):
           Resources.RealtimeCompute: Rflop,
           Resources.ColdBufferRate: Ringest,
           Resources.IngestRate: Ringest},
-        { Resources.InputBuffer: Mbuf_vis
+        { Resources.InputBuffer: Minput
             # TODO: RCAL calibration outputs?
         }
     )

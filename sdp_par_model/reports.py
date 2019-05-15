@@ -137,7 +137,7 @@ RESULT_MAP = [
     ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta     ),
     ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera    ),
     ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
-    ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta    ),
+    ('Input Buffer Size',          'PetaBytes',  True,    True,  lambda tp: tp.Minput/c.peta      ),
     ('Total buffer ingest rate',   'TeraBytes/s',True,    False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
     #('Rosies buffer size',   'PetaBytes',       True,       False, lambda tp: tp.Tobs*tp.buffer_factor*tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.peta),
     ('Output size',                'TB',         True,    True,  lambda tp: tp.Mout / c.tera      ),
