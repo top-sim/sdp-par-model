@@ -855,7 +855,10 @@ def _apply_io_equations(o):
     #
     # According to SDPPROJECT-133 (JIRA) assume that we only need
     # to read all visibilities twice per major cycle and beam.
-    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.baseline_bins) * o.Mvis
+    #
+    # Reduced further to once per major loop, assuming major loop is
+    # implemented as suggested in SKA-TEL-SDP-0000124
+    o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.baseline_bins) * o.Mvis
     # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
 
     # Facet visibility rate
