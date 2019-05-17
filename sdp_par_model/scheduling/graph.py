@@ -318,7 +318,7 @@ def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
     return hpso_sequence, Tobs_sum
 
 def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
-                           Tobs_min = 0, force_order = True):
+                           Tobs_min = 0, force_order = True, batch_parallelism=1):
     """ Convert sequence of HPSO to a (multi-)graph of nodes
 
     :param csv: Cached pipeline performance data
@@ -332,8 +332,8 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
     # Derive parameters for graph generation from capacities
     cold_transfer_rate = max(1 * c.giga, capacities[Resources.ColdBufferRate]
         - capacities[Resources.IngestRate] - capacities[Resources.DeliveryRate])
-    offline_flop_rate = capacities[Resources.BatchCompute]
-    hot_buffer_rate = capacities[Resources.HotBufferRate] - cold_transfer_rate
+    offline_flop_rate = capacities[Resources.BatchCompute] // batch_parallelism
+    hot_buffer_rate = (capacities[Resources.HotBufferRate] - cold_transfer_rate) // batch_parallelism
     delivery_rate = capacities[Resources.DeliveryRate]
 
     # Now collect graph nodes
