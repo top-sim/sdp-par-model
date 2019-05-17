@@ -65,23 +65,39 @@ def assert_schedule_consistency(usage, task_time, task_edge_end_time):
     for cost in usage:
         assert usage[cost] == usage_check[cost], usage[cost] - usage_check[cost]
 
-def schedule(tasks, capacities, verbose=False):
+def schedule(tasks, capacities,
+             task_time = {}, task_edge_end_time = {}, task_constraint = {},
+             resource_check_start = 0, verbose=False):
     """Schedules a (multi-)graph of tasks in a way that resource usage
     stays below capacities.
 
     :param tasks: List of tasks, in topological order
     :param capacities: Dictionary of resource names to capacity
+    :param task_constraint: Earliest allowed starting point for tasks
+    :param task_time: Start schedule of tasks
+    :param task_edge_end_time: Start schedule of task edges
     :return: Tuple (usage, task_time, task_edge_end_time)
     """
 
+    # Make work copies of parameters
+    task_constraint = dict(task_constraint)
+    task_time = dict(task_time)
+    task_edge_end_time = dict(task_edge_end_time)
+
+    # Initialise usage, taking initial schedule into account
     usage = { res: level_trace.LevelTrace() for res in capacities }
+    for task in task_time:
+        _apply_cost(task, task_time[task], usage)
+        _apply_edge_cost(task, task_time[task], task_edge_end_time[task], usage)
 
-    task_constraint = {}
-    task_time = {}
-    task_edge_end_time = {}
-
+    # Make sure usage is not above capacity already
     end_of_time = 1e15
-    tasks_to_do = list(tasks)
+    for res in usage:
+        max_usage = usage[res].maximum(resource_check_start, end_of_time)
+        assert max_usage <= capacities[res], \
+            "Resource {} over capacity: {} > {}!".format(res, max_usage, capacities[res])
+
+    tasks_to_do = list([ task for task in tasks if task not in task_time])
     while len(tasks_to_do) > 0:
         task = tasks_to_do.pop(0)
 
@@ -168,3 +184,120 @@ def schedule(tasks, capacities, verbose=False):
         assert_schedule_consistency(usage, task_time, task_edge_end_time)
 
     return usage, task_time, task_edge_end_time
+
+def reschedule(tasks, capacities, start_time,
+               task_time, task_edge_end_time,
+               task_constraint = {}, verbose=False):
+    """Re-schedules a (multi-)graph of tasks assuming that capacity
+    changes at a certain point in time.
+
+    The returned schedule will be identical to the one given in the
+    parameter up to the starting point. Tasks that overlap the
+    capacity change point might fail. If there is a choice involved in
+    which task to fail, we use the order in the "tasks" list for
+    priority (this is clearly somewhat arbitrary, and possibly
+    optimistic). These tasks will be re-scheduled.
+
+    :param tasks: List of tasks, in topological order
+    :param capacities: Dictionary of resource names to capacity
+    :param start_time: Start point of capacity change.
+    :param task_time: Start schedule of tasks
+    :param task_edge_end_time: Start schedule of task edges
+    :param task_constraint: Earliest allowed starting point for tasks
+    :return: Tuple (usage, task_time, task_edge_end_time, failed_tasks)
+    """
+
+    # Take over all tasks and edges that ended before the capacity change.
+    new_task_time = {}; new_task_edge_end_time = {}
+    for task, end_time in task_edge_end_time.items():
+        if end_time <= start_time:
+            new_task_time[task] = task_time[task]
+            new_task_edge_end_time[task] = end_time
+    task_constraint = dict(task_constraint)
+    failed_tasks = {}
+    if verbose:
+        print("{} tasks unaffected".format(len(new_task_time)))
+
+    # Now check all tasks and edges that overlap the time in
+    # question. We only need to check usage at the starting point
+    usage = { res: 0 for res in capacities }
+    failed_usage = { res: level_trace.LevelTrace() for res in capacities }
+    for task in tasks:
+
+        # Skip if task was not scheduled in the first place, or
+        # happens before (=> remains the same) or after (=> gets
+        # re-scheduled unconditionally) the point in question
+        if task not in task_time or \
+           task_time[task] >= start_time or \
+           task_edge_end_time[task] <= start_time:
+            continue
+
+        # Check if we can schedule it - resources must be there, and
+        # no dependency must have failed
+        impossible = []
+        for dep in task.deps:
+            if dep in failed_tasks:
+                impossible.append("dependency")
+        start = task_time[task]; end = task_time[task] + task.time
+        if task_time[task]+task.time > start_time:
+            for cost, amount in task.cost.items():
+                if usage[cost] + amount > capacities[cost]:
+                    impossible.append("{} {} > {}".format(cost, usage[cost]+amount, capacities[cost]))
+                    break
+        for cost, amount in task.edge_cost.items():
+            if usage[cost] + amount > capacities[cost]:
+                impossible.append("{} {} > {}".format(cost, usage[cost]+amount, capacities[cost]))
+                break
+
+        if verbose:
+            if len(impossible) == 0:
+                print("Task {} @ {} survived".format(task.name, start))
+            else:
+                print("Task {} @ {} failed ({})".format(
+                    task.name, start, ", ".join(impossible)))
+
+        if len(impossible) > 0:
+
+            # This task failed due to the capacity change, and will
+            # need to be restarted. Note that this explicitly includes
+            # the case where the task finished, but we lost the
+            # capacity to retain its results. In either case, we need
+            # to re-schedule the task.
+            _apply_cost(task, task_time[task], failed_usage)
+            _apply_edge_cost(task, task_time[task], min(start_time, task_edge_end_time[task]), failed_usage)
+
+        else:
+
+            # Otherwise: Add to schedule, count usage
+            new_task_time[task] = task_time[task]
+            new_task_edge_end_time[task] = task_edge_end_time[task]
+            if task_time[task]+task.time > start_time:
+                for cost, amount in task.cost.items():
+                    usage[cost] += amount
+            for cost, amount in task.edge_cost.items():
+                usage[cost] += amount
+
+    # At this point we have taken over as much of the existing
+    # schedule as we could, and must now re-schedule the remaining
+    # tasks. All of the newly scheduled task must happen after the
+    # start time, introduce a suitable constraint.
+    for task in tasks:
+        task_constraint[task] = max(start_time, task_constraint.get(task, 0))
+
+    # Now re-schedule
+    ret_usage, ret_task_time, ret_task_edge_end_time = schedule(
+        tasks, capacities, new_task_time, new_task_edge_end_time, task_constraint,
+        resource_check_start = start_time, verbose=verbose)
+
+    # Check whether any of the tasks prior to the starting point had
+    # to be re-scheduled, as that also counts as failure
+    for task in new_task_time:
+        if task_time[task] != ret_task_time[task]:
+            _apply_cost(task, task_time[task], failed_usage)
+            _apply_edge_cost(task, task_time[task], min(start_time, task_edge_end_time[task]), failed_usage)
+
+    # Remove failed usage past starting point
+    for cost in capacities:
+        del failed_usage[cost][start_time:]
+
+    return ret_usage, ret_task_time, ret_task_edge_end_time, failed_usage
