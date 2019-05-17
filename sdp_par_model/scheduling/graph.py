@@ -137,7 +137,7 @@ def make_receive_rt(csv, cfg):
     Tobs = None
     Rflop = 0
     pips = []
-    Minput = 0
+    Mingest = 0
     for pipeline in HPSOs.hpso_pipelines[cfg['hpso']]:
         if pipeline not in Pipelines.realtime:
             continue
@@ -148,7 +148,14 @@ def make_receive_rt(csv, cfg):
         if pipeline == Pipelines.Ingest:
             Tobs = lookup_csv(csv, cfg_name, Lookup.Tobs)
             Ringest = lookup_csv(csv, cfg_name, Lookup.Ringest_total)
+            Mingest = lookup_csv(csv, cfg_name, Lookup.Minput)
         Rflop += lookup_csv(csv, cfg_name, Lookup.Rflop)
+
+    # Assume we only need to leave enough data behind to feed hungriest
+    # processing pipeline
+    Minput = 0
+    for pipeline in HPSOs.hpso_pipelines[cfg['hpso']]:
+        cfg_name = PipelineConfig(pipeline=pipeline, **cfg).describe()
         if pipeline not in Pipelines.realtime:
             Minput = max(Minput, lookup_csv(csv, cfg_name, Lookup.Minput))
     assert Tobs is not None, "No ingest pipeline for HPSO {}?".format(cfg['hpso'])
