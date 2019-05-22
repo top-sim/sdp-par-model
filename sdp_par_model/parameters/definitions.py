@@ -589,6 +589,7 @@ def apply_pipeline_parameters(o, pipeline):
 
     elif (pipeline == Pipelines.DPrepA) or (pipeline == Pipelines.DPrepA_Image):
         o.Qfov = 1.0  # Field of view factor
+        o.Qfov_out = 0.42  # Output image FoV (to half-power point)
         o.Nselfcal = 0
         o.Nmajor = 10
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -603,6 +604,7 @@ def apply_pipeline_parameters(o, pipeline):
 
     elif pipeline == Pipelines.DPrepB:
         o.Qfov = 1.0  # Field of view factor
+        o.Qfov_out = 0.42  # Output image FoV (to half-power point)
         o.Nselfcal = 0
         o.Nmajor = 10
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
@@ -617,6 +619,7 @@ def apply_pipeline_parameters(o, pipeline):
 
     elif pipeline == Pipelines.DPrepC:
         o.Qfov = 1.0  # Field of view factor
+        o.Qfov_out = 0.42  # Output image FoV (to half-power point)
         o.Nselfcal = 0
         o.Nmajor = 10
         o.Nmajortotal = o.Nmajor * (o.Nselfcal + 1) + 1
