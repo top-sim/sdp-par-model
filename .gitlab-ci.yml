@@ -6,12 +6,23 @@ before_script:
   - pip install -r requirements.txt
   - pip install pymp-pypi
   - jupyter nbextension enable --py widgetsnbextension
-  - pip install pytest pytest-xdist pytest-cov
+  - pip install pytest pytest-xdist nbval pytest-cov
 
 test:
   script:
-    - py.test -n 4 --verbose --color=yes tests
+    - py.test -n 4 --verbose --color=yes --cov=sdp_par_model --cov-report=term --junitxml=junit.xml --dist loadscope --nbval-lax iPython/*.ipynb tests
+  artifacts:
+    reports:
+      junit: junit.xml
 
 notebooks:
+  only:
+    - master
   script:
     - make -j 4 -k -C iPython notebooks_html
+    - mkdir -p out
+    - cp -R iPython/out $WORKSPACE/out || true
+    - cp -R compare_* $WORKSPACE/out || true
+  artifacts:
+    paths:
+      - out/
