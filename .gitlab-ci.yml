@@ -1,0 +1,17 @@
+
+image: "python:latest"
+
+before_script:
+  - pip install -U pip setuptools
+  - pip install -r requirements.txt
+  - pip install pymp-pypi
+  - jupyter nbextension enable --py widgetsnbextension
+  - pip install pytest pytest-xdist pytest-cov
+
+test:
+  script:
+    - py.test -n 4 --verbose --color=yes tests
+
+notebooks:
+  script:
+    - make -j 4 -k -C iPython notebooks_html
