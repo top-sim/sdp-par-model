@@ -2,27 +2,51 @@
 image: "python:latest"
 
 before_script:
-  - pip install -U pip setuptools
   - pip install -r requirements.txt
-  - pip install pymp-pypi
-  - jupyter nbextension enable --py widgetsnbextension
-  - pip install pytest pytest-xdist nbval pytest-cov
+  - pip install pymp-pypi pytest pytest-xdist nbval pytest-cov
 
+# Execute all available code. Most of our "tests" are actually the
+# notebooks, so we use the nbval extension to pull them into py.test.
+# This has the advantage that we can generate coverage statistics for
+# the entire thing.
+#
+# Unfortunately, there currently seems to be some flakiness to this:
+# Sometimes a notebook fails to start, reporting "RuntimeError: Kernel
+# didn't respond in 60 seconds". There's open tickets on similar
+# issues, so maybe this is going to away eventually. For the moment,
+# simply retrying a couple of times seems to fix it. This likely means
+# that we spin a bit if something goes wrong systematically, but
+# better than dealing with random false positives...
 test:
+  tags: [sdp]
   script:
-    - py.test -n 4 --verbose --color=yes --cov=sdp_par_model --cov-report=term --junitxml=junit.xml --dist loadscope --nbval-lax iPython/*.ipynb tests
+    - py.test --verbose --color=yes --junitxml=junit.xml
+        --cov=sdp_par_model --cov-report=term --cov-report=html
+         -n 4 --dist loadscope --nbval-lax --reruns 5
+        iPython/*.ipynb tests
   artifacts:
+    paths: [htmlcov/]
     reports:
       junit: junit.xml
 
-notebooks:
-  only:
-    - master
+# Generate GitLab pages. This is done only for the master. On this
+# occasion, we export:
+#
+# 1. The Sphinx documentation (root)
+# 2. All the notebooks (note that this will re-run them)
+# 3. Coverage reports
+pages:
+  tags: [sdp]
+  only: [master]
+  dependencies: [test] # For coverage
   script:
+    # Make notebooks
     - make -j 4 -k -C iPython notebooks_html
-    - mkdir -p out
-    - cp -R iPython/out $WORKSPACE/out || true
-    - cp -R compare_* $WORKSPACE/out || true
+    # Make Sphinx documentation
+    - make -C docs html
+    # Copy all into "public"
+    - cp -R docs/_build/html public
+    - cp -R iPython/out public/iPython
+    - cp -R htmlcov public
   artifacts:
-    paths:
-      - out/
+    paths: [public/]
