@@ -5,6 +5,10 @@ before_script:
   - pip install -r requirements.txt
   - pip install pymp-pypi pytest pytest-xdist nbval pytest-cov
 
+stages:
+  - test
+  - deploy
+
 # Execute all available code. Most of our "tests" are actually the
 # notebooks, so we use the nbval extension to pull them into py.test.
 # This has the advantage that we can generate coverage statistics for
@@ -18,6 +22,7 @@ before_script:
 # that we spin a bit if something goes wrong systematically, but
 # better than dealing with random false positives...
 test:
+  stage: test
   tags: [sdp]
   script:
     - py.test --verbose --color=yes --junitxml=junit.xml
@@ -36,6 +41,7 @@ test:
 # 2. All the notebooks (note that this will re-run them)
 # 3. Coverage reports
 pages:
+  stage: deploy
   tags: [sdp]
   only: [master]
   dependencies: [test] # For coverage
