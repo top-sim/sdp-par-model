@@ -3,7 +3,7 @@ image: "python:latest"
 
 before_script:
   - pip install -r requirements.txt
-  - pip install pymp-pypi pytest pytest-xdist nbval pytest-cov pytest-rerunfailures
+      pytest pytest-xdist nbval pytest-cov pytest-rerunfailures sphinx
 
 stages:
   - test
