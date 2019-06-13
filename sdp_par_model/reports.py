@@ -1242,6 +1242,7 @@ def compare_csv(result_file, ref_file,
 def find_csvs(csv_path = "../data/csv"):
     """
     Returns a map of all CSV files currently checked into the Git repository.
+
     :returns: A dictionary of (rev, hpsos/pipelines) pairs to file names
     """
 
@@ -1262,6 +1263,7 @@ def find_csvs(csv_path = "../data/csv"):
 def newest_csv(csv_map, typ = 'hpsos', rev = 'HEAD', ignore_rev = False):
     """
     Finds the CSV closest to the given revision according to the Git history
+
     :param csv_map: CSV map, see find_csvs
     :param typ: Type of CSV to look for (hpsos/pipelines)
     :param rev: Git revision to start from
@@ -1343,6 +1345,7 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
 def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="", ylabel="", colour='b', factor=1.0):
     """
     Plots the evolution of a variable, as defined by a series of 'deltas'
+
     :param deltas: A dictionary that maps timestamps (in wall clock units) to changes to the parameter
     :param xrange: (optional) A 2-tuple indicating the x-axis (time) limits to plot
     :param yrange: (optional) A 2-tuple indicating the y-axis (value) limits to plot
