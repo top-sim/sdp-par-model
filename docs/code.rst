@@ -1,6 +1,37 @@
 
-Parameter Definitions
-=====================
+Implementation
+==============
+
+Most of the parametric code is maintained as Python code libraries,
+which is imported by the notebooks. Two important concepts are those
+of a :class:`.config.PipelineConfig`, which represents a pipeline
+configuration to query properties of, and
+:class:`.parameters.container.ParameterContainer`, which is used to
+accumulate information we have about such a telescope configuration.
+
+Below follows the general structure of the model's code base:
+
+
+config
+------
+
+.. automodule:: sdp_par_model.config
+   :members:
+   :undoc-members:
+
+evaluate
+--------
+
+.. automodule:: sdp_par_model.evaluate
+   :members:
+   :undoc-members:
+
+reports
+-------
+
+.. automodule:: sdp_par_model.reports
+   :members:
+   :undoc-members:
 
 .. py:currentmodule:: sdp_par_model.parameters
 

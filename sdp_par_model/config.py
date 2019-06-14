@@ -291,11 +291,11 @@ class PipelineConfig:
 
     def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
         """
-        Evaluating a parameter for its default parameter value
+        Evaluate a parameter sum over all relevant pipelines
 
-        :param pipelineConfig:
-        :param expression_string:
-        :param verbose:
+        :param pipelineConfig: Pipeline configuration to use
+        :param expression_string: Expression to evaluate as string
+        :param verbose: Verbosity to use for `calc_tel_params`
         """
 
         result = 0
@@ -309,11 +309,12 @@ class PipelineConfig:
 
     def eval_product(pipelineConfig, product, expression='Rflop', verbose=False):
         """
-        Evaluating a product parameter for its default parameter value
+        Evaluate a product parameter sum over all relevant pipelines
 
-        :param pipelineConfig:
-        :param expression:
-        :param verbose:
+        :param pipelineConfig: Pipeline configuration to use
+        :param product: Product to evaluate
+        :param expression: Product parameter to evaluate
+        :param verbose: Verbosity to use for `calc_tel_params`
         """
 
         result = 0
@@ -327,11 +328,11 @@ class PipelineConfig:
 
     def eval_expression_products(pipelineConfig, expression='Rflop', verbose=False):
         """
-        Evaluating a parameter for its default parameter value
+        Evaluate a parameter sum over all relevant pipelines, for each product
 
-        :param pipelineConfig:
-        :param expression:
-        :param verbose:
+        :param pipelineConfig:  Pipeline configuration to use
+        :param expression: Procuct parameter to evaluate
+        :param verbose: Verbosity to use for `calc_tel_params`
         """
 
         values={}
@@ -352,19 +353,20 @@ class PipelineConfig:
                             parameter_string='Rccf', param_val_min=10,
                             param_val_max=10, number_steps=1,
                             verbose=False):
-        """
-        Evaluates an expression for a range of different parameter values, by varying the parameter linearly in
-        a specified range in a number of steps
+        """Evaluates an expression for a range of different parameter values,
+        by varying the parameter linearly in a specified range in a
+        number of steps
 
         :param pipelineConfig:
         :param expression_string: The expression that needs to be evaluated, as string (e.g. "Rflop")
         :param parameter_string: the parameter that will be swept - written as text (e.g. "Bmax")
         :param param_val_min: minimum value for the parameter's value sweep
         :param param_val_max: maximum value for the parameter's value sweep
-        :param number_steps: the number of *intervals* that will be used to sweep the parameter from min to max
+        :param number_steps: the number of *intervals* that will be used to sweep
+           the parameter from min to max
 
         :param verbose:
-        :return:
+        :return: Pair of parameter values and results
         :raise AssertionError:
         """
         assert param_val_max > param_val_min
@@ -406,7 +408,8 @@ class PipelineConfig:
         return (param_values, results)
 
 
-    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop', parameters=None, params_ranges=None,
+    def eval_param_sweep_2d(pipelineConfig, expression_string='Rflop',
+                            parameters=None, params_ranges=None,
                             number_steps=2, verbose=False):
         """
         Evaluates an expression for a 2D grid of different values for
@@ -417,11 +420,12 @@ class PipelineConfig:
 
         :param pipelineConfig:
         :param expression_string: The expression that needs to be evalued, as string (e.g. "Rflop")
-        :param parameters:
-        :param params_ranges:
-        :param number_steps:
+        :param parameters: The two parameters to sweep
+        :param params_ranges: Ranges to use for parameters
+        :param number_steps: The number of *intervals* that will be used to sweep
+           the parameters from min to max
         :param verbose:
-        :returns:
+        :returns: Triple of parameter values (both) and results
         """
         assert (parameters is not None) and (len(parameters) == 2)
         assert (params_ranges is not None) and (len(params_ranges) == 2)
