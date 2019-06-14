@@ -2,8 +2,18 @@
 image: "python:latest"
 
 before_script:
+  - python -V
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
   - pip install -r requirements.txt
-      pytest pytest-xdist nbval pytest-cov pytest-rerunfailures sphinx
+      pytest pytest-xdist nbval pytest-cov pytest-rerunfailures
+
+# Set up caching as suggested by GitLab's Python template
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+cache:
+  paths: [.cache/pip,venv]
 
 stages:
   - test
@@ -51,10 +61,11 @@ pages:
   only: [master]
   dependencies: [test] # For coverage
   script:
+    # Make Sphinx documentation
+    - pip install sphinx sphinx-rtd-theme
+    - make -C docs html
     # Make notebooks
     - make -j 4 -k -C iPython notebooks_html
-    # Make Sphinx documentation
-    - make -C docs html
     # Copy all into "public"
     - cp -R docs/_build/html public
     - cp -R iPython/out public/iPython
