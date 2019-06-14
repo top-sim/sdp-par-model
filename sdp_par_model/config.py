@@ -127,10 +127,8 @@ class PipelineConfig:
         is_compatible = False
         telescope = self.telescope
         band = self.band
-        if telescope == Telescopes.SKA1_Low:
-            is_compatible = (band in Bands.low_bands)
-        elif telescope == Telescopes.SKA1_Mid:
-            is_compatible = (band in Bands.mid_bands)
+        if telescope in Telescopes.available_teles:
+            is_compatible = (band in Bands.telescope_bands[telescope])
         else:
             raise ValueError("Unknown telescope %s" % telescope)
 
