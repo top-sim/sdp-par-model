@@ -42,7 +42,7 @@ class Telescopes:
     SKA1_Mid = 'SKA1_Mid'
 
     # Currently supported telescopes (will show up in notebooks)
-    available_teles = {SKA1_Low, SKA1_Mid}
+    available_teles = [SKA1_Low, SKA1_Mid]
 
 class Bands:
     """
@@ -56,9 +56,11 @@ class Bands:
     Mid5b = 'Mid5b'
 
     # group the bands defined above into logically coherent sets
-    low_bands = {Low}
-    mid_bands = {Mid1, Mid2, Mid5a, Mid5b}
-    available_bands = low_bands | mid_bands
+    telescope_bands = {
+        Telescopes.SKA1_Low : [ Low ],
+        Telescopes.SKA1_Mid : [ Mid1, Mid2, Mid5a, Mid5b ]
+    }
+    available_bands = telescope_bands[Telescopes.SKA1_Low] + telescope_bands[Telescopes.SKA1_Mid]
 
 class Products:
     """

@@ -394,7 +394,6 @@ class BLDep(object):
         baselines.
 
         :param bins: List of dictionaries with baseline properties.
-
            If it is a tuple with layout
               (symbol, lower limit, upper limit, terms)
            We are going to generate a symbolic sum where the symbol

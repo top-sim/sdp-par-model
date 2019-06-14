@@ -10,7 +10,7 @@ import warnings
 
 import csv
 from IPython.display import clear_output, display, HTML, FileLink
-from ipywidgets import FloatProgress
+from ipywidgets import FloatProgress, ToggleButtons, Text, Layout
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 from matplotlib import cm
@@ -26,14 +26,13 @@ try:
 except:
     HAVE_PYMP=False
 
-
-from .parameters.definitions import HPSOs, Pipelines
-from .parameters import definitions as ParameterDefinitions
-from .parameters.definitions import Constants as c
+from .parameters.definitions import HPSOs, Pipelines, Telescopes, Bands, Constants as c
 from .parameters.container import ParameterContainer
-# from .parameters import equations as ParameterEquations # formulae that derive secondary telescope-specific parameters from input parameters
-from . import evaluate as imp  # methods for performing computations (i.e. crunching the numbers)
+from . import evaluate as imp
 from .config import PipelineConfig
+
+# Possible verbosity levels
+verbose_display     = ['Overview', 'Details', 'Debug']
 
 # Possible calculated results to display in the notebook
 RESULT_MAP = [
@@ -156,6 +155,34 @@ RESULT_MAP = [
     ('-> ',                        'PetaFLOP/s', True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta)),
 ]
 
+
+def toggles(opts, *args, **kwargs):
+    """ Helper for creating toggle buttons from given options """
+    return ToggleButtons(options=opts, *args, **kwargs)
+def adjusts():
+    """ Create widget for adjustments (with some suggestions) """
+    return Text(placeholder='e.g. blcoal=False Bmax=40*1000 Nsource=100', layout=Layout(width='95%'))
+
+def make_band_toggles():
+    """Create connected telescope/band toggle widgets that only allow
+    selection of valid combinations"""
+
+    telescope_toggles = toggles(Telescopes.available_teles, description="telescope1")
+    band_toggles = toggles(Bands.available_bands)
+    def _update_toggles(*_args):
+        band_toggles.options = tuple(Bands.telescope_bands[telescope_toggles.value])
+    _update_toggles(); telescope_toggles.observe(_update_toggles, 'value')
+    return telescope_toggles, band_toggles
+
+def make_hpso_pipeline_toggles():
+    """Create connected HPSO/pipeline toggle widgets that only allow selection
+    of valid combinations"""
+    hpso_toggles = toggles(HPSOs.available_hpsos)
+    pipeline_toggles = toggles(Pipelines.available_pipelines)
+    def update_pipeline_toggles(*_args):
+        pipeline_toggles.options = tuple(HPSOs.hpso_pipelines[hpso_toggles.value])
+    update_pipeline_toggles(); hpso_toggles.observe(update_pipeline_toggles, 'value')
+    return hpso_toggles, pipeline_toggles
 
 def get_result_sum(resultMap):
     """
