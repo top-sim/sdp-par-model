@@ -37,17 +37,31 @@ test:
     - py.test --verbose --color=yes --junitxml=junit.xml
         --cov=sdp_par_model --cov-report=term --cov-report=html
         -n 4 --dist loadscope --nbval-lax --reruns 5
+        iPython/SKA1_Export.ipynb
+        iPython/SKA1_SDP_Products.ipynb
         iPython/SKA1_Imaging_Performance_Model.ipynb
+        iPython/SKA1_SDP_DesignEquations.ipynb
         tests
-    - 'curl -X POST
+  artifacts:
+    paths: [htmlcov/, junit.xml]
+    reports:
+      junit: junit.xml
+
+# Update Xray links in Jira
+xray:
+  stage: deploy
+  tags: [ska]
+  before_script: []
+  cache: {}
+  # only: [master] # Disabled for testing right now
+  dependencies: [test]
+  script:
+    - 'curl -X POST --silent --show-error --fail
         -H "Content-Type: multipart/form-data"
         -H "Authorization: Basic $JIRA_AUTH"
         -F file=@junit.xml
         https://jira.skatelescope.org/rest/raven/1.0/import/execution/junit?testExecKey=XTP-39'
-  artifacts:
-    paths: [htmlcov/]
-    reports:
-      junit: junit.xml
+  retry: 2 # Sometimes JIRA doesn't cooperate right away
 
 # Generate GitLab pages. This is done only for the master. On this
 # occasion, we export:
@@ -72,3 +86,4 @@ pages:
     - cp -R htmlcov public
   artifacts:
     paths: [public/]
+    expire_in: 1 week
