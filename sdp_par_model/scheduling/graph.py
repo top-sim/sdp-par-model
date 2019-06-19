@@ -75,14 +75,16 @@ class Resources:
 
     # Data rates
     IngestRate = "ingest-rate" # Byte/s
-    ColdBufferRate = "cold-rate" # Byte/s (in + out)
+    InputBufferRate = "input-rate" # Byte/s (in + out)
     HotBufferRate = "hot-rate" # Byte/s (in + out)
+    OutputBufferRate = "output-rate" # Byte/s (in + out)
     DeliveryRate = "delivery-rate" # Byte/s (in + out)
     LTSRate = "lts-rate" # Byte/s (in + out)
 
     All = [ BatchCompute, RealtimeCompute,
             InputBuffer, HotBuffer, OutputBuffer,
-            IngestRate, ColdBufferRate, HotBufferRate, DeliveryRate, LTSRate
+            IngestRate, InputBufferRate, HotBufferRate, OutputBufferRate,
+            DeliveryRate, LTSRate
     ]
 
     units = {
@@ -92,8 +94,9 @@ class Resources:
         HotBuffer: ("PB", c.peta),
         OutputBuffer: ("PB", c.peta),
         IngestRate: ("TB/s", c.tera),
-        ColdBufferRate: ("TB/s", c.tera),
+        InputBufferRate: ("TB/s", c.tera),
         HotBufferRate: ("TB/s", c.tera),
+        OutputBufferRate: ("TB/s", c.tera),
         DeliveryRate: ("TB/s", c.tera),
         LTSRate: ("TB/s", c.tera),
     }
@@ -164,7 +167,7 @@ def make_receive_rt(csv, cfg):
         " + ".join(pips), cfg['hpso'], "Measurements", Tobs,
         { Resources.Observatory: 1,
           Resources.RealtimeCompute: Rflop,
-          Resources.ColdBufferRate: Ringest,
+          Resources.InputBufferRate: Ringest,
           Resources.IngestRate: Ringest},
         { Resources.InputBuffer: Minput
             # TODO: RCAL calibration outputs?
@@ -172,19 +175,34 @@ def make_receive_rt(csv, cfg):
     )
     return [receive_rt]
 
-def make_stage_buffer(inp, transfer_rate):
-    """ Generate task(s) for staging data to hot buffer
+def make_stage_buffer(inp, transfer_rate, from_buf, to_buf):
+    """ Generate task(s) for staging data between buffers
 
-    Last node returned will have data in hot buffer
+    :param from_buf: Buffer to stage data from ('Input'/'Hot'/'Output')
+    :param to_buf: Buffer to stage data to ('Input'/'Hot'/'Output')
+    :returns: Node with staged data
     """
 
-    stage_size = inp.edge_cost[Resources.InputBuffer]
+    # Map to resources
+    buf = {
+        'input': Resources.InputBuffer,
+        'hot': Resources.HotBuffer,
+        'output': Resources.OutputBuffer
+    }
+    buf_rate = {
+        'input': Resources.InputBufferRate,
+        'hot': Resources.HotBufferRate,
+        'output': Resources.OutputBufferRate
+    }
+
+    stage_size = inp.edge_cost[buf[from_buf]]
     stage = Task(
-        "Stage {}".format(inp.result_name), inp.hpso, inp.result_name,
+        "Stage {} ({} -> {})".format(inp.result_name, from_buf, to_buf),
+        inp.hpso, inp.result_name,
         stage_size / transfer_rate,
-        { Resources.ColdBufferRate: transfer_rate,
-          Resources.HotBufferRate: transfer_rate }, # Some compute for staging resources?
-        { Resources.HotBuffer: stage_size }
+        { buf_rate[from_buf]: transfer_rate,
+          buf_rate[to_buf]: transfer_rate }, # Some compute for staging resources?
+        { buf[to_buf]: stage_size }
     )
     stage.depend(inp)
     return [stage]
@@ -244,7 +262,7 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
             Resources.HotBufferRate: max(0, *cfg_iorate.values()),
         }, # Some compute for staging resources?
         {
-            Resources.OutputBuffer: sum(cfg_output.values())
+            Resources.HotBuffer: sum(cfg_output.values())
         }
     )
     offline.depend(inp)
@@ -256,15 +274,15 @@ def make_deliver(csv, inp, delivery_rate):
     deliver = Task(
         "Deliver {}".format(inp.result_name), inp.hpso, inp.result_name,
         deliver_size / delivery_rate,
-        { Resources.ColdBufferRate: delivery_rate,
+        { Resources.OutputBufferRate: delivery_rate,
           Resources.DeliveryRate: delivery_rate },
         { }
     )
     deliver.depend(inp)
     return [deliver]
 
-def make_graph(csv, cfg,
-               cold_transfer_rate, offline_flop_rate, hot_buffer_rate, delivery_rate):
+def make_graph(csv, cfg, offline_flop_rate,
+               input_transfer_rate, output_transfer_rate, hot_buffer_rate, delivery_rate):
     """ Generates complete graph of tasks for an HPSO. """
 
     # Do receive + realtime processing. If all pipelines associated
@@ -274,15 +292,16 @@ def make_graph(csv, cfg,
         return receive_rt
 
     # Stage measurements to hot buffer
-    stage = make_stage_buffer(receive_rt[-1], cold_transfer_rate)
+    stage = make_stage_buffer(receive_rt[-1], input_transfer_rate, "input", "hot")
 
-    # Do offline processing
+    # Do offline processing, stage results back
     offline = make_offline(csv, cfg, stage[-1], offline_flop_rate, hot_buffer_rate)
+    stage2 = make_stage_buffer(offline[-1], output_transfer_rate, "hot", "output")
 
     # Delivery
-    deliver = make_deliver(csv, offline[-1], delivery_rate)
+    deliver = make_deliver(csv, stage2[-1], delivery_rate)
 
-    return receive_rt + stage + offline + deliver
+    return receive_rt + stage + offline + stage2 + deliver
 
 def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
     """Generates a sequence of HPSOs of the given minimal observation
@@ -330,10 +349,13 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
     """
 
     # Derive parameters for graph generation from capacities
-    cold_transfer_rate = max(1 * c.giga, capacities[Resources.ColdBufferRate]
-        - capacities[Resources.IngestRate] - capacities[Resources.DeliveryRate])
+    input_transfer_rate = max(1 * c.giga, capacities[Resources.InputBufferRate]
+                              - capacities[Resources.IngestRate])
+    output_transfer_rate = max(1 * c.giga, capacities[Resources.OutputBufferRate]
+                               - capacities[Resources.DeliveryRate])
     offline_flop_rate = capacities[Resources.BatchCompute] // batch_parallelism
-    hot_buffer_rate = (capacities[Resources.HotBufferRate] - cold_transfer_rate) // batch_parallelism
+    hot_buffer_rate = (capacities[Resources.HotBufferRate]
+                       - input_transfer_rate - output_transfer_rate) // batch_parallelism
     delivery_rate = capacities[Resources.DeliveryRate]
 
     # Now collect graph nodes
@@ -342,8 +364,8 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
 
         # Make pipeline nodes. Adjust ingest length if necessary (a bit hack-y)
         hnodes = make_graph(
-            csv, {'hpso': hpso},
-            cold_transfer_rate, offline_flop_rate, hot_buffer_rate, delivery_rate)
+            csv, {'hpso': hpso}, offline_flop_rate,
+            input_transfer_rate, output_transfer_rate, hot_buffer_rate, delivery_rate)
         ingest = hnodes[0]
         if ingest.time < Tobs_min:
             ingest.time = Tobs_min
