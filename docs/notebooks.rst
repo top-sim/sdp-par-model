@@ -2,14 +2,14 @@
 Notebooks
 *********
 
-Notebooks are the main user interface of the SKA SDP parameteric
+Notebooks are the main user interface of the SKA SDP parametric
 model. To allow exploration of the design space, the parametric model
-provides a number of separate noteboos for different purposes.
+provides a number of separate notebooks for different purposes.
 
 Build Instructions
 ==================
 
-If you whish to use the notebooks interactively clone the parametric
+If you wish to use the notebooks interactively, clone the parametric
 model repository and run the notebooks yourself::
 
   $ git clone https://github.com/ska-telescope/sdp-par-model
@@ -18,7 +18,7 @@ model repository and run the notebooks yourself::
   $ pipenv shell
   $ jupyter notebook iPython
 
-This should allow you to interact with the notebooks using an internet browser.
+This should allow you to interact with the notebooks using a web browser.
 
 List of Notebooks
 =================

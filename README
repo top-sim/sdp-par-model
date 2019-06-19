@@ -1,8 +1,0 @@
-===SKA SDP Performance Model===
-
-This repository contains iPython and Maxima models 
-of the SKA Science Data Processor performance
-
-The purpose of these models is primarily to deduce the required amount of 
-storage, bandwidth, processing power and electricity that are needed to build the SDP.
-These parameters in turn inform the cost estimates of the SDP compute platform. 

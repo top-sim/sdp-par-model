@@ -7,10 +7,9 @@ SKA SDP Parametric Model
 The SDP parametric model is a collection of equations and software
 code that model the performance aspects of the SDP. We created an
 interactive software interface for performing computations and
-displaying their results so that people both within and external to
-SDP can easily interact and experiment with the model. This is
-accomplused using Python and Jupyter notebooks, which are documented
-below.
+displaying their results so that people can easily interact and
+experiment with the model. This is accomplished using Python and
+Jupyter notebooks, which are documented below.
 
 A central goal of the notebooks is to compute performance metrics and
 general sizing estimates for the SDP. Refer to the parametric model

@@ -2,7 +2,7 @@
 Implementation
 ==============
 
-Most of the parametric code is maintained as Python code libraries,
+Most of the parametric model code is maintained as Python package,
 which is imported by the notebooks. Two important concepts are those
 of a :class:`.config.PipelineConfig`, which represents a pipeline
 configuration to query properties of, and
