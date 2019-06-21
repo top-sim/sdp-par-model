@@ -57,8 +57,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'SKA SDP Parametric Model'
-copyright = '2019, Mark Ashdown, Rosie Bolton, Francois Malan, Bojan Nikolic, Andreas Wicenec, Peter Wortmann'
-author = 'Mark Ashdown, Rosie Bolton, Francois Malan, Bojan Nikolic, Andreas Wicenec, Peter Wortmann'
+copyright = '2019, Mark Ashdown, Rosie Bolton, Tim Cornwell, Francois Malan, Bojan Nikolic, Andreas Wicenec, Peter Wortmann'
+author = 'Mark Ashdown, Rosie Bolton, Tim Cornwell, Francois Malan, Bojan Nikolic, Andreas Wicenec, Peter Wortmann'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
