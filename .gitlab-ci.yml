@@ -40,6 +40,7 @@ test:
         iPython/SKA1_Export.ipynb
         iPython/SKA1_SDP_Products.ipynb
         iPython/SKA1_Imaging_Performance_Model.ipynb
+        iPython/SKA1_Scheduling_New.ipynb
         tests
   artifacts:
     paths: [htmlcov/, junit.xml]
