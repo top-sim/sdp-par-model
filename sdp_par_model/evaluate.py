@@ -268,26 +268,6 @@ def minimise_parameters(telescope_parameters, expression_string = 'Rflop', expre
               ' yielded the lowest value of %s=%g' % (expression_string, result))
     return dict(zip([str(p) for p in params],vals))
 
-def minimize_lambdified(lam, bound_lower, bound_upper, verbose=False):
-    """
-    The supplied lambda expression is minimized.
-
-    :param lam: The lambda expression
-    :param telescope_parameters: The telescope parameters
-    :param verbose:
-    :return: The optimal Tsnap value, along with the optimal value (as a pair)
-    """
-    assert telescope_parameters.pipeline in Pipelines.imaging
-
-    # Do optimisation
-    Tsnap_optimal = optimize_lambdified_expr(lam, bound_lower, bound_upper)
-    value_optimal = lam(Tsnap_optimal)
-    if verbose:
-        print ("Tsnap has been optimized as : %f. (Cost function = %f)" % \
-              (Tsnap_optimal, value_optimal / c.peta))
-    return (Tsnap_optimal, value_optimal)  # Replace Tsnap with optimal value
-
-
 def evaluate_expressions(expressions, tp):
     """
     Evaluate a sequence of expressions by substituting the telescope_parameters into them.
