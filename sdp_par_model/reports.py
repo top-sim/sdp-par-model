@@ -137,13 +137,13 @@ RESULT_MAP = [
     ('Cleaning memory',            'PetaBytes',  True,    True,  lambda tp: tp.M_MSMFS/c.peta     ),
     ('Working (cache) memory',     'TeraBytes',  True,    True,  lambda tp: tp.Mw_cache/c.tera    ),
     ('-- I/O --',                  '',           True,    False, lambda tp: ''                    ),
-    ('Visibility Buffer',          'PetaBytes',  True,    True,  lambda tp: tp.Mbuf_vis/c.peta    ),
+    ('Input Buffer Size',          'PetaBytes',  True,    True,  lambda tp: tp.Minput/c.peta      ),
     ('Total buffer ingest rate',   'TeraBytes/s',True,    False, lambda tp: tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.tera),
     #('Rosies buffer size',   'PetaBytes',       True,       False, lambda tp: tp.Tobs*tp.buffer_factor*tp.Rvis_ingest*tp.Nbeam*tp.Npp*tp.Mvis/c.peta),
     ('Output size',                'TB',         True,    True,  lambda tp: tp.Mout / c.tera      ),
 
     ('-> ',                        'TeraBytes',  True,    True,  lambda tp: tp.get_products('Mwcache', scale=c.tera)),
-    ('Visibility I/O Rate',        'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera         ),
+    ('Buffer Read Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rio/c.tera         ),
     ('Facet visibility rate',      'TeraBytes/s',True,    False, lambda tp: tp.Rfacet_vis/c.tera  ),
     ('Image Write Rate',           'TeraBytes/s',True,    True,  lambda tp: tp.Rimage/c.tera      ),
 
@@ -913,16 +913,14 @@ def _compute_results(pipelineConfig, result_map, verbose=False, detailed=False, 
 
     # Loop through pipeliness to collect result values
     result_value_array = []
-    for pipeline in pipelineConfig.relevant_pipelines:
 
-        # Calculate the telescope parameters
-        pipelineConfig.pipeline = pipeline
-        tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
+    # Calculate the telescope parameters
+    tp = pipelineConfig.calc_tel_params(verbose=verbose, adjusts=adjusts)
 
-        # Evaluate expressions from map
-        result_expressions = get_result_expressions(result_map, tp)
-        results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
-        result_value_array.append(results_for_pipeline)
+    # Evaluate expressions from map
+    result_expressions = get_result_expressions(result_map, tp)
+    results_for_pipeline = imp.evaluate_expressions(result_expressions, tp)
+    result_value_array.append(results_for_pipeline)
 
     # Now transpose, then sum up results from pipelines per row
     result_values = []
@@ -1108,25 +1106,44 @@ def lookup_csv(results, column_name, row_name,
     :param ignore_modifiers: Ignore modifiers when matching columns (say, [blcoal])
     :returns: Value if found, None otherwise
     """
-    
-    # Strip row name
+
+    # Strip names
     row_name = _strip_modifiers(row_name, ignore_units)
     column_name = _strip_modifiers(column_name, ignore_modifiers)
+
+    # Lookup table? Short-cut
+    if isinstance(results, dict):
+        row = results.get(row_name)
+        if row is None:
+            return None
+        return row.get(column_name)
+
     for row_name2, row in results:
-    
+
         # Right row?
         if row_name != _strip_modifiers(row_name2, ignore_units):
             continue
-        
+
         # Find column
         for column_name2, val in row:
             if column_name != _strip_modifiers(column_name2, ignore_modifiers):
                 continue
-                
+
             # Found!
             return val
-    
+
     return None
+
+def strip_csv(csv, ignore_units=True, ignore_modifiers=True):
+
+    return {
+        _strip_modifiers(row_name, ignore_units) : {
+            _strip_modifiers(column_name, ignore_modifiers) : v
+            for column_name, v in cols
+            }
+        for row_name, cols in csv
+        }
+
 
 def compare_csv(result_file, ref_file,
                 ignore_modifiers=True, ignore_units=True,

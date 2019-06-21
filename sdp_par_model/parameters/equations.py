@@ -849,13 +849,16 @@ def _apply_io_equations(o):
     # pipeline is less than the number of polarisation states
     # ingested for the project (usually all 4).
     #
-    o.Mbuf_vis = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
+    o.Minput = o.buffer_factor * o.Nbeam * o.Npp * o.Rvis_ingest * o.Mvis * o.Tobs
 
     # Visibility read rate
     #
     # According to SDPPROJECT-133 (JIRA) assume that we only need
     # to read all visibilities twice per major cycle and beam.
-    o.Rio = 2.0 * o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.baseline_bins) * o.Mvis
+    #
+    # Reduced further to once per major loop, assuming major loop is
+    # implemented as suggested in SKA-TEL-SDP-0000124
+    o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis.eval_sum(o.baseline_bins) * o.Mvis
     # o.Rio = o.Nbeam * o.Npp * (1 + o.Nmajortotal) * o.Rvis * o.Mvis * o.Nfacet ** 2
 
     # Facet visibility rate
@@ -944,7 +947,7 @@ def _apply_nonimaging_equations(o):
         o.Mcand = o.Nf_out * o.Nbin * o.Tobs / o.Tint_used * o.Nbyte
         o.Mmeta = 10000
         o.Minput = o.Ntiedbeam * o.Ncand * (o.Mcand + o.Mmeta)
-        o.Rinput = o.Minput / o.Tobs
+        o.Rio = o.Minput / o.Tobs
         o.Nunique = 0.1 * o.Ntiedbeam * o.Ncand
         o.Mout = o.Nunique * o.Mcand + o.Ntiedbeam * o.Ncand * o.Mmeta
         o.Rflop = 500.88 * Constants.giga
@@ -958,7 +961,7 @@ def _apply_nonimaging_equations(o):
         o.Mburst = o.Nsample * o.Nf_out * o.Npp * o.Nbyte
         o.Mmeta = 10000
         o.Minput = o.Nburst * o.Ntiedbeam * (o.Mburst + o.Mmeta)
-        o.Rinput = o.Minput / o.Tint_used
+        o.Rio = o.Minput / o.Tint_used
         o.Mout = (o.Nunique * o.Mburst + o.Ntiedbeam * o.Nburst * o.Mmeta) * o.Tobs / o.Tint_used
         o.Rflop = 4 * Constants.giga
 
@@ -970,6 +973,7 @@ def _apply_nonimaging_equations(o):
         o.Nbyte = 4
         o.Mpulsar = o.Nbin * o.Nf_out * o.Nsubint * o.Npp * o.Nbyte
         o.Minput = o.Ntiedbeam * o.Mpulsar
+        o.Rio = o.Minput / o.Tobs
         o.Mout = o.Minput # again, worst case
         o.Rflop = 495.9 * Constants.giga / 1800
 
