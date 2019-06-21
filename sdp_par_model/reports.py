@@ -369,37 +369,6 @@ def show_table_compare(title, labels, values_1, values_2, units):
     display(HTML(s))
 
 
-def show_table_compare3(title, labels, values_1, values_2, values_3, units):
-    """
-    Plots a table that for a set of 3 values pe label compares each' value with the other
-
-    :param title:
-    :param labels:
-    :param values_1:
-    :param values_2:
-    :param values_3:
-    :param units:
-    :returns:
-    """
-    s = '<h5>%s:</h5><table>\n' % title
-    assert len(labels) == len(values_1)
-    assert len(labels) == len(values_2)
-    assert len(labels) == len(values_3)
-    assert len(labels) == len(units)
-    for i in range(len(labels)):
-        if labels[i].startswith('--'):
-            s += '<tr><th colspan="5" style="text-align:left">{0}</th></tr>'.format(labels[i])
-            continue
-        s += '<tr><td>{0}</td><td><font color="darkcyan">{1}</font></td><td><font color="blue">{2}</font>' \
-             '</td><td><font color="purple">{3}</font>''</td><td>{4}</td></tr>\n'.format(
-                 labels[i],
-                 format_result(values_1[i]),
-                 format_result(values_2[i]),
-                 format_result(values_3[i]),
-                 units[i])
-    s += '</table>'
-    display(HTML(s))
-
 
 def plot_line_datapoints(title, x_values, y_values, xlabel=None, ylabel=None):
     """
@@ -697,76 +666,6 @@ def compare_telescopes_default(telescope_1, band_1, pipeline_1, adjusts_1,
 
     plot_stacked_bars('Computational Requirements (PetaFLOPS)', telescope_labels, labels, values,
                                     colours)
-
-
-def evaluate_telescope_manual(telescope, band, pipeline,
-                              max_baseline="default",
-                              Nf_max="default", Nfacet=-1,
-                              Tsnap=-1, blcoal=True,
-                              on_the_fly=False, scale_predict_by_facet=True,
-                              verbosity='Overview'):
-    """
-    Evaluates a telescope with manually supplied parameters.
-    These manually supplied parameters specifically include NFacet; values that can otherwise automtically be
-    optimized to minimize an expression (e.g. using the method evaluate_telescope_optimized)
-
-    :param telescope:
-    :param band:
-    :param pipeline:
-    :param Nfacet:
-    :param Tsnap:
-    :param max_baseline:
-    :param Nf_max:
-    :param Nfacet:
-    :param Tsnap:
-    :param blcoal: Baseline dependent coalescing (before gridding)
-    :param on_the_fly:
-    :param verbosity:
-    """
-
-    assert Nfacet > 0
-    assert Tsnap > 0
-
-    # Make configuration
-    cfg = PipelineConfig(telescope=telescope, pipeline=pipeline, band=band,
-                         Bmax=max_baseline, Nf_max=Nf_max, blcoal=blcoal,
-                         on_the_fly=on_the_fly,
-                         scale_predict_by_facet=scale_predict_by_facet)
-    if not check_pipeline_config(cfg, pure_pipelines=True): return
-
-    display(HTML('<font color="blue">Computing the result -- this may take several seconds.'
-                 '</font>'))
-
-    # Determine which rows to calculate & show
-    (result_map, result_titles, result_units) = mk_result_map_rows(verbosity)
-
-    # Loop through pipelines
-    detailed = (verbosity=='Debug')
-    result_values = _compute_results(cfg, result_map, detailed, detailed,
-                                     adjusts=dict(Tsnap=Tsnap, Nfacet=Nfacet))
-
-    # Show table of results
-    display(HTML('<font color="blue">Done computing. Results follow:</font>'))
-    show_table('Computed Values', result_titles, result_values, result_units)
-
-    # Show pie graph of FLOP counts
-    values = result_values[-1]  # the last value
-    colours = default_rflop_plotting_colours(set(values))
-    plot_pie('FLOP breakdown for %s' % telescope, values.keys(), list(values.values()), colours)
-
-
-def seconds_to_hms(seconds):
-    """
-    Converts a given number of seconds into hours, minutes and
-    seconds, returned as a tuple. Useful for display output
-
-    :param seconds:
-    :returns: (hours, minutes, seconds)
-    """
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    return (h, m, s)
-
 
 def evaluate_hpso_optimized(hpso, hpso_pipe, adjusts='',
                             verbosity='Overview'):
@@ -1384,61 +1283,3 @@ def stack_bars_hpsos(title, hpsos, adjusts={}, parallel=0, save=None):
     plot_stacked_bars(title, tel_labels, labels, values, colours, width=0.7,
                       xticks_rot='vertical',
                       save=save)
-
-
-def plot_deltas(deltas, xrange=None, yrange=None, max_t=None, title="", xlabel="", ylabel="", colour='b', factor=1.0):
-    """
-    Plots the evolution of a variable, as defined by a series of 'deltas'
-
-    :param deltas: A dictionary that maps timestamps (in wall clock units) to changes to the parameter
-    :param xrange: (optional) A 2-tuple indicating the x-axis (time) limits to plot
-    :param yrange: (optional) A 2-tuple indicating the y-axis (value) limits to plot
-    :param max_t: (optional) The maximum simulation time, to be indicated by a marker on the X axis
-    :param title: (optional) The plot's title string
-    :param xlabel: (optional) The plot's title string
-    :param ylabel: (optional) The plot's title string
-    :return: nothing
-    """
-
-    timestamps_sorted = sorted(deltas.keys())
-    x_values = []
-    y_values = []
-
-    value = 0
-    last_time = 0
-    for t in timestamps_sorted:
-        if (max_t is not None) and (t > max_t):
-            break
-
-        last_time = t
-        time_hours = t / 3600
-        x_values.append(time_hours)
-        y_values.append(value)
-        value += deltas[t] * factor
-        x_values.append(time_hours)
-        y_values.append(value)
-
-    # If the delta sequence stops before the end time, we extend a horizontal plot line to the end time
-    if last_time < max_t:
-        time_hours = max_t / 3600
-        x_values.append(time_hours)
-        y_values.append(value)
-
-    plt.figure()
-    plt.plot(x_values, y_values, colour)
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-
-    if xrange is None:
-        plt.xlim(min(x_values), max(x_values) * 1.05)
-    else:
-        plt.ylim(xrange[0], xrange[1])
-
-    if yrange is None:
-        plt.ylim(min(y_values), max(y_values) * 1.05)
-    else:
-        plt.ylim(yrange[0], yrange[1])
-
-    if max_t is not None:
-        plt.plot(max_t / 3600, 0, 'ro')

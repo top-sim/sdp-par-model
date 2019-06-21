@@ -284,19 +284,6 @@ class PipelineConfig:
         TEL_PARAM_CACHE[tel_param_desc] = copy.deepcopy(telescope_params)
         return telescope_params
 
-    def eval_expression(pipelineConfig, expression_string='Rflop', verbose=False):
-        """
-        Evaluate a parameter sum
-
-        :param pipelineConfig: Pipeline configuration to use
-        :param expression_string: Expression to evaluate as string
-        :param verbose: Verbosity to use for `calc_tel_params`
-        """
-
-        tp = pipelineConfig.calc_tel_params(verbose)
-        return evaluate.evaluate_expression(tp.get(expression_string), tp)
-
-
     def eval_expression_products(pipelineConfig, expression='Rflop', verbose=False):
         """
         Evaluate a parameter sum for each product

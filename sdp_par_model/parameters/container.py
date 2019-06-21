@@ -13,12 +13,6 @@ from sympy import Symbol, Expr, Lambda, Mul, Add, Sum, Function
 import warnings
 
 
-def is_value(v):
-    if isinstance(v, int) or isinstance(v, float) or \
-            isinstance(v, str) or isinstance(v, list):
-        return True
-
-
 def is_expr(e):
     return isinstance(e, Expr) or isinstance(e, BLDep)
 
