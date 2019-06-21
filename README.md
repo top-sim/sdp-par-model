@@ -3,7 +3,7 @@
 Python implementation of the SKA Science Data Processor parametric
 model.
 
-[![pipeline](https://gitlab.com/ska-telescope/sdp-par-model/badges/master/pipeline.svg)](https://sdp-par-model.readthedocs.io/en/latest/)
+[![pipeline](https://gitlab.com/ska-telescope/sdp-par-model/badges/master/pipeline.svg)](https://gitlab.com/ska-telescope/sdp-par-model/pipelines)
 [![coverage](https://gitlab.com/ska-telescope/sdp-par-model/badges/master/coverage.svg)](https://ska-telescope.gitlab.io/sdp-par-model/htmlcov/)
 [![docs](https://readthedocs.org/projects/sdp-par-model/badge/?version=latest&style=flat)](https://sdp-par-model.readthedocs.io/en/latest/)
 
