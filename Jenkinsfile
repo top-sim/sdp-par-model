@@ -47,10 +47,10 @@ py.test -n 4 --verbose --color=yes tests
 cd $WORKSPACE
 . $WORKSPACE/_build/bin/activate
 
-make -j 4 -k -C iPython notebooks_html
+make -j 4 -k -C notebooks notebooks_html
 
 mkdir -p out
-cp -R $WORKSPACE/iPython/out $WORKSPACE/out || true
+cp -R $WORKSPACE/notebooks/out $WORKSPACE/out || true
 cp -R $WORKSPACE/compare_* $WORKSPACE/out || true
 '''
            } }

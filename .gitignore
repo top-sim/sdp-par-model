@@ -7,16 +7,7 @@
 /*.egg-info
 /_build
 /docs/_build
+/.idea
 
-/iPython/.ipynb_checkpoints
-/iPython/out
-
-.idea
-@Historical
-@Obsolete
-legacy_code_comparison
-scheduling/*.csv
-scheduling/*.npz
-scheduling/*.png
-
-performance_dict.data
+/notebooks/.ipynb_checkpoints
+/notebooks/out
