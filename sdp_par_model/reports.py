@@ -1191,7 +1191,7 @@ def find_csvs(csv_path = "../data/csv"):
 
     # Get all reference files from Git history
     refs = subprocess.check_output(["git", "log", "--pretty=format:", "--name-only", "--reverse", csv_path]).split()
-    refs = list(map(lambda r: os.path.relpath(r.decode(), "iPython"), reversed(refs)))
+    refs = list(map(lambda r: os.path.relpath(r.decode(), "notebooks"), reversed(refs)))
 
     csv_map = {}
     p = re.compile("[\d\-]*\-([a-z0-9]+)_(pipelines|hpsos)\.")
