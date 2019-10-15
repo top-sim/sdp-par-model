@@ -37,7 +37,7 @@ Investigates the sensitivity of telescope parameters on inputs such as
 baseline length and ionospheric time scale.
 
 `SKA1_SDP_Performance_Dashboard
-<http://ska-telescope.gitlab.io/sdp-par-model/notebooks/SKA1_SDP_Performance_Dashboard>`_:
+<http://ska-telescope.gitlab.io/sdp-par-model/notebooks/SKA1_SDP_Performance_Dashboard.html>`_:
 Overview of FLOP rate predictions for different telescopes, pipelines
 and high-priority science objectives (HPSOs).
 
@@ -47,6 +47,12 @@ Allows exporting detailed parametric model output for usage with
 external programs. This notebook can also be used to compare existing
 parametric model exports to allow fine-grained change tracking of
 calculated parameters.
+
+`SKA1_System_Sizing
+<http://ska-telescope.gitlab.io/sdp-par-model/notebooks/SKA1_System_Sizing.html>`_:
+Uses the HPSOs to estimate the average computational requirements and
+output data rates of the SDP instances at the two telescopes. This
+informs the system sizing.
 
 `SKA1_SDP_Products
 <http://ska-telescope.gitlab.io/sdp-par-model/notebooks/SKA1_SDP_Products.html>`_,
