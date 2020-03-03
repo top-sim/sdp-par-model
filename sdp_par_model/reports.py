@@ -966,8 +966,8 @@ def read_csv(filename):
         return results
 
 # Strip modifiers from rows
-_convert_old = re.compile('(\d\d)(\w)?(DPrep.|ICAL)')
-_convert_old_max = re.compile('max_([\w_]+)_(spectral|continuum)')
+_convert_old = re.compile('(\\d\\d)(\\w)?(DPrep.|ICAL)')
+_convert_old_max = re.compile('max_([\\w_]+)_(spectral|continuum)')
 def _strip_modifiers(head, do_it=True):
 
     # Pipeline renamings
@@ -990,7 +990,7 @@ def _strip_modifiers(head, do_it=True):
 
     head = head.lower()
     if do_it:
-        return re.sub('\[[^\]]*\]', '', head).strip(' ')
+        return re.sub('\\[[^\\]]*\\]', '', head).strip(' ')
     return head
 
 def lookup_csv(results, column_name, row_name,
@@ -1194,7 +1194,7 @@ def find_csvs(csv_path = "../data/csv"):
     refs = list(map(lambda r: os.path.relpath(r.decode(), "notebooks"), reversed(refs)))
 
     csv_map = {}
-    p = re.compile("[\d\-]*\-([a-z0-9]+)_(pipelines|hpsos)\.")
+    p = re.compile("[\\d\\-]*\\-([a-z0-9]+)_(pipelines|hpsos)\\.")
     for ref in refs:
         if not os.path.isfile(ref):
             continue

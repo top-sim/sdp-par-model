@@ -42,7 +42,7 @@ class ContainerTests(unittest.TestCase):
         b = Symbol('_b')
         bb = BLDep(b,b)
         self.assertEqual((2 * bb)(1000), 2000)
-        self.assertEqual((2 / bb)(1000), 1/500)
+        self.assertEqual((2 / bb)(1000)*500, 1)
         self.assertEqual((bb * 2)(1000), 2000)
         self.assertEqual((bb / 2)(1000), 500)
         self.assertEqual((bb * bb)(1000), 1000000)

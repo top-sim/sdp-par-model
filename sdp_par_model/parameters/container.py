@@ -376,10 +376,10 @@ class BLDep(object):
 
     @property
     def free_symbols(self):
-        return Lambda(list(self.pars.values()), self.term).free_symbols
+        return Lambda(tuple(self.pars.values()), self.term).free_symbols
 
     def atoms(self, typ):
-        return Lambda(list(self.pars.values()), self.term).atoms(typ)
+        return Lambda(tuple(self.pars.values()), self.term).atoms(typ)
 
     def eval_sum(self, bins, known_sums={}):
         """
