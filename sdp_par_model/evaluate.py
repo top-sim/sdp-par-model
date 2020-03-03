@@ -66,7 +66,7 @@ def optimize_lambdified_expr(lam, bound_lower, bound_upper):
 
     # Lower bound cannot be higher than the uppper bound.
     if bound_lower < bound_upper:
-        result = opt.minimize_scalar(lam, bounds=(bound_lower, bound_upper), method='bounded')
+        result = opt.minimize_scalar(lam, bounds=(float(bound_lower), float(bound_upper)), method='bounded')
         if not result.success:
             warnings.warn('WARNING! : Was unable to optimize free variable. Using a value of: %f' % result.x)
         # else:
