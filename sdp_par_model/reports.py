@@ -167,20 +167,20 @@ def make_band_toggles():
     """Create connected telescope/band toggle widgets that only allow
     selection of valid combinations"""
 
-    telescope_toggles = toggles(Telescopes.available_teles, description="telescope1")
-    band_toggles = toggles(Bands.available_bands)
+    telescope_toggles = toggles(sorted(Telescopes.available_teles), description="telescope1")
+    band_toggles = toggles(sorted(Bands.available_bands))
     def _update_toggles(*_args):
-        band_toggles.options = tuple(Bands.telescope_bands[telescope_toggles.value])
+        band_toggles.options = tuple(sorted(Bands.telescope_bands[telescope_toggles.value]))
     _update_toggles(); telescope_toggles.observe(_update_toggles, 'value')
     return telescope_toggles, band_toggles
 
 def make_hpso_pipeline_toggles():
     """Create connected HPSO/pipeline toggle widgets that only allow selection
     of valid combinations"""
-    hpso_toggles = toggles(HPSOs.available_hpsos)
-    pipeline_toggles = toggles(Pipelines.available_pipelines)
+    hpso_toggles = toggles(sorted(HPSOs.available_hpsos))
+    pipeline_toggles = toggles(sorted(Pipelines.available_pipelines))
     def update_pipeline_toggles(*_args):
-        pipeline_toggles.options = tuple(HPSOs.hpso_pipelines[hpso_toggles.value])
+        pipeline_toggles.options = tuple(sorted(HPSOs.hpso_pipelines[hpso_toggles.value]))
     update_pipeline_toggles(); hpso_toggles.observe(update_pipeline_toggles, 'value')
     return hpso_toggles, pipeline_toggles
 
