@@ -193,7 +193,7 @@ def _apply_image_equations(o):
     #for ICAL pipeline (Assuming this is always most challenging)
     o.Tdump_no_smear=o.epsilon_f_approx * o.wl \
                 / (o.Omega_E * o.Bmax * 7.66 * o.wl_sb_max * o.Qfov_ICAL / (pi * o.Ds))
-    o.Tint_used = Max(o.Tint_min, o.Tdump_no_smear)
+    o.Tint_used = Max(o.Tint_min, Min(o.Tdump_no_smear, o.Tsnap))
 
 
 def _apply_channel_equations(o, symbolify):
@@ -273,8 +273,9 @@ def _apply_coalesce_equations(o, symbolify):
     # averaging degrees independently without any ill effects.
     b = Symbol('b')
     combine_samples = lambda theta: BLDep(b,
-        Max(floor(o.epsilon_f_approx * o.wl /
-                  (theta * o.Omega_E * b * o.Tint_used)), 1.))
+        Max(Min(floor(o.epsilon_f_approx * o.wl /
+                      (theta * o.Omega_E * b * o.Tint_used)),
+                o.Tsnap / o.Tint_used), 1.))
     o.combine_time_samples = combine_samples(o.Theta_fov_total)
     o.combine_time_samples_facet = combine_samples(o.Theta_fov)
 
