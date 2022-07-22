@@ -55,7 +55,6 @@ test:
 # 3. Coverage reports
 pages:
   stage: deploy
-  only: [master]
   tags: [k8srunner]
   dependencies: [test] # For coverage
   script:
