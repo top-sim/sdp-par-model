@@ -32,7 +32,7 @@ stages:
 # better than dealing with random false positives...
 test:
   stage: test
-  tags: [sdp]
+  tags: [k8srunner]
   script:
     - py.test --verbose --color=yes --junitxml=junit.xml
         --cov=sdp_par_model --cov-report=term --cov-report=html
@@ -47,22 +47,6 @@ test:
     reports:
       junit: junit.xml
 
-# Update Xray links in Jira
-xray:
-  stage: deploy
-  tags: [ska]
-  before_script: []
-  cache: {}
-  # only: [master] # Disabled for testing right now
-  dependencies: [test]
-  script:
-    - 'curl -X POST --silent --show-error --fail
-        -H "Content-Type: multipart/form-data"
-        -H "Authorization: Basic $JIRA_AUTH"
-        -F file=@junit.xml
-        https://jira.skatelescope.org/rest/raven/1.0/import/execution/junit?testExecKey=XTP-39'
-  retry: 2 # Sometimes JIRA doesn't cooperate right away
-
 # Generate GitLab pages. This is done only for the master. On this
 # occasion, we export:
 #
@@ -71,7 +55,7 @@ xray:
 # 3. Coverage reports
 pages:
   stage: deploy
-  tags: [sdp]
+  tags: [k8srunner]
   only: [master]
   dependencies: [test] # For coverage
   script:
