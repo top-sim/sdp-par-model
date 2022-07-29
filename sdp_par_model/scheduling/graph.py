@@ -1,4 +1,3 @@
-
 import math
 import uuid
 
@@ -6,6 +5,7 @@ from sdp_par_model import reports
 from sdp_par_model.config import PipelineConfig
 from sdp_par_model.parameters.definitions import \
     Pipelines, HPSOs, Constants as c
+
 
 class Task(object):
 
@@ -51,41 +51,41 @@ class Task(object):
             cost_set = cost_set.union(d.edge_cost.keys())
 
         return {
-            cost : sum([self.cost.get(cost,0), self.edge_cost.get(cost,0)] +
-                       [d.edge_cost.get(cost,0) for d in self.deps])
+            cost: sum([self.cost.get(cost, 0), self.edge_cost.get(cost, 0)] +
+                      [d.edge_cost.get(cost, 0) for d in self.deps])
             for cost in cost_set
-            }
+        }
 
     def __hash__(self):
         return hash(self.id)
 
-class Resources:
 
+class Resources:
     # Pseudo-capacities
     Observatory = "observatory"
 
     # Compute capacities
-    BatchCompute = "batch-compute" # costing FLOP/s
-    RealtimeCompute = "realtime-compute" # costing FLOP/s
+    BatchCompute = "batch-compute"  # costing FLOP/s
+    RealtimeCompute = "realtime-compute"  # costing FLOP/s
 
     # Buffer capacities
-    InputBuffer = "input-buffer" # Byte
-    HotBuffer = "hot-buffer" # Byte
-    OutputBuffer = "output-buffer" # Byte
+    InputBuffer = "input-buffer"  # Byte
+    HotBuffer = "hot-buffer"  # Byte
+    OutputBuffer = "output-buffer"  # Byte
 
     # Data rates
-    IngestRate = "ingest-rate" # Byte/s
-    InputBufferRate = "input-rate" # Byte/s (in + out)
-    HotBufferRate = "hot-rate" # Byte/s (in + out)
-    OutputBufferRate = "output-rate" # Byte/s (in + out)
-    DeliveryRate = "delivery-rate" # Byte/s (in + out)
-    LTSRate = "lts-rate" # Byte/s (in + out)
+    IngestRate = "ingest-rate"  # Byte/s
+    InputBufferRate = "input-rate"  # Byte/s (in + out)
+    HotBufferRate = "hot-rate"  # Byte/s (in + out)
+    OutputBufferRate = "output-rate"  # Byte/s (in + out)
+    DeliveryRate = "delivery-rate"  # Byte/s (in + out)
+    LTSRate = "lts-rate"  # Byte/s (in + out)
 
-    All = [ BatchCompute, RealtimeCompute,
-            InputBuffer, HotBuffer, OutputBuffer,
-            IngestRate, InputBufferRate, HotBufferRate, OutputBufferRate,
-            DeliveryRate, LTSRate
-    ]
+    All = [BatchCompute, RealtimeCompute,
+           InputBuffer, HotBuffer, OutputBuffer,
+           IngestRate, InputBufferRate, HotBufferRate, OutputBufferRate,
+           DeliveryRate, LTSRate
+           ]
 
     units = {
         BatchCompute: ("PFLOP/s", c.peta),
@@ -100,6 +100,7 @@ class Resources:
         DeliveryRate: ("TB/s", c.tera),
         LTSRate: ("TB/s", c.tera),
     }
+
 
 class Lookup:
     """ Data to extract data from CSV in format of original telescope parameters.
@@ -118,6 +119,7 @@ class Lookup:
     Mimage_cube = ('Image cube size', c.giga)
     Mcal_out = ('Calibration output', c.giga)
 
+
 def lookup_csv(csv, cfg_name, lookup):
     """ Lookup (resource) value from CSV
     :param csv: CSV table as returned by reports.read_csv
@@ -130,6 +132,7 @@ def lookup_csv(csv, cfg_name, lookup):
     if result is None:
         return None
     return int(math.ceil(multiplier * result))
+
 
 def make_receive_rt(csv, cfg):
     """ Generate task(s) for Receive + RT processing.
@@ -161,19 +164,21 @@ def make_receive_rt(csv, cfg):
         cfg_name = PipelineConfig(pipeline=pipeline, **cfg).describe()
         if pipeline not in Pipelines.realtime:
             Minput = max(Minput, lookup_csv(csv, cfg_name, Lookup.Minput))
-    assert Tobs is not None, "No ingest pipeline for HPSO {}?".format(cfg['hpso'])
+    assert Tobs is not None, "No ingest pipeline for HPSO {}?".format(
+        cfg['hpso'])
 
     receive_rt = Task(
         " + ".join(pips), cfg['hpso'], "Measurements", Tobs,
-        { Resources.Observatory: 1,
-          Resources.RealtimeCompute: Rflop,
-          Resources.InputBufferRate: Ringest,
-          Resources.IngestRate: Ringest},
-        { Resources.InputBuffer: Minput
-            # TODO: RCAL calibration outputs?
-        }
+        {Resources.Observatory: 1,
+         Resources.RealtimeCompute: Rflop,
+         Resources.InputBufferRate: Ringest,
+         Resources.IngestRate: Ringest},
+        {Resources.InputBuffer: Minput
+         # TODO: RCAL calibration outputs?
+         }
     )
     return [receive_rt]
+
 
 def make_stage_buffer(inp, transfer_rate, from_buf, to_buf):
     """ Generate task(s) for staging data between buffers
@@ -200,12 +205,14 @@ def make_stage_buffer(inp, transfer_rate, from_buf, to_buf):
         "Stage {} ({} -> {})".format(inp.result_name, from_buf, to_buf),
         inp.hpso, inp.result_name,
         stage_size / transfer_rate,
-        { buf_rate[from_buf]: transfer_rate,
-          buf_rate[to_buf]: transfer_rate }, # Some compute for staging resources?
-        { buf[to_buf]: stage_size }
+        {buf_rate[from_buf]: transfer_rate,
+         buf_rate[to_buf]: transfer_rate},
+        # Some compute for staging resources?
+        {buf[to_buf]: stage_size}
     )
     stage.depend(inp)
     return [stage]
+
 
 def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
     """Generate task(s) for off-line processing. Task results will be
@@ -260,7 +267,7 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
         {
             Resources.BatchCompute: max(0, *cfg_floprate.values()),
             Resources.HotBufferRate: max(0, *cfg_iorate.values()),
-        }, # Some compute for staging resources?
+        },  # Some compute for staging resources?
         {
             Resources.HotBuffer: sum(cfg_output.values())
         }
@@ -268,40 +275,47 @@ def make_offline(csv, cfg, inp, flop_rate, hot_buffer_rate):
     offline.depend(inp)
     return [offline]
 
-def make_deliver(csv, inp, delivery_rate):
 
+def make_deliver(csv, inp, delivery_rate):
     deliver_size = inp.edge_cost[Resources.OutputBuffer]
     deliver = Task(
         "Deliver {}".format(inp.result_name), inp.hpso, inp.result_name,
         deliver_size / delivery_rate,
-        { Resources.OutputBufferRate: delivery_rate,
-          Resources.DeliveryRate: delivery_rate },
-        { }
+        {Resources.OutputBufferRate: delivery_rate,
+         Resources.DeliveryRate: delivery_rate},
+        {}
     )
     deliver.depend(inp)
     return [deliver]
 
+
 def make_graph(csv, cfg, offline_flop_rate,
-               input_transfer_rate, output_transfer_rate, hot_buffer_rate, delivery_rate):
+               input_transfer_rate, output_transfer_rate, hot_buffer_rate,
+               delivery_rate):
     """ Generates complete graph of tasks for an HPSO. """
 
     # Do receive + realtime processing. If all pipelines associated
     # with the HPSO are real-time, this is all we need to do
     receive_rt = make_receive_rt(csv, cfg)
-    if all([ pip in Pipelines.realtime for pip in HPSOs.hpso_pipelines[cfg['hpso']]]):
+    if all([pip in Pipelines.realtime for pip in
+            HPSOs.hpso_pipelines[cfg['hpso']]]):
         return receive_rt
 
     # Stage measurements to hot buffer
-    stage = make_stage_buffer(receive_rt[-1], input_transfer_rate, "input", "hot")
+    stage = make_stage_buffer(receive_rt[-1], input_transfer_rate, "input",
+                              "hot")
 
     # Do offline processing, stage results back
-    offline = make_offline(csv, cfg, stage[-1], offline_flop_rate, hot_buffer_rate)
-    stage2 = make_stage_buffer(offline[-1], output_transfer_rate, "hot", "output")
+    offline = make_offline(csv, cfg, stage[-1], offline_flop_rate,
+                           hot_buffer_rate)
+    stage2 = make_stage_buffer(offline[-1], output_transfer_rate, "hot",
+                               "output")
 
     # Delivery
     deliver = make_deliver(csv, stage2[-1], delivery_rate)
 
     return receive_rt + stage + offline + stage2 + deliver
+
 
 def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
     """Generates a sequence of HPSOs of the given minimal observation
@@ -316,28 +330,50 @@ def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
     :return: HPSO sequence, actual sum of observation lengths
     """
 
-    Texp = {}; Tobs = {}; Rflop = {}
+    Texp = {};
+    Tobs = {};
+    Rflop = {}
     for hpso in HPSOs.all_hpsos:
         if HPSOs.hpso_telescopes[hpso] == telescope:
-            tp = PipelineConfig(hpso=hpso, pipeline=Pipelines.Ingest).calc_tel_params()
-            Texp[hpso] = tp.Texp; Tobs[hpso] = max(tp.Tobs, Tobs_min)
+            tp = PipelineConfig(hpso=hpso,
+                                pipeline=Pipelines.Ingest).calc_tel_params()
+            Texp[hpso] = tp.Texp;
+            Tobs[hpso] = max(tp.Tobs, Tobs_min)
 
     Texp_total = sum(Texp.values())
     hpso_sequence = []
-    Rflop_sum = 0; Tobs_sum = 0
+    Rflop_sum = 0;
+    Tobs_sum = 0
     for hpso in HPSOs.all_hpsos:
         if HPSOs.hpso_telescopes[hpso] == telescope:
-            count = int(math.ceil(Tsequence * Texp[hpso] / Tobs[hpso] / Texp_total))
+            count = int(
+                math.ceil(Tsequence * Texp[hpso] / Tobs[hpso] / Texp_total))
             if verbose:
                 print("{} x {} (Tobs={:.1f}h, Texp={:.1f}h)".format(
-                    count, hpso, Tobs[hpso]/3600, Texp[hpso]/3600))
+                    count, hpso, Tobs[hpso] / 3600, Texp[hpso] / 3600))
             hpso_sequence.extend(count * [hpso])
             Tobs_sum += count * Tobs[hpso]
 
     return hpso_sequence, Tobs_sum
 
+
+def create_fixed_sequence(telescope, verbose=False):
+    hpos = HPSOs.hpso04a
+    Tobs = {}
+    hpso_sequence = []
+    hpso_sequence.append(hpos)
+    tp = PipelineConfig(hpso=hpos,
+                        pipeline=Pipelines.Ingest).calc_tel_params()
+    Tobs[hpos] = tp.Tobs
+
+    print(f"{hpos} has duration {Tobs[hpos]}")
+    Tobs_sum = Tobs[hpos]
+
+    return hpso_sequence, Tobs_sum
+
+
 def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
-                           Tobs_min = 0, force_order = True, batch_parallelism=1):
+                           Tobs_min=0, force_order=True, batch_parallelism=1):
     """ Convert sequence of HPSO to a (multi-)graph of nodes
 
     :param csv: Cached pipeline performance data
@@ -351,7 +387,8 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
     # Derive parameters for graph generation from capacities
     input_transfer_rate = max(1 * c.giga, capacities[Resources.InputBufferRate]
                               - capacities[Resources.IngestRate])
-    output_transfer_rate = max(1 * c.giga, capacities[Resources.OutputBufferRate]
+    output_transfer_rate = max(1 * c.giga,
+                               capacities[Resources.OutputBufferRate]
                                - capacities[Resources.DeliveryRate])
     offline_flop_rate = capacities[Resources.BatchCompute] // batch_parallelism
     hot_buffer_rate = (capacities[Resources.HotBufferRate]
@@ -359,13 +396,15 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
     delivery_rate = capacities[Resources.DeliveryRate]
 
     # Now collect graph nodes
-    nodes = []; last_ingest = None
+    nodes = [];
+    last_ingest = None
     for hpso in hpso_sequence:
 
         # Make pipeline nodes. Adjust ingest length if necessary (a bit hack-y)
         hnodes = make_graph(
             csv, {'hpso': hpso}, offline_flop_rate,
-            input_transfer_rate, output_transfer_rate, hot_buffer_rate, delivery_rate)
+            input_transfer_rate, output_transfer_rate, hot_buffer_rate,
+            delivery_rate)
         ingest = hnodes[0]
         if ingest.time < Tobs_min:
             ingest.time = Tobs_min
@@ -373,7 +412,8 @@ def hpso_sequence_to_nodes(csv, hpso_sequence, capacities,
         # Introduce order constraint node if requested
         if force_order and last_ingest is not None:
             connect = Task("Sequence", last_ingest.hpso, "", 0, {}, {})
-            ingest.depend(connect); connect.depend(last_ingest)
+            ingest.depend(connect);
+            connect.depend(last_ingest)
             nodes.append(connect)
         last_ingest = ingest
 

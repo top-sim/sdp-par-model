@@ -38,7 +38,8 @@ class PipelineConfig:
         """
         params = ParameterContainer()
 
-        # Alias for now
+        # Alias for now        cfg_name = PipelineConfig(pipeline=pipeline, **cfg).describe()
+
         if hpso_pipe is not None:
             pipeline = hpso_pipe
 

@@ -3,7 +3,7 @@ from . import level_trace
 
 def toposort(tasks):
     """Simple topological sort routine for task lists. Not fast, but easy
-    - especially leaves nodes in original order if already topologically
+    - especially leaves nodes in o  riginal order if already topologically
     sorted. Dependencies that are not in the tasks list are ignored for
     the purpose of the sort.
     """
@@ -173,7 +173,8 @@ def schedule(tasks, capacities,
 
         # Finally, add the task itself
         if verbose:
-            print("=> {}: {}-{}".format(task.name, time, task_end_time))
+            print("{} => {}: {}-{}".format(task.hpso, task.name, time/3600,
+                                           task_end_time/3600))
         task_time[task] = time
         task_edge_end_time[task] = task_end_time
         _apply_cost(task, task_time[task], usage)

@@ -153,6 +153,8 @@ RESULT_MAP = [
     ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
     ('Total Compute Requirement',  'PetaFLOP/s', True,    True,  lambda tp: tp.Rflop/c.peta       ),
     ('-> ',                        'PetaFLOP/s', True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta)),
+    ('-> ', 'Tera/s', True, True,
+     lambda tp: tp.get_products('Rout', scale=c.tera)),
 ]
 
 
