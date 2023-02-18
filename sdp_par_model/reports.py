@@ -153,8 +153,9 @@ RESULT_MAP = [
     ('-- Compute --',              '',           True,    False, lambda tp: ''                    ),
     ('Total Compute Requirement',  'PetaFLOP/s', True,    True,  lambda tp: tp.Rflop/c.peta       ),
     ('-> ',                        'PetaFLOP/s', True,    True,  lambda tp: tp.get_products('Rflop', scale=c.peta)),
-    ('-> ', 'Tera/s', True, True,
-     lambda tp: tp.get_products('Rout', scale=c.tera)),
+    ('-> ', 'Tera/s', True, True,     lambda tp: tp.get_products('Rout', scale=c.tera)),
+    ("Total visibilities", "Mvis/s", True, True, lambda tp: ''),
+    ('-> ', "Mvis/s", True, True,lambda tp: tp.get_products('Rvis', scale=c.mega)),
 ]
 
 
@@ -949,7 +950,7 @@ def read_csv(filename):
     Reads pipeline calculation results from a CSV file as written by _write_csv.
     """
 
-    display(HTML('<font color="blue">Reading %s...</font>' % filename))
+    # display(HTML('<font color="blue">Reading %s...</font>' % filename))
     with open(filename, 'r') as csvfile:
         r = csv.reader(csvfile)
         it = iter(r)

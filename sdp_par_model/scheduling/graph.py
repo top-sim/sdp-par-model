@@ -337,6 +337,8 @@ def make_hpso_sequence(telescope, Tsequence, Tobs_min, verbose=False):
         if HPSOs.hpso_telescopes[hpso] == telescope:
             tp = PipelineConfig(hpso=hpso,
                                 pipeline=Pipelines.Ingest).calc_tel_params()
+            tp = PipelineConfig(hpso=hpso,
+                                pipeline=Pipelines.DPrepA).calc_tel_params()
             Texp[hpso] = tp.Texp;
             Tobs[hpso] = max(tp.Tobs, Tobs_min)
 
