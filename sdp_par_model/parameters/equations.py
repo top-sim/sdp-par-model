@@ -695,7 +695,7 @@ def _apply_major_cycle_equations(o):
             N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
             Rflop = blsum(b, 2 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
             Rout = blsum(b, o.Mvis * o.Npp * o.Rvis(b) / o.Nf_min_gran),
-            Rvis = o.Rvis(b)/ o.Nmajortotal * o.Nbeam * o.Nf_min_gran)
+            Rvis = o.Rvis(b))
 
 
 def _apply_kernel_equations(o):
