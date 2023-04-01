@@ -377,7 +377,8 @@ def _apply_ingest_equations(o):
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
             Rflop = 4 * o.Npp * o.Rvis_ingest / o.Nf_min +
                     1000 * o.Na / o.Tint_used,
-            Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
+            Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min,
+            Rvis = 0)
         o.set_product(Products.Flag,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
             Rflop = 278 * o.Npp * o.Rvis_ingest / o.Nf_min,
@@ -388,12 +389,14 @@ def _apply_ingest_equations(o):
                       (154 * o.NAteam + 84 +
                        (o.NAteam**2 + o.NAteam * (33 + 24 * o.Nsolve) + 64)
                        / (o.Tion / o.Tint_used) / (o.Nf_max / o.Nf_min)),
-            Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min)
+            Rout = o.Mvis * o.Npp * o.Rvis_ingest / o.Nf_min,
+            Rvis = 0)
         o.set_product(Products.Average,
             T = o.Tsnap, N = o.Nbeam * o.Nf_min,
             # Slight overestimation, as Rvis_ingest includes autocorrelations
             Rflop = blsum(Symbol('b'), 8 * o.Npp * o.Rvis_ingest / o.Nf_min / o.Nbl),
-            Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min)
+            Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min,
+            Rvis = 0)
 
 
 def _apply_flag_equations(o):
@@ -403,7 +406,7 @@ def _apply_flag_equations(o):
         o.set_product(Products.Flag,
             T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
             Rflop=279 * o.Npp * o.Rvis / o.Nf_min_gran,
-            Rvis=o.Rvis,
+            Rvis=o.Rvis('b')/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
             Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min_gran)
 
 
@@ -419,7 +422,7 @@ def _apply_correct_equations(o):
             T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran,
             Rflop = 8 * o.Nmm * o.Rvis * o.NIpatches / o.Nf_min_gran,
             Rout = o.Mvis * o.Rvis / o.Nf_min_gran,
-            Rvis = o.Rvis)
+            Rvis = o.Rvis('b')/(o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran))
 
 
 
@@ -635,14 +638,21 @@ def _apply_calibration_equations(o):
             N = (o.Nselfcal + 1) * o.Nsubbands * o.Nbeam,
             Rflop = Rflop_solving + Rflop_averaging / o.Nsubbands,
             Rout = o.Mcal_solve_out / o.Tsolve,
-            Rvis = o.Rvis.eval_sum(o.baseline_bins))
+            Rvis = o.Rvis('b')/((o.Nselfcal + 1) * o.Nsubbands * o.Nbeam),
+            Rvis_bdep = o.Rvis / (o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
+            Rvis_N = o.Rvis)
+
+        print(o.pipeline)
+        print("Solve")
+        for e in o.products[Products.Solve]:
+            print(e, o.products[Products.Solve][e])
 
 def _apply_dft_equations(o):
     """
     Direct discrete fourier transform as predict alternative to
     Reproject+FFT+Degrid+Phase Rotation.
 
-    References: SKA-TEL-SDP-0000040 01D section 3.6.4 - Predict via Direct Fourier Transform
+    References: SKA-TEL-SDP-0000040 01D section 3.6 - Predict via Direct Fourier Transform
     """
 
     if o.pipeline in Pipelines.imaging:
@@ -657,8 +667,13 @@ def _apply_dft_equations(o):
                     (32 * o.Na**2 * o.Nsource + (10 + 224 + 32) * o.Na * o.Nsource + 128 * o.Na * o.Na)
                           * o.Rvis(b) / o.Nf_min_gran / o.Nbl),
             Rout = blsum(b, o.Npp * o.Mvis * o.Rvis(b) / o.Nf_min_gran),
-            Rvis = o.Rvis(b))
-
+            Rvis = o.Rvis('b')/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
+            Rvis_bdep = o.Rvis/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
+            Rvis_N = o.Rvis)
+        print("DFT")
+        for e in o.products[Products.DFT]:
+            print(e, o.products[Products.DFT][e])
+        print(f"N:{o.Nbeam * o.Nmajortotal * o.Nf_min_gran}")
 
 def _apply_source_find_equations(o):
     """
@@ -695,7 +710,7 @@ def _apply_major_cycle_equations(o):
             N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
             Rflop = blsum(b, 2 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
             Rout = blsum(b, o.Mvis * o.Npp * o.Rvis(b) / o.Nf_min_gran),
-            Rvis = o.Rvis(b))
+            Rvis = o.Rvis(b)/(o.Nmajortotal * o.Nbeam * o.Nf_min_gran))
 
 
 def _apply_kernel_equations(o):
