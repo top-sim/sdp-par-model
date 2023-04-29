@@ -16,6 +16,8 @@ from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin, Functi
 from .definitions import Pipelines, Products, Constants
 from .container import ParameterContainer, BLDep, blsum
 
+from .. import evaluate
+
 # Check sympy compatibility
 if sympy.__version__ == "1.0":
 
@@ -311,7 +313,7 @@ def _apply_coalesce_equations(o, symbolify):
     # assume that they are tracked separately as a data product not
     # covered by the parametric model.
     if o.global_blcoal:
-        o.Rvis = blsum(b, o.Nf_vis(b) / Min(o.Tcoal_skipper(b), 1.2, o.Tion))
+        o.Rvis = blsum(b, o.Nf_vis(b) / Min(o.Toal_skipper(b), 1.2, o.Tion))
     else:
         o.Rvis = blsum(b, o.Nf_vis(b) / o.Tint_used)
         tmp = o.Rvis.eval_sum(o.baseline_bins)
@@ -406,7 +408,7 @@ def _apply_flag_equations(o):
         o.set_product(Products.Flag,
             T=o.Tsnap, N=o.Nbeam * o.Nmajortotal * o.Nf_min_gran,
             Rflop=279 * o.Npp * o.Rvis / o.Nf_min_gran,
-            Rvis=o.Rvis('b')/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
+            Rvis=o.Rvis/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
             Rout = o.Mvis * o.Npp * o.Rvis / o.Nf_min_gran)
 
 
@@ -422,11 +424,7 @@ def _apply_correct_equations(o):
             T = o.Tsnap, N = o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran,
             Rflop = 8 * o.Nmm * o.Rvis * o.NIpatches / o.Nf_min_gran,
             Rout = o.Mvis * o.Rvis / o.Nf_min_gran,
-            Rvis = o.Rvis('b')/(o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran))
-
-
-
-
+            Rvis = o.Rvis/(o.Nbeam*o.Nmajortotal * o.Npp * o.Nf_min_gran))
 
 def _apply_grid_equations(o):
     """
@@ -446,12 +444,13 @@ def _apply_grid_equations(o):
 
     if not o.pipeline in Pipelines.imaging: return
 
+    productN = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp *
+                     o.Nfacet**2 * o.Nf_min_gran)
     o.set_product(Products.Visibility_Weighting, T=o.Tsnap,
-        N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp *
-                     o.Nfacet**2 * o.Nf_min_gran),
+        N = productN,
         Rflop = blsum(b, 2 * 8 * o.Nf_vis_backward(b) / o.Nf_min_gran / o.Tcoal_backward(b)),
         Rout = blsum(b, o.Mvis / o.Tcoal_backward(b)),
-        Rvis = 1)
+        Rvis =blsum(b, o.Rvis_backward(b))/productN)
 
     # Assume 8 flops per default. For image-domain gridding we
     # need 6 flops additionally.
@@ -459,18 +458,20 @@ def _apply_grid_equations(o):
     if not isinstance(o.image_gridding, Symbol) and o.image_gridding > 0:
         Rflop_per_vis = 8 + 6
 
+    productN = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_backward *
+                     o.Nfacet**2 * o.Nf_vis_backward(b))
     o.set_product(Products.Grid, T=o.Tsnap,
-        N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_backward *
-                     o.Nfacet**2 * o.Nf_vis_backward(b)),
+        N = productN,
         Rflop = blsum(b, Rflop_per_vis * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
         Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap,
-        Rvis = 1)
+        Rvis = blsum(b, o.Rvis_backward(b)*(o.Nkernel2_backward(b)/o.Tcoal_backward(b))) / (o.Nmajortotal * o.Nf_vis_backward(b) * o.Ntt_backward * o.Nfacet**2))
+
     o.set_product(Products.Degrid, T = o.Tsnap,
         N = BLDep(b, o.Nmajortotal * o.Nbeam * o.Npp * o.Ntt_predict *
                      o.Nfacet_predict**2 * o.Nf_vis_predict(b)),
         Rflop = blsum(b, Rflop_per_vis * o.Nmm * o.Nkernel2_predict(b) / o.Tcoal_predict(b)),
         Rout = blsum(b, o.Mvis / o.Tcoal_predict(b)),
-        Rvis = 1)
+        Rvis = (blsum(b,o.Rvis_predict(b)*(o.Nkernel2_backward(b)/o.Tcoal_backward(b)))/BLDep(b, o.Nmajortotal * o.Ntt_predict *o.Nfacet_predict**2 * o.Nf_vis_predict(b))))
 
 
 def _apply_fft_equations(o):
@@ -485,18 +486,18 @@ def _apply_fft_equations(o):
     # Determine number of w-stacks we need
     o.Nwstack = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
     o.Nwstack_predict = Max(1, o.DeltaW_max(o.Bmax) / o.DeltaW_stack)
-
+    # TODO WITH EQUATIONS
     # These are real-to-complex for which the prefactor in the FFT is 2.5
     o.set_product(Products.FFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2,
         Rflop = 2.5 * o.Nwstack * o.Npix_linear ** 2 * log(o.Npix_linear**2, 2) / o.Tsnap,
         Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap,
-        Rvis = 1)
+        Rvis = o.Npix_linear/(o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2))
     o.set_product(Products.IFFT, T = o.Tsnap,
         N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_predict * o.Nfacet_predict**2,
         Rflop = 2.5 * o.Nwstack_predict * o.Npix_linear_predict**2 * log(o.Npix_linear_predict**2, 2) / o.Tsnap,
         Rout = o.Mcpx * o.Npix_linear_predict * (o.Npix_linear_predict / 2 + 1) / o.Tsnap,
-        Rvis = 1)
+        Rvis = o.Npix_linear_predict/(o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2))
 
 
 def _apply_reprojection_equations(o):
@@ -512,13 +513,13 @@ def _apply_reprojection_equations(o):
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_backward * o.Nfacet**2,
             Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
             Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap,
-            Rvis = 1)
+            Rvis = (o.Npix_linear**2)/ (o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2))
         o.set_product(Products.ReprojectionPredict,
             T = o.Tsnap,
             N = o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_proj_predict * o.Nfacet**2,
             Rflop = 50. * o.Npix_linear ** 2 / o.Tsnap,
             Rout = o.Mpx * o.Npix_linear**2 / o.Tsnap,
-            Rvis = 1)
+            Rvis = (o.Npix_linear**2)/(o.Nmajortotal * o.Nbeam * o.Npp * o.Nf_FFT_backward * o.Nfacet**2))
 
 
 def _apply_spectral_fitting_equations(o):
@@ -570,7 +571,7 @@ def _apply_minor_cycle_equations(o):
         N = o.Nmajortotal * o.Nbeam * o.Nf_identify * o.Nfacet**2,
         Rflop = 2 * (o.Npix_linear**2  + o.Nminor * o.Npatch**2) * o.Ntt * o.Nscales/ o.Tobs,
         Rout = o.Nminor * o.Mcpx / o.Tobs,
-        Rvis = 1)
+        Rvis = (o.Npix_linear**2)/(o.Nmajortotal * o.Nbeam * o.Nf_identify * o.Nfacet**2))
 
     # Subtract on all scales, polarisations and taylor terms
     o.set_product(Products.Subtract_Image_Component,
@@ -578,7 +579,7 @@ def _apply_minor_cycle_equations(o):
         N = o.Nmajortotal * o.Nbeam * o.Nf_identify * o.Nfacet**2,
         Rflop = 2 * o.Npp * o.Nminor * o.Ntt * o.Nscales * o.Npatch**2 / o.Nfacet**2 / o.Tobs,
         Rout = o.Mpx * o.Ntt * o.Npix_linear**2 / o.Tobs,
-        Rvis = 1)
+        Rvis = (o.Npix_linear**2)/(o.Nmajortotal * o.Nbeam * o.Nf_identify * o.Nfacet**2))
 
     # Working memory requirements according to TCC-SDP-151123-2
     o.M_MSMFS = o.Mpx * o.Nf_identify * (o.Ntt * (o.Nscales + 1) + o.Nscales) * (o.Npix_linear * o.Nfacet)**2
@@ -638,14 +639,10 @@ def _apply_calibration_equations(o):
             N = (o.Nselfcal + 1) * o.Nsubbands * o.Nbeam,
             Rflop = Rflop_solving + Rflop_averaging / o.Nsubbands,
             Rout = o.Mcal_solve_out / o.Tsolve,
-            Rvis = o.Rvis('b')/((o.Nselfcal + 1) * o.Nsubbands * o.Nbeam),
+            Rvis = o.Rvis.eval_sum(o.baseline_bins)/((o.Nselfcal + 1) * o.Nsubbands * o.Nbeam),
             Rvis_bdep = o.Rvis / (o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
             Rvis_N = o.Rvis)
 
-        print(o.pipeline)
-        print("Solve")
-        for e in o.products[Products.Solve]:
-            print(e, o.products[Products.Solve][e])
 
 def _apply_dft_equations(o):
     """
@@ -667,13 +664,9 @@ def _apply_dft_equations(o):
                     (32 * o.Na**2 * o.Nsource + (10 + 224 + 32) * o.Na * o.Nsource + 128 * o.Na * o.Na)
                           * o.Rvis(b) / o.Nf_min_gran / o.Nbl),
             Rout = blsum(b, o.Npp * o.Mvis * o.Rvis(b) / o.Nf_min_gran),
-            Rvis = o.Rvis('b')/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
+            Rvis = blsum(b,o.Rvis(b))/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
             Rvis_bdep = o.Rvis/(o.Nbeam * o.Nmajortotal * o.Nf_min_gran),
             Rvis_N = o.Rvis)
-        print("DFT")
-        for e in o.products[Products.DFT]:
-            print(e, o.products[Products.DFT][e])
-        print(f"N:{o.Nbeam * o.Nmajortotal * o.Nf_min_gran}")
 
 def _apply_source_find_equations(o):
     """
@@ -710,7 +703,7 @@ def _apply_major_cycle_equations(o):
             N = o.Nmajortotal * o.Nbeam * o.Nf_min_gran,
             Rflop = blsum(b, 2 * o.Npp * o.Rvis(b) / o.Nf_min_gran),
             Rout = blsum(b, o.Mvis * o.Npp * o.Rvis(b) / o.Nf_min_gran),
-            Rvis = o.Rvis(b)/(o.Nmajortotal * o.Nbeam * o.Nf_min_gran))
+            Rvis = blsum(b,o.Rvis(b))/(o.Nmajortotal * o.Nbeam * o.Nf_min_gran))
 
 
 def _apply_kernel_equations(o):
@@ -811,14 +804,14 @@ def _apply_kernel_product_equations(o):
             bins = bins,
             Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_backward(b) * o.Nkernel_AW_backward(b)**2 * log(o.Nkernel_AW_backward(b)**2, 2) / o.Tkernel_backward(b)),
             Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_backward(b)**3 / o.Tkernel_backward(b)),
-            Rvis = 1)
+            Rvis = blsum(b, o.Nkernel2_backward(b) / o.Tcoal_backward(b))/BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_backward(b) * o.Nfacet**2))
         o.set_product(Products.Degridding_Kernel_Update,
             T = BLDep(b,o.Tkernel_predict(b)),
             N = BLDep(b,o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet_predict**2),
             bins = bins,
             Rflop = blsum(b, 5. * o.Nmm * o.Ngcf_used_predict(b) * o.Nkernel_AW_predict(b)**2 * log(o.Nkernel_AW_predict(b)**2, 2) / o.Tkernel_predict(b)),
             Rout = blsum(b, 8 * o.Qgcf**3 * o.Ngw_predict(b)**3 / o.Tkernel_predict(b)),
-            Rvis = 1)
+            Rvis = blsum(b,  o.Nkernel2_predict(b) / o.Tcoal_predict(b))/BLDep(b, o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_gcf_predict(b) * o.Nfacet**2))
 
 
 def _apply_phrot_equations(o):
@@ -843,7 +836,8 @@ def _apply_phrot_equations(o):
                 o.Ntt_predict * o.Nfacet**2 ,
             Rflop = blsum(b, 28 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
             Rout = blsum(b, o.Mvis * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
-            Rvis = 1)
+            Rvis = blsum(b,o.Rvis(b)) /(sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
+                o.Ntt_predict * o.Nfacet**2))
 
     # Backward phase rotation: Input at overall visibility
     # rate, output averaged down to backward visibility rate.
@@ -852,8 +846,8 @@ def _apply_phrot_equations(o):
         N = sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nfacet**2 * o.Nf_min_gran,
         Rflop = blsum(b, 28 * o.Nf_vis(b) / o.Nf_min_gran / o.Tint_used),
         Rout = blsum(b, o.Mvis * o.Rvis_backward(b) / o.Nf_min_gran),
-        Rvis = 1)
-
+        Rvis = blsum(b, o.Rvis(b))/(sign(o.Nfacet - 1) * o.Nmajortotal * o.Npp * o.Nbeam * o.Nf_min_gran *
+                o.Ntt_predict * o.Nfacet**2))
 
 def _apply_flop_equations(o):
     """Calculate overall flop rate"""

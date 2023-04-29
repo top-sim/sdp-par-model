@@ -876,8 +876,8 @@ def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detai
         return list([res for cfg in configs for res in results[cfg.describe()]])
 
     results = []
+    count = 0
     for cfg in configs:
-
         # Check that the configuration is valid, skip if it isn't
         (okay, msgs) = cfg.is_valid()
         if not okay:
@@ -888,6 +888,7 @@ def _batch_compute_results(configs, result_map, parallel=0, verbose=False, detai
         if verbose:
             display(HTML('<p>Calculating %s...</p>' % cfg.describe()))
         results.append((cfg, _compute_results(cfg, result_map, verbose=verbose, detailed=detailed)))
+        count+=1
     return results
 
 
