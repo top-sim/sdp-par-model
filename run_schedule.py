@@ -82,6 +82,7 @@ else:
 # csv = reports.strip_csv(csv)
 
 csv = reports.read_csv("2023-03-25_long_HPSOs.csv")
+csv = reports.strip_csv(csv)
 
 realtime_flops = 0
 realtime_flops_hpso = None

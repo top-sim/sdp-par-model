@@ -16,8 +16,6 @@ from sympy import log, Min, Max, sqrt, floor, sign, ceiling, Symbol, sin, Functi
 from .definitions import Pipelines, Products, Constants
 from .container import ParameterContainer, BLDep, blsum
 
-from .. import evaluate
-
 # Check sympy compatibility
 if sympy.__version__ == "1.0":
 
@@ -313,7 +311,7 @@ def _apply_coalesce_equations(o, symbolify):
     # assume that they are tracked separately as a data product not
     # covered by the parametric model.
     if o.global_blcoal:
-        o.Rvis = blsum(b, o.Nf_vis(b) / Min(o.Toal_skipper(b), 1.2, o.Tion))
+        o.Rvis = blsum(b, o.Nf_vis(b) / Min(o.Tcoal_skipper(b), 1.2, o.Tion))
     else:
         o.Rvis = blsum(b, o.Nf_vis(b) / o.Tint_used)
         tmp = o.Rvis.eval_sum(o.baseline_bins)
@@ -536,7 +534,7 @@ def _apply_spectral_fitting_equations(o):
             Rflop = 2.0 * (o.Nf_FFT_backward + o.Nf_FFT_predict) *
                     o.Npix_linear_fov_total ** 2 / o.Tobs,
             Rout = o.Mpx * o.Npix_linear_fov_total ** 2 / o.Tobs,
-            Rvis = 1)
+            Rvis = o.Npix_linear_fov_total**2)
 
 
 def _apply_minor_cycle_equations(o):
