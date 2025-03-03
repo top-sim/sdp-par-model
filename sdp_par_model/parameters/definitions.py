@@ -191,13 +191,13 @@ class HPSOs:
         hpso37c: Telescopes.SKA1_Mid,
         hpso38a: Telescopes.SKA1_Mid,
         hpso38b: Telescopes.SKA1_Mid,
-        max_low: Telescopes.SKA1_Low,
-        max_mid_band1: Telescopes.SKA1_Mid,
-        max_mid_band2: Telescopes.SKA1_Mid,
-        max_mid_band5a_1: Telescopes.SKA1_Mid,
-        max_mid_band5a_2: Telescopes.SKA1_Mid,
-        max_mid_band5b_1: Telescopes.SKA1_Mid,
-        max_mid_band5b_2: Telescopes.SKA1_Mid
+        # max_low: Telescopes.SKA1_Low,
+        # max_mid_band1: Telescopes.SKA1_Mid,
+        # max_mid_band2: Telescopes.SKA1_Mid,
+        # max_mid_band5a_1: Telescopes.SKA1_Mid,
+        # max_mid_band5a_2: Telescopes.SKA1_Mid,
+        # max_mid_band5b_1: Telescopes.SKA1_Mid,
+        # max_mid_band5b_2: Telescopes.SKA1_Mid
     }
 
     # Map each HPSO to its constituent pipelines
@@ -715,6 +715,7 @@ def apply_hpso_parameters(o, hpso, hpso_pipe):
     # Check that the pipeline lookup has been defined
     assert hpso in HPSOs.hpso_pipelines
     # Check that a valid pipeline has been defined for this HPSO
+    print(f"{hpso=},{hpso_pipe=}")
     assert hpso_pipe in HPSOs.hpso_pipelines[hpso]
 
     if not hasattr(o,'hpso') or o.hpso != hpso:

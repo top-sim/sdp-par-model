@@ -89,9 +89,17 @@ class PipelineConfig:
         self.max_allowed_baseline = params.baseline_bins[-1]
         if 'Bmax' not in self.adjusts:
             self.adjusts['Bmax'] = params.Bmax
+        else:
+            self.adjusts["Bmax"] = min(params.Bmax, self.adjusts['Bmax'])
+
         self.default_frequencies = params.Nf_max
         if 'Nf_max' not in self.adjusts:
             self.adjusts['Nf_max'] = params.Nf_max
+        else:
+            self.adjusts["Nf_max"] = min(params.Nf_max, self.adjusts["Nf_max"])
+
+        if 'Na' in self.adjusts:
+            self.adjusts['Na'] = min(params.Na, self.adjusts['Na'])
 
     def describe(self):
         """ Returns a name that identifies this configuration. """

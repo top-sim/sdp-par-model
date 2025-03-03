@@ -137,7 +137,7 @@ def cheap_lambdify_curry(free_vars, expression):
 
 
 def minimise_parameters(telescope_parameters, expression_string = 'Rflop', expression = None,
-                        lower_bound = {}, upper_bound = {}, only_one_minimum = ['Nfacet'], verbose = False):
+                        lower_bound = {}, upper_bound = {}, only_one_minimum = ['Nfacet'], verbose = True):
     """Computes the optimal value for free variables in telescope parameters
     such  that it minimizes the value of an expression (typically
     Rflop). Returns result as a dictionary.
