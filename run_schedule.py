@@ -81,11 +81,18 @@ else:
 # csv = reports.read_csv(reports.newest_csv(reports.find_csvs()))
 # csv = reports.strip_csv(csv)
 
-csv = reports.read_csv("2023-03-25_long_HPSOs.csv")
+csv = reports.read_csv("/home/rwb/github/sdp-par-model/data/csv/2021-02-03-895254e_hpsos.csv")
 csv = reports.strip_csv(csv)
 
 realtime_flops = 0
 realtime_flops_hpso = None
+
+hpso_data = {}
+for hpso in definitions.HPSOs.all_hpsos:
+    hpso_data[hpso] = {}
+    for pipeline in definitions.HPSOs.hpso_pipelines[hpso]:
+        cfg = config.PipelineConfig(hpso=hpso, pipeline=pipeline)
+        hpso_data[hpso][pipeline] = cfg
 
 for hpso in definitions.HPSOs.all_hpsos:
     if definitions.HPSOs.hpso_telescopes[hpso] != telescope:
@@ -93,8 +100,9 @@ for hpso in definitions.HPSOs.all_hpsos:
     # Sum FLOP rates over involved real-time pipelines
     rt_flops = 0
     for pipeline in definitions.HPSOs.hpso_pipelines[hpso]:
-        cfg_name = config.PipelineConfig(hpso=hpso,
-                                         pipeline=pipeline).describe()
+        cfg = config.PipelineConfig(hpso=hpso,
+                              pipeline=pipeline)
+        cfg_name = cfg.describe()
         flops = int(math.ceil(float(reports.lookup_csv(csv, cfg_name,
                                                        'Total Compute Requirement')) * definitions.Constants.peta))
         if pipeline in definitions.Pipelines.realtime:

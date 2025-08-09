@@ -462,6 +462,7 @@ def _apply_grid_equations(o):
         N = productN,
         Rflop = blsum(b, Rflop_per_vis * o.Nmm * o.Nkernel2_backward(b) / o.Tcoal_backward(b)),
         Rout = o.Mcpx * o.Npix_linear * (o.Npix_linear / 2 + 1) / o.Tsnap,
+        # Adapted from equation 65 in Bolton 2019! NKernel2 backward is Npix/kernel; this is pixel and data
         Rvis = blsum(b, o.Rvis_backward(b)*(o.Nkernel2_backward(b)/o.Tcoal_backward(b))) / (o.Nmajortotal * o.Nf_vis_backward(b) * o.Ntt_backward * o.Nfacet**2))
 
     o.set_product(Products.Degrid, T = o.Tsnap,

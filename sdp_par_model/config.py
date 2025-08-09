@@ -37,6 +37,7 @@ class PipelineConfig:
           "name=val name2=val flag".
         """
         params = ParameterContainer()
+        self.params = params
 
         # Alias for now        cfg_name = PipelineConfig(pipeline=pipeline, **cfg).describe()
 
